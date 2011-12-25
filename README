@@ -1,0 +1,12 @@
+For now, no makefile. Committing to avoid any trouble due to personal disasters such as hard
+disk failure. As of the first commit, the project has a foundation laid, but is otherwise in
+a state of total uselessness. Kind of like a house with no walls or doors.
+
+If you wish to build the thing, just install Code::Blocks and open the enclosed .cbp.
+
+Makefile to come with project maturity...
+
+Docs not included because anyone with Doxygen can presently generate them. Perhaps when the
+project's size competes with that of its documentation, I will upload them.
+
+In the meantime, work will continue at whatever pace.
