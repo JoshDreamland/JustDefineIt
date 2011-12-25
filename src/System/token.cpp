@@ -79,10 +79,12 @@ token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), const
 token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition* def): token_basics(type(t), file(fn), linenum(l), pos(p)), extra(def) {}
 
 token_t::extra_::extra_() {}
-token_t::extra_::extra_(const char* ct, int ctl): content({ct,ctl}) {}
+token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
 token_t::extra_::extra_(definition* d): def(d) {}
 
 void token_t::report_error(parse_context& pc, std::string error) {
+  // This is where we use the token_basics macro to only assign
+  // those parse context members which exist.
   token_basics(
     pc.error = error,
     pc.err_file = (const char*)file,

@@ -28,18 +28,18 @@ namespace jdi {
   definition *definition::duplicate() {
     return new definition(name, parent, flags);
   }
-  definition::definition(string n,definition* p,unsigned int f): name(n), parent((definition_scope*)p), flags(f) {}
-  definition::definition(): name(), parent(NULL), flags(0) {}
+  definition::definition(string n,definition* p,unsigned int f): flags(f), name(n), parent((definition_scope*)p) {}
+  definition::definition(): flags(0), name(), parent(NULL) {}
   definition::~definition() {}
   
-  definition_typed::definition_typed(string name, definition* p, definition* tp, ref_stack rf): definition(name,p,DEF_TYPED), type(tp), referencers(rf) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack rf): definition(n,p,DEF_TYPED), type(tp), referencers(rf) {}
   
   full_type::full_type(): def(NULL) {}
   full_type::full_type(jdi::definition* d): def(d) {}
   full_type::full_type(jdi::definition* d, jdi::ref_stack r, int f): def(d), refs(r), flags(f) {}
   
-  definition *definition_scope::look_up(string name) {
-    defiter it = members.find(name);
+  definition *definition_scope::look_up(string sname) {
+    defiter it = members.find(sname);
     if (it != members.end())
       return it->second;
     if (parent == NULL)
@@ -60,7 +60,7 @@ namespace jdi {
   }
   definition_scope::definition_scope(): definition() { }
   definition_scope::definition_scope(const definition_scope&): definition() { }
-  definition_scope::definition_scope(string name, definition *parent, unsigned int flags): definition(name,parent,flags) {}
+  definition_scope::definition_scope(string name_, definition *parent_, unsigned int flags_): definition(name_,parent_,flags_) {}
   definition_scope::~definition_scope() {
     for (defiter it = members.begin(); it != members.end(); it++)
       delete it->second;

@@ -116,7 +116,7 @@ token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope 
     switch (cfile[pos])
     {
       case '=':
-        { const size_t spos = pos; pos += cfile[++pos] == '=';
+        { const size_t spos = pos++; pos += cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos); }
       case ';':
         return token_t(token_basics(TT_SEMICOLON,"some file",0,pos++));

@@ -1,10 +1,6 @@
 /**
- * @file handle_declarators.cpp
- * @brief Source implementing the parser function to handle standard declarations.
- * 
- * This file's function will be referenced by every other function in the
- * parser. The efficiency of its implementation is of crucial importance.
- * If this file runs slow, so do the others in the parser.
+ * @file read_type.cpp
+ * @brief Source implementing a utility funciton to read in a type.
  * 
  * @section License
  * 
