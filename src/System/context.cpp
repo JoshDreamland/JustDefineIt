@@ -124,6 +124,11 @@ void context::reset_all()
   
 }
 
+string context::get_last_error() {
+  if (pc) return pc->error;
+  return "";
+}
+
 void context::load_standard_builtins()
 {
   global->members["char"] = new definition("char", global, DEF_TYPENAME);
@@ -170,11 +175,11 @@ void context::output_definitions(ostream &out) {
   }
 }
 
-context::context(): global(new definition_scope()) {
+context::context(): global(new definition_scope()), pc(NULL) {
   builtin.global->copy(global);
 }
 
-context::context(int): global(new definition_scope()) { }
+context::context(int): global(new definition_scope()), pc(NULL) { }
 
 context::~context() {
   delete global;

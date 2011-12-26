@@ -56,6 +56,7 @@
 #include "../System/context.h"
 #include "../General/llreader.h"
 #include "../Storage/definition.h"
+#include "../Storage/value.h"
 #include "parse_context.h"
 
 namespace jdip {
@@ -82,7 +83,7 @@ namespace jdip {
       @param  pc     The parse context that was allocated at the start of the parse. [in-out]
       @return The next token in the stream.
     **/
-    token_t read_next_token(llreader &cfile, definition_scope *scope, parse_context &pc);
+    token_t read_next_token(llreader &cfile, definition_scope *scope);
     
     /**
       Help handle a standard by-type declaration by returning the full type
@@ -100,12 +101,12 @@ namespace jdip {
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_declarators(llreader &cfile, definition_scope *scope, token_t& token, parse_context &pc);
+    int handle_declarators(llreader &cfile, definition_scope *scope, token_t& token);
     
     /**
       Read a complete type from the given input stream.
       
-      This function is a reader. All inputs are liable to be modified in some form or another.
+      This function is a reader. Many inputs are liable to be modified in some form or another.
       See \section Readers for details.
       
       The read_type function will generally leave you with the next token in the file linearly,
@@ -123,7 +124,31 @@ namespace jdip {
       
       @return Returns the \c full_type read from the stream.
     **/
-    full_type read_type(llreader &cfile, token_t &token, definition_scope *scope, parse_context &pc);
+    full_type read_type(llreader &cfile, token_t &token, definition_scope *scope);
+    
+    /**
+      Read an expression from the given input stream, evaluating it for a value.
+      
+      This function is a reader. Many inputs are liable to be modified in some form or another.
+      See \section Readers for details.
+      
+      The read_expression function will retrieve tokens from \p cfile until the stream ends,
+      a comma is reached, or a token denoted by closing_token is reached. If a semicolon is
+      encountered and \p closing_token is not \c TT_SEMICOLON, the function will return error.
+      
+      When the read_expression function finishes, \p token will be set to the first unhandled
+      token in the stream. If the expression cannot be evaluated, the type of the returned \c
+      value will be set to \c VT_NOTHING.
+      
+      @param  cfile          The input stream to read from. [in-out]
+      @param  token          The \c token structure which will represent the first non-evaluated token. [out]
+      @param  closing_token  The \c TOKEN_TYPE of an additional token which will close this expression. [in]
+      @param  scope          The scope which may be passed to \c read_token. [in]
+      @param  pc             The parse context that was allocated at the start of the parse. [in-out]
+      
+      @return Returns the \c full_type read from the stream.
+    **/
+    value read_expression(llreader &cfile, token_t &token, TOKEN_TYPE closing_token, definition_scope *scope);
     
     /**
       Retrieve the type of a token from a given string in a given scope.

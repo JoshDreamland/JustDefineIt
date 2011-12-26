@@ -1,6 +1,6 @@
 /**
- * @file  parse_context.cpp
- * @brief A very small source to implement the parse_context constructor.
+ * @file value.h
+ * @brief Header defining a structure for storing parsed values.
  * 
  * @section License
  * 
@@ -19,7 +19,33 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "parse_context.h"
-jdip::parse_context::parse_context(): active(true) {
-  
+#ifndef _VALUE__H
+#define _VALUE__H
+#include <string>
+
+namespace jdi {
+  enum VT {
+    VT_NONE,
+    VT_DOUBLE,
+    VT_INTEGER,
+    VT_STRING
+  };
+
+  struct value {
+    union {
+      double d;
+      long i;
+      const char* s;
+    } val;
+    VT type;
+    
+    value();
+    value(double v);
+    value(long v);
+    value(std::string v);
+    value(const value& v);
+    ~value();
+  };
 }
+
+#endif

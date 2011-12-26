@@ -1,6 +1,6 @@
 /**
- * @file  parse_context.cpp
- * @brief A very small source to implement the parse_context constructor.
+ * @file value.cpp
+ * @brief Source implementing constructors and destructors for \c jdi::value.
  * 
  * @section License
  * 
@@ -19,7 +19,18 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "parse_context.h"
-jdip::parse_context::parse_context(): active(true) {
-  
+#include "value.h"
+
+namespace jdi {
+  value::value(): type(VT_NONE) {}
+  value::value(double v): type(VT_DOUBLE)  { val.d = v; }
+  value::value(long v):   type(VT_INTEGER) { val.i = v; }
+  value::value(std::string v): type(VT_STRING) {
+    char* s = new char[v.length()];
+    for (size_t i = 0; i < v.length(); i++)
+      s[i] = v[i];
+    val.s = s;
+  }
+  value::value(const value& v): val(v.val), type(v.type) { }
+  value::~value() { if (type == VT_STRING) delete[] val.s; }
 }

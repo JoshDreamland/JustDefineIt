@@ -36,10 +36,10 @@ using namespace jdi;
   variety of memory constructs an llreader may actually represent, that
   isn't an option here.
 **/
-full_type jdip::context_parser::read_type(llreader &cfile, token_t &token, definition_scope *scope, parse_context &pc)
+full_type jdip::context_parser::read_type(llreader &cfile, token_t &token, definition_scope *scope)
 {
   if (token.type != TT_DECLARATOR) {
-    token = read_next_token(cfile, scope, pc);
+    token = read_next_token(cfile, scope);
     if (token.type != TT_DECLARATOR) {
       token.report_error(pc,"Type name expected here");
       return full_type();
@@ -50,7 +50,7 @@ full_type jdip::context_parser::read_type(llreader &cfile, token_t &token, defin
   ref_stack rrefs;
   
   // Read any additional type info
-  token = read_next_token(cfile, scope, pc);
+  token = read_next_token(cfile, scope);
   while (token.type == TT_DECLARATOR)
   {
     if (token.extra.def) {
@@ -60,7 +60,7 @@ full_type jdip::context_parser::read_type(llreader &cfile, token_t &token, defin
       }
       rdef = token.extra.def;
     }
-    token = read_next_token(cfile, scope, pc);
+    token = read_next_token(cfile, scope);
   }
   
   return full_type(rdef, rrefs, rflags);

@@ -41,7 +41,7 @@ using namespace jdi;
   variety of memory constructs an llreader may actually represent, that
   isn't an option here.
 **/
-token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope *scope, parse_context &pc)
+token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope *scope)
 {
   #undef cfile
   stack_tracer("token_t jdip::read_next_token(llreader &c_file, parse_context &pc)");
@@ -99,17 +99,17 @@ token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope 
         if (cfile[pos] == 'x') {
           const size_t sp = pos;
           while (++pos < len and is_hexdigit(cfile[pos]));
-          while (++pos < len and is_letter(cfile[pos])); // Skip the ull and shit
+          while (pos < len and is_letter(cfile[pos])) pos++; // Skip the ull and shit
           return token_t(token_basics(TT_HEXLITERAL,"some file",0,pos), cfile+sp, pos-sp);  
         }
         const size_t sp = pos;
         while (++pos < len and is_hexdigit(cfile[pos]));
-        while (++pos < len and is_letter(cfile[pos])); // Skip the ull and shit
+        while (pos < len and is_letter(cfile[pos])) pos++; // Skip the ull and shit
         return token_t(token_basics(TT_OCTLITERAL,"some file",0,pos), cfile+sp, pos-sp);
       }
       const size_t sp = pos;
-      while (++pos < len and is_digit(cfile[pos]));
-      while (++pos < len and is_letter(cfile[pos])); // Skip the ull and shit
+      while (pos < len and is_digit(cfile[pos])) pos++;
+      while (pos < len and is_letter(cfile[pos])) pos++; // Skip the ull and shit
       return token_t(token_basics(TT_DECLITERAL,"some file",0,pos), cfile+sp, pos-sp);
     }
     
@@ -120,6 +120,8 @@ token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope 
         return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos); }
       case ';':
         return token_t(token_basics(TT_SEMICOLON,"some file",0,pos++));
+      case ',':
+        return token_t(token_basics(TT_COMMA,"some file",0,pos++));
       default:
         return token_t(token_basics(TT_INVALID,"some file",0,pos));
     }
@@ -128,7 +130,7 @@ token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope 
   return token_t();
   
   POP_FILE: // This block was created instead of a tail call to piss Rusky off.
-  pc.files.empty();
+  pc->files.empty();
   return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
 }
 

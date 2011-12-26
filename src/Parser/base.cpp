@@ -44,18 +44,31 @@ using namespace jdip;
 int jdi::context::parse_C_stream(llreader &cfile)
 {
   stack_tracer("void jdi::context::parse_C_stream(llreader &cfile)");
-  parse_context pc;
+  if (pc) {
+    if (pc->active) {
+      pc->error = "STILL PARSING";
+      return -1;
+    }
+    delete pc;
+  }
+  pc = new parse_context();
   context_parser* const p = (context_parser*)this;
+  
+  struct deactivate { parse_context* &pc;
+    deactivate(parse_context*& p): pc(p) {}
+    ~deactivate() { pc->active = false; }
+  } deactivate_me(pc);
+  
   for (;;) {
-    token_t tk = p->read_next_token(cfile, global, pc);
+    token_t tk = p->read_next_token(cfile, global);
     switch (tk.type) {
       case TT_DECLARATOR:
-        if (p->handle_declarators(cfile, global, tk, pc))
+        if (p->handle_declarators(cfile, global, tk))
           return 1;
         break;
       
       case TT_COMMA:
-          pc.error = "Unexpected comma at this point.";
+          tk.report_error(pc,"Unexpected comma at this point.");
         return 1;
       
       case TT_SEMICOLON:

@@ -5,6 +5,7 @@
 		<Option title="JustDefineIt" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
+		<Option virtualFolders="test/;" />
 		<Build>
 			<Target title="Debug">
 				<Option output="bin/Debug/JustDefineIt" prefix_auto="1" extension_auto="1" />
@@ -62,12 +63,15 @@
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />
 		<Unit filename="src/Parser/parse_context.cpp" />
 		<Unit filename="src/Parser/parse_context.h" />
+		<Unit filename="src/Parser/readers/read_expression.cpp" />
 		<Unit filename="src/Parser/readers/read_next_token.cpp" />
 		<Unit filename="src/Parser/readers/read_type.cpp" />
 		<Unit filename="src/Storage/definition.cpp" />
 		<Unit filename="src/Storage/definition.h" />
 		<Unit filename="src/Storage/references.cpp" />
 		<Unit filename="src/Storage/references.h" />
+		<Unit filename="src/Storage/value.cpp" />
+		<Unit filename="src/Storage/value.h" />
 		<Unit filename="src/System/builtins.cpp" />
 		<Unit filename="src/System/builtins.h" />
 		<Unit filename="src/System/context.cpp" />
@@ -81,6 +85,12 @@
 		<Unit filename="test/modifiers.txt" />
 		<Unit filename="test/primitives.txt" />
 		<Unit filename="test/standaloneflags.txt" />
+		<Unit filename="test/test.cc">
+			<Option compile="0" />
+			<Option link="0" />
+			<Option virtualFolder="test/" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
 		<Extensions>
 			<envvars />
 			<code_completion />

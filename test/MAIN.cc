@@ -45,9 +45,8 @@ int main() {
   {
     context enigma;
     if (enigma.parse_C_stream(f))
-      cout << "ERROR: " << endl;
-    else
-      enigma.output_definitions();
+      cout << "ERROR: " << enigma.get_last_error() << endl;
+    enigma.output_definitions();
   }
   else
     cout << "Failed to open file for parsing!" << endl;

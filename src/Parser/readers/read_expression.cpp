@@ -1,6 +1,7 @@
 /**
- * @file  parse_context.cpp
- * @brief A very small source to implement the parse_context constructor.
+ * @file read_expressions.cpp
+ * @brief Source implementing the utility function to read an expression
+ *        and parse for a value.
  * 
  * @section License
  * 
@@ -19,7 +20,19 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "parse_context.h"
-jdip::parse_context::parse_context(): active(true) {
-  
+#include "../bodies.h"
+//#include "../../"
+using namespace jdi;
+using namespace jdip;
+
+value jdip::context_parser::read_expression(llreader &cfile, token_t &token, TOKEN_TYPE closing_token, definition_scope *scope)
+{
+  token = read_next_token(cfile, scope);
+  while (token.type != TT_COMMA and token.type != closing_token)
+  {
+    if (token.type == TT_ENDOFCODE)
+      return value();
+    token = read_next_token(cfile, scope);
+  }
+  return value();
 }

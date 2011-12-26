@@ -43,7 +43,7 @@
 #include "../System/type_usage_flags.h"
 #include "../Storage/definition.h"
 #include "../General/llreader.h"
-#include "context.h"
+#include "../Parser/parse_context.h"
 
 namespace jdip { class context_parser; }
 
@@ -74,6 +74,7 @@ namespace jdi
     macro_map macros; ///< A map of macros defined in this context.
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.
+    jdip::parse_context* pc; ///< Any open parse context in this definition context.
     
     public:
     
@@ -135,6 +136,11 @@ namespace jdi
         @param cfile    The stream to be read in.
     **/
     int parse_C_stream(llreader& cfile);
+    
+    /** Retrieve the last error message, if any error was thrown during parse.
+        @return The last error message, or an empty string if no error occurred.
+    **/
+    string get_last_error();
     
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.
