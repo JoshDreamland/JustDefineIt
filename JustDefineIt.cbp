@@ -61,6 +61,7 @@
 		<Unit filename="src/Parser/base.cpp" />
 		<Unit filename="src/Parser/bodies.h" />
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />
+		<Unit filename="src/Parser/handlers/handle_scope.cpp" />
 		<Unit filename="src/Parser/parse_context.cpp" />
 		<Unit filename="src/Parser/parse_context.h" />
 		<Unit filename="src/Parser/readers/read_expression.cpp" />

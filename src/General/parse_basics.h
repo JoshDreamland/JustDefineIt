@@ -56,8 +56,7 @@ namespace parse_bacics {
       return is.whatever[(unsigned char) x] & is.DIGIT;
     }
     
-    /// Returns whether the given character is a hexadecimal digit.
-    /// These can be from 0 to 9, or from A-F or a-f.
+    /// Returns whether the given character is an octal digit from 0 to 7.
     inline bool is_octdigit(char x) {
       return is.whatever[(unsigned char) x] & is.OCTDIGIT;
     }

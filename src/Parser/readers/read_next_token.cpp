@@ -113,25 +113,36 @@ token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope 
       return token_t(token_basics(TT_DECLITERAL,"some file",0,pos), cfile+sp, pos-sp);
     }
     
-    switch (cfile[pos])
+    const size_t spos = pos;
+    switch (cfile[pos++])
     {
-      case '=':
-        { const size_t spos = pos++; pos += cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos); }
       case ';':
-        return token_t(token_basics(TT_SEMICOLON,"some file",0,pos++));
+        return token_t(token_basics(TT_SEMICOLON,"some file",0,spos));
       case ',':
-        return token_t(token_basics(TT_COMMA,"some file",0,pos++));
+        return token_t(token_basics(TT_COMMA,"some file",0,spos));
+      case '+': case '-':
+        pos += cfile[pos] == cfile[spos] or cfile[pos] == '=';
+        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+      case '*': case '/': case '^': case '=':
+        pos += cfile[pos] == cfile[spos];
+        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+      case '&': case '|':  case '!': case '~': 
+        pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
+        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+      case '>': case '<':
+        pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
+        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
       default:
-        return token_t(token_basics(TT_INVALID,"some file",0,pos));
+        return token_t(token_basics(TT_INVALID,"some file",0,pos++));
     }
   }
   
   return token_t();
   
-  POP_FILE: // This block was created instead of a tail call to piss Rusky off.
-  pc->files.empty();
-  return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+  POP_FILE: // This block was created instead of a helper function to piss Rusky off.
+  if (pc->files.empty())
+    return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+  return read_next_token(c_file, scope);
 }
 
 token_t jdip::context_parser::look_up_token(definition_scope* scope, string name, token_t defalt)

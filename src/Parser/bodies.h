@@ -80,14 +80,12 @@ namespace jdip {
       
       @param  cfile  The stream containing the C++ source to parse. [in-out]
       @param  scope  The scope from which identifiers will be looked up. [in]
-      @param  pc     The parse context that was allocated at the start of the parse. [in-out]
       @return The next token in the stream.
     **/
     token_t read_next_token(llreader &cfile, definition_scope *scope);
     
     /**
-      Help handle a standard by-type declaration by returning the full type
-      associated with a set of tokens.
+      Parse a list of declarations, copying them into the given scope.
       
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
@@ -97,11 +95,24 @@ namespace jdip {
       @param  token  The token that was read before this function was invoked.
                      This will be updated to represent the next non-type token
                      in the stream. [in-out]
-      @param  pc     The parse context that was allocated at the start of the parse. [in-out]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
     int handle_declarators(llreader &cfile, definition_scope *scope, token_t& token);
+    
+    /**
+      Handle parsing an entire scope.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  cfile  The stream containing the C++ source to parse. [in-out]
+      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  token  The \c token structure into which the next unhandled token will be placed. [out]
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_scope(llreader &cfile, definition_scope *scope, token_t& token);
     
     /**
       Read a complete type from the given input stream.
@@ -120,7 +131,6 @@ namespace jdip {
                      type, it will be part of the return \c full_type, otherwise it will
                      just be overwritten. [in-out]
       @param  scope  The scope which may be passed to \c read_token. [in]
-      @param  pc     The parse context that was allocated at the start of the parse. [in-out]
       
       @return Returns the \c full_type read from the stream.
     **/
@@ -144,7 +154,6 @@ namespace jdip {
       @param  token          The \c token structure which will represent the first non-evaluated token. [out]
       @param  closing_token  The \c TOKEN_TYPE of an additional token which will close this expression. [in]
       @param  scope          The scope which may be passed to \c read_token. [in]
-      @param  pc             The parse context that was allocated at the start of the parse. [in-out]
       
       @return Returns the \c full_type read from the stream.
     **/

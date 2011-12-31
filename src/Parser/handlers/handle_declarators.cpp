@@ -126,7 +126,7 @@ int jdip::context_parser::handle_declarators(llreader &cfile, definition_scope *
       case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_IDENTIFIER:
       case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_COLON: case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LEFTTRIANGLE: case TT_RIGHTTRIANGLE: case TT_DESTRUCTOR:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_DESTRUCTOR:
       case TT_EQUALS: case TT_INVALID: default:
           #ifdef NO_ERROR_REPORTING
           token.report_error(pc,"Unexpected token at this point");

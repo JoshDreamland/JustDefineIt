@@ -25,7 +25,7 @@ using namespace jdip;
 #ifdef DEBUG_MODE
 namespace jdip {
   /// A debug listing of token descriptions by value ID
-  const char* TOKEN_TYPE_NAME[] = {
+  const char* TOKEN_TYPE_NAME[TT_INVALID+1] = {
     "TT_DECLARATOR ///< Phrases like const, long, int, struct {}; anything that can be used as a type.",
     "TT_CLASS      ///< The `class' keyword.",
     "TT_STRUCT     ///< The `struct' keyword.",
@@ -55,8 +55,6 @@ namespace jdip {
     "TT_RIGHTBRACKET  ///< A right bracket, `]'.",
     "TT_LEFTBRACE     ///< A left brace, `{'.",
     "TT_RIGHTBRACE    ///< A right brace, `}'.",
-    "TT_LEFTTRIANGLE  ///< The less-than symbol `<'. Implies we're at a template.",
-    "TT_RIGHTTRIANGLE ///< The greater-than symbol `>'. Implies we're ending a template.",
     
     "TT_DESTRUCTOR    ///< The tilde `~' symbol.",
     "TT_COMMA         ///< A comma, `,'. Separates items in lists.",
@@ -74,6 +72,7 @@ namespace jdip {
 }
 #endif
 
+token_t::token_t(): token_basics(type(TT_INVALID), file(""), linenum(), pos()) {}
 token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p)): token_basics(type(t), file(fn), linenum(l), pos(p)) {}
 token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), const char* ct, int ctl): token_basics(type(t), file(fn), linenum(l), pos(p)), extra(ct, ctl) {}
 token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition* def): token_basics(type(t), file(fn), linenum(l), pos(p)), extra(def) {}

@@ -58,8 +58,6 @@ namespace jdip {
     TT_RIGHTBRACKET,  ///< A right bracket, `]'.
     TT_LEFTBRACE,     ///< A left brace, `{'.
     TT_RIGHTBRACE,    ///< A right brace, `}'.
-    TT_LEFTTRIANGLE,  ///< The less-than symbol `<'. Implies we're at a template.
-    TT_RIGHTTRIANGLE, ///< The greater-than symbol `>'. Implies we're ending a template.
     
     TT_DESTRUCTOR,    ///< The tilde `~' symbol.
     TT_COMMA,         ///< A comma, `,'. Separates items in lists.
