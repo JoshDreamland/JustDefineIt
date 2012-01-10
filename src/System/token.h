@@ -25,7 +25,7 @@
 #define _TOKEN__H
 
 #include <string>
-#include "../Parser/parse_context.h"
+#include "../System/context.h"
 
 namespace jdip {
   enum TOKEN_TYPE {
@@ -157,7 +157,7 @@ namespace jdip {
       @param pc    The context into which error info is copied.
       @param error The text of the error.
     **/
-    void report_error(parse_context* pc, std::string error);
+    void report_error(context* pc, std::string error);
   };
   
   

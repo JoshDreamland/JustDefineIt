@@ -22,9 +22,10 @@
 #include "value.h"
 
 namespace jdi {
-  value::value(): type(VT_NONE) {}
+  value::value(): type(VT_NONE) { val.d = 0; }
   value::value(double v): type(VT_DOUBLE)  { val.d = v; }
   value::value(long v):   type(VT_INTEGER) { val.i = v; }
+  value::value(const char* v): type(VT_STRING) { val.s = v; }
   value::value(std::string v): type(VT_STRING) {
     char* s = new char[v.length()];
     for (size_t i = 0; i < v.length(); i++)

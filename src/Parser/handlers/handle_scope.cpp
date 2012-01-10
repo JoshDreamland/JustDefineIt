@@ -34,11 +34,11 @@ int jdip::context_parser::handle_scope(llreader &cfile, definition_scope *scope,
           if (handle_declarators(cfile, scope, token))
             return 1;
           if (token.type != TT_SEMICOLON)
-            return (token.report_error(pc, "Expected semicolon at this point"), 1);
+            return (token.report_error(this, "Expected semicolon at this point"), 1);
         break;
       
       case TT_COMMA:
-          token.report_error(pc, "Unexpected comma at this point.");
+          token.report_error(this, "Unexpected comma at this point.");
         return 1;
       
       case TT_SEMICOLON:

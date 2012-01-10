@@ -21,6 +21,7 @@
 **/
 
 #include "../bodies.h"
+#include "../../API/AST.h"
 //#include "../../"
 using namespace jdi;
 using namespace jdip;

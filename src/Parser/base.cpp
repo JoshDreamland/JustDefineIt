@@ -45,17 +45,20 @@ int jdi::context::parse_C_stream(llreader &cfile)
 {
   stack_tracer("void jdi::context::parse_C_stream(llreader &cfile)");
   
-  if (pc) {
-    if (pc->active) {
-      pc->error = "STILL PARSING";
-      return -1;
-    }
-    delete pc;
-  }
+  if (pc) // Make sure we're not still parsing anything
+    return (error = "STILL PARSING", -1);
   pc = new parse_context();
+  error = "";
+  err_file = "";
+  err_line = -1;
+  err_pos = -1;
   
   token_t dummy;
   int res = ((context_parser*)this)->handle_scope(cfile, global, dummy);
   pc->active = false;
+  
+  delete pc; // Clean up
+  pc = NULL; // Now a parse can be called in this context again
+  
   return res;
 }

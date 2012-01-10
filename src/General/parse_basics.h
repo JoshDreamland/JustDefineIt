@@ -36,7 +36,7 @@ namespace parse_bacics {
       LETTERD  = 3,  ///< The bitwise OR of the LETTER and DIGIT flags.
       HEXDIGIT = 4,  ///< Flag set if the character is a hexadecimal digit (0-9, A-F, a-f).
       OCTDIGIT = 8,  ///< Flag set if the character is an octal digit (0-7).
-      SPACER   = 16,  ///< Flag set if the character is a non-newline whitespace character.
+      SPACER   = 16, ///< Flag set if the character is a non-newline whitespace character.
       NEWLINE  = 32, ///< Flag set if the character is a newline whitespace character.
       USELESS  = 48  ///< The bitwise OR of the two newline flags.
     };

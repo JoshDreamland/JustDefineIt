@@ -41,7 +41,7 @@ full_type jdip::context_parser::read_type(llreader &cfile, token_t &token, defin
   if (token.type != TT_DECLARATOR) {
     token = read_next_token(cfile, scope);
     if (token.type != TT_DECLARATOR) {
-      token.report_error(pc,"Type name expected here");
+      token.report_error(this,"Type name expected here");
       return full_type();
     }
   }
@@ -55,7 +55,7 @@ full_type jdip::context_parser::read_type(llreader &cfile, token_t &token, defin
   {
     if (token.extra.def) {
       if (rdef) {
-        token.report_error(pc,"Two types named in declaration");
+        token.report_error(this,"Two types named in declaration");
         return full_type();
       }
       rdef = token.extra.def;

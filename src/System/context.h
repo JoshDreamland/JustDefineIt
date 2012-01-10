@@ -77,6 +77,10 @@ namespace jdi
     jdip::parse_context* pc; ///< Any open parse context in this definition context.
     
     public:
+    string error; ///< Any error text from parse calls in this context
+    string err_file; ///< The file in which an error occurred
+    int err_line; ///< The line number on which the error occurred
+    int err_pos; ///< The position at which the error occurred
     
     /** Add a type name to this context
         The type will be added as a primitive. To add a typedef, use \c jdi::context::add_typedef().

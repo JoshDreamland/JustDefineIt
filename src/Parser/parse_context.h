@@ -41,10 +41,6 @@ namespace jdip {
   struct parse_context {
     definition* global; ///< The global scope in this context
     stack<llreader> files; ///< The files we have open
-    string error; ///< Any error text
-    string err_file; ///< The file in which an error occurred
-    int err_line; ///< The line number on which the error occurred
-    int err_pos; ///< The position at which the error occurred
     bool active; ///< True if a parse is still in action (implying a second thread exists).
     /// Default constructor, taking a pointer to the enclosing context.
     parse_context();

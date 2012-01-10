@@ -23,7 +23,7 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-O3" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -50,14 +50,22 @@
 			<Add option="-Wall" />
 			<Add option="-Werror" />
 		</Compiler>
+		<Unit filename="src/API/AST.cpp" />
+		<Unit filename="src/API/AST.h" />
+		<Unit filename="src/API/AST_Export.cpp" />
 		<Unit filename="src/API/jdi.h" />
 		<Unit filename="src/API/parse_config.h" />
+		<Unit filename="src/API/user_tokens.cpp" />
+		<Unit filename="src/API/user_tokens.h" />
 		<Unit filename="src/General/debug_macros.cpp" />
 		<Unit filename="src/General/debug_macros.h" />
 		<Unit filename="src/General/llreader.cpp" />
+		<Unit filename="src/General/llreader.h" />
 		<Unit filename="src/General/parse_basics.cpp" />
 		<Unit filename="src/General/parse_basics.h" />
 		<Unit filename="src/General/quickstack.h" />
+		<Unit filename="src/General/svg_simple.cpp" />
+		<Unit filename="src/General/svg_simple.h" />
 		<Unit filename="src/Parser/base.cpp" />
 		<Unit filename="src/Parser/bodies.h" />
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />

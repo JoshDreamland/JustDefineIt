@@ -17,10 +17,13 @@
 #include <iostream>
 using namespace std;
 #include "../src/API/jdi.h"
+#include "../src/API/AST.h"
+#include "../src/API/user_tokens.h"
 #include "../src/General/llreader.h"
 #include "../src/General/quickstack.h"
 
 using namespace jdi;
+using namespace jdip;
 int main() {
   read_declarators("test/primitives.txt", UF_PRIMITIVE);
   read_declarators("test/modifiers.txt", UF_FLAG);
@@ -50,4 +53,210 @@ int main() {
   }
   else
     cout << "Failed to open file for parsing!" << endl;
+  
+  cout << endl << endl << endl << endl << "==================================================================" << endl;
+  cout << endl << "Ignore that shit for now. Test expression evaluator:" << endl << endl;
+  
+  AST ast;
+  ast << create_token_dec_literal("10",2);
+  value v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("20",2);
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("20",2);
+  ast << create_token_operator("+",1);
+  ast << create_token_dec_literal("10",2);
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("20",2);
+  ast << create_token_operator("+",1);
+  ast << create_token_dec_literal("10",2);
+  ast << create_token_operator("+",1);
+  ast << create_token_dec_literal("10",2);
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("20",2);
+  ast << create_token_operator("+",1);
+  ast << create_token_dec_literal("40",2);
+  ast << create_token_operator("-",1);
+  ast << create_token_dec_literal("10",2);
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("20",2);
+  ast << create_token_operator("+",1);
+  ast << create_token_dec_literal("40",2);
+  ast << create_token_operator("/",1);
+  ast << create_token_dec_literal("10",2);
+  ast << create_token_operator("<<",2);
+  ast << create_token_dec_literal("1",1);
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_00.svg");
+  ast << create_token_operator("<<",2);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_01.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_02.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_03.svg");
+  ast << create_token_dec_literal("6",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_04.svg");
+  ast << create_token_operator("/",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_05.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_06.svg");
+  ast << create_token_operator("-",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_07.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_08.svg");
+  ast << create_token_operator("/",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_09.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_10.svg");
+  ast << create_token_operator("<<",2);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_11.svg");
+  ast << create_token_dec_literal("8",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_12.svg");
+  ast << create_token_operator("%",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_13.svg");
+  ast << create_token_dec_literal("5",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_14.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_15.svg");
+  ast << create_token_operator("-",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_16.svg");
+  ast << create_token_dec_literal("5",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_17.svg");
+  ast << create_token_operator("/",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_18.svg");
+  ast << create_token_operator("-",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_19.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_20.svg");
+  ast << create_token_operator("==",2);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_21.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_22.svg");
+  ast << create_token_operator("<<",2);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_23.svg");
+  ast << create_token_operator("-",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_24.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_25.svg");
+  ast << create_token_operator("*",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_26.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_27.svg");
+  ast << create_token_operator("*",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_28.svg");
+  ast << create_token_operator("-",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_29.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_30.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_31.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_101/AST_32.svg");
+  ast.writeSVG("/home/josh/Desktop/AST.svg");
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_dec_literal("25",2);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_00.svg");
+  ast << create_token_operator("/",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_01.svg");
+  ast << create_token_opening_parenth();
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_02.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_03.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_04.svg");
+  ast << create_token_dec_literal("3",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_05.svg");
+  ast << create_token_closing_parenth();
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_06.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_07.svg");
+  ast << create_token_opening_parenth();
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_08.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_09.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_10.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_11.svg");
+  ast << create_token_operator("*",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_12.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_13.svg");
+  ast << create_token_closing_parenth();
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_14.svg");
+  ast << create_token_operator("*",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_15.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_16.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_17.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_102/AST_18.svg");
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  ast.clear();
+  ast << create_token_identifier("a",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_00.svg");
+  ast << create_token_operator("=",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_01.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_02.svg");
+  ast << create_token_operator("-",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_03.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_04.svg");
+  ast << create_token_operator("?",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_05.svg");
+  ast << create_token_identifier("b",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_06.svg");
+  ast << create_token_operator("=",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_07.svg");
+  ast << create_token_dec_literal("1",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_08.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_09.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_10.svg");
+  ast << create_token_operator("<<",2);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_11.svg");
+  ast << create_token_dec_literal("2",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_12.svg");
+  ast << create_token_colon();
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_13.svg");
+  ast << create_token_identifier("c",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_14.svg");
+  ast << create_token_operator("=",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_15.svg");
+  ast << create_token_dec_literal("3",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_16.svg");
+  ast << create_token_operator("+",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_17.svg");
+  ast << create_token_dec_literal("4",1);
+  ast.writeSVG("/home/josh/Desktop/AST_103/AST_18.svg");
+  v = ast.eval();
+  cout << v.val.i << endl;
+  
+  return 0;
 }

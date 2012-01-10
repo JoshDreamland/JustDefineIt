@@ -24,27 +24,42 @@
 #include <string>
 
 namespace jdi {
+  /**
+    @enum VT
+    Declares constants representing the possible types that \class value can hold.
+  */
   enum VT {
-    VT_NONE,
-    VT_DOUBLE,
-    VT_INTEGER,
-    VT_STRING
+    VT_NONE, ///< No value has been assigned to this \class value.
+    VT_DOUBLE, ///< The value stored is a double.
+    VT_INTEGER, ///< The value stored is an integer.
+    VT_STRING ///< The value stored is a string.
   };
 
+  // FIXME: This value structure should be the union
+
+  /**
+    @struct value
+    A structure for storing and communicating data of varying types.
+    This structure can contain any value defined in \enum VT.
+  */
   struct value {
+    /**
+      This union contains the actual data types.
+    */
     union {
-      double d;
-      long i;
-      const char* s;
-    } val;
+      double d; ///< Any data stored as a floating point.
+      long i; ///< Any data stored as an integer.
+      const char* s; ///< Any data stored as a string. This value must be deleted if replaced or destructed.
+    } val; ///< The value storage for this structure.
     VT type;
     
-    value();
-    value(double v);
-    value(long v);
-    value(std::string v);
-    value(const value& v);
-    ~value();
+    value(); ///< Construct a new, invalid value with no type (VT_NONE).
+    value(double v); ///< Construct a new value representing a double.
+    value(long v); ///< Construct a new value representing an integer.
+    value(const char* v); ///< Construct a new value consuming and representing a const char*. Once you pass a const char*, it belongs to this class.
+    value(std::string v); ///< Construct a new value representing a copy of the passed string. This operates in O(N).
+    value(const value& v); ///< Copy a value. Handles allocation issues.
+    ~value(); ///< Default destructor; handles freeing any strings.
   };
 }
 

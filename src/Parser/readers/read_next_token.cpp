@@ -132,6 +132,9 @@ token_t jdip::context_parser::read_next_token(llreader &cfile, definition_scope 
       case '>': case '<':
         pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+      case ':':
+        pos += cfile[pos] == cfile[spos];
+        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,"some file",0,spos), cfile+spos, pos-spos);
       default:
         return token_t(token_basics(TT_INVALID,"some file",0,pos++));
     }

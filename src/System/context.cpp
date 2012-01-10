@@ -125,17 +125,16 @@ void context::reset_all()
 }
 
 string context::get_last_error() {
-  if (pc) return pc->error;
-  return "";
+  return error;
 }
 
 void context::load_standard_builtins()
 {
-  global->members["char"] = new definition("char", global, DEF_TYPENAME);
-  global->members["int"] = new definition("int", global, DEF_TYPENAME);
-  global->members["float"] = new definition("float", global, DEF_TYPENAME);
+  global->members["char"]   = new definition("char",   global, DEF_TYPENAME);
+  global->members["int"]    = new definition("int",    global, DEF_TYPENAME);
+  global->members["float"]  = new definition("float",  global, DEF_TYPENAME);
   global->members["double"] = new definition("double", global, DEF_TYPENAME);
-  global->members["void"] = new definition("void", global, DEF_TYPENAME);
+  global->members["void"]   = new definition("void",   global, DEF_TYPENAME);
 }
 void context::load_gnu_builtins()
 {

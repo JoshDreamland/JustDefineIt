@@ -81,13 +81,13 @@ token_t::extra_::extra_() {}
 token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
 token_t::extra_::extra_(definition* d): def(d) {}
 
-void token_t::report_error(parse_context *pc, std::string error) {
+void token_t::report_error(context *hc, std::string error) {
   // This is where we use the token_basics macro to only assign
   // those parse context members which exist.
   token_basics(
-    pc->error = error,
-    pc->err_file = (const char*)file,
-    pc->err_line = linenum,
-    pc->err_pos = pos
+    hc->error = error,
+    hc->err_file = (const char*)file,
+    hc->err_line = linenum,
+    hc->err_pos = pos
   );
 }
