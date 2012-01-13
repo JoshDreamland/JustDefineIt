@@ -24,6 +24,9 @@ using namespace std;
 
 using namespace jdi;
 using namespace jdip;
+
+void test_expression_evaluator();
+
 int main() {
   read_declarators("test/primitives.txt", UF_PRIMITIVE);
   read_declarators("test/modifiers.txt", UF_FLAG);
@@ -54,8 +57,16 @@ int main() {
   else
     cout << "Failed to open file for parsing!" << endl;
   
-  cout << endl << endl << endl << endl << "==================================================================" << endl;
-  cout << endl << "Ignore that shit for now. Test expression evaluator:" << endl << endl;
+  test_expression_evaluator();
+  
+  return 0;
+}
+
+void test_expression_evaluator() {
+  cout << endl << endl << endl << endl;
+  cout << "============================================================================" << endl;
+  cout << "=: Test expression evaluator :==============================================" << endl;
+  cout << "============================================================================" << endl;
   
   AST ast;
   ast << create_token_dec_literal("10",2);
@@ -223,7 +234,7 @@ int main() {
   ast.writeSVG("/home/josh/Desktop/AST_103/AST_01.svg");
   ast << create_token_dec_literal("1",1);
   ast.writeSVG("/home/josh/Desktop/AST_103/AST_02.svg");
-  ast << create_token_operator("-",1);
+  ast << create_token_operator("==",2);
   ast.writeSVG("/home/josh/Desktop/AST_103/AST_03.svg");
   ast << create_token_dec_literal("1",1);
   ast.writeSVG("/home/josh/Desktop/AST_103/AST_04.svg");
@@ -257,6 +268,4 @@ int main() {
   ast.writeSVG("/home/josh/Desktop/AST_103/AST_18.svg");
   v = ast.eval();
   cout << v.val.i << endl;
-  
-  return 0;
 }

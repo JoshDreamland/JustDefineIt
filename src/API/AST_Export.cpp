@@ -35,6 +35,7 @@ namespace jdi {
     
   }
   
+  /// A wrapper to \c SVG which generates IDs based on an internally-stored node count.
   struct AST::SVGrenderInfo {
     SVG *svg;
     AST_Node *cur;
@@ -93,7 +94,7 @@ namespace jdi {
          y2 = y+r+16+max(max(exp?exp->own_width()/2:0, left?left->own_width()/2:0), right?right->own_width()/2:0);
     svg->draw_line(nid,'e',x,y,ex,y2);
     svg->draw_line(nid,'l',x,y,lx,y2);
-    if (state)
+    if (right or (left and svg->cur == this))
       svg->draw_line(nid,'r',x,y,rx,y2);
     svg->draw_circle(nid,x,y,r,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
@@ -154,7 +155,7 @@ namespace jdi {
   int AST::AST_Node::width() { return own_width(); }
   int AST::AST_Node_Binary::width() { return 24 + (left?left->width():0) + (right?right->width():0); }
   int AST::AST_Node_Unary::width() { return right?max(right->width(),own_width()):own_width(); }
-  int AST::AST_Node_Ternary::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right?right->width():0)); }
+  int AST::AST_Node_Ternary::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }
   int AST::AST_Node_Group::width() { return root?max(root->width(),own_width()):own_width(); }
   int AST::AST_Node_Parameters::width() { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width(), res); }
   int AST::AST_Node::height() { return own_width(); }

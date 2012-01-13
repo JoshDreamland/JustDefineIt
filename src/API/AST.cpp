@@ -31,6 +31,9 @@
 using namespace std;
 using namespace jdip;
 
+/**
+  Enumeration of usage types of symbols used in this AST.
+**/
 enum symbol_type {
   ST_TERNARY = 1, ///< True if this can be used as a ternary operator
   ST_BINARY = 2, ///< True if this can be used as a ternary operator
@@ -39,14 +42,18 @@ enum symbol_type {
   ST_RTL_PARSED = 16 ///< For types parsed right-to-left, such as assignments
 };
 
+/**
+  Structure containing information about a given symbol, including how it is
+  used, its precedence, and methods for executing its operation on two values.
+**/
 struct symbol {
-  short type;
-  short prec;
-  value (*operate)(const value&, const value&);
-  value (*operate_unary)(const value&);
-  symbol() {}
-  symbol(short t, short p): type(t), prec(p), operate(NULL), operate_unary(NULL) {}
-  symbol(short t, short p, value(*o)(const value&, const value&)): type(t), prec(p), operate(o), operate_unary(NULL) {}
+  short type; ///< Usage information, as declared in the \c symbol_type enum.
+  short prec; ///< Precedence, where 1 is the highest precedence.
+  value (*operate)(const value&, const value&); ///< Method to perform this operation on two values, if this is a binary operator.
+  value (*operate_unary)(const value&); ///< Method to perform this operation on one value, if this is a unary prefix operator.
+  symbol() {} ///< Default constructor, so std::map doesn't have a conniption.
+  symbol(short t, short p): type(t), prec(p), operate(NULL), operate_unary(NULL) {} ///< Operation-free constructor.
+  symbol(short t, short p, value(*o)(const value&, const value&)): type(t), prec(p), operate(o), operate_unary(NULL) {} ///< 
   symbol(short t, short p, value(*o)(const value&, const value&), value(*ou)(const value&)): type(t), prec(p), operate(o), operate_unary(ou) {}
   symbol(short t, short p, value(*ou)(const value&)): type(t), prec(p), operate(NULL), operate_unary(ou) {}
 };
@@ -152,6 +159,10 @@ static value value_unary_reference(const value&) {
   return value();
 }
 
+/**
+  A structure designed to circumvent C++'s lack of static initializer blocks.
+  Simply maps all the symbols with their AST generation and evaluation information.
+**/
 static struct map_symbols_ {
   map_symbols_ () {
     symbols["::"] = symbol(ST_BINARY, 1);

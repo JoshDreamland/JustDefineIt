@@ -26,10 +26,10 @@
 namespace jdi {
   /**
     @enum VT
-    Declares constants representing the possible types that \class value can hold.
-  */
+    Declares constants representing the possible types that \c value can hold.
+  **/
   enum VT {
-    VT_NONE, ///< No value has been assigned to this \class value.
+    VT_NONE, ///< No value has been assigned to this structure.
     VT_DOUBLE, ///< The value stored is a double.
     VT_INTEGER, ///< The value stored is an integer.
     VT_STRING ///< The value stored is a string.
@@ -38,14 +38,14 @@ namespace jdi {
   // FIXME: This value structure should be the union
 
   /**
-    @struct value
+    @struct jdi::value
     A structure for storing and communicating data of varying types.
     This structure can contain any value defined in \enum VT.
-  */
+  **/
   struct value {
     /**
       This union contains the actual data types.
-    */
+    **/
     union {
       double d; ///< Any data stored as a floating point.
       long i; ///< Any data stored as an integer.

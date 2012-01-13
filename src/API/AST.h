@@ -31,8 +31,8 @@
 
 namespace jdi {
   /** @class jdi::AST
-      General-purpose class designed to take in a series of tokens and generate an AST.
-      The generated AST can then be evaluated or coerced for a resultant type.
+      General-purpose class designed to take in a series of tokens and generate an abstract syntax tree.
+      The generated AST can then be evaluated for a \c value or coerced for a resultant type as a \c definition.
   **/
   class AST
   {
@@ -151,6 +151,7 @@ namespace jdi {
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+    /// Child of AST_Node for parenthetical groupings. @deprecated
     struct AST_Node_Group: AST_Node {
       AST_Node *root;
       
@@ -169,6 +170,7 @@ namespace jdi {
       int own_width(); ///< Returns the width of this individual node, regardless of children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+    /// Child of AST_Node for array subscripts.
     struct AST_Node_Subscript: AST_Node {
       AST_Node *left;
       AST_Node *index;
@@ -187,6 +189,7 @@ namespace jdi {
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+    /// Child of AST_Node for function call parameters.
     struct AST_Node_Parameters: AST_Node {
       AST_Node *func;
       vector<AST_Node*> params;
