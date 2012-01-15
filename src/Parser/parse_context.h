@@ -23,9 +23,9 @@
 #ifndef _PARSE_CONTEXT__H
 #define _PARSE_CONTEXT__H
 
-#include "../General/quickstack.h"
-#include "../General/llreader.h"
-#include "../Storage/definition.h"
+#include <General/quickstack.h>
+#include <General/llreader.h>
+#include <Storage/definition.h>
 namespace jdip {
   using quickstack::stack;
   using namespace jdi;

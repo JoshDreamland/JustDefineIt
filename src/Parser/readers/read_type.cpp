@@ -19,11 +19,11 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "../bodies.h"
-#include "../../System/context.h"
-#include "../../General/parse_basics.h"
-#include "../../General/debug_macros.h"
-#include "../parse_context.h"
+#include <Parser/bodies.h>
+#include <System/context.h>
+#include <General/parse_basics.h>
+#include <General/debug_macros.h>
+#include <Parser/parse_context.h>
 #include <cstdio>
 using namespace jdip;
 using namespace jdi;

@@ -27,7 +27,7 @@
 using namespace std;
 
 #include "macros.h"
-#include "../General/parse_basics.h"
+#include <General/parse_basics.h>
 using namespace jdip;
 
 macro_type::macro_type(int ac): argc(ac) {}

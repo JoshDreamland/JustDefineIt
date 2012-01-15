@@ -25,7 +25,7 @@
 #define _TOKEN__H
 
 #include <string>
-#include "../System/context.h"
+#include <System/context.h>
 
 namespace jdip {
   enum TOKEN_TYPE {

@@ -33,7 +33,7 @@
   The jdi namespace contains the most basic functions, such as \c parse_C_stream(),
   as well as important utility functions and classes, such as \c jdi::context.
 **/
-#include "../System/builtins.h"
+#include <System/builtins.h>
 
 /**
   @namespace jdip

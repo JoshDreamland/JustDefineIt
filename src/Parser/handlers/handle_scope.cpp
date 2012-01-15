@@ -1,5 +1,5 @@
 /**
- * @file  bodies.h
+ * @file  handle_scope.cpp
  * @brief Source implementing a massive delegator which populates a scope.
  * 
  * This file does a huge amount of work.
@@ -22,7 +22,7 @@
  * 
 **/
 
-#include "../bodies.h"
+#include <Parser/bodies.h>
 
 int jdip::context_parser::handle_scope(llreader &cfile, definition_scope *scope, token_t& token)
 {

@@ -26,8 +26,8 @@
 **/
 
 #include <string>
-#include "../System/token.h"
-#include "../Storage/value.h"
+#include <System/token.h>
+#include <Storage/value.h>
 
 namespace jdi {
   /** @class jdi::AST

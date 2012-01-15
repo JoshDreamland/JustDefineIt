@@ -15,6 +15,7 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DDEBUG_MODE" />
+					<Add directory="./src" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -53,6 +54,8 @@
 		<Unit filename="src/API/AST.cpp" />
 		<Unit filename="src/API/AST.h" />
 		<Unit filename="src/API/AST_Export.cpp" />
+		<Unit filename="src/API/error_reporting.cpp" />
+		<Unit filename="src/API/error_reporting.h" />
 		<Unit filename="src/API/jdi.h" />
 		<Unit filename="src/API/parse_config.h" />
 		<Unit filename="src/API/user_tokens.cpp" />
@@ -81,12 +84,16 @@
 		<Unit filename="src/Storage/references.h" />
 		<Unit filename="src/Storage/value.cpp" />
 		<Unit filename="src/Storage/value.h" />
+		<Unit filename="src/Storage/value_funcs.cpp" />
+		<Unit filename="src/Storage/value_funcs.h" />
 		<Unit filename="src/System/builtins.cpp" />
 		<Unit filename="src/System/builtins.h" />
 		<Unit filename="src/System/context.cpp" />
 		<Unit filename="src/System/context.h" />
 		<Unit filename="src/System/macros.cpp" />
 		<Unit filename="src/System/macros.h" />
+		<Unit filename="src/System/symbols.cpp" />
+		<Unit filename="src/System/symbols.h" />
 		<Unit filename="src/System/token.cpp" />
 		<Unit filename="src/System/token.h" />
 		<Unit filename="src/System/type_usage_flags.h" />

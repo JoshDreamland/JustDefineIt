@@ -16,11 +16,11 @@
 #include <cstdio>
 #include <iostream>
 using namespace std;
-#include "../src/API/jdi.h"
-#include "../src/API/AST.h"
-#include "../src/API/user_tokens.h"
-#include "../src/General/llreader.h"
-#include "../src/General/quickstack.h"
+#include <API/jdi.h>
+#include <API/AST.h>
+#include <API/user_tokens.h>
+#include <General/llreader.h>
+#include <General/quickstack.h>
 
 using namespace jdi;
 using namespace jdip;

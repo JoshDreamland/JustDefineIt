@@ -52,11 +52,11 @@
  * 
 **/
 
-#include "../System/token.h"
-#include "../System/context.h"
-#include "../General/llreader.h"
-#include "../Storage/definition.h"
-#include "../Storage/value.h"
+#include <System/token.h>
+#include <System/context.h>
+#include <General/llreader.h>
+#include <Storage/definition.h>
+#include <Storage/value.h>
 #include "parse_context.h"
 
 namespace jdip {

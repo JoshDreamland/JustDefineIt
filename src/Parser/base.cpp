@@ -24,9 +24,9 @@
 **/
 
 #include <fstream>
-#include "../System/context.h"
-#include "../System/token.h"
-#include "../General/debug_macros.h"
+#include <System/context.h>
+#include <System/token.h>
+#include <General/debug_macros.h>
 #include "parse_context.h"
 #include "bodies.h"
 using namespace std;
@@ -40,14 +40,16 @@ using namespace jdip;
   majority of the work is done in the function that grabs the next token.
   
   @param cfile   The stream to be read in.
-  @param errout  An instance of \c jdi::error_reporter which will receive any warnings or errors encountered.
+  @param errout  An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
 **/
-int jdi::context::parse_C_stream(llreader &cfile)
+int jdi::context::parse_C_stream(llreader &cfile, error_handler *herr)
 {
   stack_tracer("void jdi::context::parse_C_stream(llreader &cfile)");
   
-  if (pc) // Make sure we're not still parsing anything
+  if (pc) { // Make sure we're not still parsing anything
+    herr->error("Attempted to invoke parser while parse is in progress in another thread");
     return (error = "STILL PARSING", -1);
+  }
   
   pc = new parse_context();
   error = "";

@@ -1,5 +1,5 @@
 /**
- * @file  AST.h
+ * @file  AST.cpp
  * @brief Source implementing a class that handles expression evaluation and type
  *        coercion via an AST.
  * 
@@ -18,211 +18,17 @@
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
- * 
 **/
 
 #include "AST.h"
-#include "../General/parse_basics.h"
-#include <cstring>
+#include <General/parse_basics.h>
+#include <Storage/value_funcs.h>
+#include <System/symbols.h>
 #include <cstdio>
-#include <cmath>
 #include <map>
 
 using namespace std;
 using namespace jdip;
-
-/**
-  Enumeration of usage types of symbols used in this AST.
-**/
-enum symbol_type {
-  ST_TERNARY = 1, ///< True if this can be used as a ternary operator
-  ST_BINARY = 2, ///< True if this can be used as a ternary operator
-  ST_UNARY_PRE = 4, ///< True if this can be used as a prefix unary operator
-  ST_UNARY_POST = 8, ///< True if this can be used as a postfix unary operator
-  ST_RTL_PARSED = 16 ///< For types parsed right-to-left, such as assignments
-};
-
-/**
-  Structure containing information about a given symbol, including how it is
-  used, its precedence, and methods for executing its operation on two values.
-**/
-struct symbol {
-  short type; ///< Usage information, as declared in the \c symbol_type enum.
-  short prec; ///< Precedence, where 1 is the highest precedence.
-  value (*operate)(const value&, const value&); ///< Method to perform this operation on two values, if this is a binary operator.
-  value (*operate_unary)(const value&); ///< Method to perform this operation on one value, if this is a unary prefix operator.
-  symbol() {} ///< Default constructor, so std::map doesn't have a conniption.
-  symbol(short t, short p): type(t), prec(p), operate(NULL), operate_unary(NULL) {} ///< Operation-free constructor.
-  symbol(short t, short p, value(*o)(const value&, const value&)): type(t), prec(p), operate(o), operate_unary(NULL) {} ///< 
-  symbol(short t, short p, value(*o)(const value&, const value&), value(*ou)(const value&)): type(t), prec(p), operate(o), operate_unary(ou) {}
-  symbol(short t, short p, value(*ou)(const value&)): type(t), prec(p), operate(NULL), operate_unary(ou) {}
-};
-
-typedef map<string, symbol> symbol_table;
-symbol_table symbols;
-typedef symbol_table::iterator symbol_iter;
-
-inline char* strdupcat(const char* s1, const char* s2) {
-  int l1 = strlen(s1), l2 = strlen(s2)+1;
-  char* res = new char[l1+l2];
-  memcpy(res,s1,l1), memcpy(res+l1,s2,l2);
-  return res;
-}
-
-static value values_add(const value& x, const value& y) {
-  switch (x.type) {
-    case VT_DOUBLE:
-      if (y.type == VT_DOUBLE) return value(x.val.d + y.val.d);
-      if (y.type == VT_STRING) { double d = x.val.d; const char* i = y.val.s; while (*i and d --> 0) ++i; return value(strdup(i)); }
-      return value(x.val.d + y.val.i);
-    case VT_STRING:
-      if (y.type == VT_DOUBLE) { double d = y.val.d; const char* i = x.val.s; while (*i and d --> 0) ++i; return value(strdup(i)); }
-      if (y.type == VT_STRING) return strdupcat(x.val.s, y.val.s);
-      return value(x.val.d + y.val.i);
-    case VT_INTEGER:
-      if (y.type == VT_DOUBLE) return value(x.val.i + y.val.d);
-      if (y.type == VT_STRING) { long d = x.val.i; const char* i = y.val.s; while (*i and d --> 0) ++i; return value(strdup(i)); }
-      return value(x.val.i + y.val.i);
-    case VT_NONE: default: return value();
-  }
-}
-static value values_subtract(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d - y.val.d); else if (y.type == VT_INTEGER) return value(x.val.d - y.val.i); else return value();
-  else if (y.type == VT_INTEGER) return value(x.val.i - y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i - y.val.d); else return value();
-}
-static value values_multiply(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d * y.val.d); else if (y.type == VT_INTEGER) return value(x.val.d * y.val.i); else return value();
-  else if (y.type == VT_INTEGER) return value(x.val.i * y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i * y.val.d); else return value();
-}
-static value values_divide(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d / y.val.d); else if (y.type == VT_INTEGER) return value(x.val.d / y.val.i); else return value();
-  else if (y.type == VT_INTEGER) if (y.val.i == 0) return value(); else return value(x.val.i / y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i / y.val.d); else return value();
-}
-static value values_modulo(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(fmod(x.val.d, y.val.d)); else if (y.type == VT_INTEGER) return value(fmod(x.val.d, y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) if (y.val.i == 0) return value(); else return value(x.val.i % y.val.i); else if (y.type == VT_INTEGER) return value(fmod(x.val.i, y.val.d)); else return value();
-}
-static value values_lshift(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d * pow(2, y.val.d)); else if (y.type == VT_INTEGER) return value(x.val.d * pow(2, y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(x.val.i << y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i * pow(2, y.val.d)); else return value();
-}
-static value values_rshift(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d / pow(2, y.val.d)); else if (y.type == VT_INTEGER) return value(x.val.d / pow(2, y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(x.val.i >> y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i / pow(2, y.val.d)); else return value();
-}
-static value values_greater(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d > y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d > y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(long(x.val.i > y.val.i)); else if (y.type == VT_INTEGER) return value(long(x.val.i > y.val.d)); else return value();
-}
-static value values_less(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d < y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d < y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(long(x.val.i < y.val.i)); else if (y.type == VT_INTEGER) return value(long(x.val.i < y.val.d)); else return value();
-}
-static value values_greater_or_equal(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d >= y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d >= y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(long(x.val.i >= y.val.i)); else if (y.type == VT_INTEGER) return value(long(x.val.i >= y.val.d)); else return value();
-}
-static value values_less_or_equal(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d <= y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d <= y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(long(x.val.i <= y.val.i)); else if (y.type == VT_INTEGER) return value(long(x.val.i <= y.val.d)); else return value();
-}
-inline long fcomp(double x, double y) { return fabs(x - y) < 1/double(1<<10); }
-inline long fcomp(double x, long y) { return fabs(x - y) < 1/double(1<<10); }
-static value values_equal(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(fcomp(x.val.d, y.val.d)); else if (y.type == VT_INTEGER) return value(fcomp(x.val.d, y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(long(x.val.i == y.val.i)); else if (y.type == VT_INTEGER) return value(fcomp(x.val.i, y.val.d)); else return value();
-}
-static value values_notequal(const value& x, const value& y) {
-  if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value((long)!fcomp(x.val.d, y.val.d)); else if (y.type == VT_INTEGER) return value((long)!fcomp(x.val.d, y.val.i)); else return value();
-  else if (y.type == VT_INTEGER) return value(long(x.val.i == y.val.i)); else if (y.type == VT_INTEGER) return value((long)!fcomp(x.val.i, y.val.d)); else return value();
-}
-static value values_latter(const value&, const value& y) {
-  return y;
-}
-
-static value value_unary_increment(const value& x) {
-  if (x.type == VT_DOUBLE) return value(x.val.d + 1); return value(x.val.i + 1);
-}
-static value value_unary_decrement(const value& x) {
-  if (x.type == VT_DOUBLE) return value(x.val.d - 1); return value(x.val.i - 1);
-}
-static value value_unary_positive(const value& x) {
-  if (x.type == VT_DOUBLE) return value(+x.val.d); return value(+x.val.i);
-}
-static value value_unary_negative(const value& x) {
-  if (x.type == VT_DOUBLE) return value(-x.val.d); return value(-x.val.i);
-}
-static value value_unary_dereference(const value& x) {
-  if (x.type == VT_STRING) return value((long)*x.val.s); return value();
-}
-static value value_unary_reference(const value&) {
-  return value();
-}
-
-/**
-  A structure designed to circumvent C++'s lack of static initializer blocks.
-  Simply maps all the symbols with their AST generation and evaluation information.
-**/
-static struct map_symbols_ {
-  map_symbols_ () {
-    symbols["::"] = symbol(ST_BINARY, 1);
-    
-    symbols["["]  = symbol(ST_BINARY,2);
-    symbols["("]  = symbol(ST_BINARY | ST_UNARY_PRE,2);
-    symbols["."]  = symbol(ST_BINARY,2);
-    symbols["->"] = symbol(ST_BINARY,2);
-    
-    symbols["++"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_increment);
-    symbols["--"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_decrement);
-    symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_increment);
-    symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_increment);
-    
-    symbols[".*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,3);
-    symbols["->*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,3);
-    
-    symbols["*"]  = symbol(ST_UNARY_PRE | ST_BINARY,4,values_multiply,value_unary_dereference);
-    symbols["/"]  = symbol(ST_BINARY,4,values_divide);
-    symbols["%"]  = symbol(ST_BINARY,4,values_modulo);
-    
-    symbols["+"]  = symbol(ST_UNARY_PRE | ST_BINARY,5,values_add,value_unary_positive);
-    symbols["-"]  = symbol(ST_UNARY_PRE | ST_BINARY,5,values_subtract,value_unary_negative);
-    
-    symbols["<<"]  = symbol(ST_BINARY,6,values_lshift);
-    symbols[">>"]  = symbol(ST_BINARY,6,values_rshift);
-    
-    symbols["<"]  = symbol(ST_BINARY,7,values_less);
-    symbols[">"]  = symbol(ST_BINARY,7,values_greater);
-    symbols["<="]  = symbol(ST_BINARY,7,values_less_or_equal);
-    symbols[">="]  = symbol(ST_BINARY,7,values_greater_or_equal);
-    
-    symbols["=="]  = symbol(ST_BINARY,8,values_equal);
-    symbols["!="]  = symbol(ST_BINARY,8,values_notequal);
-    
-    symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,9,value_unary_reference);
-    symbols["^"]  = symbol(ST_BINARY,10);
-    symbols["|"]  = symbol(ST_BINARY,11);
-    
-    symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,12);
-    symbols["^^"] = symbol(ST_BINARY,13);
-    symbols["||"] = symbol(ST_BINARY,14);
-    
-    symbols["?"]  = symbol(ST_TERNARY | ST_RTL_PARSED,15);
-    
-    symbols["="]   = symbol(ST_BINARY | ST_RTL_PARSED,16, values_latter);
-    symbols["+="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["-="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["*="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["%="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["/="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["&="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["^="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["|="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["<<="] = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols[">>="] = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    
-    symbols[","]  = symbol(ST_BINARY,17,values_latter);
-  }
-} map_symbols;
 
 namespace jdi
 {
@@ -397,6 +203,11 @@ namespace jdi
     }
   }
   
+  
+  //===========================================================================================================================
+  //=: Evaluators :============================================================================================================
+  //===========================================================================================================================
+  
   value AST::eval() {
     if (!root) return value();
     return root->eval();
@@ -423,7 +234,7 @@ namespace jdi
   value AST::AST_Node_Ternary::eval() {
     if (!exp) return value();
     value e = exp->eval();
-    return (e.type == VT_DOUBLE?(abs(e.val.d)>1/double(1<<10)):e.val.i)? (left?left->eval():value()) : (right?right->eval():value());
+    return value_boolean(e)? (left?left->eval():value()) : (right?right->eval():value());
   }
   value AST::AST_Node_Binary::eval() {
     if (!left or !right) return value();
@@ -450,6 +261,11 @@ namespace jdi
     return value(); // We can't evaluate a function call ;_;
   }
   
+  
+  //===========================================================================================================================
+  //=: Constructors :==========================================================================================================
+  //===========================================================================================================================
+  
   AST::AST_Node::AST_Node(): parent(NULL) {}
   AST::AST_Node_Unary::AST_Node_Unary(): right(NULL) {}
   AST::AST_Node_Binary::AST_Node_Binary(): left(NULL), right(NULL) {}
@@ -457,12 +273,22 @@ namespace jdi
   AST::AST_Node_Group::AST_Node_Group(): root(NULL) {}
   AST::AST_Node_Parameters::AST_Node_Parameters(): func(NULL) {}
   
+  
+  //===========================================================================================================================
+  //=: Destructors :===========================================================================================================
+  //===========================================================================================================================
+  
   AST::AST_Node::~AST_Node() { }
   AST::AST_Node_Binary::~AST_Node_Binary() { delete left; delete right; }
   AST::AST_Node_Unary::~AST_Node_Unary() { delete right; }
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Group::~AST_Node_Group() { delete root; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
+  
+  
+  //===========================================================================================================================
+  //=: Virtual Setters :=======================================================================================================
+  //===========================================================================================================================
   
   void AST::AST_Node::setleft(AST::AST_Node* n) { cout << "ERROR! Passed to wrong token type. DISCARDED TO PREVENT MEMORY LEAK." << endl; delete n; }
   void AST::AST_Node_Binary::setleft(AST::AST_Node* n) { if (n == this) for(;;); left = n;}
@@ -485,12 +311,10 @@ namespace jdi
   bool AST::AST_Node_Group::full() { return root != NULL; }
   bool AST::AST_Node_Parameters::full() { return false; }
   
-  void AST::AST_Node::print() { cout << "(" << content << ")"; }
-  void AST::AST_Node_Unary::print() {}
-  void AST::AST_Node_Binary::print() { cout << "( " << content << " )["; if (left) left->print(); else cout << "(...)"; if (right) right->print(); else cout << "(...)"; cout << "]"; }
-  void AST::AST_Node_Ternary::print() {}
-  void AST::AST_Node_Group::print() { cout << "("; if (root) root->print(); else cout << "..."; cout << ")" << endl; }
-  void AST::AST_Node_Parameters::print() {}
+  
+  //===========================================================================================================================
+  //=: Everything else :=======================================================================================================
+  //===========================================================================================================================
   
   void AST::clear() {
     delete root;

@@ -1,5 +1,5 @@
 /**
- * @file value.h
+ * @file svg_simple.cpp
  * @brief Source implementing SVG functions.
  * 
  * @section License

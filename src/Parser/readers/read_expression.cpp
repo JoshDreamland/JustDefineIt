@@ -1,5 +1,5 @@
 /**
- * @file read_expressions.cpp
+ * @file read_expression.cpp
  * @brief Source implementing the utility function to read an expression
  *        and parse for a value.
  * 
@@ -20,9 +20,9 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "../bodies.h"
-#include "../../API/AST.h"
-//#include "../../"
+#include <Parser/bodies.h>
+#include <API/AST.h>
+//#include <>
 using namespace jdi;
 using namespace jdip;
 

@@ -29,7 +29,7 @@ using namespace std;
 
 #include "macros.h"
 #include "context.h"
-#include "../System/builtins.h"
+#include <System/builtins.h>
 
 using namespace jdi;
 using namespace jdip;

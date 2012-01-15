@@ -1,5 +1,5 @@
 /**
- * @file value.h
+ * @file AST_Export.cpp
  * @brief Source implementing export functions for printing and rendering ASTs.
  * 
  * @section License
@@ -20,7 +20,7 @@
 **/
 
 #include "AST.h"
-#include "../General/svg_simple.h"
+#include <General/svg_simple.h>
 
 namespace jdi {
   void AST::print() {
@@ -49,8 +49,20 @@ namespace jdi {
     SVGrenderInfo(const char* fn): svg(new SVG(fn)), cur(NULL), nodes_written(0) {}
     ~SVGrenderInfo() { delete svg; }
   };
+  
+  
+  //===========================================================================================================================
+  //=: Node Widths :===========================================================================================================
+  //===========================================================================================================================
+  
   int AST::AST_Node::own_width() { return content.length()*8 + 16; }
   int AST::AST_Node_Group::own_width() { return 32; }
+  
+  
+  //===========================================================================================================================
+  //=: SVG Renderers :=========================================================================================================
+  //===========================================================================================================================
+  
   void AST::AST_Node::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
@@ -135,6 +147,10 @@ namespace jdi {
   }
   
   
+  //===========================================================================================================================
+  //=: Base Call :=============================================================================================================
+  //===========================================================================================================================
+  
   void AST::writeSVG(const char* filename) {
     SVGrenderInfo svg(filename);
     svg.cur = current;
@@ -152,6 +168,12 @@ namespace jdi {
     #endif
     svg.svg->close();
   }
+  
+  
+  //===========================================================================================================================
+  //=: Recursive Width/Height Resolvers :======================================================================================
+  //===========================================================================================================================
+  
   int AST::AST_Node::width() { return own_width(); }
   int AST::AST_Node_Binary::width() { return 24 + (left?left->width():0) + (right?right->width():0); }
   int AST::AST_Node_Unary::width() { return right?max(right->width(),own_width()):own_width(); }
@@ -164,4 +186,16 @@ namespace jdi {
   int AST::AST_Node_Ternary::height() { return own_width() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
   int AST::AST_Node_Group::height() { return own_width() + (root?16 + root->height():0); }
   int AST::AST_Node_Parameters::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
+  
+  
+  //===========================================================================================================================
+  //=: Basic Tree Print :======================================================================================================
+  //===========================================================================================================================
+  
+  void AST::AST_Node::print() { cout << "(" << content << ")"; }
+  void AST::AST_Node_Unary::print() {}
+  void AST::AST_Node_Binary::print() { cout << "( " << content << " )["; if (left) left->print(); else cout << "(...)"; if (right) right->print(); else cout << "(...)"; cout << "]"; }
+  void AST::AST_Node_Ternary::print() {}
+  void AST::AST_Node_Group::print() { cout << "("; if (root) root->print(); else cout << "..."; cout << ")" << endl; }
+  void AST::AST_Node_Parameters::print() {}
 }

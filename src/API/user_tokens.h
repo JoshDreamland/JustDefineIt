@@ -1,5 +1,5 @@
 /**
- * @file  user_tokens.h
+ * @file user_tokens.h
  * @brief API header offering stable functions for users to create tokens.
  * 
  * @section License
@@ -19,7 +19,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "../System/token.h"
+#include <System/token.h>
 
 namespace jdi {
   /** Create a token representing a decimal literal.
@@ -29,7 +29,7 @@ namespace jdi {
       @param line      The line number in that file.
       @param pos       The position in that line.
   **/
-  jdip::token_t create_token_dec_literal(const char* val, int vl, const char* filename = "<no file>", int line = -1, int pos = -1);
+  jdip::token_t create_token_dec_literal(const char* val, int len, const char* filename = "<no file>", int line = -1, int pos = -1);
   /** Create a token representing a hexadecimal literal.
       @param val       A string representation of the value of the token, starting with 0x.
       @param len       The length of the string pointed to by val.
@@ -82,6 +82,7 @@ namespace jdi {
   /** Create a token representing an identifier.
       This will not be coerced for type or checked against keyword tables.
       @param name      The name of the identifier.
+      @param len       The length of the string pointed to by val.
       @param filename  The filename from which this operator was read, if any.
       @param line      The line number in that file.
       @param pos       The position in that line.

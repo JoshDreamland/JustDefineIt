@@ -40,10 +40,11 @@
 
 #include "macros.h"
 #include "type_usage_flags.h"
-#include "../System/type_usage_flags.h"
-#include "../Storage/definition.h"
-#include "../General/llreader.h"
-#include "../Parser/parse_context.h"
+#include <System/type_usage_flags.h>
+#include <Storage/definition.h>
+#include <General/llreader.h>
+#include <Parser/parse_context.h>
+#include <API/error_reporting.h>
 
 namespace jdip { class context_parser; }
 
@@ -139,7 +140,7 @@ namespace jdi
     /** Parse an input stream for definitions.
         @param cfile    The stream to be read in.
     **/
-    int parse_C_stream(llreader& cfile);
+    int parse_C_stream(llreader& cfile, error_handler *herr = def_error_handler);
     
     /** Retrieve the last error message, if any error was thrown during parse.
         @return The last error message, or an empty string if no error occurred.

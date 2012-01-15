@@ -35,23 +35,21 @@ namespace jdi {
     VT_STRING ///< The value stored is a string.
   };
 
-  // FIXME: This value structure should be the union
-
   /**
     @struct jdi::value
     A structure for storing and communicating data of varying types.
     This structure can contain any value defined in \enum VT.
   **/
   struct value {
-    /**
-      This union contains the actual data types.
+    /** This union contains the actual data for each type.
     **/
     union {
       double d; ///< Any data stored as a floating point.
       long i; ///< Any data stored as an integer.
       const char* s; ///< Any data stored as a string. This value must be deleted if replaced or destructed.
     } val; ///< The value storage for this structure.
-    VT type;
+    
+    VT type; ///< The type of our value. This little bugger is the reason we can't just be a big union.
     
     value(); ///< Construct a new, invalid value with no type (VT_NONE).
     value(double v); ///< Construct a new value representing a double.
