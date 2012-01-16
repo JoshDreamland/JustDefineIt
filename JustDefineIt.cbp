@@ -5,7 +5,7 @@
 		<Option title="JustDefineIt" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="test/;" />
+		<Option virtualFolders="test/;src/API/;" />
 		<Build>
 			<Target title="Debug">
 				<Option output="bin/Debug/JustDefineIt" prefix_auto="1" extension_auto="1" />
@@ -54,9 +54,13 @@
 		<Unit filename="src/API/AST.cpp" />
 		<Unit filename="src/API/AST.h" />
 		<Unit filename="src/API/AST_Export.cpp" />
+		<Unit filename="src/API/context.cpp" />
+		<Unit filename="src/API/context.h" />
 		<Unit filename="src/API/error_reporting.cpp" />
 		<Unit filename="src/API/error_reporting.h" />
 		<Unit filename="src/API/jdi.h" />
+		<Unit filename="src/API/lexer_interface.cpp" />
+		<Unit filename="src/API/lexer_interface.h" />
 		<Unit filename="src/API/parse_config.h" />
 		<Unit filename="src/API/user_tokens.cpp" />
 		<Unit filename="src/API/user_tokens.h" />
@@ -88,8 +92,8 @@
 		<Unit filename="src/Storage/value_funcs.h" />
 		<Unit filename="src/System/builtins.cpp" />
 		<Unit filename="src/System/builtins.h" />
-		<Unit filename="src/System/context.cpp" />
-		<Unit filename="src/System/context.h" />
+		<Unit filename="src/System/lex_cpp.cpp" />
+		<Unit filename="src/System/lex_cpp.h" />
 		<Unit filename="src/System/macros.cpp" />
 		<Unit filename="src/System/macros.h" />
 		<Unit filename="src/System/symbols.cpp" />

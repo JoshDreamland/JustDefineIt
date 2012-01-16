@@ -38,8 +38,7 @@
 #include <vector>
 #include <iostream>
 
-#include "macros.h"
-#include "type_usage_flags.h"
+#include <System/macros.h>
 #include <System/type_usage_flags.h>
 #include <Storage/definition.h>
 #include <General/llreader.h>
@@ -69,8 +68,9 @@ namespace jdi
     @see context.h
   **/
   
-  struct context
+  class context
   {
+    protected: // Make sure our method-packing child can use these.
     macro_map macros; ///< A map of macros defined in this context.
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.

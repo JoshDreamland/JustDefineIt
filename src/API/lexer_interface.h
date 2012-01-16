@@ -27,7 +27,7 @@
 #define LEXER_INTERFACE__H
 
 #include <System/token.h>
-#include <System/context.h>
+#include <API/context.h>
 #include <API/error_reporting.h>
 
 namespace jdi {
@@ -39,9 +39,11 @@ namespace jdi {
   **/
   struct lexer {
     /** Read in a token from the open stream.
+        @param ct    The definitions context in which type names will be looked up.
+        @param scope The scope from which type searching will be performed, if the scope permits it. [in-opt]
         @param herr  The error handler which will receive any lexing errors.
     **/
-    virtual jdip::token_t get_token(context* ct, definition_scope* scope = NULL, error_handler *herr = def_error_handler) = 0;
+    virtual jdip::token_t get_token(error_handler *herr = def_error_handler) = 0;
     virtual ~lexer(); ///< Destruct and free any non-POD or pointer members.
   };
 }

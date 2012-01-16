@@ -28,7 +28,7 @@
 #ifndef _JDI_BUILTINS__H
 #define _JDI_BUILTINS__H
 
-#include "context.h"
+#include <API/context.h>
 
 namespace jdip {
   using namespace jdi;

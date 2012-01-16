@@ -25,6 +25,8 @@
 
 #include <General/llreader.h>
 #include <Storage/definition.h>
+#include <API/error_reporting.h>
+
 namespace jdip {
   using namespace jdi;
   
@@ -39,8 +41,10 @@ namespace jdip {
   struct parse_context {
     definition* global; ///< The global scope in this context
     bool active; ///< True if a parse is still in action (implying a second thread exists).
-    /// Default constructor, taking a pointer to the enclosing context.
-    parse_context();
+    error_handler *herr; ///< The \c error_handler which will receive warnings and errors.
+    
+    /// Default constructor, taking an optional pointer to an error handler.
+    parse_context(error_handler *h_err = def_error_handler);
   };
 }
 

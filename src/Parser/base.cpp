@@ -24,7 +24,7 @@
 **/
 
 #include <fstream>
-#include <System/context.h>
+#include <API/context.h>
 #include <System/lex_cpp.h>
 #include <System/token.h>
 #include <General/debug_macros.h>
@@ -52,14 +52,14 @@ int jdi::context::parse_C_stream(llreader &cfile, error_handler *herr)
     return (error = "STILL PARSING", -1);
   }
   
-  pc = new parse_context();
+  pc = new parse_context(herr);
   error = "";
   err_file = "";
   err_line = -1;
   err_pos = -1;
   
-  token_t dummy;
-  lexer_cpp lcpp(cfile);
+  token_t dummy; // An invalid token to appease the parameter chain.
+  lexer_cpp lcpp(cfile, macros); // Our C++ lexer. We hand it our file, it keeps track.
   int res = ((context_parser*)this)->handle_scope(&lcpp, global, dummy);
   pc->active = false;
   

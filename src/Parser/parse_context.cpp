@@ -20,6 +20,5 @@
 **/
 
 #include "parse_context.h"
-jdip::parse_context::parse_context(): active(true) {
-  
+jdip::parse_context::parse_context(error_handler *h_err): active(true), herr(h_err) {
 }

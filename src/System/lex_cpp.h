@@ -28,6 +28,7 @@
 #include <General/quickstack.h>
 #include <General/llreader.h>
 #include <Parser/bodies.h>
+#include <API/context.h>
 
 namespace jdip {
   using namespace jdi;
@@ -46,11 +47,14 @@ namespace jdip {
            seamlessly, returning only relevant tokens.
   **/
   struct lexer_cpp: lexer, openfile {
-    token_t get_token(context* ct, definition_scope* scope = NULL, error_handler *herr = def_error_handler);
-    quick::stack<openfile> files; ///< The files we have open
+    token_t get_token(error_handler *herr = def_error_handler);
+    quick::stack<openfile> files; ///< The files we have open, in the order we included them.
+    macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
+    
     /// Default constructor; consumes an llreader.
-    /// @param input  The file from which to read definitions. This file will be manipulated by the system.
-    lexer_cpp(llreader& input);
+    /// @param input    The file from which to read definitions. This file will be manipulated by the system.
+    /// @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
+    lexer_cpp(llreader& input, macro_map &pmacros);
   };
   
   /**
@@ -58,7 +62,7 @@ namespace jdip {
            Unrolls macros automatically. Treats non-macro identifiers as zero.
   **/
   struct lexer_macro: lexer {
-    token_t get_token(context* ct, definition_scope* scope = NULL, error_handler *herr = def_error_handler);
+    token_t get_token(error_handler *herr = def_error_handler);
     quick::stack<openfile*> files; ///< The files we have open
   };
 }

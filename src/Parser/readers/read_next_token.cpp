@@ -2,10 +2,6 @@
  * @file read_next_token.cpp
  * @brief Source implementing the parser function to fetch the next token.
  * 
- * This file's function will be referenced by every other function in the
- * parser. The efficiency of its implementation is of crucial importance.
- * If this file runs slow, so do the others in the parser.
- * 
  * @section License
  * 
  * Copyright (C) 2011 Josh Ventura
@@ -24,7 +20,7 @@
 **/
 
 #include <Parser/bodies.h>
-#include <System/context.h>
+#include <API/context.h>
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
 #include <Parser/parse_context.h>
@@ -43,7 +39,10 @@ using namespace jdi;
 **/
 token_t jdip::context_parser::read_next_token(lexer* lex, definition_scope *scope)
 {
-  return lex->get_token(this,scope);
+  token_t r = lex->get_token(pc->herr);
+  if (r.type == TT_IDENTIFIER)
+    return look_up_token(scope,string((const char*)r.extra.content.str,r.extra.content.len),r);
+  return r;
 }
 
 token_t jdip::context_parser::look_up_token(definition_scope* scope, string name, token_t defalt)

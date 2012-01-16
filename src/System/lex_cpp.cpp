@@ -2,6 +2,10 @@
  * @file lex_cpp.cpp
  * @brief Source implementing the C++ \c lexer class extensions.
  * 
+ * This file's function will be referenced, directly or otherwise, by every
+ * other function in the parser. The efficiency of its implementation is of
+ * crucial importance. If this file runs slow, so do the others.
+ * 
  * @section License
  * 
  * Copyright (C) 2011 Josh Ventura
@@ -23,19 +27,18 @@
 #include <General/debug_macros.h>
 #include <General/parse_basics.h>
 #include <Parser/parse_context.h>
-#include <System/context.h>
+#include <API/context.h>
 #include <Parser/bodies.h>
 #include <cstdio>
 
 using namespace jdi;
 using namespace jdip;
 
-token_t lexer_cpp::get_token(context* ct, definition_scope* scope, error_handler *herr)
+token_t lexer_cpp::get_token(error_handler *herr)
 {
   stack_tracer("token_t jdip::read_next_token(llreader &c_file, parse_context &pc)");
-  #define cfile data
+  #define cfile data //I'm sorry, but I can't spend the whole function calling the file buffer "data."
   
-  if (!scope) scope = ct->global;
   if (pos >= length) goto POP_FILE;
   for (;;) // Loop until we find something or hit world's end
   {
@@ -73,12 +76,12 @@ token_t lexer_cpp::get_token(context* ct, definition_scope* scope, error_handler
       
       string fn(sp, cfile + pos); // We'll need a copy of this thing for lookup purposes
       
-      macro_iter mi = ct->macros.find(fn);
-      if (mi != ct->macros.end()) {
+      macro_iter mi = macros.find(fn);
+      if (mi != macros.end()) {
         printf("ERROR: Unimplemented: macros\n");
       }
       
-      return ((context_parser*)ct)->look_up_token(scope,fn,token_t(token_basics(TT_IDENTIFIER,"some file",0,0), sp, fn.length()));
+      return token_t(token_basics(TT_IDENTIFIER,"some file",0,0), sp, fn.length());
     }
     
     if (is_digit(cfile[pos])) {
@@ -132,9 +135,9 @@ token_t lexer_cpp::get_token(context* ct, definition_scope* scope, error_handler
   POP_FILE: // This block was created instead of a helper function to piss Rusky off.
   if (files.empty())
     return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
-  return get_token(ct,scope,herr);
+  return get_token(herr);
 }
 
-lexer_cpp::lexer_cpp(llreader &input) {
+lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros) {
   consume(input);
 }

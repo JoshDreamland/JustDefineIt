@@ -27,8 +27,8 @@
 #include <cstring>
 using namespace std;
 
-#include "macros.h"
 #include "context.h"
+#include <System/macros.h>
 #include <System/builtins.h>
 
 using namespace jdi;
