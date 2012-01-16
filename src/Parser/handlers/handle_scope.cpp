@@ -24,14 +24,14 @@
 
 #include <Parser/bodies.h>
 
-int jdip::context_parser::handle_scope(llreader &cfile, definition_scope *scope, token_t& token)
+int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, token_t& token)
 {
-  token = read_next_token(cfile, scope);
+  token = read_next_token(lex, scope);
   for (;;)
   {
     switch (token.type) {
       case TT_DECLARATOR:
-          if (handle_declarators(cfile, scope, token))
+          if (handle_declarators(lex, scope, token))
             return 1;
           if (token.type != TT_SEMICOLON)
             return (token.report_error(this, "Expected semicolon at this point"), 1);
@@ -83,6 +83,6 @@ int jdip::context_parser::handle_scope(llreader &cfile, definition_scope *scope,
       case TT_ENDOFCODE:
         return 0;
     }
-    token = read_next_token(cfile, scope);
+    token = read_next_token(lex, scope);
   }
 }

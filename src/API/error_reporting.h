@@ -22,6 +22,9 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#ifndef ERROR_REPORTING__H
+#define ERROR_REPORTING__H
+
 #include <string>
 /// Abstract class for error handling and warning reporting.
 /// Implement this class yourself, or use \c default_error_handler.
@@ -42,7 +45,7 @@ struct error_handler {
   virtual ~error_handler();
 };
 
-/// Default class for handling error handling and warning reporting.
+/// Default class for error handling and warning reporting.
 /// Prints all errors and warnings to stderr alike. No other action is taken.
 struct default_error_handler: error_handler {
   /// Prints the error to stderr, in the format "ERROR[(<file>[:<line>[:<pos>]])]: <error string>"
@@ -53,3 +56,5 @@ struct default_error_handler: error_handler {
 
 /// A pointer to an instance of \c default_error_handler, for use wherever.
 extern default_error_handler *def_error_handler;
+
+#endif

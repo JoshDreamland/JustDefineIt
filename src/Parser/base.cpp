@@ -25,6 +25,7 @@
 
 #include <fstream>
 #include <System/context.h>
+#include <System/lex_cpp.h>
 #include <System/token.h>
 #include <General/debug_macros.h>
 #include "parse_context.h"
@@ -58,7 +59,8 @@ int jdi::context::parse_C_stream(llreader &cfile, error_handler *herr)
   err_pos = -1;
   
   token_t dummy;
-  int res = ((context_parser*)this)->handle_scope(cfile, global, dummy);
+  lexer_cpp lcpp(cfile);
+  int res = ((context_parser*)this)->handle_scope(&lcpp, global, dummy);
   pc->active = false;
   
   delete pc; // Clean up

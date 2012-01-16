@@ -22,9 +22,10 @@
 #ifndef _QUICKSTACK__H
 #define _QUICKSTACK__H
 
-namespace quickstack {
-  /**
-    A basic stack structure designed to minimize allocation.
+/** Namespace holding specialized container data types designed to up speed or minimize allocation.
+**/
+namespace quick {
+  /** A basic stack structure designed to minimize allocation.
   **/
   template<typename tp, int chunksize=5> class stack
   {

@@ -100,6 +100,16 @@ void llreader::open(const char* filename) {
 #endif
 }
 
+void llreader::consume(llreader& whom) {
+  mode = whom.mode;
+  pos = whom.pos;
+  length = whom.length;
+  data = whom.data;
+  whom.mode = FT_CLOSED;
+  whom.length = 0;
+  whom.data = NULL;
+}
+
 void llreader::close() {
   switch (mode) {
     case FT_BUFFER: delete data;

@@ -69,9 +69,8 @@ namespace jdi
     @see context.h
   **/
   
-  class context
+  struct context
   {
-    friend class jdip::context_parser; ///< Make sure the parser can read this junk
     macro_map macros; ///< A map of macros defined in this context.
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.

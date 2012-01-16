@@ -112,6 +112,11 @@ class llreader {
     **/
     llreader(std::string contents, bool copy);
     /**
+      Consumes another \c llreader, stealing its contents then settings its
+      mode to closed (while keeping the stolen one open).
+    **/
+    void consume(llreader& whom);
+    /**
       Copy constructor.
       This constructor really shouldn't be used; it is provided to be compliant.
       This constructor will perform an O(N) copy of the entire contents to a string,

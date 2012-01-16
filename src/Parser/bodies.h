@@ -52,9 +52,12 @@
  * 
 **/
 
+#ifndef PARSE_BODIES__H
+#define PARSE_BODIES__H
+
 #include <System/token.h>
 #include <System/context.h>
-#include <General/llreader.h>
+#include <API/lexer_interface.h>
 #include <Storage/definition.h>
 #include <Storage/value.h>
 #include "parse_context.h"
@@ -67,10 +70,8 @@ namespace jdip {
     
     This is some heavy shit.
   **/
-  class context_parser: jdi::context
+  struct context_parser: jdi::context
   {
-    friend class context;
-    
     /**
       Read in the next token, handling any preprocessing.
       
@@ -78,11 +79,11 @@ namespace jdip {
       the next token, it may skip hundreds of lines of code, enter a new file,
       leave a file for its including file, or just return the 'end of code' token.
       
-      @param  cfile  The stream containing the C++ source to parse. [in-out]
+      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope from which identifiers will be looked up. [in]
       @return The next token in the stream.
     **/
-    token_t read_next_token(llreader &cfile, definition_scope *scope);
+    token_t read_next_token(lexer *lex, definition_scope *scope);
     
     /**
       Parse a list of declarations, copying them into the given scope.
@@ -90,7 +91,7 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  cfile  The stream containing the C++ source to parse. [in-out]
+      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      This will be updated to represent the next non-type token
@@ -98,7 +99,7 @@ namespace jdip {
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_declarators(llreader &cfile, definition_scope *scope, token_t& token);
+    int handle_declarators(lexer *lex, definition_scope *scope, token_t& token);
     
     /**
       Handle parsing an entire scope.
@@ -106,13 +107,13 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  cfile  The stream containing the C++ source to parse. [in-out]
+      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The \c token structure into which the next unhandled token will be placed. [out]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_scope(llreader &cfile, definition_scope *scope, token_t& token);
+    int handle_scope(lexer *lex, definition_scope *scope, token_t& token);
     
     /**
       Read a complete type from the given input stream.
@@ -126,7 +127,7 @@ namespace jdip {
       place you in the middle of a pair of parentheses. For example, consider int (*fn)(int).
       In that instance, \c read_type will exit with token = token_t(TT_IDENTIFIER, "fn", ...).
       
-      @param  cfile  The input stream to read from. [in-out]
+      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  token  The token for which this function was invoked. If the given token is a
                      type, it will be part of the return \c full_type, otherwise it will
                      just be overwritten. [in-out]
@@ -134,7 +135,7 @@ namespace jdip {
       
       @return Returns the \c full_type read from the stream.
     **/
-    full_type read_type(llreader &cfile, token_t &token, definition_scope *scope);
+    full_type read_type(lexer *lex, token_t &token, definition_scope *scope);
     
     /**
       Read an expression from the given input stream, evaluating it for a value.
@@ -150,14 +151,14 @@ namespace jdip {
       token in the stream. If the expression cannot be evaluated, the type of the returned \c
       value will be set to \c VT_NOTHING.
       
-      @param  cfile          The input stream to read from. [in-out]
+      @param  lex            The lexer to be polled for tokens. [in-out]
       @param  token          The \c token structure which will represent the first non-evaluated token. [out]
       @param  closing_token  The \c TOKEN_TYPE of an additional token which will close this expression. [in]
       @param  scope          The scope which may be passed to \c read_token. [in]
       
       @return Returns the \c full_type read from the stream.
     **/
-    value read_expression(llreader &cfile, token_t &token, TOKEN_TYPE closing_token, definition_scope *scope);
+    value read_expression(lexer *lex, token_t &token, TOKEN_TYPE closing_token, definition_scope *scope);
     
     /**
       Retrieve the type of a token from a given string in a given scope.
@@ -173,3 +174,5 @@ namespace jdip {
     token_t look_up_token(definition_scope* scope, string name, token_t def);
   };
 }
+
+#endif

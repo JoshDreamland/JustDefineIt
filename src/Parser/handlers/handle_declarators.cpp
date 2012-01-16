@@ -40,12 +40,12 @@ using namespace jdi;
   variety of memory constructs an llreader may actually represent, that
   isn't actually an option here.
 **/
-int jdip::context_parser::handle_declarators(llreader &cfile, definition_scope *scope, token_t& token)
+int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope, token_t& token)
 {
   // Outsource to read_type, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
   // This means an identifier if the syntax is correct.
-  full_type tp = read_type(cfile, token, scope);
+  full_type tp = read_type(lex, token, scope);
   
   // Make sure we actually read a valid type.
   if (!tp.def) {
@@ -80,7 +80,7 @@ int jdip::context_parser::handle_declarators(llreader &cfile, definition_scope *
   }
   #endif
   
-  token = read_next_token(cfile, scope);
+  token = read_next_token(lex, scope);
   for (;;)
   {
     switch (token.type) {
@@ -91,7 +91,7 @@ int jdip::context_parser::handle_declarators(llreader &cfile, definition_scope *
           }
           else {
             // If this thing's const, we need to make note of the value... FML
-            value a = read_expression(cfile, token, TT_SEMICOLON, scope);
+            value a = read_expression(lex, token, TT_SEMICOLON, scope);
             if (a.type != VT_NONE) {
               
             }
@@ -106,7 +106,7 @@ int jdip::context_parser::handle_declarators(llreader &cfile, definition_scope *
           token.extra.def = tp.def;
           
           // Re-invoke the type reader via tail call
-        return handle_declarators(cfile, scope, token);
+        return handle_declarators(lex, scope, token);
       
       case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
           token.report_error(this,"Expected initializer `=' here before literal.");

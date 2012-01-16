@@ -23,11 +23,9 @@
 #ifndef _PARSE_CONTEXT__H
 #define _PARSE_CONTEXT__H
 
-#include <General/quickstack.h>
 #include <General/llreader.h>
 #include <Storage/definition.h>
 namespace jdip {
-  using quickstack::stack;
   using namespace jdi;
   
   /**
@@ -40,7 +38,6 @@ namespace jdip {
   **/
   struct parse_context {
     definition* global; ///< The global scope in this context
-    stack<llreader> files; ///< The files we have open
     bool active; ///< True if a parse is still in action (implying a second thread exists).
     /// Default constructor, taking a pointer to the enclosing context.
     parse_context();
