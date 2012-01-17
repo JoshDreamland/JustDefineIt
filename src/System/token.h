@@ -155,12 +155,25 @@ namespace jdip {
       Copy error information to a parse context.
       If no information is available, then zeros are copied in its place.
       @param pc    The context into which error info is copied.
+      @param herr  The error_handler which will receive this notification.
       @param error The text of the error.
     **/
-    void report_error(context* pc, std::string error);
+    void report_error(context* pc, error_handler *herr, std::string error);
+    /**
+      Copy error information to a parse context.
+      If no information is available, then zeros are copied in its place.
+      @param herr  The error_handler which will receive this notification.
+      @param error The text of the error.
+    **/
+    void report_error(error_handler *herr, std::string error);
+    /**
+      Copy error information to a parse context.
+      If no information is available, then zeros are copied in its place.
+      @param herr  The error_handler which will receive this notification.
+      @param error The text of the error.
+    **/
+    void report_warning(error_handler *herr, std::string error);
   };
-  
-  
 }
 
 #endif

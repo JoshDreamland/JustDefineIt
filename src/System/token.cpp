@@ -81,8 +81,13 @@ token_t::extra_::extra_() {}
 token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
 token_t::extra_::extra_(definition* d): def(d) {}
 
-void token_t::report_error(context *hc, std::string error) {
-  // This is where we use the token_basics macro to only assign
+void token_t::report_error(context *hc, error_handler *herr, std::string error)
+{
+  hc->err_file.clear();
+  hc->err_line = -1;
+  hc->err_pos = -1;
+  
+  // This is where we use the token_basics macro to only assign to
   // those parse context members which exist.
   token_basics(
     hc->error = error,
@@ -90,4 +95,36 @@ void token_t::report_error(context *hc, std::string error) {
     hc->err_line = linenum,
     hc->err_pos = pos
   );
+  
+  herr->error(error, hc->err_file, hc->err_line, hc->err_pos);
+}
+
+void token_t::report_error(error_handler *herr, std::string error)
+{
+  string fn; // Default values for non-existing info members
+  int l = -1, p = -1;
+  
+  // Overwrite those which exist
+  token_basics(p = -1,
+    fn = (const char*)file,
+    l = linenum,
+    p = pos
+  );
+  
+  herr->error(error, fn, l, p);
+}
+
+void token_t::report_warning(error_handler *herr, std::string error)
+{
+  string fn; // Default values for non-existing info members
+  int l = -1, p = -1;
+  
+  // Overwrite those which exist
+  token_basics(p = -1,
+    fn = (const char*)file,
+    l = linenum,
+    p = pos
+  );
+  
+  herr->error(error, fn, l, p);
 }

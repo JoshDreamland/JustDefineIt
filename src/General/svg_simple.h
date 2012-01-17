@@ -46,6 +46,7 @@ class SVG {
         @param id            The unique id of this circle, as a string.
         @param x             The x coordinate of the center of the circle.
         @param y             The y coordinate of the center of the circle.
+        @param r             The radius of the circle.
         @param fill          The fill color, in ARGB format. Defaults to full-alpha white.
         @param stroke        The stroke color, in ARGB format. Defaults to full-alpha black.
         @param stroke_width  The width of the stroke, in pixels. Defaults to 2. **/
@@ -58,7 +59,7 @@ class SVG {
         @param y2            The y coordinate of the second point on the line.
         @param stroke        The stroke color, in ARGB format. Defaults to full-alpha black.
         @param stroke_width  The width of the stroke, in pixels. Defaults to 2. **/
-    void draw_line(std::string id, int x1, int y1, int x2, int y2, unsigned color = 0xFF000000, float stroke_width = 2);
+    void draw_line(std::string id, int x1, int y1, int x2, int y2, unsigned stroke = 0xFF000000, float stroke_width = 2);
     /** Render a rectangle to this SVG.
         @param id            The unique id of this rectangle, as a string.
         @param x1            The x coordinate of the top-left corner of the rectangle.

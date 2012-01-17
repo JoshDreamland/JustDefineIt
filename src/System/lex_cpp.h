@@ -51,9 +51,10 @@ namespace jdip {
     quick::stack<openfile> files; ///< The files we have open, in the order we included them.
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
     
-    /// Default constructor; consumes an llreader.
-    /// @param input    The file from which to read definitions. This file will be manipulated by the system.
-    /// @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
+    /** Default constructor; consumes an llreader.
+        @param input    The file from which to read definitions. This file will be manipulated by the system.
+        @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
+    **/
     lexer_cpp(llreader& input, macro_map &pmacros);
   };
   

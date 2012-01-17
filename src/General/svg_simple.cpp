@@ -48,9 +48,9 @@ void SVG::draw_circle(std::string id, int x,int y,int r,unsigned fill,unsigned s
              "d=\"m %d,%d a %d,%d 0 0 1 -%d,0 %d,%d 0 0 1 %d,0 z\" />\n", x,y,r,r,
           fill&0x00FFFFFF, (fill&0xFF000000)/(double)0xFF000000, stroke&0x00FFFFFF,(stroke&0xFF000000)/(double)0xFF000000, stroke_width, id.c_str(), x+r,y, r,r, d, r,r, d);
 }
-void SVG::draw_line(std::string id, int x1, int y1, int x2, int y2, unsigned color, float stroke_width) {
+void SVG::draw_line(std::string id, int x1, int y1, int x2, int y2, unsigned stroke, float stroke_width) {
   fprintf(f, "  <path style=\"fill:none;stroke:#%06X;stroke-width:%f;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:%f;stroke-miterlimit:4;stroke-dasharray:none\" "
-             "d=\"M %d,%d %d,%d\" id=\"%s\" />\n", color & 0x00FFFFFF, stroke_width, (color & 0xFF000000) / (double)0xFF000000, x1,y1, x2,y2, id.c_str());
+             "d=\"M %d,%d %d,%d\" id=\"%s\" />\n", stroke & 0x00FFFFFF, stroke_width, (stroke & 0xFF000000) / (double)0xFF000000, x1,y1, x2,y2, id.c_str());
 }
 void SVG::draw_rectangle(std::string id, int x1, int y1, int x2, int y2, unsigned color, float stroke_width) {
   fprintf(f, "  <path style=\"fill:none;stroke:#%06X;stroke-width:%f;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:%f;stroke-miterlimit:4;stroke-dasharray:none\" "

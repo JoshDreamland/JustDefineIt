@@ -40,8 +40,8 @@ using namespace jdip;
   out what it represents, and dispatch a new function to deal with it. The vast
   majority of the work is done in the function that grabs the next token.
   
-  @param cfile   The stream to be read in.
-  @param errout  An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
+  @param cfile  The stream to be read in.
+  @param herr   An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
 **/
 int jdi::context::parse_C_stream(llreader &cfile, error_handler *herr)
 {
