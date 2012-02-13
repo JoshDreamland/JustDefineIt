@@ -49,13 +49,13 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
   
   // Make sure we actually read a valid type.
   if (!tp.def) {
-    token.report_error(this,pc->herr,"Declaration does not give a valid type");
+    token.report_error(this,"Declaration does not give a valid type");
     return 1;
   }
   
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (token.type != TT_IDENTIFIER) {
-    token.report_error(this,pc->herr,"Declaration doesn't declare anything");
+    token.report_error(this,"Declaration doesn't declare anything");
     return 2;
   }
   
@@ -70,11 +70,11 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
   else // Well, uh-the-fuck-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {
     if (not(ins.first->second->flags & DEF_TYPED)) {
-      token.report_error(this,pc->herr,"Redeclaration of `" + name + "' as a different kind of symbol");
+      token.report_error(this,"Redeclaration of `" + name + "' as a different kind of symbol");
       return 3;
     }
     if (not(ins.first->second->flags & DEF_TYPED) & DEF_EXTERN) { //TODO: Implement
-      token.report_error(this,pc->herr,"Redeclaration of non-extern `" + name + "' as non-extern");
+      token.report_error(this,"Redeclaration of non-extern `" + name + "' as non-extern");
       return 4;
     }
   }
@@ -86,7 +86,8 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
     switch (token.type) {
       case TT_OPERATOR:
           if (*token.extra.content.str != '=' or token.extra.content.len != 1) { // If this operator isn't =, this is a fatal error. No idea where we are.
-            token.report_error(this,pc->herr,"Unexpected operator " + string((const char*)token.extra.content.str,token.extra.content.len) + " at this point");
+            case TT_GREATERTHAN: case TT_LESSTHAN:
+            token.report_error(this,"Unexpected operator " + string((const char*)token.extra.content.str,token.extra.content.len) + " at this point");
             return 5;
           }
           else {
@@ -109,12 +110,12 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
         return handle_declarators(lex, scope, token);
       
       case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
-          token.report_error(this,pc->herr,"Expected initializer `=' here before literal.");
+          token.report_error(this,"Expected initializer `=' here before literal.");
         return 5;
       
       case TT_ENDOFCODE:
       #ifndef NO_ERROR_REPORTING
-          token.report_error(this,pc->herr,"Expected semicolon here before end of code.");
+          token.report_error(this,"Expected semicolon here before end of code.");
         return 5;
       #else
         return 0;
@@ -126,12 +127,12 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
       case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_IDENTIFIER:
       case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_COLON: case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_DESTRUCTOR:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_TILDE:
       case TT_EQUALS: case TT_INVALID: default:
           #ifndef DEBUG_MODE
-          token.report_error(this,pc->herr,"Unexpected token at this point");
+          token.report_error(this,"Unexpected token at this point");
           #else
-          token.report_error(this,pc->herr,"Unexpected token at this point: " + string(TOKEN_TYPE_NAME[token.type]));
+          token.report_error(this,"Unexpected token at this point: " + string(TOKEN_TYPE_NAME[token.type]));
           #endif
         return 5;
     }

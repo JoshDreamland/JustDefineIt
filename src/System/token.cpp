@@ -26,48 +26,16 @@ using namespace jdip;
 namespace jdip {
   /// A debug listing of token descriptions by value ID
   const char* TOKEN_TYPE_NAME[TT_INVALID+1] = {
-    "TT_DECLARATOR ///< Phrases like const, long, int, struct {}; anything that can be used as a type.",
-    "TT_CLASS      ///< The `class' keyword.",
-    "TT_STRUCT     ///< The `struct' keyword.",
-    "TT_ENUM       ///< The `enum' keyword.",
-    "TT_UNION      ///< The `union' keyword.",
-    "TT_NAMESPACE  ///< The `namespace' keyword. ",
-    
-    "TT_IDENTIFIER, ///< A standard identifier.",
-    
-    "TT_TEMPLATE   ///< The `template' keyword, which should be followed by <...>",
-    "TT_TYPENAME   ///< The `typename' keyword.",
-    
-    "TT_OPERATOR   ///< The `operator' keyword, not a random operator.",
-    "TT_TYPEDEF    ///< The `typedef' keyword.",
-    "TT_USING      ///< The `using' keyword.",
-    
-    "TT_PUBLIC     ///< The `public' keyword.",
-    "TT_PRIVATE    ///< The `private' keyword.",
-    "TT_PROTECTED  ///< The `protected' keyword.",
-    
-    "TT_COLON      ///< A simple colon, which should always mark a label.",
-    "TT_SCOPE      ///< The scope accessor `::' symbol.",
-    
-    "TT_LEFTPARENTH   ///< A left parenthesis, `('.",
-    "TT_RIGHTPARENTH  ///< A right parenthesis, `)'.",
-    "TT_LEFTBRACKET   ///< A left bracket, `['.",
-    "TT_RIGHTBRACKET  ///< A right bracket, `]'.",
-    "TT_LEFTBRACE     ///< A left brace, `{'.",
-    "TT_RIGHTBRACE    ///< A right brace, `}'.",
-    
-    "TT_DESTRUCTOR    ///< The tilde `~' symbol.",
-    "TT_COMMA         ///< A comma, `,'. Separates items in lists.",
-    "TT_SEMICOLON     ///< A semicolon, `;'. Separates statements and declarations.",
-    "TT_EQUALS        ///< An equals sign, `='. Used for assigning default values and const values.",
-    
-    "TT_STRINGLITERAL ///< A string literal, such as \"hello, world!\"",
-    "TT_DECLITERAL    ///< A decimal literal, such as 12345",
-    "TT_HEXLITERAL    ///< A hexadecimal literal, such as 0xDEC0DED",
-    "TT_OCTLITERAL    ///< An octal literal, such as 07654321.",
-    
-    "TT_ENDOFCODE ///< This token signifies that the code has reached its end.",
-    "TT_INVALID ///< Invalid token; read failed."
+    "TT_DECLARATOR","TT_CLASS","TT_STRUCT","TT_ENUM","TT_UNION","TT_NAMESPACE",
+    "TT_IDENTIFIER",
+    "TT_TEMPLATE","TT_TYPENAME",
+    "TT_TYPEDEF","TT_USING",
+    "TT_PUBLIC","TT_PRIVATE","TT_PROTECTED",
+    "TT_COLON","TT_SCOPE",
+    "TT_LEFTPARENTH","TT_RIGHTPARENTH","TT_LEFTBRACKET","TT_RIGHTBRACKET","TT_LEFTBRACE","TT_RIGHTBRACE","TT_LESSTHAN", "TT_GREATERTHAN",
+    "TT_TILDE","TT_EQUALS","TT_COMMA","TT_SEMICOLON",
+    "TT_STRINGLITERAL","TT_DECLITERAL","TT_HEXLITERAL","TT_OCTLITERAL",
+    "TT_ENDOFCODE","TT_INVALID"
   };
 }
 #endif
@@ -81,7 +49,7 @@ token_t::extra_::extra_() {}
 token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
 token_t::extra_::extra_(definition* d): def(d) {}
 
-void token_t::report_error(context *hc, error_handler *herr, std::string error)
+void token_t::report_error(context *hc, std::string error)
 {
   hc->err_file.clear();
   hc->err_line = -1;
@@ -96,7 +64,7 @@ void token_t::report_error(context *hc, error_handler *herr, std::string error)
     hc->err_pos = pos
   );
   
-  herr->error(error, hc->err_file, hc->err_line, hc->err_pos);
+  hc->pc->herr->error(error, hc->err_file, hc->err_line, hc->err_pos);
 }
 
 void token_t::report_error(error_handler *herr, std::string error)

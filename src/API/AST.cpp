@@ -30,177 +30,199 @@
 using namespace std;
 using namespace jdip;
 
+#ifdef DEBUG_MODE
+#define track(ct) expression += ct + " "
+#else
+#define track(ct)
+#endif
+
 namespace jdi
 {
-  void AST::operator<<(jdip::token_t token)
-  {
-    AST_TYPE at;
-    int precedence = 0, special_precedence = 0; bool rtl_parsed = 0;
-    AST_Node* an;
-    
-    #ifdef DEBUG_MODE
-    #define track(ct) expression += ct + " "
-    #endif
-    
+  AST::AST_Node* AST::parse_expression(token_t &token, int prec_min) {
+    if (token.type == TT_DECLARATOR or  token.type == TT_STRUCT
+    or  token.type == TT_CLASS or  token.type == TT_ENUM or  token.type == TT_UNION)
+    {
+      //full_type ft = ?????->read_type(token); // Read complete type
+      //if (token.type == TT_RIGHTPARENTH) // Check if we are a C-style cast (eg, (int)a)
+      //  return new unary_cast(ft, parse_expression(token = lex->get_token(herr), prec_unary_postfix));
+      //if (token.type == TT_LEFTPARENTH) // We could also be a C++ cast (eg, int(a))
+      //  return new func_cast(ft, parse_expression(token = lex->get_token(herr)));
+      token.report_error(herr, "Expected '(' or ')' after type name used in expression");
+      return NULL;
+    }
+    AST_Node *myroot = parse_unary_pre_or_literal(token);
+    if (!myroot) return NULL;
+    myroot = parse_binary_or_unary_post(token,myroot,prec_min);
+    return myroot;
+  }
+  AST::AST_Node* AST::parse_unary_pre_or_literal(token_t& token) {
+    string ct;
+    AST_Node *an = NULL;
+    AST_TYPE at = AT_BINARYOP;
+    bool read_next = false; // True at the end of this switch if the next token has already been read.
     switch (token.type)
     {
-      case TT_OPERATOR: {
-        string ct = string((const char*)token.extra.content.str,token.extra.content.len);
+      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+        token.report_error(herr, "Expected expression before declarator");
+        return NULL;
+      
+      case TT_IDENTIFIER: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                          track(an->content); at = AT_IDENTIFIER; break;
+      
+      case TT_TYPENAME:
+        token.report_error(herr, "Unimplemented.");
+        return NULL;
+      
+      case TT_OPERATOR:
+        ct = string((const char*)token.extra.content.str,token.extra.content.len);
+        if (not(symbols[ct].type & ST_UNARY_PRE)) {
+          token.report_error(herr,"Operator cannot be used as unary prefix");
+          return NULL;
+        }
         track(ct);
-        symbol &s = symbols[ct];
-        if (s.type & ST_RTL_PARSED)
-          rtl_parsed = true;
-        if (!current or current->type == AT_BINARYOP or current->type == AT_TERNARYOP or current->type == AT_UNARY_PREFIX) {
-          if (!(s.type & ST_UNARY_PRE)) {
-            return;
-          }
-          at = AT_UNARY_PREFIX;
-          precedence = 3;
-          an = new AST_Node_Unary();
+        token = lex->get_token();
+        an = new AST_Node_Unary(parse_expression(token, 1000), ct);
+        read_next = true;
+        break;
+      
+      case TT_GREATERTHAN: case TT_LESSTHAN: case TT_COLON:
+        token.report_error(herr, "Expected expression here before operator");
+        return NULL;
+      
+      case TT_SCOPE:
+      
+      case TT_LEFTPARENTH:
+        track(string("("));
+        token = lex->get_token();
+        an = parse_expression(token, 0);
+        if (token.type != TT_RIGHTPARENTH) {
+          token.report_error(herr, "Expected closing parenthesis at this point");
+          return NULL;
         }
-        else if (s.type & ST_UNARY_POST) {
-          if (current->type != AT_DECLITERAL and current->type != AT_HEXLITERAL and current->type != AT_OCTLITERAL and current->type != AT_UNARY_POSTFIX) {
-            return;
-          }
-          at = AT_UNARY_POSTFIX;
-          precedence = 2;
-          an = new AST_Node_Unary();
-        }
-        else {
-          if (!(s.type & ST_BINARY)) {
-            if (!(s.type & ST_TERNARY)) {
-              return;
-            }
-            at = AT_TERNARYOP;
-            precedence = s.prec;
-            special_precedence = 9001;
-            an = new AST_Node_Ternary();
-          }
-          else {
-            at = AT_BINARYOP;
-            precedence = s.prec;
-            an = new AST_Node_Binary();
-          }
-        }
-        an->content = ct;
-      } break;
+        track(string(")"));
+        token = lex->get_token();
+        return an;
+      case TT_LEFTBRACKET:
+      case TT_LEFTBRACE:
+      case TT_TILDE: break;
+      
+      case TT_COMMA:
+      case TT_SEMICOLON:
+        token.report_error(herr, "Expected expression");
+        return NULL;
+      
+      case TT_EQUALS:
+      case TT_STRINGLITERAL:
       
       case TT_DECLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
                           track(an->content); at = AT_DECLITERAL; break;
-      case TT_OCTLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
-                          track(an->content); at = AT_OCTLITERAL; break;
       case TT_HEXLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
                           track(an->content); at = AT_HEXLITERAL; break;
+      case TT_OCTLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                          track(an->content); at = AT_OCTLITERAL; break;
       
-      case TT_DECLARATOR: break;
-      case TT_IDENTIFIER: 
-        an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
-        track(an->content); at = AT_IDENTIFIER;
-        break;
+      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: 
+        return NULL; // Leave any error handling to caller.
       
-      case TT_COLON: // In this case, we need to traverse in search of a ternary operator.
-          track(string(":"));
-          while (!current or current->type != AT_TERNARYOP) {
-            if (!current) {
-              return;
-            }
-            current = current->parent;
-          }
-          if (!((AST_Node_Ternary*)current)->left or current->full()) {
-            return;
-          }
-          ((AST_Node_Ternary*)current)->state = true;
-        return;
+      case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+        token.report_error(herr, "Expected primary expression before %s token");
+        return NULL;
       
-      case TT_LEFTPARENTH:
-          track(string("("));
-          if (!current or current->type == AT_BINARYOP or current->type == AT_TERNARYOP or current->type == AT_UNARY_PREFIX) {
-            precedence = 2;
-            special_precedence = 9002;
-            an = new AST_Node_Group();
-            at = AT_OPEN_PARENTH;
-          }
-          else {
-            an = new AST_Node_Parameters();
-            at = AT_PARAMETER_START;
-          }
-        break;
-      case TT_RIGHTPARENTH:
-          track(string(")"));
-          if (!current) {
-            return;
-          }
-          while (current->type != AT_OPEN_PARENTH and current->type != AT_PARAMETER_START) {
-            current = current->parent;
-            if (!current) {
-              return;
-            }
-          }
-        return;
-      case TT_LEFTBRACKET: break;
-      case TT_RIGHTBRACKET: break;
-      
-      case TT_COMMA: break;
-      
-      case TT_EQUALS: break;
-      
-      case TT_SEMICOLON:
-        cout << "Semicolon token not handled by higher system. sadface" << endl;
-        return;
-      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: 
-      case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
-      case TT_SCOPE: case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_DESTRUCTOR: case TT_STRINGLITERAL: case TT_ENDOFCODE: case TT_INVALID: default:
-        
-        return;
+      case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
     }
-    
     token_basics(
       an->type = at,
       an->filename = (const char*)token.file,
       an->linenum = token.linenum,
       an->pos = token.pos
     );
-    an->precedence = special_precedence? special_precedence : precedence;
-    
-    // Time to add it to our AST.
-    // First, see if we have a root
-    if (root == NULL) {
-      root = current =  an; // We don't. This'll be a simple add.
-      return;
+    if (!read_next)
+      token = lex->get_token();
+    return an;
+  }
+  AST::AST_Node* AST::parse_binary_or_unary_post(token_t &token, AST::AST_Node *left, int prec_min) {
+    switch (token.type)
+    {
+      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+        return left;
+      
+      case TT_IDENTIFIER:
+      
+      case TT_TYPENAME:
+        token.report_error(herr, "Unimplemented.");
+        return NULL;
+      
+      case TT_GREATERTHAN: if (!tt_greater_is_op) return left; 
+      case TT_LESSTHAN: 
+      case TT_COLON: return left;
+      case TT_SCOPE: token.report_error(herr, "Unimplemented."); return NULL;
+      
+      case TT_OPERATOR: {
+          string op((const char*)token.extra.content.str,token.extra.content.len);
+          symbol &s = symbols[op];
+          if (s.type & ST_BINARY) {
+            if (s.prec < prec_min) return left;
+            token = lex->get_token();
+            track(op);
+            AST_Node *right = parse_expression(token, s.prec + !(s.type & ST_RTL_PARSED));
+            if (!right) {
+              token.report_error(herr, "Expected secondary expression after binary operator");
+              return left;
+            }
+            left = new AST_Node_Binary(left,right,op);
+            break;
+          }
+          if (s.type & ST_TERNARY) {
+            if (s.prec < prec_min) return left;
+            string ct((const char*)token.extra.content.str,token.extra.content.len);
+            track(ct);
+            
+            token = lex->get_token();
+            AST_Node* exptrue = parse_expression(token, 0);
+            if (!exptrue) return NULL;
+            if (token.type != TT_COLON) { token.report_error(herr, "Colon expected"); return NULL; }
+            track(string(":"));
+            
+            token = lex->get_token();
+            AST_Node* expfalse = parse_expression(token, 0);
+            if (!exptrue) return NULL;
+            
+            left = new AST_Node_Ternary(left,exptrue,expfalse,ct);
+          }
+        }
+        break;
+      case TT_TILDE:
+      
+      case TT_LEFTPARENTH:
+      case TT_LEFTBRACKET:
+      case TT_LEFTBRACE:
+      case TT_COMMA:
+      case TT_SEMICOLON:
+      case TT_EQUALS:
+      case TT_STRINGLITERAL:
+      case TT_DECLITERAL:
+      case TT_HEXLITERAL:
+      case TT_OCTLITERAL:
+      
+      case TT_RIGHTPARENTH:
+      case TT_RIGHTBRACKET:
+      case TT_RIGHTBRACE:
+      
+      case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      return left;
+      
+      case TT_INVALID: default: return left;
     }
-    
-    // We now assume that since we already have at least one node, `current` is valid
-    if (token.type == TT_OPERATOR and at != AT_UNARY_PREFIX) // If we're an operator (but not a unary prefix operator)
-    { // Then we need to consume some other node in the AST.
-      
-      // The first thing to do is find an operator of higher or equal precedence and consume it.
-      while (current->parent and current->parent->precedence < precedence)
-        current = current->parent;
-      
-      // We only consume operators of equal precedence if we are left-to-right parsed, otherwise
-      // we act as its child instead, replacing the root of its sub-AST.
-      if (current->parent and !rtl_parsed and current->parent->precedence == precedence)
-        current = current->parent;
-      
-      // We then consume the current node.
-      if (current->parent)
-        current->parent->setright(an);
-      else
-        root = an;
-      an->parent = current->parent;
-      
-      an->setleft(current);
-      current->parent = an;
-      current = an;
-    }
-    else {
-      if (current->full()) {
-        return;
-      }
-      current->setright(an);
-      an->parent = current;
-      current = an;
-    }
+    return parse_binary_or_unary_post(token,left,prec_min);
+  }
+  
+  int AST::parse_expression(lexer *ulex, error_handler *uherr) {
+    lex = ulex, herr = uherr;
+    token_t token = lex->get_token();
+    root = parse_expression(token, 0);
+    return 0;
   }
   
   
@@ -267,9 +289,13 @@ namespace jdi
   //===========================================================================================================================
   
   AST::AST_Node::AST_Node(): parent(NULL) {}
-  AST::AST_Node_Unary::AST_Node_Unary(): right(NULL) {}
-  AST::AST_Node_Binary::AST_Node_Binary(): left(NULL), right(NULL) {}
-  AST::AST_Node_Ternary::AST_Node_Ternary(): exp(NULL), left(NULL), right(NULL), state(false) {}
+  AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
+  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): right(r) {}
+  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct): AST_Node(ct), right(r) {}
+  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) {}
+  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) {}
+  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) {}
+  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct), exp(expression), left(exp_true), right(exp_false) {}
   AST::AST_Node_Group::AST_Node_Group(): root(NULL) {}
   AST::AST_Node_Parameters::AST_Node_Parameters(): func(NULL) {}
   
@@ -284,32 +310,6 @@ namespace jdi
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Group::~AST_Node_Group() { delete root; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
-  
-  
-  //===========================================================================================================================
-  //=: Virtual Setters :=======================================================================================================
-  //===========================================================================================================================
-  
-  void AST::AST_Node::setleft(AST::AST_Node* n) { cout << "ERROR! Passed to wrong token type. DISCARDED TO PREVENT MEMORY LEAK." << endl; delete n; }
-  void AST::AST_Node_Binary::setleft(AST::AST_Node* n) { if (n == this) for(;;); left = n;}
-  void AST::AST_Node_Unary::setleft(AST::AST_Node* n) { right = n; }
-  void AST::AST_Node_Ternary::setleft(AST::AST_Node* n) { exp = n; }
-  void AST::AST_Node_Group::setleft(AST::AST_Node* n) { root = n; }
-  void AST::AST_Node_Parameters::setleft(AST::AST_Node* n) { func = n; }
-  
-  void AST::AST_Node::setright(AST::AST_Node* n) { cout << "ERROR! Setting child node of a regular node {" << content << "}! DISCARDED TO PREVENT MEMORY LEAK." << endl; delete n; }
-  void AST::AST_Node_Binary::setright(AST::AST_Node* n) { right = n;}
-  void AST::AST_Node_Unary::setright(AST::AST_Node* n) { right = n; }
-  void AST::AST_Node_Ternary::setright(AST::AST_Node* n) { if (!state) left = n; else right = n; }
-  void AST::AST_Node_Group::setright(AST::AST_Node* n) { root = n; }
-  void AST::AST_Node_Parameters::setright(AST::AST_Node* n) { params.push_back(n); }
-  
-  bool AST::AST_Node::full() { return false; }
-  bool AST::AST_Node_Unary::full() { return right != NULL; }
-  bool AST::AST_Node_Binary::full() { return right != NULL; }
-  bool AST::AST_Node_Ternary::full() { return right != NULL; }
-  bool AST::AST_Node_Group::full() { return root != NULL; }
-  bool AST::AST_Node_Parameters::full() { return false; }
   
   
   //===========================================================================================================================

@@ -34,45 +34,44 @@ int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, toke
           if (handle_declarators(lex, scope, token))
             return 1;
           if (token.type != TT_SEMICOLON)
-            return (token.report_error(this, pc->herr, "Expected semicolon at this point"), 1);
+            return (token.report_error(this, "Expected semicolon at this point"), 1);
         break;
       
       case TT_COMMA:
-          token.report_error(this, pc->herr, "Unexpected comma at this point.");
+          token.report_error(this, "Unexpected comma at this point.");
         return 1;
       
       case TT_SEMICOLON:
           /* Printing a warning here is advisable but unnecessary. */
         break;
       
-      case TT_CLASS:
-      case TT_STRUCT:
-      case TT_ENUM:
-      case TT_UNION:
-      case TT_NAMESPACE:
-      case TT_IDENTIFIER:
-      case TT_TEMPLATE:
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
       case TT_TYPENAME:
-      case TT_OPERATOR:
-      case TT_TYPEDEF:
-      case TT_USING:
-      case TT_PUBLIC:
-      case TT_PRIVATE:
-      case TT_PROTECTED:
+      
+      case TT_IDENTIFIER:
+      
+      case TT_OPERATOR: case TT_LESSTHAN: case TT_GREATERTHAN:
       case TT_COLON:
-      case TT_SCOPE:
+      
       case TT_LEFTPARENTH:
       case TT_RIGHTPARENTH:
       case TT_LEFTBRACKET:
       case TT_RIGHTBRACKET:
       case TT_LEFTBRACE:
       case TT_RIGHTBRACE:
-      case TT_DESTRUCTOR:
+      
+      case TT_SCOPE:
+      case TT_TILDE:
       case TT_EQUALS:
       case TT_STRINGLITERAL:
+      
       case TT_DECLITERAL:
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
+      
+      case TT_TYPEDEF: case TT_USING: case TT_NAMESPACE: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      case TT_TEMPLATE:
+      
       case TT_INVALID:
       default:
         cout << "ERROR: INVALID TOKEN TYPE RETURNED.\n";

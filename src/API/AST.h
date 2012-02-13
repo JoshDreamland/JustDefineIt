@@ -28,6 +28,7 @@
 #include <string>
 #include <System/token.h>
 #include <Storage/value.h>
+#include <API/lexer_interface.h>
 
 namespace jdi {
   /** @class jdi::AST
@@ -56,6 +57,7 @@ namespace jdi {
       AT_PARAMETER_START
     };
     
+    /// Structure containing info for use when rendering SVGs.
     /// This class can export SVG files. Some info needs tossed around to do so.
     struct SVGrenderInfo;
     
@@ -81,10 +83,8 @@ namespace jdi {
       virtual value eval();
       
       AST_Node(); ///< Default constructor.
+      AST_Node(string ct); ///< Constructor, with content string.
       virtual ~AST_Node(); ///< Virtual destructor.
-      virtual void setleft(AST_Node* l); ///< Assign to the left node, if there is one. Otherwise, sets error state.
-      virtual void setright(AST_Node* r); ///< Assign to the right node, if there is one and it is empty. Otherwise, sets error state.
-      virtual bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
       virtual void print(); ///< Prints the contents of this node to stdout, recursively.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
@@ -99,10 +99,9 @@ namespace jdi {
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
       
-      AST_Node_Unary(); ///< Default constructor. Sets children to NULL.
+      AST_Node_Unary(AST_Node* r = NULL); ///< Default constructor. Sets children to NULL.
+      AST_Node_Unary(AST_Node* r, string ct); ///< Complete constructor, with child node and operator string.
       ~AST_Node_Unary(); ///< Default destructor. Frees children recursively.
-      void setleft(AST_Node* l); ///< Set the operand (same as \c setright).
-      void setright(AST_Node* r); ///< Set the operand (same as \c setleft).
       bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
       void print(); ///< Prints the contents of this node to stdout, recursively.
@@ -118,11 +117,9 @@ namespace jdi {
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
       
-      AST_Node_Binary(); ///< Default constructor. Sets children to NULL.
+      AST_Node_Binary(AST_Node* left=NULL, AST_Node* right=NULL); ///< Default constructor. Sets children to NULL.
+      AST_Node_Binary(AST_Node* left, AST_Node* right, string op); ///< Default constructor. Sets children to NULL.
       ~AST_Node_Binary(); ///< Default destructor. Frees children recursively.
-      void setleft(AST_Node* l); ///< Set the left-hand operand.
-      void setright(AST_Node* r); ///< Set the right-hand operand.
-      bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
       void print(); ///< Prints the contents of this node to stdout, recursively.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
@@ -135,16 +132,12 @@ namespace jdi {
                *left, ///< The left-hand (true) result.
                *right; ///< The right-hand (false) result.
       
-      bool state; ///< Unfortunately, we need to store state information to allow passive parsing.
-      
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
       
-      AST_Node_Ternary(); ///< Default constructor. Sets children to NULL.
+      AST_Node_Ternary(AST_Node *expression = NULL, AST_Node *exp_true = NULL, AST_Node *exp_false = NULL); ///< Default constructor. Sets children to NULL.
+      AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct); ///< Complete constructor, with children and a content string.
       ~AST_Node_Ternary(); ///< Default destructor. Frees children recursively.
-      void setleft(AST_Node* l); ///< Set the left-hand operand (the test expression).
-      void setright(AST_Node* r); ///< Set the right-hand operands (the first empty result).
-      bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
       void print(); ///< Prints the contents of this node to stdout, recursively.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
@@ -160,9 +153,6 @@ namespace jdi {
       
       AST_Node_Group(); ///< Default constructor. Sets children to NULL.
       ~AST_Node_Group(); ///< Default destructor. Frees children recursively.
-      void setleft(AST_Node* l); ///< Set the operand (the nested expression).
-      void setright(AST_Node* r); ///< Set the operand (the nested expression).
-      bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
       void print(); ///< Prints the contents of this node to stdout, recursively.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
@@ -211,11 +201,58 @@ namespace jdi {
     
     AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
     AST_Node *current; ///< A buffer containing the tokens to be lexed.
+    error_handler *herr; ///< The error handler which will receive any error messages.
+    lexer *lex; ///< The lexer from which tokens will be read.
+    
+    // State flags
+    bool tt_greater_is_op; ///< True if the greater-than symbol is to be interpreted as an operator.
+    
+    /** Handle a whole damn expression. Stops at the first unexpected token or when an
+        operator is encountered which has a precendence lower than the one specified.
+        Ergo, passing a precedence of 0 will handle all operators.
+        @param  precedence  The lowest precedence of any operators to be handled.
+    **/
+    AST_Node* parse_expression(jdip::token_t &token, int precedence = 0);
+    /** Handle anything you'd expect to see after a literal is given. This includes
+        binary and ternary operators (to which the literal or enclosing tree will be
+        used as the left-hand side, and the right will be read fresh), or a unary
+        postfix (which will apply to the latest-read literal or expression).
+        @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
+        @param  left_node  The latest-read literal or expression.
+        @param  prec_min   The minimum precedence of operators to handle.
+        @return Returns the node of the operator of lowest precedence (ie, the root
+                node), or NULL if an error occurs.
+    **/
+    AST_Node* parse_binary_or_unary_post(jdip::token_t &token, AST_Node *left_node, int prec_min);
+    /** Handle anything you'd expect to see at the start of an expression, being a
+        unary prefix operator or a literal.
+        @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
+        @return Returns the node of the operator of lowest precedence (ie, the root
+                node), or NULL if an error occurs.
+    **/
+    AST_Node* parse_unary_pre_or_literal(jdip::token_t& token);
+    /* * Handle a binary operator. Errors if the operator represented by the token cannot
+        be used as a binary operator.
+        @param  precedence  The precedence which will be given to this operator.
+        @param  origin      The token which sparked this call; used to copy over error info.
+        @return Returns the node of the operator of lowest precedence (ie, the root node),
+                be it the node of the newly allocated node or some other operator. If an
+                error occurs, NULL is returned.
+    ** /
+    int parse_binary_op(int precedence, jdip::token_t &origin);
+    int parse_unary_prefix(int precedence, jdip::token_t &origin);
+    int parse_unary_postfix(int precedence, jdip::token_t &origin);
+    int parse_ternary(int precedence, jdip::token_t &origin);*/
     
     public:
     
-    /// Push a token into the AST.
-    void operator<<(jdip::token_t token);
+    /** Parse in an expression, building an AST.
+        @param lex    The lexer which will be polled for tokens.
+        @param endat  The type of token which marks the end of the expression. TT_INTERRUPT will always be accepted.
+        @param herr   The error handler which will receive any warning or error messages.
+        @return  This function shall return 0 if no error has occurred, or nonzero otherwise.
+    **/
+    int parse_expression(lexer *lex, error_handler *herr = def_error_handler);
     
     /// Evaluate the current AST, returning its \c value.
     value eval();

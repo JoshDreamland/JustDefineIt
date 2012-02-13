@@ -102,6 +102,8 @@
 		<Unit filename="src/System/token.h" />
 		<Unit filename="src/System/type_usage_flags.h" />
 		<Unit filename="test/MAIN.cc" />
+		<Unit filename="test/debug_lexer.cpp" />
+		<Unit filename="test/debug_lexer.h" />
 		<Unit filename="test/modifiers.txt" />
 		<Unit filename="test/primitives.txt" />
 		<Unit filename="test/standaloneflags.txt" />

@@ -137,7 +137,8 @@ token_t lexer_cpp::get_token(error_handler *herr)
     return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
   return get_token(herr);
 }
-
+  
 lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros) {
-  consume(input);
+  consume(input); // We are also an llreader. Consume the given one!
 }
+

@@ -41,7 +41,6 @@ namespace jdip {
     TT_TEMPLATE,   ///< The `template' keyword, which should be followed by <...>
     TT_TYPENAME,   ///< The `typename' keyword.
     
-    TT_OPERATOR,   ///< The `operator' keyword, not a random operator.
     TT_TYPEDEF,    ///< The `typedef' keyword.
     TT_USING,      ///< The `using' keyword.
     
@@ -58,11 +57,15 @@ namespace jdip {
     TT_RIGHTBRACKET,  ///< A right bracket, `]'.
     TT_LEFTBRACE,     ///< A left brace, `{'.
     TT_RIGHTBRACE,    ///< A right brace, `}'.
+    TT_LESSTHAN,      ///< A less-than symbol, or left triangle bracket, `<'.
+    TT_GREATERTHAN,   ///< A greater-than symbol, or right triangle bracket, `>'.
     
-    TT_DESTRUCTOR,    ///< The tilde `~' symbol.
+    TT_TILDE,         ///< The tilde `~' symbol.
+    TT_EQUALS,        ///< An equals sign, `='. Used for assigning default values and const values.
+    TT_OPERATOR,      ///< Any sort of operator. This token is used only when the token has no other purpose but as an operator.
+    
     TT_COMMA,         ///< A comma, `,'. Separates items in lists.
     TT_SEMICOLON,     ///< A semicolon, `;'. Separates statements and declarations.
-    TT_EQUALS,        ///< An equals sign, `='. Used for assigning default values and const values.
     
     TT_STRINGLITERAL, ///< A string literal, such as "hello, world!"
     TT_DECLITERAL,    ///< A decimal literal, such as 12345
@@ -158,7 +161,7 @@ namespace jdip {
       @param herr  The error_handler which will receive this notification.
       @param error The text of the error.
     **/
-    void report_error(context* pc, error_handler *herr, std::string error);
+    void report_error(context* pc, std::string error);
     /**
       Copy error information to a parse context.
       If no information is available, then zeros are copied in its place.

@@ -74,6 +74,8 @@ namespace jdi
     macro_map macros; ///< A map of macros defined in this context.
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.
+    
+    public: // FIXME: Make this protected, too, somehow
     jdip::parse_context* pc; ///< Any open parse context in this definition context.
     
     public:

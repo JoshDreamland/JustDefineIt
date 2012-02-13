@@ -64,6 +64,6 @@ namespace jdip {
   **/
   struct lexer_macro: lexer {
     token_t get_token(error_handler *herr = def_error_handler);
-    quick::stack<openfile*> files; ///< The files we have open
+    quick::stack<openfile*> files; ///< The files we have open                                                              
   };
 }

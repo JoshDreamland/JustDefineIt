@@ -19,6 +19,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <cstdio>
 #include "symbols.h"
 #include <Storage/value_funcs.h>
 
@@ -41,61 +42,75 @@ using namespace jdip;
 static struct map_symbols_ {
   /// Constructor will be run at program start to populate symbols.
   map_symbols_ () {
-    symbols["::"] = symbol(ST_BINARY, 1);
+    int prec = 18;
+    symbols["::"] = symbol(ST_BINARY, prec);
     
-    symbols["["]  = symbol(ST_BINARY,2);
-    symbols["("]  = symbol(ST_BINARY | ST_UNARY_PRE,2);
-    symbols["."]  = symbol(ST_BINARY,2);
-    symbols["->"] = symbol(ST_BINARY,2);
+    prec--;
+    symbols["["]  = symbol(ST_BINARY,prec);
+    symbols["("]  = symbol(ST_BINARY | ST_UNARY_PRE,prec);
+    symbols["."]  = symbol(ST_BINARY,prec);
+    symbols["->"] = symbol(ST_BINARY,prec);
     
-    symbols["++"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_increment);
-    symbols["--"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_decrement);
-    symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_increment);
-    symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,2,value_unary_increment);
+    prec--;
+    symbols["++"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
+    symbols["--"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_decrement);
+    symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
+    symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
     
-    symbols[".*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,3);
-    symbols["->*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,3);
+    prec--;
+    symbols[".*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,  prec);
+    symbols["->*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST, prec);
     
-    symbols["*"]  = symbol(ST_UNARY_PRE | ST_BINARY,4,values_multiply,value_unary_dereference);
-    symbols["/"]  = symbol(ST_BINARY,4,values_divide);
-    symbols["%"]  = symbol(ST_BINARY,4,values_modulo);
+    prec--;
+    symbols["*"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_multiply,value_unary_dereference);
+    symbols["/"]  = symbol(ST_BINARY,prec,values_divide);
+    symbols["%"]  = symbol(ST_BINARY,prec,values_modulo);
     
-    symbols["+"]  = symbol(ST_UNARY_PRE | ST_BINARY,5,values_add,value_unary_positive);
-    symbols["-"]  = symbol(ST_UNARY_PRE | ST_BINARY,5,values_subtract,value_unary_negative);
+    prec--;
+    symbols["+"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_add,value_unary_positive);
+    symbols["-"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_subtract,value_unary_negative);
     
-    symbols["<<"]  = symbol(ST_BINARY,6,values_lshift);
-    symbols[">>"]  = symbol(ST_BINARY,6,values_rshift);
+    prec--;
+    symbols["<<"]  = symbol(ST_BINARY,prec,values_lshift);
+    symbols[">>"]  = symbol(ST_BINARY,prec,values_rshift);
     
-    symbols["<"]  = symbol(ST_BINARY,7,values_less);
-    symbols[">"]  = symbol(ST_BINARY,7,values_greater);
-    symbols["<="]  = symbol(ST_BINARY,7,values_less_or_equal);
-    symbols[">="]  = symbol(ST_BINARY,7,values_greater_or_equal);
+    prec--;
+    symbols["<"]  = symbol(ST_BINARY,prec,values_less);
+    symbols[">"]  = symbol(ST_BINARY,prec,values_greater);
+    symbols["<="]  = symbol(ST_BINARY,prec,values_less_or_equal);
+    symbols[">="]  = symbol(ST_BINARY,prec,values_greater_or_equal);
     
-    symbols["=="]  = symbol(ST_BINARY,8,values_equal);
-    symbols["!="]  = symbol(ST_BINARY,8,values_notequal);
+    prec--;
+    symbols["=="]  = symbol(ST_BINARY,prec,values_equal);
+    symbols["!="]  = symbol(ST_BINARY,prec,values_notequal);
     
-    symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,9,value_unary_reference);
-    symbols["^"]  = symbol(ST_BINARY,10);
-    symbols["|"]  = symbol(ST_BINARY,11);
+    prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,value_unary_reference);
+    prec--; symbols["^"]  = symbol(ST_BINARY,prec);
+    prec--; symbols["|"]  = symbol(ST_BINARY,prec);
     
-    symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,12);
-    symbols["^^"] = symbol(ST_BINARY,13);
-    symbols["||"] = symbol(ST_BINARY,14);
+    prec--; symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,prec);
+    prec--; symbols["^^"] = symbol(ST_BINARY,prec);
+    prec--; symbols["||"] = symbol(ST_BINARY,prec);
     
-    symbols["?"]  = symbol(ST_TERNARY | ST_RTL_PARSED,15);
+    prec--; symbols["?"]  = symbol(ST_TERNARY | ST_RTL_PARSED,prec);
     
-    symbols["="]   = symbol(ST_BINARY | ST_RTL_PARSED,16, values_latter);
-    symbols["+="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["-="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["*="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["%="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["/="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["&="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["^="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["|="]  = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols["<<="] = symbol(ST_BINARY | ST_RTL_PARSED,16);
-    symbols[">>="] = symbol(ST_BINARY | ST_RTL_PARSED,16);
+    prec--;
+    symbols["="]   = symbol(ST_BINARY | ST_RTL_PARSED,prec, values_latter);
+    symbols["+="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["-="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["*="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["%="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["/="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["&="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["^="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["|="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols["<<="] = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+    symbols[">>="] = symbol(ST_BINARY | ST_RTL_PARSED,prec);
     
-    symbols[","]  = symbol(ST_BINARY,17,values_latter);
+    prec--;
+    symbols[","]  = symbol(ST_BINARY,prec,values_latter);
+    
+    if (prec != 1)
+      printf("INTERNAL ERROR. SHIT.\n");
   }
 } map_symbols;
