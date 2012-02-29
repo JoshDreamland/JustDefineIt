@@ -34,7 +34,12 @@ using namespace std;
 #include "builtins.h"
 
 namespace jdip {
-  map<string,USAGE_FLAG> builtin_flags;
+  tf_map builtin_declarators;
+  prim_map builtin_primitives;
+  tf_flag_map builtin_decls_byflag;
+  typeflag::typeflag(): usage(), def(NULL) {}
+  typeflag::typeflag(string n, USAGE_FLAG u): name(n), usage(u), def(NULL) {}
+  typeflag::~typeflag() { }
 }
 
 using namespace jdip;
@@ -53,11 +58,44 @@ namespace jdi {
     }
     in.close();
   }
-  void add_declarator(string type_name, USAGE_FLAG usage_flags)
+  void add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name)
   {
-    if (usage_flags & UF_FLAG) {
-      pair<map<string,USAGE_FLAG>::iterator, bool> insit = builtin_flags.insert(pair<string,USAGE_FLAG>(type_name,usage_flags));
-      insit.first->second = USAGE_FLAG(insit.first->second | usage_flags);
+    pair<tf_iter, bool> insit = builtin_declarators.insert(pair<string,typeflag*>(type_name,NULL));
+    if (insit.second) {
+      insit.first->second = new typeflag(type_name, usage_flags);
+      if (usage_flags & (UF_PRIMITIVE | UF_STANDALONE)) {
+        if (prim_name.empty())
+          prim_name = type_name;
+        pair<prim_iter, bool> ntit = builtin_primitives.insert(pair<string,definition*>(prim_name,NULL));
+        if (ntit.second)
+          ntit.first->second = new definition(prim_name, NULL, DEF_TYPENAME);
+        insit.first->second->def = ntit.first->second;
+      }
+      if (usage_flags & UF_FLAG)
+      {
+        const unsigned long fb = 1 << builtin_decls_byflag.size();
+        builtin_decls_byflag[fb] = insit.first->second;
+        insit.first->second->flagbit = fb;
+      }
     }
+    else
+      insit.first->second->usage = USAGE_FLAG(insit.first->second->usage | usage_flags);
+  }
+  
+  void add_gnu_declarators() {
+    add_declarator("volatile", UF_FLAG);
+    add_declarator("static",   UF_FLAG);
+    add_declarator("const",    UF_FLAG);
+    add_declarator("register", UF_FLAG);
+    
+    add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
+    add_declarator("signed",   UF_STANDALONE_FLAG, "int");
+    add_declarator("long",     UF_PRIMITIVE_FLAG);
+    add_declarator("short",    UF_PRIMITIVE_FLAG);
+    
+    add_declarator("char",     UF_PRIMITIVE);
+    add_declarator("int",      UF_PRIMITIVE);
+    add_declarator("float",    UF_PRIMITIVE);
+    add_declarator("double",   UF_PRIMITIVE);
   }
 }

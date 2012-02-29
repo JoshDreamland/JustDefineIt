@@ -15,7 +15,6 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DDEBUG_MODE" />
-					<Add directory="./src" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -38,7 +37,6 @@
 			<Add option="-Wcast-align" />
 			<Add option="-Wundef" />
 			<Add option="-Wfloat-equal" />
-			<Add option="-Winline" />
 			<Add option="-Wunreachable-code" />
 			<Add option="-Wmissing-declarations" />
 			<Add option="-Wmissing-include-dirs" />
@@ -50,6 +48,7 @@
 			<Add option="-Wextra" />
 			<Add option="-Wall" />
 			<Add option="-Werror" />
+			<Add directory="./src" />
 		</Compiler>
 		<Unit filename="src/API/AST.cpp" />
 		<Unit filename="src/API/AST.h" />

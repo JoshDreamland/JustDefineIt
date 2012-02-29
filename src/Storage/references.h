@@ -26,6 +26,9 @@
 #ifndef _REFERENCES__H
 #define _REFERENCES__H
 
+#include <string>
+using std::string;
+
 namespace jdi {
   /**
     @struct jdi::ref_stack
@@ -36,13 +39,75 @@ namespace jdi {
     pointer symbol (*), the ampersand reference symbol (&), bracket array
     bound indicators ([]), and function parameter parentheses ((*)()).
     
-    The stack is ordered such that each dereference symbol (the asterisk
-    symbol or a set of array bounds, or a list of function parameters)
-    is evaluated simply by popping one item from a copy of the stack.
+    The stack does not depict parentheses used in grouping. Instead, the
+    grouped referencers are simply added to the stack in the correct order.
+    
+    The stack is ordered such that each dereference symbol (listed above)
+    can be evaluated simply by popping one item from a copy of the stack,
+    performing each action as it is removed.
+    
+    As an example, this is the stack for int* (*(*a)[10][12])[15]:
+    * RT_POINTERTO
+    * RT_ARRAYBOUND(10)
+    * RT_ARRAYBOUND(12)
+    * RT_POINTERTO
+    * RT_ARRAYBOUND(15)
+    * RT_POINTERTO
   **/
   struct ref_stack {
+    /// Types of referencers you'll find on this stack
+    enum ref_type {
+      RT_POINTERTO, ///< This referencer is a pointer-to asterisk, (*).
+      RT_REFERENCE, ///< This referencer is a reference ampersand (&).
+      RT_ARRAYBOUND, ///< This referencer is an array boundary subscript, [].
+      RT_FUNCTION ///< This referencer is a set of function parameters.
+    };
+    
+    /// Parameter storage container type. Guaranteed to have a push_back(full_type) method.
+    struct parameter_ct;
+    
+    /// Node type.
+    struct node {
+      node* previous;
+      ref_type type;
+      virtual ~node();
+    };
+    struct node_array;
+    struct node_func;
+    
+    /// Append a stack to the top of this stack, consuming it.
+    void append(ref_stack &rf);
     /// Clear the stack, undoing all referencers.
     void clear();
+    
+    ref_stack& operator= (const ref_stack& rf); ///< Wrapper to the copy() method so operator= doesn't leak and bite someone in the ass.
+    ref_stack(const ref_stack&); ///< Constructor wrapper to the copy() method.
+    
+    ref_stack(); ///< Default contructor. Zeroes pointers.
+    ~ref_stack(); ///< Default destructor. Frees the stack.
+    
+    string name;
+    private:
+      void copy(const ref_stack &rf); ///< Make a copy of the given ref_stack, LEAKING any stored nodes! Call clear() first.
+      node *bottom; ///< The bottommost node on the list; used in the prepend method.
+      node *top; ///< The topmost node on the list, for everything else.
+  };
+}
+
+//=========================================================================================================
+//===: Specializations with extended dependencies:=========================================================
+//=========================================================================================================
+
+#include <Storage/definition.h>
+
+namespace jdi {  
+  struct ref_stack::parameter_ct: public vector<jdi::full_type> {};
+  struct ref_stack::node_array: ref_stack::node {
+    size_t bounds;
+  };
+  struct ref_stack::node_func: ref_stack::node {
+    parameter_ct params;
+    ~node_func();
   };
 }
 

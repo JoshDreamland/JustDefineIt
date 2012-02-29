@@ -130,11 +130,7 @@ string context::get_last_error() {
 
 void context::load_standard_builtins()
 {
-  global->members["char"]   = new definition("char",   global, DEF_TYPENAME);
-  global->members["int"]    = new definition("int",    global, DEF_TYPENAME);
-  global->members["float"]  = new definition("float",  global, DEF_TYPENAME);
-  global->members["double"] = new definition("double", global, DEF_TYPENAME);
-  global->members["void"]   = new definition("void",   global, DEF_TYPENAME);
+  // Nothing to load
 }
 void context::load_gnu_builtins()
 {
@@ -165,13 +161,32 @@ void context::output_macros(ostream &out)
     }
   }
 }
-void context::output_definitions(ostream &out) {
-  for (map<string,definition*>::iterator it = global->members.begin(); it != global->members.end(); it++)
+
+static void utility_printrc(definition_scope* scope, ostream &out, string indent) {
+  for (map<string,definition*>::iterator it = scope->members.begin(); it != scope->members.end(); it++)
   {
-    if (it->second->flags & DEF_TYPED) out << ((definition_typed*)it->second)->type->name << " ";
-    out << it->second->name;
-    out << ";" << endl;
+    out << indent;
+    if (it->second->flags & DEF_TYPED)
+    {
+      for (int i = 1; i <= 0x10000; i <<= 1)
+        if (((definition_typed*)it->second)->flags & i)
+          out << builtin_decls_byflag[i]->name << " ";
+      if (((definition_typed*)it->second)->type)
+        out << ((definition_typed*)it->second)->type->name << " ";
+      else out << "<NULL> ";
+      out << it->second->name;
+      out << ";" << endl;
+    }
+    else if (it->second->flags & DEF_NAMESPACE)
+    {
+      out << indent << "namespace " << it->second->name << " {" << endl;
+      utility_printrc((definition_scope*)it->second, out, indent + "  ");
+      out << indent << "}" << endl;
+    }
   }
+}
+void context::output_definitions(ostream &out) {
+  utility_printrc(global, out, "");
 }
 
 context::context(): global(new definition_scope()), pc(NULL) {

@@ -39,35 +39,25 @@ using namespace jdip;
 namespace jdi
 {
   AST::AST_Node* AST::parse_expression(token_t &token, int prec_min) {
-    if (token.type == TT_DECLARATOR or  token.type == TT_STRUCT
-    or  token.type == TT_CLASS or  token.type == TT_ENUM or  token.type == TT_UNION)
-    {
-      //full_type ft = ?????->read_type(token); // Read complete type
-      //if (token.type == TT_RIGHTPARENTH) // Check if we are a C-style cast (eg, (int)a)
-      //  return new unary_cast(ft, parse_expression(token = lex->get_token(herr), prec_unary_postfix));
-      //if (token.type == TT_LEFTPARENTH) // We could also be a C++ cast (eg, int(a))
-      //  return new func_cast(ft, parse_expression(token = lex->get_token(herr)));
-      token.report_error(herr, "Expected '(' or ')' after type name used in expression");
-      return NULL;
-    }
-    AST_Node *myroot = parse_unary_pre_or_literal(token);
-    if (!myroot) return NULL;
-    myroot = parse_binary_or_unary_post(token,myroot,prec_min);
-    return myroot;
-  }
-  AST::AST_Node* AST::parse_unary_pre_or_literal(token_t& token) {
     string ct;
-    AST_Node *an = NULL;
+    AST_Node *myroot = NULL;
     AST_TYPE at = AT_BINARYOP;
+    
     bool read_next = false; // True at the end of this switch if the next token has already been read.
+    bool handled_basics = false; // True at the end of this switch if the basic token info was already read in.
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+        //full_type ft = ?????->read_type(token); // Read complete type
+        //if (token.type == TT_RIGHTPARENTH) // Check if we are a C-style cast (eg, (int)a)
+        //  return new unary_cast(ft, parse_expression(token = lex->get_token(herr), prec_unary_postfix));
+        //if (token.type == TT_LEFTPARENTH) // We could also be a C++ cast (eg, int(a))
+        //  return new func_cast(ft, parse_expression(token = lex->get_token(herr)));
         token.report_error(herr, "Expected expression before declarator");
         return NULL;
       
-      case TT_IDENTIFIER: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
-                          track(an->content); at = AT_IDENTIFIER; break;
+      case TT_IDENTIFIER: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                          track(myroot->content); at = AT_IDENTIFIER; break;
       
       case TT_TYPENAME:
         token.report_error(herr, "Unimplemented.");
@@ -81,7 +71,7 @@ namespace jdi
         }
         track(ct);
         token = lex->get_token();
-        an = new AST_Node_Unary(parse_expression(token, 1000), ct);
+        myroot = new AST_Node_Unary(parse_expression(token, 1000), ct);
         read_next = true;
         break;
       
@@ -94,14 +84,14 @@ namespace jdi
       case TT_LEFTPARENTH:
         track(string("("));
         token = lex->get_token();
-        an = parse_expression(token, 0);
+        myroot = parse_expression(token, 0);
         if (token.type != TT_RIGHTPARENTH) {
           token.report_error(herr, "Expected closing parenthesis at this point");
           return NULL;
         }
         track(string(")"));
-        token = lex->get_token();
-        return an;
+        handled_basics = true;
+        break;
       case TT_LEFTBRACKET:
       case TT_LEFTBRACE:
       case TT_TILDE: break;
@@ -114,37 +104,40 @@ namespace jdi
       case TT_EQUALS:
       case TT_STRINGLITERAL:
       
-      case TT_DECLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
-                          track(an->content); at = AT_DECLITERAL; break;
-      case TT_HEXLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
-                          track(an->content); at = AT_HEXLITERAL; break;
-      case TT_OCTLITERAL: an = new AST_Node(); an->content = string((const char*)token.extra.content.str,token.extra.content.len);
-                          track(an->content); at = AT_OCTLITERAL; break;
+      case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                          track(myroot->content); at = AT_DECLITERAL; break;
+      case TT_HEXLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                          track(myroot->content); at = AT_HEXLITERAL; break;
+      case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                          track(myroot->content); at = AT_OCTLITERAL; break;
       
-      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: 
-        return NULL; // Leave any error handling to caller.
-      
+      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
+        // Overflow; same error.
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
-        token.report_error(herr, "Expected primary expression before %s token");
+        token.report_error(herr, "Expected expression before %s token");
         return NULL;
       
       case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
     }
-    token_basics(
-      an->type = at,
-      an->filename = (const char*)token.file,
-      an->linenum = token.linenum,
-      an->pos = token.pos
-    );
+    if (!handled_basics)
+      token_basics(
+        myroot->type = at,
+        myroot->filename = (const char*)token.file,
+        myroot->linenum = token.linenum,
+        myroot->pos = token.pos
+      );
     if (!read_next)
       token = lex->get_token();
-    return an;
+    
+    myroot = parse_binary_or_unary_post(token,myroot,prec_min);
+    return myroot;
   }
+  
   AST::AST_Node* AST::parse_binary_or_unary_post(token_t &token, AST::AST_Node *left, int prec_min) {
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
         return left;
       
       case TT_IDENTIFIER:
@@ -205,9 +198,7 @@ namespace jdi
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
       
-      case TT_RIGHTPARENTH:
-      case TT_RIGHTBRACKET:
-      case TT_RIGHTBRACE:
+      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left;
       
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
@@ -221,6 +212,19 @@ namespace jdi
   int AST::parse_expression(lexer *ulex, error_handler *uherr) {
     lex = ulex, herr = uherr;
     token_t token = lex->get_token();
+    root = parse_expression(token, 0);
+    return 0;
+  }
+  
+  int AST::parse_expression(lexer *ulex, token_t &token, error_handler *uherr) {
+    lex = ulex, herr = uherr;
+    token = lex->get_token();
+    root = parse_expression(token, 0);
+    return 0;
+  }
+  
+  int AST::parse_expression(token_t &token, lexer *ulex, error_handler *uherr) {
+    lex = ulex, herr = uherr;
     root = parse_expression(token, 0);
     return 0;
   }

@@ -64,6 +64,51 @@
 
 namespace jdip {
   /**
+    Read a complete type from the given input stream.
+    
+    This function is a reader. Many inputs are liable to be modified in some form or another.
+    See \section Readers for details.
+    
+    When the read_type function is invoked, the passed token must be a declarator of some sort.
+    It is up to the calling method to ensure this.
+    
+    When the read_type function terminates, the passed token will have been set to the first
+    unhandled token, meaning it will NOT have the types \c TT_DECLARATOR, \c TT_DECFLAG, \c
+    TT_LEFTBRACKET, \c TT_LEFTPARENTH, or \c TT_IDENTIFIER. Each of those is handled before
+    the termination of this function, either in the function itself or in a call to
+    \c read_referencers. If a name is specified along with the type, it will be copied into
+    the `referencers` member of the resulting \c full_type.
+    
+    @param  lex    The lexer to be polled for tokens. [in-out]
+    @param  token  The token for which this function was invoked.
+                   The type of this token must be either \c TT_DECLARATOR or \c TT_DECFLAG. [in-out]
+    @param  scope  The scope used to resolve identifiers. [in]
+    
+    @return Returns the \c full_type read from the stream. Leaves \p token indicating the
+            first unhandled token.
+  **/
+  full_type read_type(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr = def_error_handler);
+  /**
+    Read a series of referencers from the given input stream.
+    
+    This function is a reader. Many inputs are liable to be modified in some form or another.
+    See \section Readers for details.
+    
+    This method will read a complete rf_stack from the given input stream. This includes pointer-to asterisks (*),
+    reference ampersands (&), array bounds in square brackets [], and function parameters in parentheses (). Parentheses
+    used for the purpose of putting precedence on a given referencer will be handled, but will not be literally denoted
+    in the returned stack.
+    
+    @param  lex    The lexer to be polled for tokens. [in-out]
+    @param  token  The token for which this function was invoked. If the given token is a
+                   type, it will be part of the return \c full_type, otherwise it will
+                   just be overwritten. [in-out]
+    @param  scope  The scope used to resolve identifiers. [in]
+    
+    @return Returns the \c jdi::ref_stack read from the stream.
+  **/
+  jdi::ref_stack read_referencers(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr = def_error_handler);
+  /**
     @class context_parser
     @brief A field-free utility class extending \c context, implementing the
            recursive-descent functions needed by the parser.
@@ -114,28 +159,6 @@ namespace jdip {
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
     int handle_scope(lexer *lex, definition_scope *scope, token_t& token);
-    
-    /**
-      Read a complete type from the given input stream.
-      
-      This function is a reader. Many inputs are liable to be modified in some form or another.
-      See \section Readers for details.
-      
-      The read_type function will generally leave you with the next token in the file linearly,
-      but for complicated declarations, it will try to ensure the next token is the declarator
-      name. In this case, seeking back to the resulting const char* is a bad idea, as it may
-      place you in the middle of a pair of parentheses. For example, consider int (*fn)(int).
-      In that instance, \c read_type will exit with token = token_t(TT_IDENTIFIER, "fn", ...).
-      
-      @param  lex    The lexer to be polled for tokens. [in-out]
-      @param  token  The token for which this function was invoked. If the given token is a
-                     type, it will be part of the return \c full_type, otherwise it will
-                     just be overwritten. [in-out]
-      @param  scope  The scope which may be passed to \c read_token. [in]
-      
-      @return Returns the \c full_type read from the stream.
-    **/
-    full_type read_type(lexer *lex, token_t &token, definition_scope *scope);
     
     /**
       Read an expression from the given input stream, evaluating it for a value.

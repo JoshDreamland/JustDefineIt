@@ -53,34 +53,32 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
     return 1;
   }
   
+  after_comma:
+  
   // Make sure we do indeed find ourselves at an identifier to declare.
-  if (token.type != TT_IDENTIFIER) {
+  if (tp.refs.name.empty()) {
     token.report_error(this,"Declaration doesn't declare anything");
     return 2;
   }
   
-  // Take record of the name.
-  string name((const char*)token.extra.content.str,token.extra.content.len);
-  
   // Add it to our definitions map, without overwriting the existing member.
-  definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(name,NULL));
+  definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
   if (ins.second) // If we successfully inserted,
-    ins.first->second = new definition_typed(name,scope,tp.def,tp.refs);
+    ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags);
   #ifndef NO_ERROR_REPORTING
-  else // Well, uh-the-fuck-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
+  else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {
     if (not(ins.first->second->flags & DEF_TYPED)) {
-      token.report_error(this,"Redeclaration of `" + name + "' as a different kind of symbol");
+      token.report_error(this,"Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
       return 3;
     }
     if (not(ins.first->second->flags & DEF_TYPED) & DEF_EXTERN) { //TODO: Implement
-      token.report_error(this,"Redeclaration of non-extern `" + name + "' as non-extern");
+      token.report_error(this,"Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
       return 4;
     }
   }
   #endif
   
-  token = read_next_token(lex, scope);
   for (;;)
   {
     switch (token.type) {
@@ -91,7 +89,7 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
             return 5;
           }
           else {
-            // If this thing's const, we need to make note of the value... FML
+            // If this thing's const, we need to make note of the value.
             value a = read_expression(lex, token, TT_SEMICOLON, scope);
             if (a.type != VT_NONE) {
               
@@ -99,15 +97,14 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
           }
         break;
       case TT_COMMA:
-          // Clear the refstack from our previous type; ISO C says that char *foo, bar; makes foo a char* and bar a char.
-          tp.refs.clear();
+          // Move past this comma
+          token = read_next_token(lex, scope);
           
-          // Establish a dummy token with our original type
-          token.type = TT_DECLARATOR;
-          token.extra.def = tp.def;
+          // Read a new type
+          tp.refs = read_referencers(lex, token, scope);
           
-          // Re-invoke the type reader via tail call
-        return handle_declarators(lex, scope, token);
+          // Just hop into the error checking above and pass through the definition addition again.
+        goto after_comma;
       
       case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
           token.report_error(this,"Expected initializer `=' here before literal.");
@@ -124,7 +121,7 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
       case TT_SEMICOLON:
         return 0;
       
-      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_IDENTIFIER:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_IDENTIFIER:
       case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_COLON: case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_TILDE:

@@ -32,9 +32,11 @@ namespace jdi {
     unsigned and long can behave either way. This enumeration represents each of these.
   **/
   enum USAGE_FLAG {
-    UF_PRIMITIVE = 1, ///< The type name is a standard primitive type, such as int or double.
-    UF_FLAG = 2, ///< The type name is a modifier flag, such as volatile or const.
-    UF_STANDALONE_FLAG = UF_PRIMITIVE | UF_FLAG ///< The type name is a modifier flag that can stand alone, such as long or short. These imply int.
+    UF_PRIMITIVE = 1,      ///< The type name is a standard primitive type, such as int or double.
+    UF_FLAG = 2,           ///< The type name is a modifier flag, such as volatile or const.
+    UF_PRIMITIVE_FLAG = 3, ///< The type name is both a primitive and a modifier flag, such as long or short.
+    UF_STANDALONE = 4,     ///< The type name is a modifier flag that can stand alone, such as unsigned and signed. These imply int.
+    UF_STANDALONE_FLAG = 6 ///< This is a convenience OR of STANDALONE and FLAG, even though you can not have STANDALONE without FLAG.
   };
 }
 #endif

@@ -29,7 +29,8 @@
 
 namespace jdip {
   enum TOKEN_TYPE {
-    TT_DECLARATOR, ///< Phrases like const, long, int, struct {}; anything that can be used as a type. 
+    TT_DECLARATOR, ///< Phrases like int, struct {}, std::map; anything that can be used as a type. 
+    TT_DECFLAG,    ///< Phrases which can be used multiple times in a declaration as flags, like const, unsigned, long. 
     TT_CLASS,      ///< The `class' keyword.
     TT_STRUCT,     ///< The `struct' keyword.
     TT_ENUM,       ///< The `enum' keyword.
@@ -72,8 +73,8 @@ namespace jdip {
     TT_HEXLITERAL,    ///< A hexadecimal literal, such as 0xDEC0DED
     TT_OCTLITERAL,    ///< An octal literal, such as 07654321.
     
-    TT_ENDOFCODE, ///< This token signifies that the code has reached its end.
-    TT_INVALID ///< Invalid token; read failed.
+    TT_ENDOFCODE,     ///< This token signifies that the code has reached its end.
+    TT_INVALID        ///< Invalid token; read failed.
   };
   
   #ifdef DEBUG_MODE

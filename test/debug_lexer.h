@@ -21,6 +21,6 @@ class debug_lexer: public jdi::lexer {
   public:
   void clear();
   debug_lexer &operator<< (jdip::token_t t);
-  jdip::token_t get_token(error_handler *herr = def_error_handler);
+  jdip::token_t get_token(jdi::error_handler *herr = jdi::def_error_handler);
   ~debug_lexer(); ///< Destruct and free any non-POD or pointer members.
 };

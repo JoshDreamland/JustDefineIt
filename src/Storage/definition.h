@@ -31,8 +31,6 @@
 using namespace std;
 typedef size_t pt;
 
-#include "references.h"
-
 namespace jdi {
   enum DEF_FLAGS
   {
@@ -83,7 +81,17 @@ namespace jdi {
     /// Default destructor.
     virtual ~definition();
   };
-  
+}
+
+//=========================================================================================================
+//===: Specializations with extended dependencies:=========================================================
+//=========================================================================================================
+
+#include <Storage/value.h>
+#include <Storage/full_type.h>
+#include <Storage/references.h>
+
+namespace jdi {
   /**
     @struct jdi::definition_typed
     A piece of a definition for anything simply declared with a type.
@@ -93,7 +101,8 @@ namespace jdi {
   struct definition_typed: definition {
     definition* type; ///< The definition of the type of this definition. This is not guaranteed to be non-NULL.
     ref_stack referencers; ///< Any referencers modifying the type, such as *, &, [], or (*)().
-    definition_typed(string name, definition* p, definition* tp, ref_stack rf);
+    unsigned int flags; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
+    definition_typed(string name, definition* p, definition* tp, ref_stack rf, unsigned int flgs);
   };
   /**
     @struct jdi::function_overload
@@ -115,13 +124,11 @@ namespace jdi {
   
   
   /**
-    @struct jdi::definition_constant
-    A subclass of definition for anything simply declared with a type.
-    This class includes regular variables, as well as typedefs. This is a
-    base class for functions, as well; see \c jdi::definition_constant.
+    @struct jdi::definition_valued
+    A subclass of definition for anything declared with a type, and given a value.
   **/
-  struct definition_constant: definition {
-    long value_of; ///< The constant value of this definition, which must be an integer.
+  struct definition_valued: definition_typed {
+    value value_of; ///< The constant value of this definition.
   };
   
   /**
@@ -195,21 +202,6 @@ namespace jdi {
         the vector).
     **/
     vector<definition*> tempargs;
-  };
-  
-  /**
-    @struct jdi::full_type
-    A structure noting the \c definition associated with a type along with a
-    set of modifier flags.
-  **/
-  struct full_type {
-    jdi::definition *def; ///< The \c definition associated with the type
-    jdi::ref_stack refs; ///< Any referencers affecting this type, such as the pointer-to asterisk (*) or ampersand reference (&).
-    int flags; ///< Any flags, such as unsigned, signed, or const, associated with us, as a bitmask.
-    
-    full_type();
-    full_type(jdi::definition*);
-    full_type(jdi::definition*, jdi::ref_stack, int);
   };
 }
 

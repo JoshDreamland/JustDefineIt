@@ -26,7 +26,41 @@
 #include "references.h"
 
 namespace jdi {
+  ref_stack::ref_stack(): bottom(NULL), top(NULL) {}
+  ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
+  ref_stack::~ref_stack() { clear(); }
+  
+  ref_stack &ref_stack::operator= (const ref_stack& rf) { copy(rf); return *this; }
+  
+  ref_stack::node::~node() {}
+  ref_stack::node_func::~node_func() {  }
+  
+  
+  void ref_stack::copy(const ref_stack& rf) {
+    name = rf.name;
+    if (!rf.bottom) {
+      top = bottom = NULL;
+      return;
+    }
+    bottom = top = new node(*rf.top);
+    for (node *c = rf.top->previous; c; c = c->previous) {
+      bottom->previous = new node(*c);
+      bottom = bottom->previous;
+    }
+  }
+  
+  void ref_stack::append(ref_stack &rf) {
+    if (!rf.bottom) return; // Appending an empty stack is meaningless
+    if (!bottom) bottom = rf.bottom; // If we didn't have anything on our stack, our bottom is now its bottom.
+    rf.bottom->previous = top; // If we had anything on our stack, then our top item comes before its bottom item.
+    top = rf.top; // Since we threw that stack on top of ours, its top is now our top.
+    rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
+  }
+  
   void ref_stack::clear() {
-    
+    for (node* n = top, *p; n; n = p) {
+      p = n->previous;
+      delete n;
+    }
   }
 }

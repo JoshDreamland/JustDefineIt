@@ -207,16 +207,18 @@ namespace jdi {
     // State flags
     bool tt_greater_is_op; ///< True if the greater-than symbol is to be interpreted as an operator.
     
-    /** Handle a whole damn expression. Stops at the first unexpected token or when an
+    /** Handle a whole expression, stopping at the first unexpected token or when an
         operator is encountered which has a precendence lower than the one specified.
         Ergo, passing a precedence of 0 will handle all operators.
         @param  precedence  The lowest precedence of any operators to be handled.
     **/
     AST_Node* parse_expression(jdip::token_t &token, int precedence = 0);
-    /** Handle anything you'd expect to see after a literal is given. This includes
-        binary and ternary operators (to which the literal or enclosing tree will be
-        used as the left-hand side, and the right will be read fresh), or a unary
+    /** Handle anything you'd expect to see after a literal is given.
+        
+        This includes binary and ternary operators (to which the literal or enclosing tree
+        will be used as the left-hand side, and the right will be read fresh), or a unary
         postfix (which will apply to the latest-read literal or expression).
+        
         @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
         @param  left_node  The latest-read literal or expression.
         @param  prec_min   The minimum precedence of operators to handle.
@@ -248,11 +250,29 @@ namespace jdi {
     
     /** Parse in an expression, building an AST.
         @param lex    The lexer which will be polled for tokens.
-        @param endat  The type of token which marks the end of the expression. TT_INTERRUPT will always be accepted.
         @param herr   The error handler which will receive any warning or error messages.
-        @return  This function shall return 0 if no error has occurred, or nonzero otherwise.
+        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
     int parse_expression(lexer *lex, error_handler *herr = def_error_handler);
+    
+    /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
+        the sister overload which does not utilize the passed token.
+        
+        @param token  The first token to handle. Will be overwritten with the first unhandled token. [in-out]
+        @param lex    The lexer which will be polled for tokens.
+        @param herr   The error handler which will receive any warning or error messages.
+        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
+    **/
+    int parse_expression(jdip::token_t& token, lexer *lex, error_handler *herr = def_error_handler);
+    
+    /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
+        the sister overload which utilizes the passed token.
+        @param lex    The lexer which will be polled for tokens.
+        @param token  A buffer for the first unhandled token. [out]
+        @param herr   The error handler which will receive any warning or error messages.
+        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
+    **/
+    int parse_expression(lexer *lex, jdip::token_t& token, error_handler *herr = def_error_handler);
     
     /// Evaluate the current AST, returning its \c value.
     value eval();

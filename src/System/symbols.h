@@ -51,8 +51,11 @@ namespace jdip {
     symbol(short t, short p, value(*o)(const value&, const value&), value(*ou)(const value&)); ///< Constructor operators that can be binary or unary.
     symbol(short t, short p, value(*ou)(const value&)); ///< Constructor for unary operators.
   };
-
-  typedef std::map<std::string, symbol> symbol_table; ///< Convenience typedef to allow replacing the map type later and to decrease typing.
+  
+  /// Our "own map type" to circumvent the lack of static code blocks in C++.
+  struct symbol_table: public std::map<std::string, symbol> {
+    symbol_table(); ///< Default constructor. Populates map.
+  };
   extern symbol_table symbols; ///< The symbol table which will be searched while building ASTs.
   typedef symbol_table::iterator symbol_iter; ///< Convenience typedef to the iterator type of the symbol table.
 }

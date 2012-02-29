@@ -32,11 +32,7 @@ namespace jdi {
   definition::definition(): flags(0), name(), parent(NULL) {}
   definition::~definition() {}
   
-  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack rf): definition(n,p,DEF_TYPED), type(tp), referencers(rf) {}
-  
-  full_type::full_type(): def(NULL) {}
-  full_type::full_type(jdi::definition* d): def(d) {}
-  full_type::full_type(jdi::definition* d, jdi::ref_stack r, int f): def(d), refs(r), flags(f) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack rf, unsigned int flgs): definition(n,p,DEF_TYPED), type(tp), referencers(rf), flags(flgs) {}
   
   definition *definition_scope::look_up(string sname) {
     defiter it = members.find(sname);

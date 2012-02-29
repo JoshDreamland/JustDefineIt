@@ -51,7 +51,12 @@ namespace jdip {
     quick::stack<openfile> files; ///< The files we have open, in the order we included them.
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
     
-    /** Default constructor; consumes an llreader.
+    typedef map<string,TOKEN_TYPE> keyword_map; ///< Map of string to token type; a map-of-keywords type.
+    /// List of C++ keywords, mapped to the type of their token.
+    /// This list is assumed to contain tokens whose contents are unambiguous; one string maps to one token, and vice-versa.
+    keyword_map keywords;
+    
+    /** Sole constructor; consumes an llreader.
         @param input    The file from which to read definitions. This file will be manipulated by the system.
         @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
     **/

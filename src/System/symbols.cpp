@@ -35,82 +35,78 @@ namespace jdip {
 
 using namespace jdip;
 
-/**
-  A structure designed to circumvent C++'s lack of static initializer blocks.
-  Simply maps all the symbols with their AST generation and evaluation information.
-**/
-static struct map_symbols_ {
-  /// Constructor will be run at program start to populate symbols.
-  map_symbols_ () {
-    int prec = 18;
-    symbols["::"] = symbol(ST_BINARY, prec);
-    
-    prec--;
-    symbols["["]  = symbol(ST_BINARY,prec);
-    symbols["("]  = symbol(ST_BINARY | ST_UNARY_PRE,prec);
-    symbols["."]  = symbol(ST_BINARY,prec);
-    symbols["->"] = symbol(ST_BINARY,prec);
-    
-    prec--;
-    symbols["++"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
-    symbols["--"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_decrement);
-    symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
-    symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
-    
-    prec--;
-    symbols[".*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,  prec);
-    symbols["->*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST, prec);
-    
-    prec--;
-    symbols["*"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_multiply,value_unary_dereference);
-    symbols["/"]  = symbol(ST_BINARY,prec,values_divide);
-    symbols["%"]  = symbol(ST_BINARY,prec,values_modulo);
-    
-    prec--;
-    symbols["+"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_add,value_unary_positive);
-    symbols["-"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_subtract,value_unary_negative);
-    
-    prec--;
-    symbols["<<"]  = symbol(ST_BINARY,prec,values_lshift);
-    symbols[">>"]  = symbol(ST_BINARY,prec,values_rshift);
-    
-    prec--;
-    symbols["<"]  = symbol(ST_BINARY,prec,values_less);
-    symbols[">"]  = symbol(ST_BINARY,prec,values_greater);
-    symbols["<="]  = symbol(ST_BINARY,prec,values_less_or_equal);
-    symbols[">="]  = symbol(ST_BINARY,prec,values_greater_or_equal);
-    
-    prec--;
-    symbols["=="]  = symbol(ST_BINARY,prec,values_equal);
-    symbols["!="]  = symbol(ST_BINARY,prec,values_notequal);
-    
-    prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,value_unary_reference);
-    prec--; symbols["^"]  = symbol(ST_BINARY,prec);
-    prec--; symbols["|"]  = symbol(ST_BINARY,prec);
-    
-    prec--; symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,prec);
-    prec--; symbols["^^"] = symbol(ST_BINARY,prec);
-    prec--; symbols["||"] = symbol(ST_BINARY,prec);
-    
-    prec--; symbols["?"]  = symbol(ST_TERNARY | ST_RTL_PARSED,prec);
-    
-    prec--;
-    symbols["="]   = symbol(ST_BINARY | ST_RTL_PARSED,prec, values_latter);
-    symbols["+="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["-="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["*="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["%="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["/="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["&="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["^="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["|="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols["<<="] = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    symbols[">>="] = symbol(ST_BINARY | ST_RTL_PARSED,prec);
-    
-    prec--;
-    symbols[","]  = symbol(ST_BINARY,prec,values_latter);
-    
-    if (prec != 1)
-      printf("INTERNAL ERROR. SHIT.\n");
-  }
-} map_symbols;
+/// Constructor designed to circumvent C++'s lack of static initializer blocks; will be run at program start to populate symbols.
+/// Simply maps all the symbols with their AST generation and evaluation information.
+symbol_table::symbol_table()
+{
+  int prec = 18; // Count down precedence levels to avoid accidental decrements.
+  symbols["::"] = symbol(ST_BINARY, prec);
+  
+  prec--;
+  symbols["["]  = symbol(ST_BINARY,prec);
+  symbols["("]  = symbol(ST_BINARY | ST_UNARY_PRE,prec);
+  symbols["."]  = symbol(ST_BINARY,prec);
+  symbols["->"] = symbol(ST_BINARY,prec);
+  
+  prec--;
+  symbols["++"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
+  symbols["--"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_decrement);
+  symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
+  symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
+  
+  prec--;
+  symbols[".*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,  prec);
+  symbols["->*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST, prec);
+  
+  prec--;
+  symbols["*"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_multiply,value_unary_dereference);
+  symbols["/"]  = symbol(ST_BINARY,prec,values_divide);
+  symbols["%"]  = symbol(ST_BINARY,prec,values_modulo);
+  
+  prec--;
+  symbols["+"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_add,value_unary_positive);
+  symbols["-"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_subtract,value_unary_negative);
+  
+  prec--;
+  symbols["<<"]  = symbol(ST_BINARY,prec,values_lshift);
+  symbols[">>"]  = symbol(ST_BINARY,prec,values_rshift);
+  
+  prec--;
+  symbols["<"]  = symbol(ST_BINARY,prec,values_less);
+  symbols[">"]  = symbol(ST_BINARY,prec,values_greater);
+  symbols["<="]  = symbol(ST_BINARY,prec,values_less_or_equal);
+  symbols[">="]  = symbol(ST_BINARY,prec,values_greater_or_equal);
+  
+  prec--;
+  symbols["=="]  = symbol(ST_BINARY,prec,values_equal);
+  symbols["!="]  = symbol(ST_BINARY,prec,values_notequal);
+  
+  prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,value_unary_reference);
+  prec--; symbols["^"]  = symbol(ST_BINARY,prec);
+  prec--; symbols["|"]  = symbol(ST_BINARY,prec);
+  
+  prec--; symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,prec);
+  prec--; symbols["^^"] = symbol(ST_BINARY,prec);
+  prec--; symbols["||"] = symbol(ST_BINARY,prec);
+  
+  prec--; symbols["?"]  = symbol(ST_TERNARY | ST_RTL_PARSED,prec);
+  
+  prec--;
+  symbols["="]   = symbol(ST_BINARY | ST_RTL_PARSED,prec, values_latter);
+  symbols["+="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["-="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["*="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["%="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["/="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["&="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["^="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["|="]  = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols["<<="] = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  symbols[">>="] = symbol(ST_BINARY | ST_RTL_PARSED,prec);
+  
+  prec--;
+  symbols[","]  = symbol(ST_BINARY,prec,values_latter);
+  
+  if (prec != 1)
+    printf("INTERNAL ERROR. INCORRECT PRECENDENCE COUNT GIVEN.\n");
+}
