@@ -24,14 +24,14 @@
 
 #include <Parser/bodies.h>
 
-int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, token_t& token)
+int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
   token = read_next_token(lex, scope);
   for (;;)
   {
     switch (token.type) {
       case TT_DECLARATOR: case TT_DECFLAG:
-          if (handle_declarators(lex, scope, token))
+          if (handle_declarators(lex, scope, token, inherited_flags))
             return 1;
           if (token.type != TT_SEMICOLON)
             return (token.report_error(this, "Expected semicolon at this point"), 1);
@@ -45,41 +45,7 @@ int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, toke
           /* Printing a warning here is advisable but unnecessary. */
         break;
       
-      case TT_NAMESPACE: {
-        token = read_next_token(lex, scope);
-        if (token.type != TT_IDENTIFIER) {
-          token.report_error(this, "Expected namespace name here.");
-          return 1;
-        }
-        
-        // Copy the name and ensure it's a member of this scope.
-        string nsname((const char*)token.extra.content.str, token.extra.content.len);
-        pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(nsname,NULL));
-        
-        definition_scope *nscope;
-        if (dins.second) // If a new definition key was created, then allocate a new namespace representation for it.
-          dins.first->second = nscope = new definition_scope(nsname,scope,DEF_NAMESPACE);
-        else {
-          nscope = (definition_scope*)dins.first->second;
-          if (not(dins.first->second->flags & DEF_NAMESPACE)) {
-            token.report_error(this,"Attempting to redeclare `" + nsname + "' as a namespace");
-            return 1;
-          }
-        }
-        
-        token = read_next_token(lex,scope);
-        if (token.type != TT_LEFTBRACE) {
-          token.report_error(this,"Expected opening brace for namespace definition.");
-          return 1;
-        }
-        if (handle_scope(lex, nscope, token)) return 1;
-        if (token.type != TT_RIGHTBRACE) {
-          token.report_error(this,"Expected closing brace to namespace `" + nsname + "'");
-          return 1;
-        }
-        break;
-      }
-      
+      case TT_NAMESPACE: if (handle_namespace(lex,scope,token)) return 1; break;
       case TT_LEFTPARENTH:  token.report_error(this, "Stray opening parenthesis."); return 1;
       case TT_RIGHTPARENTH: token.report_error(this, "Stray closing parenthesis."); return 1;
       case TT_LEFTBRACKET:  token.report_error(this, "Stray opening bracket."); return 1;
@@ -87,7 +53,10 @@ int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, toke
       case TT_LEFTBRACE:    token.report_error(this, "Expected scope declaration before opening brace."); return 1;
       case TT_RIGHTBRACE:   return 0;
       
-      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+      case TT_CLASS: case TT_STRUCT:
+      if (handle_class(lex,scope,token)) return 1; break;
+      
+      case TT_ENUM: case TT_UNION:
       case TT_TYPENAME:
       
       case TT_IDENTIFIER:

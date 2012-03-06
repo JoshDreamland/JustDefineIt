@@ -62,4 +62,8 @@ namespace jdi {
       delete it->second;
     members.clear();
   }
+  
+  definition_class::ancestor::ancestor(unsigned protection_level, definition* inherit_from): protection(protection_level), def(inherit_from) {}
+  definition_class::ancestor::ancestor() {}
+  definition_class::definition_class(string classname, definition_scope* prnt, unsigned flgs): definition_scope(classname, prnt, flgs) {}
 }

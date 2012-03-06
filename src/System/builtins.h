@@ -55,12 +55,15 @@ namespace jdi {
   void add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name = "");
   /// Add declarator flags used in the default GNU implementation.
   void add_gnu_declarators();
+  /// Free memory for all declarators. This should be called only at program end.
+  void cleanup_declarators();
 }
 
 namespace jdip {
   using namespace jdi;
   class typeflag {
     friend void jdi::add_declarator(string, USAGE_FLAG, string);
+    friend void jdi::cleanup_declarators();
     
     typeflag(); ///< Construct a new type flag.
     ~typeflag();

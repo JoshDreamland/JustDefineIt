@@ -69,6 +69,7 @@ int main() {
   else
     cout << "Failed to open file for parsing!" << endl;
   
+  cleanup_declarators();
   return 0;
 }
 

@@ -83,6 +83,7 @@ namespace jdip {
     @param  token  The token for which this function was invoked.
                    The type of this token must be either \c TT_DECLARATOR or \c TT_DECFLAG. [in-out]
     @param  scope  The scope used to resolve identifiers. [in]
+    @param  herr   The error handler which will be used to report errors. [in]
     
     @return Returns the \c full_type read from the stream. Leaves \p token indicating the
             first unhandled token.
@@ -104,6 +105,7 @@ namespace jdip {
                    type, it will be part of the return \c full_type, otherwise it will
                    just be overwritten. [in-out]
     @param  scope  The scope used to resolve identifiers. [in]
+    @param  herr   The error handler which will be used to report errors. [in]
     
     @return Returns the \c jdi::ref_stack read from the stream.
   **/
@@ -141,10 +143,46 @@ namespace jdip {
       @param  token  The token that was read before this function was invoked.
                      This will be updated to represent the next non-type token
                      in the stream. [in-out]
+      @param inherited_flags Any flags which should be given to each declared definition.
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_declarators(lexer *lex, definition_scope *scope, token_t& token);
+    int handle_declarators(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags);
+    
+    /**
+      Parse a namespace definition.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  lex    The lexer to be polled for tokens. [in-out]
+      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  token  The token that was read before this function was invoked.
+                     At the start of this call, the type of this token must be
+                     TT_NAMESPACE. Upon termination, the type of this token will
+                     be TT_RIGHTBRACE unless an error occurs. [in-out]
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_namespace(lexer *lex, definition_scope *scope, token_t& token);
+    
+    /**
+      Parse a class or struct definition.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  lex    The lexer to be polled for tokens. [in-out]
+      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  token  The token that was read before this function was invoked.
+                     At the start of this call, the type of this token must be
+                     either TT_CLASS or TT_STRUCT. Upon termination, the type
+                     of this token will be TT_DECLARATOR with extra info set to
+                     the new definition unless an error occurs. [in-out]
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_class(lexer *lex, definition_scope *scope, token_t& token);
     
     /**
       Handle parsing an entire scope.
@@ -155,10 +193,11 @@ namespace jdip {
       @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The \c token structure into which the next unhandled token will be placed. [out]
+      @param  inherited_flags  Any flags which must be given to all members of this scope. [in]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_scope(lexer *lex, definition_scope *scope, token_t& token);
+    int handle_scope(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
     
     /**
       Read an expression from the given input stream, evaluating it for a value.

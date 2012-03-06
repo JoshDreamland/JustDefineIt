@@ -209,7 +209,8 @@ namespace jdi {
     
     /** Handle a whole expression, stopping at the first unexpected token or when an
         operator is encountered which has a precendence lower than the one specified.
-        Ergo, passing a precedence of 0 will handle all operators.
+        I.E., passing a precedence of 0 will handle all operators.
+        @param  token       The first token to be handled. Will be set to the first unhandled token. [in-out]
         @param  precedence  The lowest precedence of any operators to be handled.
     **/
     AST_Node* parse_expression(jdip::token_t &token, int precedence = 0);

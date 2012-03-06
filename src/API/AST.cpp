@@ -134,11 +134,11 @@ namespace jdi
     return myroot;
   }
   
-  AST::AST_Node* AST::parse_binary_or_unary_post(token_t &token, AST::AST_Node *left, int prec_min) {
+  AST::AST_Node* AST::parse_binary_or_unary_post(token_t &token, AST::AST_Node *left_node, int prec_min) {
     switch (token.type)
     {
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
-        return left;
+        return left_node;
       
       case TT_IDENTIFIER:
       
@@ -146,28 +146,28 @@ namespace jdi
         token.report_error(herr, "Unimplemented.");
         return NULL;
       
-      case TT_GREATERTHAN: if (!tt_greater_is_op) return left; 
+      case TT_GREATERTHAN: if (!tt_greater_is_op) return left_node; 
       case TT_LESSTHAN: 
-      case TT_COLON: return left;
+      case TT_COLON: return left_node;
       case TT_SCOPE: token.report_error(herr, "Unimplemented."); return NULL;
       
       case TT_OPERATOR: {
           string op((const char*)token.extra.content.str,token.extra.content.len);
           symbol &s = symbols[op];
           if (s.type & ST_BINARY) {
-            if (s.prec < prec_min) return left;
+            if (s.prec < prec_min) return left_node;
             token = lex->get_token();
             track(op);
             AST_Node *right = parse_expression(token, s.prec + !(s.type & ST_RTL_PARSED));
             if (!right) {
               token.report_error(herr, "Expected secondary expression after binary operator");
-              return left;
+              return left_node;
             }
-            left = new AST_Node_Binary(left,right,op);
+            left_node = new AST_Node_Binary(left_node,right,op);
             break;
           }
           if (s.type & ST_TERNARY) {
-            if (s.prec < prec_min) return left;
+            if (s.prec < prec_min) return left_node;
             string ct((const char*)token.extra.content.str,token.extra.content.len);
             track(ct);
             
@@ -181,7 +181,7 @@ namespace jdi
             AST_Node* expfalse = parse_expression(token, 0);
             if (!exptrue) return NULL;
             
-            left = new AST_Node_Ternary(left,exptrue,expfalse,ct);
+            left_node = new AST_Node_Ternary(left_node,exptrue,expfalse,ct);
           }
         }
         break;
@@ -198,15 +198,15 @@ namespace jdi
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
       
-      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left;
+      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left_node;
       
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
-      return left;
+      return left_node;
       
-      case TT_INVALID: default: return left;
+      case TT_INVALID: default: return left_node;
     }
-    return parse_binary_or_unary_post(token,left,prec_min);
+    return parse_binary_or_unary_post(token,left_node,prec_min);
   }
   
   int AST::parse_expression(lexer *ulex, error_handler *uherr) {

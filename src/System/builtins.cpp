@@ -98,4 +98,11 @@ namespace jdi {
     add_declarator("float",    UF_PRIMITIVE);
     add_declarator("double",   UF_PRIMITIVE);
   }
+  
+  void cleanup_declarators() {
+    for (tf_iter tfit = builtin_declarators.begin(); tfit != builtin_declarators.end(); tfit++)
+      delete tfit->second;
+    for (prim_iter prit = builtin_primitives.begin(); prit != builtin_primitives.end(); prit++)
+      delete prit->second;
+  }
 }

@@ -6,3 +6,10 @@ namespace justdefineit {
   long unsigned long k;
 }
 long double i;
+class koalacub {
+  int leavesEaten;
+  int chutesEaten;
+};
+class koala: koalacub {
+  int children;
+};

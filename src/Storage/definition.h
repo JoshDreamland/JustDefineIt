@@ -47,7 +47,10 @@ namespace jdi {
     DEF_TEMPPARAM =    1 << 10, ///< This definition is a parameter of a template.
     DEF_EXTERN =       1 << 11, ///< This definition was declared with the "extern" flag.
     DEF_HYPOTHETICAL = 1 << 12, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_C99_STRUCT =   1 << 13  ///< This definition is a C99 structure.
+    DEF_PRIVATE =      1 << 13, ///< This definition was declared as a private member.
+    DEF_PROTECTED =    1 << 14, ///< This definition was declared as a private member.
+    DEF_INCOMPLETE =   1 << 15  ///< This definition was declared as a private member.
+    // DEF_C99_STRUCT =   1 << 13  ///< This definition is a C99 structure. Remove me.
     // DEF_PENDING_TYPE1 << 14DEF =   ///< Remove me.
   };
   
@@ -178,11 +181,19 @@ namespace jdi {
     ~definition_scope();
   };
   /**
-    @struct jdi::definition_polyscope
-    An extension of \c jdi::definition_scope for classes and structures, which can have ancestors.
+    @struct jdi::definition_class
+    An extension of \c jdi::definition_class for classes and structures, which can have ancestors.
   **/
-  struct definition_polyscope: definition_scope {
-    vector<definition*> ancestors; ///< Ancestors of this structure or class
+  struct definition_class: definition_scope {
+    /// Simple structure for storing an inheritance type and the \c definition* of an ancestor.
+    struct ancestor {
+      unsigned protection; ///< The protection level of this inheritance, as one of the DEF_ constants, or 0 for public.
+      definition* def; ///< The \c definition of the structure or class from which this one inherits members.
+      ancestor(unsigned protection_level, definition* inherit_from); ///< Convenience constructor with both members.
+      ancestor(); ///< Default constructor for vector.
+    };
+    vector<ancestor> ancestors; ///< Ancestors of this structure or class
+    definition_class(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_TYPENAME);
   };
   
   /**

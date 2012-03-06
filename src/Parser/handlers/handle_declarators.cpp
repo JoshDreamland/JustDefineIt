@@ -40,7 +40,7 @@ using namespace jdi;
   variety of memory constructs an llreader may actually represent, that
   isn't actually an option here.
 **/
-int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope, token_t& token)
+int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
   // Outsource to read_type, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
@@ -63,8 +63,10 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
   
   // Add it to our definitions map, without overwriting the existing member.
   definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
-  if (ins.second) // If we successfully inserted,
+  if (ins.second) { // If we successfully inserted,
     ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags);
+    ins.first->second->flags |= inherited_flags;
+  }
   #ifndef NO_ERROR_REPORTING
   else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {

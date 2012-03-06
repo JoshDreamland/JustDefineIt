@@ -183,6 +183,22 @@ static void utility_printrc(definition_scope* scope, ostream &out, string indent
       utility_printrc((definition_scope*)it->second, out, indent + "  ");
       out << indent << "}" << endl;
     }
+    else if (it->second->flags & DEF_CLASS)
+    {
+      out << "class " << it->second->name;
+      definition_class *dc = (definition_class*)it->second;
+      if (dc->ancestors.size()) {
+        out << ": ";
+        for (size_t i = 0; i < dc->ancestors.size(); i++)
+          out << (dc->ancestors[i].protection == DEF_PRIVATE? "private "
+                 :dc->ancestors[i].protection == DEF_PROTECTED? "protected "
+                 :"public ") << dc->ancestors[i].def->name
+              << (i+1 < dc->ancestors.size() ? ", " : "");
+      }
+      out << " {" << endl;
+      utility_printrc((definition_scope*)it->second, out, indent + "  ");
+      out << indent << "}" << endl;
+    }
   }
 }
 void context::output_definitions(ostream &out) {
