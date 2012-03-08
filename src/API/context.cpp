@@ -162,18 +162,38 @@ void context::output_macros(ostream &out)
   }
 }
 
+static void utility_printtype(definition_typed* t, ostream &out) {
+  for (int i = 1; i <= 0x10000; i <<= 1)
+    if (t->flags & i)
+      out << builtin_decls_byflag[i]->name << " ";
+  if (t->type)
+    out << t->type->name << " ";
+  else out << "<NULL> ";
+  for (ref_stack::iterator it = t->referencers.begin(); it; ++it) {
+    switch (it->type)
+    {
+      case ref_stack::RT_POINTERTO: out << '*'; break;
+      case ref_stack::RT_REFERENCE: out << '&'; break;
+      case ref_stack::RT_ARRAYBOUND:
+          out << '[';
+          if (it->arraysize() != ref_stack::node_array::nbound)
+            cout << it->arraysize();
+          cout << ']'; break;
+      case ref_stack::RT_FUNCTION: out << "(LOLUBERFAIL)"; break;
+      default:
+        out << "[INVALIDREF:" << it->type << "]";
+        break;
+    }
+  }
+}
+
 static void utility_printrc(definition_scope* scope, ostream &out, string indent) {
   for (map<string,definition*>::iterator it = scope->members.begin(); it != scope->members.end(); it++)
   {
     out << indent;
     if (it->second->flags & DEF_TYPED)
     {
-      for (int i = 1; i <= 0x10000; i <<= 1)
-        if (((definition_typed*)it->second)->flags & i)
-          out << builtin_decls_byflag[i]->name << " ";
-      if (((definition_typed*)it->second)->type)
-        out << ((definition_typed*)it->second)->type->name << " ";
-      else out << "<NULL> ";
+      utility_printtype((definition_typed*)it->second, out);
       out << it->second->name;
       out << ";" << endl;
     }

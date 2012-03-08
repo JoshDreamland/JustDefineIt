@@ -11,7 +11,7 @@ to do so using the enclosed Code::Blocks project file.
 This parser is designed to be small and portable, in the sense that it is easy to add
 into an existing project's code base. Its goal is to be capable and modular enough to
 meet a variety of needs, from code completion in IDEs to--with some extension--use as
-a complete C++ lexer. It should carry as few dependencies as possible while reamining
+a complete C++ lexer. It should carry as few dependencies as possible while remaining
 small and simple to understand (unlike Clang, which depends on parts of LLVM that can
 be difficult to separate).
 

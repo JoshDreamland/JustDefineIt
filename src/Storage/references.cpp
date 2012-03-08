@@ -23,6 +23,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <assert.h>
 #include "references.h"
 
 namespace jdi {
@@ -32,9 +33,32 @@ namespace jdi {
   
   ref_stack &ref_stack::operator= (const ref_stack& rf) { copy(rf); return *this; }
   
-  ref_stack::node::~node() {}
+  ref_stack::node::node(node* p, ref_type rt): previous(p), type(rt) {}
+  
+  ref_stack::node::~node() { if (type == RT_FUNCTION) ((node_func*)this)->~node_func(); }
   ref_stack::node_func::~node_func() {  }
   
+  size_t ref_stack::node::arraysize() {
+    #ifdef DEBUG_MODE
+      assert(this->type == RT_ARRAYBOUND);
+    #endif
+    return ((node_array*)this)->bound;
+  }
+  
+  ref_stack::node* ref_stack::iterator::operator*() { return n; }
+  ref_stack::node* ref_stack::iterator::operator->() { return n; }
+  ref_stack::iterator ref_stack::iterator::operator++(int) { iterator res = *this; n = n->previous; return res; }
+  ref_stack::iterator &ref_stack::iterator::operator++() { n = n->previous; return *this; }
+  ref_stack::iterator::operator bool() { return n; }
+  ref_stack::iterator::iterator(ref_stack::node *nconstruct): n(nconstruct) { }
+  
+  ref_stack::iterator ref_stack::begin() { return ref_stack::iterator(top); }
+  ref_stack::iterator ref_stack::end() { return ref_stack::iterator(NULL); }
+  
+  void ref_stack::push(ref_stack::ref_type reference_type) {
+    top = new node(top, reference_type);
+    if (!bottom) bottom = top;
+  }
   
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;

@@ -66,36 +66,72 @@ namespace jdi {
     /// Parameter storage container type. Guaranteed to have a push_back(full_type) method.
     struct parameter_ct;
     
+    /// Iterator type, complying with C++11; iterates elements in the stack from top to bottom.
+    class iterator;
+    
     /// Node type.
-    struct node {
-      node* previous;
-      ref_type type;
-      virtual ~node();
+    class node {
+      node* previous; ///< The node beneath this node in the stack.
+      friend struct ref_stack;
+      friend struct ref_stack::iterator;
+      public:
+        ref_type type; ///< The type of this node.
+        size_t arraysize(); ///< Return the size of this array if and only if type == RT_ARRAYBOUND. Undefined behavior otherwise.
+        node(node* p, ref_type rt); ///< Allow constructing a new node easily.
+        ~node(); ///< Non-virtual destructor which must call appropriate child constructor.
     };
     struct node_array;
     struct node_func;
     
+    /// Push a node onto this stack by a given type.
+    /// @param reference_type The type of this reference; should be either \c RT_REFERENCE or \c RT_POINTERTO.
+    void push(ref_type reference_type);
+    /// Push an array node onto this stack by a given type, with extra info.
+    /// @param array_size  The number of elements in this array, or -1 for unspecified.
+    void push_array(int array_size);
     /// Append a stack to the top of this stack, consuming it.
     void append(ref_stack &rf);
     /// Clear the stack, undoing all referencers.
     void clear();
     
-    ref_stack& operator= (const ref_stack& rf); ///< Wrapper to the copy() method so operator= doesn't leak and bite someone in the ass.
-    ref_stack(const ref_stack&); ///< Constructor wrapper to the copy() method.
+    /// Wrapper to the copy() method so operator= doesn't leak and bite someone in the ass.
+    ref_stack& operator= (const ref_stack& rf);
+    /// Constructor wrapper to the copy() method.
+    ref_stack(const ref_stack&);
+    
+    /// Return iterator from topmost item.
+    iterator begin();
+    /// Return invalid iterator for comparison.
+    iterator end();
     
     ref_stack(); ///< Default contructor. Zeroes pointers.
     ~ref_stack(); ///< Default destructor. Frees the stack.
     
-    string name;
+    
+    struct iterator {
+      private:
+        node* n; ///< The node to which we are pointing.
+        iterator(node*); ///< Utility constructor for use in begin().
+        friend iterator ref_stack::begin(); ///< Let the begin() function use this constructor.
+        friend iterator ref_stack::end(); ///< Let the end() function use this constructor.
+      public:
+        node* operator*(); ///< Get the current node pointer.
+        node* operator->(); ///< Treat iterator as current node pointer.
+        iterator operator++(int); ///< Increment iterator; move to next element on the stack. @return Return copy of iterator before call.
+        iterator &operator++(); ///< Increment iterator; move to next element on the stack. @return Returns self.
+        operator bool(); ///< Allow quick checking for invalidity; this iterator class does not use sentinel nodes.
+    };
+    
+    string name; ///< The name of the object with the contained referencers.
     private:
-      void copy(const ref_stack &rf); ///< Make a copy of the given ref_stack, LEAKING any stored nodes! Call clear() first.
       node *bottom; ///< The bottommost node on the list; used in the prepend method.
       node *top; ///< The topmost node on the list, for everything else.
+      void copy(const ref_stack &rf); ///< Make a copy of the given ref_stack, DISCARDING any stored nodes! Call clear() first.
   };
 }
 
 //=========================================================================================================
-//===: Specializations with extended dependencies:=========================================================
+//===: Specializations with extended dependencies :========================================================
 //=========================================================================================================
 
 #include <Storage/definition.h>
@@ -103,7 +139,8 @@ namespace jdi {
 namespace jdi {  
   struct ref_stack::parameter_ct: public vector<jdi::full_type> {};
   struct ref_stack::node_array: ref_stack::node {
-    size_t bounds;
+    size_t bound;
+    static const size_t nbound = size_t(-1);
   };
   struct ref_stack::node_func: ref_stack::node {
     parameter_ct params;

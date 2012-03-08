@@ -74,7 +74,9 @@
 		<Unit filename="src/General/svg_simple.h" />
 		<Unit filename="src/Parser/base.cpp" />
 		<Unit filename="src/Parser/bodies.h" />
+		<Unit filename="src/Parser/handlers/handle_class.cpp" />
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />
+		<Unit filename="src/Parser/handlers/handle_namespace.cpp" />
 		<Unit filename="src/Parser/handlers/handle_scope.cpp" />
 		<Unit filename="src/Parser/parse_context.cpp" />
 		<Unit filename="src/Parser/parse_context.h" />
@@ -83,6 +85,8 @@
 		<Unit filename="src/Parser/readers/read_type.cpp" />
 		<Unit filename="src/Storage/definition.cpp" />
 		<Unit filename="src/Storage/definition.h" />
+		<Unit filename="src/Storage/full_type.cpp" />
+		<Unit filename="src/Storage/full_type.h" />
 		<Unit filename="src/Storage/references.cpp" />
 		<Unit filename="src/Storage/references.h" />
 		<Unit filename="src/Storage/value.cpp" />
@@ -105,7 +109,6 @@
 		<Unit filename="test/debug_lexer.h" />
 		<Unit filename="test/modifiers.txt" />
 		<Unit filename="test/primitives.txt" />
-		<Unit filename="test/standaloneflags.txt" />
 		<Unit filename="test/test.cc">
 			<Option compile="0" />
 			<Option link="0" />

@@ -125,7 +125,8 @@ jdi::ref_stack jdip::read_referencers(lexer *lex, token_t &token, definition_sco
       
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
-        if ((token.extra.content.str[0] == '&' or token.extra.content.str[0] == '*') and token.extra.content.len == 1) { 
+        if ((token.extra.content.str[0] == '&' or token.extra.content.str[0] == '*') and token.extra.content.len == 1) {
+          res.push(token.extra.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
         } // Else overflow
       
