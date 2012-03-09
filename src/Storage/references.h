@@ -74,6 +74,7 @@ namespace jdi {
       node* previous; ///< The node beneath this node in the stack.
       friend struct ref_stack;
       friend struct ref_stack::iterator;
+      node* duplicate();
       public:
         ref_type type; ///< The type of this node.
         size_t arraysize(); ///< Return the size of this array if and only if type == RT_ARRAYBOUND. Undefined behavior otherwise.
@@ -87,17 +88,27 @@ namespace jdi {
     /// @param reference_type The type of this reference; should be either \c RT_REFERENCE or \c RT_POINTERTO.
     void push(ref_type reference_type);
     /// Push an array node onto this stack by a given type, with extra info.
-    /// @param array_size  The number of elements in this array, or -1 for unspecified.
-    void push_array(int array_size);
+    /// @param array_size  The number of elements in this array, or node_array::nbound for unspecified.
+    void push_array(size_t array_size);
     /// Append a stack to the top of this stack, consuming it.
     void append(ref_stack &rf);
     /// Clear the stack, undoing all referencers.
     void clear();
     
+    /// Constructor wrapper to the copy() method so copying doesn't bite someone in the ass.
+    ref_stack(const ref_stack&);
     /// Wrapper to the copy() method so operator= doesn't leak and bite someone in the ass.
     ref_stack& operator= (const ref_stack& rf);
-    /// Constructor wrapper to the copy() method.
-    ref_stack(const ref_stack&);
+    /// Swap-action data transfer constructor: DOES NOT COPY. Implemented to combat ABYSMAL RVO in g++.
+    ref_stack(ref_stack&);
+    /// Swap-action data transfer operator: DOES NOT COPY. Implemented to combat ABYSMAL RVO in g++.
+    ref_stack& operator= (ref_stack& rf);
+    
+    /// Make a copy of the given ref_stack, DISCARDING any stored nodes! Call clear() first.
+    /// @warning If the stack is not empty upon invoking this method, memory will be leaked.
+    void copy(const ref_stack &rf);
+    /// Swap contents with another ref_stack. This method is completely safe.
+    void swap(ref_stack &rf);
     
     /// Return iterator from topmost item.
     iterator begin();
@@ -126,7 +137,6 @@ namespace jdi {
     private:
       node *bottom; ///< The bottommost node on the list; used in the prepend method.
       node *top; ///< The topmost node on the list, for everything else.
-      void copy(const ref_stack &rf); ///< Make a copy of the given ref_stack, DISCARDING any stored nodes! Call clear() first.
   };
 }
 
@@ -141,6 +151,7 @@ namespace jdi {
   struct ref_stack::node_array: ref_stack::node {
     size_t bound;
     static const size_t nbound = size_t(-1);
+    node_array(node* p, size_t b);
   };
   struct ref_stack::node_func: ref_stack::node {
     parameter_ct params;

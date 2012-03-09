@@ -105,7 +105,8 @@ namespace jdi {
     definition* type; ///< The definition of the type of this definition. This is not guaranteed to be non-NULL.
     ref_stack referencers; ///< Any referencers modifying the type, such as *, &, [], or (*)().
     unsigned int flags; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
-    definition_typed(string name, definition* p, definition* tp, ref_stack rf, unsigned int flgs);
+    /// Construct with all information. Consumes the given \c ref_stack.
+    definition_typed(string name, definition* p, definition* tp, ref_stack &rf, unsigned int flgs);
   };
   /**
     @struct jdi::function_overload

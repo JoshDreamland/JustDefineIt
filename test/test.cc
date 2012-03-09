@@ -11,5 +11,5 @@ class koalacub {
   int chutesEaten;
 };
 class koala: koalacub {
-  koala *children[10]; // A koala can have at most ten children because of reasons.
+  koalacub *children[10]; // A koala can have at most ten children because of reasons.
 };

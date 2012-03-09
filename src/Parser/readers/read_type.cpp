@@ -93,13 +93,29 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
   if (rdef == NULL)
     rdef = inferred_type;
   if (rdef)
-    rrefs = jdip::read_referencers(lex, token, scope, herr);
+    jdip::read_referencers(rrefs, lex, token, scope, herr);
   return full_type(rdef, rrefs, rflags);
 }
 
-jdi::ref_stack jdip::read_referencers(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr)
+#define render_ast(x)
+#ifdef DEBUG_MODE
+  #ifndef RENDER_ASTS
+    #include <sys/stat.h>
+    #undef render_ast
+    static unsigned ast_rn = 0;
+    static void render_ast(AST& ast) {
+      if (!ast_rn) {
+        mkdir("/home/josh/Desktop/AST_Renders",0777);
+        mkdir("/home/josh/Desktop/AST_Renders/ArrayBounds",0777);
+      }
+      char fn[64]; sprintf(fn,"/home/josh/Desktop/AST_Renders/ArrayBounds/ast_%08u",ast_rn++);
+      ast.writeSVG(fn);
+    }
+  #endif
+#endif
+
+int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, error_handler *herr)
 {
-  ref_stack res;
   ref_stack append;
   for (;;)
   {
@@ -108,25 +124,28 @@ jdi::ref_stack jdip::read_referencers(lexer *lex, token_t &token, definition_sco
       case TT_LEFTBRACKET: { // Array bound indicator
         AST ast;
         if (ast.parse_expression(lex,token,herr))
-          return ref_stack(); // This error has already been reported, just return empty.
+          return 1; // This error has already been reported, just return empty.
         if (token.type != TT_RIGHTBRACKET) {
           token.report_error(herr,"Expected closing square bracket here before %s");
-          return ref_stack();
+          return 1;
         }
-        //value as = ast.eval();
+        render_ast(ast);
+        value as = ast.eval();
+        size_t boundsize = (as.type == VT_INTEGER)? as.val.i : ref_stack::node_array::nbound;
+        refs.push_array(boundsize);
       } break;
       case TT_LEFTPARENTH: { // Either a function or a grouping
         token = lex->get_token(herr);
-        append = read_referencers(lex, token, scope, herr);
+        read_referencers(append, lex, token, scope, herr);
       } break;
       case TT_IDENTIFIER: // The name associated with this type, be it the name of a parameter or of a declaration or what have you.
-        res.name = string((const char*)token.extra.content.str, token.extra.content.len);
+        refs.name = string((const char*)token.extra.content.str, token.extra.content.len);
       break;
       
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
         if ((token.extra.content.str[0] == '&' or token.extra.content.str[0] == '*') and token.extra.content.len == 1) {
-          res.push(token.extra.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
+          refs.push(token.extra.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
         } // Else overflow
       
@@ -136,8 +155,8 @@ jdi::ref_stack jdip::read_referencers(lexer *lex, token_t &token, definition_sco
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_EQUALS:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TT_INVALID: default:
-          res.append(append);
-        return res;
+          refs.append(append);
+        return 0;
     }
     token = lex->get_token(herr);
   }

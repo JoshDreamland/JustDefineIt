@@ -23,25 +23,40 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <assert.h>
 #include "references.h"
+
+#ifdef DEBUG_MODE
+  #include <assert.h>
+  #define dbg_assert assert
+#else
+  #define dbg_assert(x)
+#endif
+#include <iostream>
 
 namespace jdi {
   ref_stack::ref_stack(): bottom(NULL), top(NULL) {}
-  ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
   ref_stack::~ref_stack() { clear(); }
   
+  ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
   ref_stack &ref_stack::operator= (const ref_stack& rf) { copy(rf); return *this; }
   
+  ref_stack::ref_stack(ref_stack& rf): bottom(NULL), top(NULL) { swap(rf); }
+  ref_stack &ref_stack::operator= (ref_stack& rf) { swap(rf); return *this; }
+  
   ref_stack::node::node(node* p, ref_type rt): previous(p), type(rt) {}
+  ref_stack::node_array::node_array(node* p, size_t b): node(p,RT_ARRAYBOUND), bound(b) {}
   
   ref_stack::node::~node() { if (type == RT_FUNCTION) ((node_func*)this)->~node_func(); }
-  ref_stack::node_func::~node_func() {  }
+  ref_stack::node_func::~node_func() {}
+  
+  ref_stack::node* ref_stack::node::duplicate() {
+    if (type == RT_ARRAYBOUND) return new node_array(NULL,((node_array*)this)->bound);
+    cout << "DUPLICATE CALLED" << endl;
+    return new node(NULL,type);
+  }
   
   size_t ref_stack::node::arraysize() {
-    #ifdef DEBUG_MODE
-      assert(this->type == RT_ARRAYBOUND);
-    #endif
+    dbg_assert(this->type == RT_ARRAYBOUND);
     return ((node_array*)this)->bound;
   }
   
@@ -59,6 +74,10 @@ namespace jdi {
     top = new node(top, reference_type);
     if (!bottom) bottom = top;
   }
+  void ref_stack::push_array(size_t array_size) {
+    top = new node_array(top, array_size);
+    if (!bottom) bottom = top;
+  }
   
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;
@@ -66,11 +85,17 @@ namespace jdi {
       top = bottom = NULL;
       return;
     }
-    bottom = top = new node(*rf.top);
+    bottom = top = rf.top->duplicate();
     for (node *c = rf.top->previous; c; c = c->previous) {
-      bottom->previous = new node(*c);
+      bottom->previous = c->duplicate();
       bottom = bottom->previous;
     }
+  }
+  void ref_stack::swap(ref_stack& rf) {
+    name.swap(rf.name);
+    node *ts = top, *bs= bottom;
+    top = rf.top, bottom = rf.bottom;
+    rf.top = ts, rf.bottom = bs;
   }
   
   void ref_stack::append(ref_stack &rf) {

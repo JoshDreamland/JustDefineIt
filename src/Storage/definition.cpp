@@ -32,7 +32,7 @@ namespace jdi {
   definition::definition(): flags(0), name(), parent(NULL) {}
   definition::~definition() {}
   
-  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack rf, unsigned int flgs): definition(n,p,DEF_TYPED), type(tp), referencers(rf), flags(flgs) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack &rf, unsigned int flgs): definition(n,p,DEF_TYPED), type(tp), referencers(rf), flags(flgs) {}
   
   definition *definition_scope::look_up(string sname) {
     defiter it = members.find(sname);
@@ -40,7 +40,7 @@ namespace jdi {
       return it->second;
     if (parent == NULL)
       return NULL;
-    return parent->look_up(name);
+    return parent->look_up(sname);
   }
   void definition_scope::copy(definition_scope* to) {
     for (defiter it = members.begin(); it != members.end(); it++) {

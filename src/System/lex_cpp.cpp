@@ -120,7 +120,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
         return token_t(token_basics(TT_OCTLITERAL,"some file",0,pos), cfile+sp, pos-sp);
       }
       // Turns out, it's decimal.
-      const size_t sp = pos;
+      const size_t sp = pos - 1;
       while (pos < length and is_digit(cfile[pos])) pos++;
       while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
       return token_t(token_basics(TT_DECLITERAL,"some file",0,pos), cfile+sp, pos-sp);

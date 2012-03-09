@@ -103,7 +103,7 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
           token = read_next_token(lex, scope);
           
           // Read a new type
-          tp.refs = read_referencers(lex, token, scope);
+          read_referencers(tp.refs, lex, token, scope);
           
           // Just hop into the error checking above and pass through the definition addition again.
         goto after_comma;

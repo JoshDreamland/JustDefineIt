@@ -100,16 +100,17 @@ namespace jdip {
     used for the purpose of putting precedence on a given referencer will be handled, but will not be literally denoted
     in the returned stack.
     
+    @param  refs   The ref_stack onto which referencers should be pushed. [out]
     @param  lex    The lexer to be polled for tokens. [in-out]
     @param  token  The token for which this function was invoked. If the given token is a
                    type, it will be part of the return \c full_type, otherwise it will
                    just be overwritten. [in-out]
     @param  scope  The scope used to resolve identifiers. [in]
     @param  herr   The error handler which will be used to report errors. [in]
-    
-    @return Returns the \c jdi::ref_stack read from the stream.
+    @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
+             error state, as the error will have already been reported to the given error handler.
   **/
-  jdi::ref_stack read_referencers(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr = def_error_handler);
+  int read_referencers(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, error_handler *herr = def_error_handler);
   /**
     @class context_parser
     @brief A field-free utility class extending \c context, implementing the
