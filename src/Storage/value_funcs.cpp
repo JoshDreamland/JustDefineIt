@@ -52,28 +52,42 @@ namespace jdi {
   }
   value values_subtract(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d - y.val.d); else if (y.type == VT_INTEGER) return value(x.val.d - y.val.i); else return value();
-    else if (y.type == VT_INTEGER) return value(x.val.i - y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i - y.val.d); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i - y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i - y.val.d); else return value();
   }
   value values_multiply(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d * y.val.d); else if (y.type == VT_INTEGER) return value(x.val.d * y.val.i); else return value();
-    else if (y.type == VT_INTEGER) return value(x.val.i * y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i * y.val.d); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i * y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i * y.val.d); else return value();
   }
   value values_divide(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d / y.val.d); else if (y.type == VT_INTEGER) return value(x.val.d / y.val.i); else return value();
-    else if (y.type == VT_INTEGER) if (y.val.i == 0) return value(); else return value(x.val.i / y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i / y.val.d); else return value();
+    else if (y.type == VT_INTEGER) if (y.val.i == 0) return value(); else return value(x.val.i / y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i / y.val.d); else return value();
   }
   value values_modulo(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(fmod(x.val.d, y.val.d)); else if (y.type == VT_INTEGER) return value(fmod(x.val.d, y.val.i)); else return value();
-    else if (y.type == VT_INTEGER) if (y.val.i == 0) return value(); else return value(x.val.i % y.val.i); else if (y.type == VT_INTEGER) return value(fmod(x.val.i, y.val.d)); else return value();
+    else if (y.type == VT_INTEGER) if (y.val.i == 0) return value(); else return value(x.val.i % y.val.i); else if (y.type == VT_DOUBLE) return value(fmod(x.val.i, y.val.d)); else return value();
   }
   value values_lshift(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d * pow(2, y.val.d)); else if (y.type == VT_INTEGER) return value(x.val.d * pow(2, y.val.i)); else return value();
-    else if (y.type == VT_INTEGER) return value(x.val.i << y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i * pow(2, y.val.d)); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i << y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i * pow(2, y.val.d)); else return value();
   }
   value values_rshift(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d / pow(2, y.val.d)); else if (y.type == VT_INTEGER) return value(x.val.d / pow(2, y.val.i)); else return value();
-    else if (y.type == VT_INTEGER) return value(x.val.i >> y.val.i); else if (y.type == VT_INTEGER) return value(x.val.i / pow(2, y.val.d)); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i >> y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i / pow(2, y.val.d)); else return value();
   }
+  value values_band(const value& x, const value& y) {
+    if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d) & long(y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d) & y.val.i); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i & y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i & long(y.val.d)); else return value();
+  }
+  value values_bor(const value& x, const value& y) {
+    if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d) | long(y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d) | y.val.i); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i | y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i | long(y.val.d)); else return value();
+  }
+  value values_bxor(const value& x, const value& y) {
+    if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d) ^ long(y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d) ^ y.val.i); else return value();
+    else if (y.type == VT_INTEGER) return value(x.val.i ^ y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i ^ long(y.val.d)); else return value();
+  }
+  
+  
   value values_greater(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d > y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d > y.val.i)); else return value();
     else if (y.type == VT_INTEGER) return value(long(x.val.i > y.val.i)); else if (y.type == VT_INTEGER) return value(long(x.val.i > y.val.d)); else return value();

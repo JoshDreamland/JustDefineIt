@@ -70,6 +70,7 @@
 		<Unit filename="src/General/parse_basics.cpp" />
 		<Unit filename="src/General/parse_basics.h" />
 		<Unit filename="src/General/quickstack.h" />
+		<Unit filename="src/General/quickvector.h" />
 		<Unit filename="src/General/svg_simple.cpp" />
 		<Unit filename="src/General/svg_simple.h" />
 		<Unit filename="src/Parser/base.cpp" />

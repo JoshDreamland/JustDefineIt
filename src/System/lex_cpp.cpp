@@ -141,8 +141,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
       case '+': case '-':
         pos += cfile[pos] == cfile[spos] or cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
-      case '*': case '/': case '^': case '=':
-        pos += cfile[pos] == cfile[spos];
+      case '=': pos += cfile[pos] == cfile[spos]; case '*': case '/': case '^':
         return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
       case '&': case '|':  case '!': case '~': 
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';

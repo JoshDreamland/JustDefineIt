@@ -74,12 +74,12 @@ namespace jdi {
       node* previous; ///< The node beneath this node in the stack.
       friend struct ref_stack;
       friend struct ref_stack::iterator;
-      node* duplicate();
+      node* duplicate(); ///< Actually duplicate this node
       public:
         ref_type type; ///< The type of this node.
         size_t arraysize(); ///< Return the size of this array if and only if type == RT_ARRAYBOUND. Undefined behavior otherwise.
         node(node* p, ref_type rt); ///< Allow constructing a new node easily.
-        ~node(); ///< Non-virtual destructor which must call appropriate child constructor.
+        ~node(); ///< Virtual destructor so \c node_func can be complicated.
     };
     struct node_array;
     struct node_func;
@@ -87,11 +87,16 @@ namespace jdi {
     /// Push a node onto this stack by a given type.
     /// @param reference_type The type of this reference; should be either \c RT_REFERENCE or \c RT_POINTERTO.
     void push(ref_type reference_type);
-    /// Push an array node onto this stack by a given type, with extra info.
+    /// Push an array node onto the bottom of this stack with the given boundary size.
     /// @param array_size  The number of elements in this array, or node_array::nbound for unspecified.
     void push_array(size_t array_size);
+    /// Push a funciton node onto the bottom of this stack with the given parameter descriptors, consuming them.
+    /// @param parameters  A \c parameter_ct to consume containing details about the parameters of this function.
+    void push_func(parameter_ct &parameters);
     /// Append a stack to the top of this stack, consuming it.
     void append(ref_stack &rf);
+    /// Similar to append, but for reference stacks composed in a nest. Copies the name member as well.
+    void append_nest(ref_stack &rf);
     /// Clear the stack, undoing all referencers.
     void clear();
     
@@ -145,16 +150,28 @@ namespace jdi {
 //=========================================================================================================
 
 #include <Storage/definition.h>
+#include <General/quickvector.h>
 
 namespace jdi {  
-  struct ref_stack::parameter_ct: public vector<jdi::full_type> {};
+  struct ref_stack::parameter_ct: public quick::vector<jdi::full_type> {
+    /// Throw a full_type onto this list, consuming it.
+    /// @param ft  The \c full_type that will be consumed and added to the stack.
+    void throw_on(jdi::full_type& ft);
+  };
   struct ref_stack::node_array: ref_stack::node {
-    size_t bound;
-    static const size_t nbound = size_t(-1);
+    size_t bound; ///< The size of the bound, or \c nbound for an unspecified or non-const boundary size.
+    static const size_t nbound = size_t(-1); ///< Value denoting an unspecified or non-const boundary size.
+    /// Construct a new array bound node with previous node and a boundary size.
+    /// @param p  The previous node.
+    /// @param b  The boundary size, or \c nbound if no definite size is available.
     node_array(node* p, size_t b);
   };
   struct ref_stack::node_func: ref_stack::node {
     parameter_ct params;
+    /// Construct new function node with previous node and a parameter container, consuming the parameter container.
+    /// @param p   The previous node.
+    /// @param ps  The parameter container to consume.
+    node_func(node* p, parameter_ct &ps);
     ~node_func();
   };
 }

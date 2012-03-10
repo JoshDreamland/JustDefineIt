@@ -38,6 +38,9 @@ namespace jdi {
   value values_modulo(const value& x, const value& y);  ///< Returns the modulo of two real values.
   value values_lshift(const value& x, const value& y);  ///< Returns the value given by x, multiplied by two to the power of y.
   value values_rshift(const value& x, const value& y);  ///< Returns the value given by x, divided by two to the power of y.
+  value values_band(const value& x, const value& y);  ///< Returns the value given by the bitwise AND of x and y.
+  value values_bor(const value& x, const value& y);  ///< Returns the value given by the bitwise OR of x and y.
+  value values_bxor(const value& x, const value& y);  ///< Returns the value given by the bitwise XOR of x and y.
   
   /** Compares two values, x and y.
       If x and y are both real, the result is true iff x > y.

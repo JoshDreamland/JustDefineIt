@@ -81,9 +81,9 @@ symbol_table::symbol_table()
   symbols["=="]  = symbol(ST_BINARY,prec,values_equal);
   symbols["!="]  = symbol(ST_BINARY,prec,values_notequal);
   
-  prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,value_unary_reference);
-  prec--; symbols["^"]  = symbol(ST_BINARY,prec);
-  prec--; symbols["|"]  = symbol(ST_BINARY,prec);
+  prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_band,value_unary_reference);
+  prec--; symbols["^"]  = symbol(ST_BINARY,prec,values_bxor);
+  prec--; symbols["|"]  = symbol(ST_BINARY,prec,values_bor);
   
   prec--; symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,prec);
   prec--; symbols["^^"] = symbol(ST_BINARY,prec);

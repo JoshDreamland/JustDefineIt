@@ -42,7 +42,6 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
   
   if (token.type != TT_DECLARATOR) {
     if (token.type != TT_DECFLAG) {
-      token = lex->get_token();
       if (token.type != TT_DECLARATOR) {
         token.report_error(herr,"Type name expected here");
         return full_type();
@@ -99,7 +98,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
 
 #define render_ast(x)
 #ifdef DEBUG_MODE
-  #ifndef RENDER_ASTS
+  #ifdef RENDER_ASTS
     #include <sys/stat.h>
     #undef render_ast
     static unsigned ast_rn = 0;
@@ -108,7 +107,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
         mkdir("/home/josh/Desktop/AST_Renders",0777);
         mkdir("/home/josh/Desktop/AST_Renders/ArrayBounds",0777);
       }
-      char fn[64]; sprintf(fn,"/home/josh/Desktop/AST_Renders/ArrayBounds/ast_%08u",ast_rn++);
+      char fn[64]; sprintf(fn,"/home/josh/Desktop/AST_Renders/ArrayBounds/ast_%08u.svg",ast_rn++);
       ast.writeSVG(fn);
     }
   #endif
@@ -117,12 +116,15 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
 int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, error_handler *herr)
 {
   ref_stack append;
+  ref_stack postfix;
+  bool rhs = false;
   for (;;)
   {
     switch (token.type)
     {
       case TT_LEFTBRACKET: { // Array bound indicator
         AST ast;
+        rhs = true;
         if (ast.parse_expression(lex,token,herr))
           return 1; // This error has already been reported, just return empty.
         if (token.type != TT_RIGHTBRACKET) {
@@ -132,14 +134,40 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         render_ast(ast);
         value as = ast.eval();
         size_t boundsize = (as.type == VT_INTEGER)? as.val.i : ref_stack::node_array::nbound;
-        refs.push_array(boundsize);
+        postfix.push_array(boundsize);
       } break;
       case TT_LEFTPARENTH: { // Either a function or a grouping
         token = lex->get_token(herr);
-        read_referencers(append, lex, token, scope, herr);
+        if (!rhs) { // If we're still on the left-hand side
+          rhs = true;
+          read_referencers(append, lex, token, scope, herr);
+          if (token.type != TT_RIGHTPARENTH) {
+            token.report_error(herr, "Expected right parenthesis after nested referencers");
+          }
+        }
+        else {
+          ref_stack::parameter_ct params;
+          while (token.type != TT_RIGHTPARENTH)
+          {
+            full_type a = read_type(lex,token,scope,herr);
+            params.throw_on(a);
+            if (token.type != TT_COMMA) {
+              if (token.type == TT_RIGHTPARENTH) break;
+              token.report_error(herr,"Expected comma or closing parenthesis to function parameters");
+              return 1;
+            }
+            token = lex->get_token();
+          }
+          postfix.push_func(params);
+          if (token.type != TT_RIGHTPARENTH) {
+            token.report_error(herr,"Expected closing parenthesis to function parameters");
+            return 1;
+          }
+        }
       } break;
       case TT_IDENTIFIER: // The name associated with this type, be it the name of a parameter or of a declaration or what have you.
         refs.name = string((const char*)token.extra.content.str, token.extra.content.len);
+        rhs = true; // Officially on the right hand side
       break;
       
       
@@ -155,7 +183,8 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_EQUALS:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TT_INVALID: default:
-          refs.append(append);
+          refs.append(postfix);
+          refs.append_nest(append);
         return 0;
     }
     token = lex->get_token(herr);

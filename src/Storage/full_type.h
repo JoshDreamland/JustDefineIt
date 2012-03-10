@@ -40,6 +40,8 @@ namespace jdi {
     jdi::ref_stack refs; ///< Any referencers affecting this type, such as the pointer-to asterisk (*) or ampersand reference (&).
     int flags; ///< Any flags, such as unsigned, signed, or const, associated with us, as a bitmask.
     
+    void swap(full_type& ft); ///< Trade contents with another full_type.
+    
     full_type(); ///< Default constructor.
     full_type(jdi::definition*); ///< Construct with only a definition.
     full_type(jdi::definition*, jdi::ref_stack, int); ///< Construct from individual components. Consumes the given \c ref_stack.

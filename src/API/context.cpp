@@ -162,29 +162,75 @@ void context::output_macros(ostream &out)
   }
 }
 
-static void utility_printtype(definition_typed* t, ostream &out) {
+static string fulltype_string(full_type& ft);
+
+static string typeflags_string(definition *type, unsigned flags) {
+  string res;
   for (int i = 1; i <= 0x10000; i <<= 1)
-    if (t->flags & i)
-      out << builtin_decls_byflag[i]->name << " ";
-  if (t->type)
-    out << t->type->name << " ";
-  else out << "<NULL> ";
-  for (ref_stack::iterator it = t->referencers.begin(); it; ++it) {
-    switch (it->type)
-    {
-      case ref_stack::RT_POINTERTO: out << '*'; break;
-      case ref_stack::RT_REFERENCE: out << '&'; break;
-      case ref_stack::RT_ARRAYBOUND:
-          out << '[';
-          if (it->arraysize() != ref_stack::node_array::nbound)
-            cout << it->arraysize();
-          cout << ']'; break;
-      case ref_stack::RT_FUNCTION: out << "(LOLUBERFAIL)"; break;
-      default:
-        out << "[INVALIDREF:" << it->type << "]";
-        break;
-    }
+    if (flags & i)
+      res += builtin_decls_byflag[i]->name + " ";
+  if (type)
+    res += type->name;
+  else res += "<NULL>";
+  return res;
+}
+
+static string type_referencers_string_prefix(ref_stack& rf) {
+  string res;
+  ref_stack::iterator it = rf.begin();
+  while (it)
+  {
+    while (it and (it->type == ref_stack::RT_ARRAYBOUND || it->type == ref_stack::RT_FUNCTION)) ++it;
+    while (it and (it->type == ref_stack::RT_POINTERTO || it->type == ref_stack::RT_REFERENCE))
+      res = (it->type == ref_stack::RT_POINTERTO? '*' : '&') + res, ++it;
+    if (it) res = '(' + res;
   }
+  return res;
+}
+
+static string arraybound_string(size_t b) {
+  if (b == ref_stack::node_array::nbound)
+    return "[]";
+  char buf[32]; sprintf(buf,"[%lu]",(long unsigned)b);
+  return buf;
+}
+
+static string type_referencers_string_postfix(ref_stack& rf) {
+  string res;
+  ref_stack::iterator it = rf.begin();
+  while (it)
+  {
+    while (it and (it->type == ref_stack::RT_ARRAYBOUND || it->type == ref_stack::RT_FUNCTION)) {
+      if (it->type == ref_stack::RT_ARRAYBOUND) res += arraybound_string(it->arraysize());
+      else {
+        res += '(';
+        ref_stack::node_func* nf = (ref_stack::node_func*)*it;
+        for (size_t i = 0; i < nf->params.size(); i++) {
+          res += fulltype_string(nf->params[i]);
+          if (i + 1 < nf->params.size()) res += ", ";
+        }
+        res += ')';
+      }
+      ++it;
+    }
+    while (it and (it->type == ref_stack::RT_POINTERTO || it->type == ref_stack::RT_REFERENCE)) ++it;
+    if (it) res += ')';
+  }
+  return res;
+}
+
+static string fulltype_string(full_type& ft) {
+  string res = typeflags_string(ft.def, ft.flags);
+  string app = type_referencers_string_prefix(ft.refs) + ft.refs.name + type_referencers_string_postfix(ft.refs);
+  if (app.length()) res += " " + app;
+  return res;
+}
+
+static void utility_printtype(definition_typed* t, ostream &out) {
+  out << typeflags_string(t->type, t->flags) << " ";
+  out << type_referencers_string_prefix(t->referencers);
+  out << t->name;
+  out << type_referencers_string_postfix(t->referencers);
 }
 
 static void utility_printrc(definition_scope* scope, ostream &out, string indent) {
@@ -194,7 +240,6 @@ static void utility_printrc(definition_scope* scope, ostream &out, string indent
     if (it->second->flags & DEF_TYPED)
     {
       utility_printtype((definition_typed*)it->second, out);
-      out << it->second->name;
       out << ";" << endl;
     }
     else if (it->second->flags & DEF_NAMESPACE)

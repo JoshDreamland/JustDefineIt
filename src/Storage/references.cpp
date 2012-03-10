@@ -25,11 +25,13 @@
 
 #include "references.h"
 
-#ifdef DEBUG_MODE
-  #include <assert.h>
-  #define dbg_assert assert
-#else
-  #define dbg_assert(x)
+#ifndef dbg_assert
+  #ifdef DEBUG_MODE
+    #include <assert.h>
+    #define dbg_assert assert
+  #else
+    #define dbg_assert(x)
+  #endif
 #endif
 #include <iostream>
 
@@ -38,19 +40,21 @@ namespace jdi {
   ref_stack::~ref_stack() { clear(); }
   
   ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
-  ref_stack &ref_stack::operator= (const ref_stack& rf) { copy(rf); return *this; }
+  ref_stack &ref_stack::operator= (const ref_stack& rf) { clear(); copy(rf); return *this; }
   
   ref_stack::ref_stack(ref_stack& rf): bottom(NULL), top(NULL) { swap(rf); }
   ref_stack &ref_stack::operator= (ref_stack& rf) { swap(rf); return *this; }
   
   ref_stack::node::node(node* p, ref_type rt): previous(p), type(rt) {}
   ref_stack::node_array::node_array(node* p, size_t b): node(p,RT_ARRAYBOUND), bound(b) {}
+  ref_stack::node_func::node_func(node* p, parameter_ct &ps): node(p,RT_FUNCTION), params() { params.swap(ps); }
   
-  ref_stack::node::~node() { if (type == RT_FUNCTION) ((node_func*)this)->~node_func(); }
+  ref_stack::node::~node() { }
   ref_stack::node_func::~node_func() {}
   
   ref_stack::node* ref_stack::node::duplicate() {
     if (type == RT_ARRAYBOUND) return new node_array(NULL,((node_array*)this)->bound);
+    if (type == RT_FUNCTION) return new node_func(NULL,((node_func*)this)->params);
     cout << "DUPLICATE CALLED" << endl;
     return new node(NULL,type);
   }
@@ -75,12 +79,21 @@ namespace jdi {
     if (!bottom) bottom = top;
   }
   void ref_stack::push_array(size_t array_size) {
-    top = new node_array(top, array_size);
-    if (!bottom) bottom = top;
+    node* bo = bottom;
+    bottom = new node_array(NULL, array_size);
+    if (bo) bo->previous = bottom;
+    else top = bottom;
+  }
+  void ref_stack::push_func(parameter_ct &parameters) {
+    node* bo = bottom;
+    bottom = new node_func(NULL, parameters);
+    if (bo) bo->previous = bottom;
+    else top = bottom;
   }
   
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;
+    cout << "DUPLICATED REF STACK" << endl;
     if (!rf.bottom) {
       top = bottom = NULL;
       return;
@@ -105,11 +118,27 @@ namespace jdi {
     top = rf.top; // Since we threw that stack on top of ours, its top is now our top.
     rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
   }
+  void ref_stack::append_nest(ref_stack &rf) {
+    if (!rf.bottom) return; // Appending an empty stack is meaningless
+    if (!bottom) bottom = rf.bottom; // If we didn't have anything on our stack, our bottom is now its bottom.
+    rf.bottom->previous = top; // If we had anything on our stack, then our top item comes before its bottom item.
+    top = rf.top; // Since we threw that stack on top of ours, its top is now our top.
+    rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
+    name = rf.name; // Steal the name, too.
+  }
   
   void ref_stack::clear() {
     for (node* n = top, *p; n; n = p) {
       p = n->previous;
-      delete n;
+      switch (n->type) {
+        case RT_FUNCTION: delete (node_func*)n; break;
+        case RT_ARRAYBOUND: delete (node_array*)n; break;
+        case RT_POINTERTO: case RT_REFERENCE: default: delete n; break;
+      }
     }
+  }
+  
+  void ref_stack::parameter_ct::throw_on(full_type &ft) {
+    enswap(ft);
   }
 }
