@@ -100,6 +100,9 @@ namespace jdi {
     /// Clear the stack, undoing all referencers.
     void clear();
     
+    /// Return whether this stack is empty.
+    bool empty();
+    
     /// Constructor wrapper to the copy() method so copying doesn't bite someone in the ass.
     ref_stack(const ref_stack&);
     /// Wrapper to the copy() method so operator= doesn't leak and bite someone in the ass.
@@ -139,6 +142,7 @@ namespace jdi {
     };
     
     string name; ///< The name of the object with the contained referencers.
+    void *implementation; ///< Any data harvested from a function implementation, if we are one.
     private:
       node *bottom; ///< The bottommost node on the list; used in the prepend method.
       node *top; ///< The topmost node on the list, for everything else.

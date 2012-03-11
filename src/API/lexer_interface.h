@@ -26,8 +26,11 @@
 #ifndef LEXER_INTERFACE__H
 #define LEXER_INTERFACE__H
 
+namespace jdi {
+  struct lexer;
+}
+
 #include <System/token.h>
-#include <API/context.h>
 #include <API/error_reporting.h>
 
 namespace jdi {

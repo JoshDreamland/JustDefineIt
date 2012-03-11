@@ -25,12 +25,6 @@
 #ifndef _DEFINITION__H
 #define _DEFINITION__H
 
-#include <map>
-#include <string>
-#include <vector>
-using namespace std;
-typedef size_t pt;
-
 namespace jdi {
   enum DEF_FLAGS
   {
@@ -48,14 +42,28 @@ namespace jdi {
     DEF_EXTERN =       1 << 11, ///< This definition was declared with the "extern" flag.
     DEF_HYPOTHETICAL = 1 << 12, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
     DEF_PRIVATE =      1 << 13, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 14, ///< This definition was declared as a private member.
-    DEF_INCOMPLETE =   1 << 15  ///< This definition was declared as a private member.
-    // DEF_C99_STRUCT =   1 << 13  ///< This definition is a C99 structure. Remove me.
-    // DEF_PENDING_TYPE1 << 14DEF =   ///< Remove me.
+    DEF_PROTECTED =    1 << 14, ///< This definition was declared as a protected member.
+    DEF_INCOMPLETE =   1 << 15  ///< This definition was declared but not implemented.
   };
   
+  struct definition;
+  struct definition_typed;
+  struct function_overload;
+  struct definition_function;
+  struct definition_valued;
   struct definition_scope;
-  
+  struct definition_class;
+  struct definition_template;
+}
+
+
+#include <map>
+#include <string>
+#include <vector>
+using namespace std;
+typedef size_t pt;
+
+namespace jdi {
   /**
     @struct jdi::definition
     @brief  The class responsible for storing all parsed definitions.

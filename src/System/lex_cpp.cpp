@@ -37,14 +37,11 @@ using namespace jdip;
 
 token_t lexer_cpp::get_token(error_handler *herr)
 {
-  stack_tracer("token_t jdip::read_next_token(llreader &c_file, parse_context &pc)");
   #define cfile data //I'm sorry, but I can't spend the whole function calling the file buffer "data."
   
   if (pos >= length) goto POP_FILE;
   for (;;) // Loop until we find something or hit world's end
   {
-    loop_tracer();
-    
     // Skip all whitespace
     while (is_useless(cfile[pos])) if (++pos >= length) goto POP_FILE;
     
@@ -62,7 +59,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
         if (cfile[pos] == '*') {
           ++pos; // Skip one more char so we don't break on /*/
           do if (++pos >= length) goto POP_FILE; while (cfile[pos] != '/' or cfile[pos-1] != '*');
-          continue;
+          ++pos; continue;
         }
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,"some file",0,pos), cfile+pos-1, 2);

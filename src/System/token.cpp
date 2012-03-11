@@ -20,6 +20,7 @@
 **/
 
 #include "token.h"
+#include <API/context.h>
 using namespace jdip;
 
 #ifdef DEBUG_MODE
@@ -49,24 +50,6 @@ token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), defin
 token_t::extra_::extra_() {}
 token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
 token_t::extra_::extra_(definition* d): def(d) {}
-
-void token_t::report_error(context *hc, std::string error)
-{
-  hc->err_file.clear();
-  hc->err_line = -1;
-  hc->err_pos = -1;
-  
-  // This is where we use the token_basics macro to only assign to
-  // those parse context members which exist.
-  token_basics(
-    hc->error = error,
-    hc->err_file = (const char*)file,
-    hc->err_line = linenum,
-    hc->err_pos = pos
-  );
-  
-  hc->pc->herr->error(error, hc->err_file, hc->err_line, hc->err_pos);
-}
 
 void token_t::report_error(error_handler *herr, std::string error)
 {

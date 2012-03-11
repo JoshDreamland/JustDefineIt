@@ -25,7 +25,6 @@
 #define _TOKEN__H
 
 #include <string>
-#include <API/context.h>
 
 namespace jdip {
   enum TOKEN_TYPE {
@@ -90,10 +89,23 @@ namespace jdip {
     For reasons of error reporting, the structure also contains information on
     where the token originated: the filename, and the line number/position.
   **/
+  struct token_t;
+}
+
+
+
+//=========================================================================================================
+//===: Implementation carries extended dependencies:=======================================================
+//=========================================================================================================
+
+#include <Storage/definition.h>
+#include <API/context.h>
+
+namespace jdip {
+  using namespace jdi; // If you are in the private namespace, you probably intend access to the regular namespace as well.
+  
   struct token_t {
     TOKEN_TYPE type; ///< The type of this token
-    /*const char* content; ///< Pointer to the beginning of the text of this token, where it can otherwise not be discerned from the type.
-    int length; ///< The length of the data pointed to by \c content.*/
     
     /// Construct a new, invalid token.
     token_t();
@@ -155,13 +167,6 @@ namespace jdip {
     /// Construct a token with extra information regarding its definition.
     token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition*);
     
-    /**
-      Copy error information to a parse context.
-      If no information is available, then zeros are copied in its place.
-      @param pc    The context into which error info is copied.
-      @param error The text of the error.
-    **/
-    void report_error(context* pc, std::string error);
     /**
       Copy error information to a parse context.
       If no information is available, then zeros are copied in its place.

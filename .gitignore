@@ -5,3 +5,4 @@ JustDefineIt.depend
 JustDefineIt.layout
 .objs
 ValgrindOut.xml
+cachegrind.*

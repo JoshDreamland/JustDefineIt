@@ -37,9 +37,9 @@ using namespace jdi;
   variety of memory constructs an llreader may actually represent, that
   isn't an option here.
 **/
-token_t jdip::context_parser::read_next_token(lexer* lex, definition_scope *scope)
+token_t jdip::context_parser::read_next_token(definition_scope *scope)
 {
-  token_t r = lex->get_token(pc->herr);
+  token_t r = lex->get_token(herr);
   if (r.type == TT_IDENTIFIER)
     return look_up_token(scope,string((const char*)r.extra.content.str,r.extra.content.len),r);
   return r;

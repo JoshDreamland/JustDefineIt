@@ -33,38 +33,47 @@
 using namespace std;
 using namespace jdip;
 
-/**
-  @brief Parse an input stream for definitions.
-  
-  This function's only purpose is to make a call to fetch the next token, figure
-  out what it represents, and dispatch a new function to deal with it. The vast
-  majority of the work is done in the function that grabs the next token.
-  
-  @param cfile  The stream to be read in.
-  @param herr   An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
+/** @section Implementation
+  This is the single most trivial function in the API. It makes a call to parse_stream, passing a
+  new instance of the C++ lexer that ships with JDI, \c lex_cpp.
 **/
-int jdi::context::parse_C_stream(llreader &cfile, error_handler *herr)
+int jdi::context::parse_C_stream(llreader &cfile, error_handler *errhandl) {
+  return parse_stream(new lexer_cpp(cfile, macros), errhandl); // Invoke our common method with it
+}
+
+/** @section Implementation
+  This function's task is to make a call to check if the parser is already running, then
+  instantiate a token class and set a few members. The actual work is done by the next
+  call, \c handle_scope(), and then the other members of the derived \c context_parser
+  class in \c jdip, which will be called from handle_scope.
+*/
+int jdi::context::parse_stream(lexer *lang_lexer, error_handler *errhandl)
 {
-  stack_tracer("void jdi::context::parse_C_stream(llreader &cfile)");
+  if (errhandl)
+    herr = errhandl;
   
-  if (pc) { // Make sure we're not still parsing anything
+  if (parse_open) { // Make sure we're not still parsing anything
     herr->error("Attempted to invoke parser while parse is in progress in another thread");
+    delete lang_lexer;
     return (error = "STILL PARSING", -1);
   }
   
-  pc = new parse_context(herr);
+  if (lang_lexer) { delete lex; lex = lang_lexer; }
+  else if (!lex) { // Make sure we're not still parsing anything
+    herr->error("Attempted to invoke parser without a lexer");
+    return (error = "NO LEXER", -1);
+  }
+  
+  parse_open = true;
   error = "";
   err_file = "";
   err_line = -1;
   err_pos = -1;
   
   token_t dummy; // An invalid token to appease the parameter chain.
-  lexer_cpp lcpp(cfile, macros); // Our C++ lexer. We hand it our file, it keeps track.
-  int res = ((context_parser*)this)->handle_scope(&lcpp, global, dummy);
-  pc->active = false;
+  int res = ((context_parser*)this)->handle_scope(global, dummy);
   
-  delete pc; // Clean up
-  pc = NULL; // Now a parse can be called in this context again
+  parse_open = false; // Now a parse can be called in this context again
   
   return res;
 }

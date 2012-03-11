@@ -78,7 +78,10 @@ int main() {
     if (res)
       cout << "ERROR: " << enigma.get_last_error() << endl;
     enigma.output_definitions();
-    
+    if (res)
+      cout << endl << "====[------------------------------ /FAILURE ------------------------------]====" << endl << endl;
+    else
+      cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
   }
   else
     cout << "Failed to open file for parsing!" << endl;

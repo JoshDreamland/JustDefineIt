@@ -21,11 +21,11 @@
 
 #include <Parser/bodies.h>
 
-int jdip::context_parser::handle_namespace(lexer *lex, definition_scope *scope, token_t& token)
+int jdip::context_parser::handle_namespace(definition_scope *scope, token_t& token)
 {
-  token = read_next_token(lex, scope);
+  token = read_next_token( scope);
   if (token.type != TT_IDENTIFIER) {
-    token.report_error(this, "Expected namespace name here.");
+    token.report_error(herr, "Expected namespace name here.");
     return 1;
   }
   
@@ -39,19 +39,19 @@ int jdip::context_parser::handle_namespace(lexer *lex, definition_scope *scope, 
   else {
     nscope = (definition_scope*)dins.first->second;
     if (not(dins.first->second->flags & DEF_NAMESPACE)) {
-      token.report_error(this,"Attempting to redeclare `" + nsname + "' as a namespace");
+      token.report_error(herr, "Attempting to redeclare `" + nsname + "' as a namespace");
       return 1;
     }
   }
   
-  token = read_next_token(lex,scope);
+  token = read_next_token(scope);
   if (token.type != TT_LEFTBRACE) {
-    token.report_error(this,"Expected opening brace for namespace definition.");
+    token.report_error(herr, "Expected opening brace for namespace definition.");
     return 1;
   }
-  if (handle_scope(lex, nscope, token)) return 1;
+  if (handle_scope(nscope, token)) return 1;
   if (token.type != TT_RIGHTBRACE) {
-    token.report_error(this,"Expected closing brace to namespace `" + nsname + "'");
+    token.report_error(herr, "Expected closing brace to namespace `" + nsname + "'");
     return 1;
   }
   return 0;

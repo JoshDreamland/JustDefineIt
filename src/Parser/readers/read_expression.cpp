@@ -26,14 +26,14 @@
 using namespace jdi;
 using namespace jdip;
 
-value jdip::context_parser::read_expression(lexer *lex, token_t &token, TOKEN_TYPE closing_token, definition_scope *scope)
+value jdip::context_parser::read_expression(token_t &token, TOKEN_TYPE closing_token, definition_scope *scope)
 {
-  token = read_next_token(lex, scope);
+  token = read_next_token( scope);
   while (token.type != TT_COMMA and token.type != closing_token)
   {
     if (token.type == TT_ENDOFCODE)
       return value();
-    token = read_next_token(lex, scope);
+    token = read_next_token( scope);
   }
   return value();
 }

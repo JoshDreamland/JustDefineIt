@@ -270,14 +270,15 @@ void context::output_definitions(ostream &out) {
   utility_printrc(global, out, "");
 }
 
-context::context(): global(new definition_scope()), pc(NULL) {
+context::context(): parse_open(false), lex(NULL), herr(def_error_handler), global(new definition_scope()) {
   builtin.global->copy(global);
 }
 
-context::context(int): global(new definition_scope()), pc(NULL) { }
+context::context(int): parse_open(false), lex(NULL), herr(def_error_handler), global(new definition_scope()) { }
 
 context::~context() {
   delete global;
+  delete lex;
   
   // Clean up macros
   for (macro_iter it = macros.begin(); it != macros.end(); it++) {

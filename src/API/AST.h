@@ -25,6 +25,9 @@
  * 
 **/
 
+#ifndef _AST__H
+#define _AST__H // Used in debug_macros.h. Do not rename on a whim.
+
 #include <string>
 #include <System/token.h>
 #include <Storage/value.h>
@@ -298,3 +301,4 @@ namespace jdi {
   };
 }
 
+#endif

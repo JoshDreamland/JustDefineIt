@@ -96,22 +96,17 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
   return full_type(rdef, rrefs, rflags);
 }
 
-#define render_ast(x)
-#ifdef DEBUG_MODE
-  #ifdef RENDER_ASTS
-    #include <sys/stat.h>
-    #undef render_ast
-    static unsigned ast_rn = 0;
-    static void render_ast(AST& ast) {
-      if (!ast_rn) {
-        mkdir("/home/josh/Desktop/AST_Renders",0777);
-        mkdir("/home/josh/Desktop/AST_Renders/ArrayBounds",0777);
-      }
-      char fn[64]; sprintf(fn,"/home/josh/Desktop/AST_Renders/ArrayBounds/ast_%08u.svg",ast_rn++);
-      ast.writeSVG(fn);
-    }
-  #endif
-#endif
+#include <General/debug_macros.h>
+
+///TODO: EXPORTME
+static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_handler *herr) {
+  for (size_t bc = 0;;) {
+    if (token.type == TT_LEFTBRACE) ++bc;
+    else if (token.type == TT_RIGHTBRACE and !--bc) return NULL;
+    token = lex->get_token(herr);
+  }
+}
+static void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = code_ignorer;
 
 int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, error_handler *herr)
 {
@@ -131,7 +126,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           token.report_error(herr,"Expected closing square bracket here before %s");
           return 1;
         }
-        render_ast(ast);
+        render_ast(ast, "ArrayBounds");
         value as = ast.eval();
         size_t boundsize = (as.type == VT_INTEGER)? as.val.i : ref_stack::node_array::nbound;
         postfix.push_array(boundsize);
@@ -162,6 +157,18 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           if (token.type != TT_RIGHTPARENTH) {
             token.report_error(herr,"Expected closing parenthesis to function parameters");
             return 1;
+          }
+          if (append.empty()) {
+            token = lex->get_token(herr);
+            if (token.type == TT_LEFTBRACE) {
+              refs.implementation = handle_function_implementation(lex,token,scope,herr);
+              if (token.type != TT_RIGHTBRACE) {
+                token.report_error(herr, "Expected closing brace to function");
+                continue;
+              }
+              token.type = TT_SEMICOLON;
+            }
+            continue;
           }
         }
       } break;

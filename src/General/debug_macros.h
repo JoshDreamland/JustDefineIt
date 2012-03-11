@@ -1,6 +1,6 @@
 /**
  * @file  debug_macros.h
- * @brief A header declaring conditional macros for tracking code position.
+ * @brief A header declaring conditional macros for your parser debugging convenience.
  * 
  * This file declares macros for reporting loop iterations, stack traces, and
  * other information that would otherwise need to be acquired via a debugger.
@@ -22,17 +22,30 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+/// Render an AST to an SVG, if debug AST rendering is enabled.
+/// @param AST The jdi::AST to render.
+/// @param cat The category under which the AST is rendered, such as "ArrayBounds".
+
+#ifndef _DEBUG_MACROS__H
+#define _DEBUG_MACROS__H
+
+#define render_ast(AST, cat) //Do nothing
+
 #ifdef DEBUG_MODE
-  #include <string>
-  /** Conditionally track loop iteration history for finding infinite loops. **/
-  #define loop_tracer() log_loop_iteration(__FILE__,__LINE__)
-  /** Completely unstable function for tracking loop iteration **/
-  void log_loop_iteration(const char*,int);
-  /** Conditionally track call stack information for locating mishaps. **/
-  #define stack_tracer(fname) stack_enter_obj seobj(__FILE__, __LINE__, "" fname);
-  /** Completely unstable function for tracking call stack information. **/
-  struct stack_enter_obj { stack_enter_obj(const char*, int, const char*); ~stack_enter_obj(); };
-#else
-  #define loop_tracer()
-  #define stack_tracer(fname)
-#endif
+  
+  #ifndef DEBUG_OUTPUT_PATH
+    #define DEBUG_OUTPUT_PATH "/home/josh/Desktop"
+  #endif
+
+  #if defined(RENDER_ASTS) && defined(_AST__H)
+    #include <string>
+    #undef render_ast
+    void render_ast(jdi::AST& ast, std::string cat);
+  #endif
+
+#else // NOT DEBUG_MODE
+
+
+
+#endif // DEBUG_MODE ELSE
+#endif // Guard

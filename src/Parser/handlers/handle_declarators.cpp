@@ -40,7 +40,7 @@ using namespace jdi;
   variety of memory constructs an llreader may actually represent, that
   isn't actually an option here.
 **/
-int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags)
+int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
   // Outsource to read_type, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
@@ -49,7 +49,7 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
   
   // Make sure we actually read a valid type.
   if (!tp.def) {
-    token.report_error(this,"Declaration does not give a valid type");
+    token.report_error(herr, "Declaration does not give a valid type");
     return 1;
   }
   
@@ -57,7 +57,7 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
   
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (tp.refs.name.empty()) {
-    token.report_error(this,"Declaration doesn't declare anything");
+    token.report_error(herr, "Declaration doesn't declare anything");
     return 2;
   }
   
@@ -71,11 +71,11 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
   else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {
     if (not(ins.first->second->flags & DEF_TYPED)) {
-      token.report_error(this,"Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
+      token.report_error(herr, "Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
       return 3;
     }
     if (not(ins.first->second->flags & DEF_TYPED) & DEF_EXTERN) { //TODO: Implement
-      token.report_error(this,"Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
+      token.report_error(herr, "Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
       return 4;
     }
   }
@@ -87,12 +87,12 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
       case TT_OPERATOR:
           if (*token.extra.content.str != '=' or token.extra.content.len != 1) { // If this operator isn't =, this is a fatal error. No idea where we are.
             case TT_GREATERTHAN: case TT_LESSTHAN:
-            token.report_error(this,"Unexpected operator " + string((const char*)token.extra.content.str,token.extra.content.len) + " at this point");
+            token.report_error(herr, "Unexpected operator " + string((const char*)token.extra.content.str,token.extra.content.len) + " at this point");
             return 5;
           }
           else {
             // If this thing's const, we need to make note of the value.
-            value a = read_expression(lex, token, TT_SEMICOLON, scope);
+            value a = read_expression(token, TT_SEMICOLON, scope);
             if (a.type != VT_NONE) {
               
             }
@@ -100,7 +100,7 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
         break;
       case TT_COMMA:
           // Move past this comma
-          token = read_next_token(lex, scope);
+          token = read_next_token(scope);
           
           // Read a new type
           read_referencers(tp.refs, lex, token, scope);
@@ -109,12 +109,12 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
         goto after_comma;
       
       case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
-          token.report_error(this,"Expected initializer `=' here before literal.");
+          token.report_error(herr, "Expected initializer `=' here before literal.");
         return 5;
       
       case TT_ENDOFCODE:
       #ifndef NO_ERROR_REPORTING
-          token.report_error(this,"Expected semicolon here before end of code.");
+          token.report_error(herr, "Expected semicolon here before end of code.");
         return 5;
       #else
         return 0;
@@ -129,9 +129,9 @@ int jdip::context_parser::handle_declarators(lexer *lex, definition_scope *scope
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_TILDE:
       case TT_EQUALS: case TT_INVALID: default:
           #ifndef DEBUG_MODE
-          token.report_error(this,"Unexpected token at this point");
+          token.report_error(herr, "Unexpected token at this point");
           #else
-          token.report_error(this,"Unexpected token at this point: " + string(TOKEN_TYPE_NAME[token.type]));
+          token.report_error(herr, "Unexpected token at this point: " + string(TOKEN_TYPE_NAME[token.type]));
           #endif
         return 5;
     }

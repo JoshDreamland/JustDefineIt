@@ -52,11 +52,11 @@
  * 
 **/
 
-#ifndef PARSE_BODIES__H
-#define PARSE_BODIES__H
+#ifndef _PARSE_BODIES__H
+#define _PARSE_BODIES__H
 
-#include <System/token.h>
 #include <API/context.h>
+#include <System/token.h>
 #include <API/lexer_interface.h>
 #include <Storage/definition.h>
 #include <Storage/value.h>
@@ -123,15 +123,16 @@ namespace jdip {
     /**
       Read in the next token, handling any preprocessing.
       
-      This function does a huge amount of work for you; in one call to retrieve
-      the next token, it may skip hundreds of lines of code, enter a new file,
-      leave a file for its including file, or just return the 'end of code' token.
+      This function wraps to two functions which together do a huge amount of work for
+      you; in this one call to retrieve the next token, the lexer may skip hundreds of
+      lines of code, enter a new file, or perform a number of other operations. The
+      second call will then check the token against the given scope to find definitions.
+      What is returned is ready to be used as-is, except if followed by the scope op.
       
-      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope from which identifiers will be looked up. [in]
       @return The next token in the stream.
     **/
-    token_t read_next_token(lexer *lex, definition_scope *scope);
+    token_t read_next_token(definition_scope *scope);
     
     /**
       Parse a list of declarations, copying them into the given scope.
@@ -139,7 +140,6 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      This will be updated to represent the next non-type token
@@ -148,7 +148,7 @@ namespace jdip {
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_declarators(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags);
+    int handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags);
     
     /**
       Parse a namespace definition.
@@ -156,7 +156,6 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      At the start of this call, the type of this token must be
@@ -165,7 +164,7 @@ namespace jdip {
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_namespace(lexer *lex, definition_scope *scope, token_t& token);
+    int handle_namespace(definition_scope *scope, token_t& token);
     
     /**
       Parse a class or struct definition.
@@ -173,7 +172,6 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      At the start of this call, the type of this token must be
@@ -183,7 +181,7 @@ namespace jdip {
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_class(lexer *lex, definition_scope *scope, token_t& token);
+    int handle_class(definition_scope *scope, token_t& token);
     
     /**
       Handle parsing an entire scope.
@@ -191,14 +189,13 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  lex    The lexer to be polled for tokens. [in-out]
       @param  scope  The scope into which declarations will be stored. [in-out]
       @param  token  The \c token structure into which the next unhandled token will be placed. [out]
       @param  inherited_flags  Any flags which must be given to all members of this scope. [in]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_scope(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
+    int handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
     
     /**
       Read an expression from the given input stream, evaluating it for a value.
@@ -214,14 +211,13 @@ namespace jdip {
       token in the stream. If the expression cannot be evaluated, the type of the returned \c
       value will be set to \c VT_NOTHING.
       
-      @param  lex            The lexer to be polled for tokens. [in-out]
       @param  token          The \c token structure which will represent the first non-evaluated token. [out]
       @param  closing_token  The \c TOKEN_TYPE of an additional token which will close this expression. [in]
       @param  scope          The scope which may be passed to \c read_token. [in]
       
       @return Returns the \c full_type read from the stream.
     **/
-    value read_expression(lexer *lex, token_t &token, TOKEN_TYPE closing_token, definition_scope *scope);
+    value read_expression(token_t &token, TOKEN_TYPE closing_token, definition_scope *scope);
     
     /**
       Retrieve the type of a token from a given string in a given scope.

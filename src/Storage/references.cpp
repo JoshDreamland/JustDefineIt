@@ -119,12 +119,15 @@ namespace jdi {
     rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
   }
   void ref_stack::append_nest(ref_stack &rf) {
-    if (!rf.bottom) return; // Appending an empty stack is meaningless
+    if (!rf.bottom) {
+      if (!rf.name.empty()) name = rf.name; // Grab the name, if it's meaningful
+      return; // Appending an empty stack is meaningless
+    }
     if (!bottom) bottom = rf.bottom; // If we didn't have anything on our stack, our bottom is now its bottom.
     rf.bottom->previous = top; // If we had anything on our stack, then our top item comes before its bottom item.
     top = rf.top; // Since we threw that stack on top of ours, its top is now our top.
     rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
-    name = rf.name; // Steal the name, too.
+    name = rf.name; // Steal the name from the nested expression.
   }
   
   void ref_stack::clear() {
@@ -137,6 +140,8 @@ namespace jdi {
       }
     }
   }
+  
+  bool ref_stack::empty() { return !bottom; }
   
   void ref_stack::parameter_ct::throw_on(full_type &ft) {
     enswap(ft);

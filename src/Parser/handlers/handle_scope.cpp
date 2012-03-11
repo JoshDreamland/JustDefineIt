@@ -24,37 +24,37 @@
 
 #include <Parser/bodies.h>
 
-int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, token_t& token, unsigned inherited_flags)
+int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
-  token = read_next_token(lex, scope);
+  token = read_next_token( scope);
   for (;;)
   {
     switch (token.type) {
       case TT_DECLARATOR: case TT_DECFLAG:
-          if (handle_declarators(lex, scope, token, inherited_flags))
+          if (handle_declarators(scope, token, inherited_flags))
             return 1;
           if (token.type != TT_SEMICOLON)
-            return (token.report_error(this, "Expected semicolon at this point"), 1);
+            return (token.report_error(herr, "Expected semicolon at this point"), 1);
         break;
       
       case TT_COMMA:
-          token.report_error(this, "Unexpected comma at this point.");
+          token.report_error(herr, "Unexpected comma at this point.");
         return 1;
       
       case TT_SEMICOLON:
           /* Printing a warning here is advisable but unnecessary. */
         break;
       
-      case TT_NAMESPACE: if (handle_namespace(lex,scope,token)) return 1; break;
-      case TT_LEFTPARENTH:  token.report_error(this, "Stray opening parenthesis."); return 1;
-      case TT_RIGHTPARENTH: token.report_error(this, "Stray closing parenthesis."); return 1;
-      case TT_LEFTBRACKET:  token.report_error(this, "Stray opening bracket."); return 1;
-      case TT_RIGHTBRACKET: token.report_error(this, "Stray closing bracket."); return 1;
-      case TT_LEFTBRACE:    token.report_error(this, "Expected scope declaration before opening brace."); return 1;
+      case TT_NAMESPACE: if (handle_namespace(scope,token)) return 1; break;
+      case TT_LEFTPARENTH:  token.report_error(herr, "Stray opening parenthesis."); return 1;
+      case TT_RIGHTPARENTH: token.report_error(herr, "Stray closing parenthesis."); return 1;
+      case TT_LEFTBRACKET:  token.report_error(herr, "Stray opening bracket."); return 1;
+      case TT_RIGHTBRACKET: token.report_error(herr, "Stray closing bracket."); return 1;
+      case TT_LEFTBRACE:    token.report_error(herr, "Expected scope declaration before opening brace."); return 1;
       case TT_RIGHTBRACE:   return 0;
       
       case TT_CLASS: case TT_STRUCT:
-      if (handle_class(lex,scope,token)) return 1; break;
+      if (handle_class(scope,token)) return 1; break;
       
       case TT_ENUM: case TT_UNION:
       case TT_TYPENAME:
@@ -86,6 +86,6 @@ int jdip::context_parser::handle_scope(lexer *lex, definition_scope *scope, toke
       case TT_ENDOFCODE:
         return 0;
     }
-    token = read_next_token(lex, scope);
+    token = read_next_token( scope);
   }
 }
