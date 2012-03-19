@@ -72,6 +72,9 @@ namespace jdip {
     TT_HEXLITERAL,    ///< A hexadecimal literal, such as 0xDEC0DED
     TT_OCTLITERAL,    ///< An octal literal, such as 07654321.
     
+    TTM_CONCAT,       ///< A macro-only token meaning the concatenation of two tokens to form a new token, '##'.
+    TTM_TOSTRING,     ///< A macro-only token meaning the value of a parameter, treated as a string literal, '#'.
+    
     TT_ENDOFCODE,     ///< This token signifies that the code has reached its end.
     TT_INVALID        ///< Invalid token; read failed.
   };

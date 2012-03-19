@@ -42,10 +42,13 @@
     #undef render_ast
     void render_ast(jdi::AST& ast, std::string cat);
   #endif
+  
+  #include <assert.h>
+  #define dbg_assert(x) assert(x)
 
 #else // NOT DEBUG_MODE
 
-
+  #define dbg_assert(x)
 
 #endif // DEBUG_MODE ELSE
 #endif // Guard

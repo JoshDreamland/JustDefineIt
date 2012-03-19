@@ -23,13 +23,7 @@
 #define _QUICKVECTOR__H
 
 #include <malloc.h>
-
-#ifdef DEBUG_MODE
-  #include <assert.h>
-  #define dbg_assert(x) assert(x)
-#else
-  #define dbg_assert(x)
-#endif
+#include <General/debug_macros.h>
 
 /** Namespace holding specialized container data types designed to up speed or minimize allocation.
 **/

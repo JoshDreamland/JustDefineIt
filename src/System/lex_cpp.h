@@ -24,10 +24,17 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#ifndef _LEX_CPP__H
+#define _LEX_CPP__H
+
+namespace jdip {
+  struct lexer_cpp;
+  struct lexer_macro;
+}
+
 #include <API/lexer_interface.h>
 #include <General/quickstack.h>
 #include <General/llreader.h>
-#include <Parser/bodies.h>
 #include <API/context.h>
 
 namespace jdip {
@@ -56,19 +63,54 @@ namespace jdip {
     /// This list is assumed to contain tokens whose contents are unambiguous; one string maps to one token, and vice-versa.
     keyword_map keywords;
     
-    /** Sole constructor; consumes an llreader.
+    /** Sole constructor; consumes an llreader and attaches a new \c lex_macro.
         @param input    The file from which to read definitions. This file will be manipulated by the system.
         @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
     **/
     lexer_cpp(llreader& input, macro_map &pmacros);
+    /** Destructor; free the attached macro lexer. **/
+    ~lexer_cpp();
+    
+    /**
+      Utility function designed to handle the preprocessor directive
+      pointed to by \c pos upon invoking the function. Note that it should
+      be the character directly after the pound pointed to upon invoking
+      the function, not the pound itself.
+      @param herr  The error handler to use if the preprocessor doesn't
+                   exist or is malformed.
+    **/
+    void handle_preprocessor(error_handler *herr);
+    /**
+      Second-order utility function to skip lines until a preprocessor
+      directive is encountered, then invoke the handler on the directive it found.
+    **/
+    void skip_to_macro(error_handler(*herr));
+    
+  private:
+    /// Storage mechanism for conditionals, such as #if, #ifdef, and #1ifndef
+    struct condition {
+      bool is_true; ///< True if code in this layer is to be parsed; ie, the condition given is true.
+      bool can_be_true; ///< True if an `else` statement or the like can set is_true to true.
+      condition(bool,bool); ///< Convenience constructor.
+      condition(); ///< Default constructor.
+    };
+    quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested #if*)
+    lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
   };
   
   /**
-    @brief An implementation of \c jdi::lexer for handling macro expressions.
-           Unrolls macros automatically. Treats non-macro identifiers as zero.
+    An implementation of \c jdi::lexer for handling macro expressions.
+    Unrolls macros automatically. Treats non-macro identifiers as zero.
+    Replaces `defined x` with 0 or 1, depending on whether x is defined.
   **/
   struct lexer_macro: lexer {
+    const char* cfile;
+    size_t &pos, length;
+    lexer_cpp *lcpp;
     token_t get_token(error_handler *herr = def_error_handler);
-    quick::stack<openfile*> files; ///< The files we have open                                                              
+    lexer_macro(lexer_cpp*);
+    void update();
   };
 }
+
+#endif

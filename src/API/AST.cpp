@@ -118,6 +118,7 @@ namespace jdi
         token.report_error(herr, "Expected expression before %s token");
         return NULL;
       
+      case TTM_CONCAT: case TTM_TOSTRING: token.report_error(herr, "Illogical token type returned!"); break;
       case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
     }
     if (!handled_basics)
@@ -204,7 +205,7 @@ namespace jdi
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       return left_node;
       
-      case TT_INVALID: default: return left_node;
+      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: return left_node;
     }
     return parse_binary_or_unary_post(token,left_node,prec_min);
   }

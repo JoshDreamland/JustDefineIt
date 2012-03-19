@@ -58,6 +58,11 @@ namespace jdi {
     value(std::string v); ///< Construct a new value representing a copy of the passed string. This operates in O(N).
     value(const value& v); ///< Copy a value. Handles allocation issues.
     ~value(); ///< Default destructor; handles freeing any strings.
+    
+    operator long() const; ///< Cast to a long int, returning zero if no valid cast exists.
+    operator double() const; ///< Cast to a double, returning zero if no valid cast exists.
+    operator bool() const; ///< Cast to a boolean, returning false if no valid cast exists, true if this is a non-empty string.
+    operator const char* () const; ///< Cast to a const char*, returning NULL if no valid cast exists. @warning May be null. @warning Do not free.
   };
 }
 

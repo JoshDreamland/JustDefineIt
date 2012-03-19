@@ -76,13 +76,14 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_TEMPLATE:
       
-      case TT_INVALID:
+      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       default:
-        cout << "ERROR: INVALID TOKEN TYPE RETURNED.\n";
+        token.report_error(herr, "INVALID TOKEN TYPE RETURNED");
         #ifdef DEBUG_MODE
           cout << TOKEN_TYPE_NAME[token.type] << endl;
         #endif
         break;
+      
       case TT_ENDOFCODE:
         return 0;
     }

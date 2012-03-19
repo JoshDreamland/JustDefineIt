@@ -189,7 +189,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_SCOPE: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_EQUALS:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
-      case TT_OCTLITERAL: case TT_ENDOFCODE: case TT_INVALID: default:
+      case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default:
           refs.append(postfix);
           refs.append_nest(append);
         return 0;

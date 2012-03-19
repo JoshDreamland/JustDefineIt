@@ -127,7 +127,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_COLON: case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_TILDE:
-      case TT_EQUALS: case TT_INVALID: default:
+      case TT_EQUALS: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default:
           #ifndef DEBUG_MODE
           token.report_error(herr, "Unexpected token at this point");
           #else
