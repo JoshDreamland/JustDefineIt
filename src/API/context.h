@@ -148,19 +148,19 @@ namespace jdi
     void output_definitions(ostream &out = cout); ///< Print a any scoped-in other shit.
     
     /** Parse an input stream for definitions.
-        @param cfile  The stream to be read in.
-        @param herr   An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
-                          If this parameter is NULL, the previous error handler will be used, or the default will be used.
+        @param cfile     The stream to be read in.
+        @param errhandl  An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
+                         If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
-    int parse_C_stream(llreader& cfile, error_handler *herr = NULL);
+    int parse_C_stream(llreader& cfile, error_handler *errhandl = NULL);
     
     /** Parse an input stream for definitions using the default C++ lexer.
         @param lang_lexer The lexer which will be polled for tokens. This lexer will already know its token source.
                           If this parameter is NULL, the previous lexer will be used. Or else a huge error will be thrown.
-        @param herr       An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
+        @param errhandl   An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
                           If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
-    int parse_stream(lexer *lang_lexer = NULL, error_handler *herr = NULL);
+    int parse_stream(lexer *lang_lexer = NULL, error_handler *errhandl = NULL);
     
     /** Retrieve the last error message, if any error was thrown during parse.
         @return The last error message, or an empty string if no error occurred.

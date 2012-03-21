@@ -63,10 +63,8 @@ namespace jdi {
       RT_FUNCTION ///< This referencer is a set of function parameters.
     };
     
-    /// Parameter storage container type. Guaranteed to have a push_back(full_type) method.
     struct parameter_ct;
     
-    /// Iterator type, complying with C++11; iterates elements in the stack from top to bottom.
     class iterator;
     
     /// Node type.
@@ -126,7 +124,8 @@ namespace jdi {
     ref_stack(); ///< Default contructor. Zeroes pointers.
     ~ref_stack(); ///< Default destructor. Frees the stack.
     
-    
+    /// Iterator type, complying with C++11; iterates elements in the stack from top to bottom.
+    /// Implements a boolean cast for short, simple iteration.
     struct iterator {
       private:
         node* n; ///< The node to which we are pointing.
@@ -156,12 +155,14 @@ namespace jdi {
 #include <Storage/definition.h>
 #include <General/quickvector.h>
 
-namespace jdi {  
+namespace jdi {
+  /// Parameter storage container type. Guaranteed to have a push_back(full_type) method.
   struct ref_stack::parameter_ct: public quick::vector<jdi::full_type> {
     /// Throw a full_type onto this list, consuming it.
     /// @param ft  The \c full_type that will be consumed and added to the stack.
     void throw_on(jdi::full_type& ft);
   };
+  /// A special ref_stack node with an array bound size member.
   struct ref_stack::node_array: ref_stack::node {
     size_t bound; ///< The size of the bound, or \c nbound for an unspecified or non-const boundary size.
     static const size_t nbound = size_t(-1); ///< Value denoting an unspecified or non-const boundary size.
@@ -170,6 +171,7 @@ namespace jdi {
     /// @param b  The boundary size, or \c nbound if no definite size is available.
     node_array(node* p, size_t b);
   };
+  /// A special ref_stack node with a list of function parameters.
   struct ref_stack::node_func: ref_stack::node {
     parameter_ct params;
     /// Construct new function node with previous node and a parameter container, consuming the parameter container.

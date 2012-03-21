@@ -84,14 +84,6 @@ namespace jdip {
     extern const char* TOKEN_TYPE_NAME[];
   #endif
   
-  /**
-    A structure for representing complete info about a token.
-    First and foremost, the structure denotes the type of the token. If that
-    type is insufficient to discern the text of the token, the text is included
-    as well; otherwise, there is little point to maintaining a copy in memory.
-    For reasons of error reporting, the structure also contains information on
-    where the token originated: the filename, and the line number/position.
-  **/
   struct token_t;
 }
 
@@ -107,6 +99,20 @@ namespace jdip {
 namespace jdip {
   using namespace jdi; // If you are in the private namespace, you probably intend access to the regular namespace as well.
   
+  /**
+    A structure for representing complete info about a token.
+    
+    First and foremost, the structure denotes the type of the token. If that
+    type is insufficient to discern the text of the token, the text is included
+    as well in the \c token_t::extra member. Otherwise, there is little point
+    to maintaining a pointer to that information in memory.
+    
+    If the type of the token is a declarator or other sort of object backed by
+    a \c definition, then \c token_t::extra member will contain a \c definition*.
+    
+    For reasons of error reporting, the structure also contains information on
+    the origin of the token: the filename, the line number, and the position.
+  **/
   struct token_t {
     TOKEN_TYPE type; ///< The type of this token
     

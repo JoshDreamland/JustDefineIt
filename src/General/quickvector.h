@@ -22,7 +22,7 @@
 #ifndef _QUICKVECTOR__H
 #define _QUICKVECTOR__H
 
-#include <malloc.h>
+#include <cstdlib>
 #include <General/debug_macros.h>
 
 /** Namespace holding specialized container data types designed to up speed or minimize allocation.

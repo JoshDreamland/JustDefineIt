@@ -275,7 +275,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
       
       macro_iter mi = macros.find(fn);
       if (mi != macros.end()) {
-        printf("ERROR: Unimplemented: macros\n");
+        //printf("ERROR: Unimplemented: macros\n");
       }
       
       keyword_map::iterator kwit = keywords.find(fn);
@@ -436,7 +436,7 @@ token_t lexer_macro::get_token(error_handler *)
       
       macro_iter mi = lcpp->macros.find(fn);
       if (mi != lcpp->macros.end()) {
-        printf("ERROR: Unimplemented: macros\n");
+        //printf("ERROR: Unimplemented: macros\n");
       }
       
       static const char zero[] = "0";

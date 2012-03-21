@@ -61,6 +61,7 @@ namespace jdi {
 
 namespace jdip {
   using namespace jdi;
+  /// Class for storing information about a 'typeflag,' declarators such as 'int', 'short', and 'const' which refer to or modify primitives.
   class typeflag {
     friend void jdi::add_declarator(string, USAGE_FLAG, string);
     friend void jdi::cleanup_declarators();
