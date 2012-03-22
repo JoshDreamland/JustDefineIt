@@ -63,10 +63,17 @@ void llreader::copy(string contents) {
 llreader::llreader(): mode(FT_CLOSED), pos(0), length(0), data(NULL) {}
 llreader::llreader(const char* filename): mode(FT_CLOSED), pos(0), length(0), data(NULL) { open(filename); }
 llreader::llreader(std::string contents, bool cp): mode(FT_CLOSED), pos(0), length(0), data(NULL) { cp? copy(contents) : encapsulate(contents); }
+
+#include <iostream>
 llreader::llreader(const llreader& x): mode(FT_BUFFER), pos(x.pos), length(FT_BUFFER), data(NULL) {
-  char *buf = new char[x.length+1];
-  memcpy(buf, x.data, x.length);
-  buf[length = x.length] = 0;
+  cout << "COPY CALLED ON LLREADER" << endl;
+  if (x.mode == FT_CLOSED) mode = FT_CLOSED;
+  else {
+    char *buf = new char[x.length+1];
+    memcpy(buf, x.data, x.length);
+    buf[length = x.length] = 0;
+    data = buf;
+  }
 }
 llreader::~llreader() { close(); }
 

@@ -43,17 +43,21 @@ namespace jdip {
     @brief An extension of \c llreader which also stores information about the
            current line number and the position of the last line break.
   **/
-  struct openfile: llreader {
+  struct openfile {
     string filename; ///< The name of the open file.
-    size_t line, ///< The index of the current line.
-           lpos; ///< The position of the most recent line break.
+    size_t line; ///< The index of the current line.
+    size_t lpos; ///< The position of the most recent line break.
+    llreader file; ///< The llreader of this file.
+    openfile(); ///< Default constructor.
+    openfile(string fname); ///< Construct a new openfile at position 0 with the given filename.
+    void swap(openfile&); ///< Copy constructor.
   };
   
   /**
     @brief An implementation of \c jdi::lexer for lexing C++. Handles preprocessing
            seamlessly, returning only relevant tokens.
   **/
-  struct lexer_cpp: lexer, openfile {
+  struct lexer_cpp: lexer, llreader {
     token_t get_token(error_handler *herr = def_error_handler);
     quick::stack<openfile> files; ///< The files we have open, in the order we included them.
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.

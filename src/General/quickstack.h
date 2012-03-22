@@ -73,10 +73,13 @@ namespace quick {
           In actuality, it is unlikely that a new node will be allocated
           rather than a pointer being incremented and value being set. **/
       void push(tp x) { if (!ntop->next) ntop->next = alloc(ntop); ntop = ntop->next; ntop->data = x; }
+      /** Pushes a new node onto the stack, but instead of copying x, simply swaps it with the new node.
+          This leaves the given value in the same state it would be if constructed fresh. **/
+      void enswap(tp &x) { if (!ntop->next) ntop->next = alloc(ntop); ntop = ntop->next; ntop->data.swap(x); }
       /** Pops an item from the stack, returning the value it contained.
           In actuality, this only involves changing the top pointer to
           its previous node's. **/
-      tp pop() { tp &r = ntop->data; ntop = ntop->prev; return r; }
+      tp &pop() { tp &r = ntop->data; ntop = ntop->prev; return r; }
       /** Return the item of the top node on the stack. **/
       tp& top() { return ntop->data; }
       /** Default destructor. Picks up after our class. **/

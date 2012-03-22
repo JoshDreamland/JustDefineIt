@@ -364,6 +364,9 @@ token_t lexer_cpp::get_token(error_handler *herr)
   POP_FILE: // This block was created instead of a helper function to piss Rusky off.
   if (files.empty())
     return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+  files.pop();
+  if (files.empty())
+    return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
   return get_token(herr);
 }
   
@@ -382,9 +385,24 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros), mlex
   keywords["typename"] = TT_TYPENAME;
   keywords["union"] = TT_UNION;
   keywords["using"] = TT_USING;
+  openfile temp("stdcall");
+  files.enswap(temp);
 }
 lexer_cpp::~lexer_cpp() {
   delete mlex;
+}
+
+openfile::openfile() {}
+openfile::openfile(string fname): filename(fname), line(0), lpos(0) {}
+void openfile::swap(openfile &f) {
+  filename.swap(f.filename);
+  register size_t tmpl = line;
+  line = f.line, f.line = tmpl;
+  tmpl = lpos, lpos = f.lpos, f.lpos = tmpl;
+  llreader tmpr;
+  tmpr.consume(file);
+  file.consume(f.file);
+  f.file.consume(tmpr);
 }
 
 #undef cfile
