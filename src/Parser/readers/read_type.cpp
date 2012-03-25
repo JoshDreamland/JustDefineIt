@@ -49,9 +49,10 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
     }
     else {
       typeflag *const tf = ((typeflag*)token.extra.def);
-      if (tf->usage & UF_PRIMITIVE)
-        overridable_type = tf->def,
+      if (tf->usage & UF_PRIMITIVE) {
+        (tf->usage == UF_PRIMITIVE? rdef : overridable_type) = tf->def,
         swif = tf->flagbit;
+      }
       else {
         if (tf->usage & UF_STANDALONE)
           inferred_type = tf->def;
@@ -67,19 +68,25 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
   while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
   {
     if (token.type == TT_DECLARATOR) {
-      if (rdef) {
+      if (rdef)
         token.report_error(herr,"Two types named in declaration");
-        return full_type();
-      }
       rdef = token.extra.def;
       rflags |= swif;
     }
     else {
       typeflag *const tf = ((typeflag*)token.extra.def);
-      if (tf->usage & UF_PRIMITIVE)
-        overridable_type = tf->def,
-        rflags |= swif,
-        swif = tf->flagbit;
+      if (tf->usage & UF_PRIMITIVE) {
+        if (tf->usage == UF_PRIMITIVE) {
+          if (rdef)
+            token.report_error(herr,"Two types named in declaration");
+          rdef = tf->def;
+          rflags |= swif;
+        } else {
+          overridable_type = tf->def,
+          rflags |= swif,
+          swif = tf->flagbit;
+        }
+      }
       else if (tf->usage & UF_STANDALONE_FLAG)
         inferred_type = tf->def,
         rflags |= tf->flagbit;

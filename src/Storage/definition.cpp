@@ -42,9 +42,9 @@ namespace jdi {
       return NULL;
     return parent->look_up(sname);
   }
-  void definition_scope::copy(definition_scope* to) {
-    for (defiter it = members.begin(); it != members.end(); it++) {
-      pair<defiter,bool> dest = to->members.insert(pair<string,definition*>(it->first,NULL));
+  void definition_scope::copy(const definition_scope* from) {
+    for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
+      pair<defiter,bool> dest = members.insert(pair<string,definition*>(it->first,NULL));
       if (dest.second)
         dest.first->second = it->second->duplicate();
     }

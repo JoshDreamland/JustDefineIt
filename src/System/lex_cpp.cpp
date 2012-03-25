@@ -45,8 +45,21 @@ static inline bool strbw(const char* s1, const char (&s2)[6]) { return *s1 == *s
 static inline bool strbw(const char* s1, const char (&s2)[7]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and s1[5] == s2[5] and (s1[6] == ' ' or s1[6] == '\t' or s1[6] == '\n' or s1[6] == '\r'); }
 static inline bool strbw(char s) { return s == ' ' or s == '\t' or s == '\n' or s == '\r'; }
 
-/**
+void lexer_cpp::skip_comment()
+{
+  #ifdef ALLOW_MULTILINE_COMMENT
+  while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') if (cfile[pos] == '\\') {
+    if (cfile[++pos] == '\n') ++line, lpos = pos;
+    else if (cfile[pos] == '\r') pos += cfile[pos+1] == '\n', ++line, lpos = pos;
+  }
+  #else
+  while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r');
+  #endif
+}
 
+/**
+  @section implementation
+  Outsources to two other skip functions in a loop.
 **/
 void lexer_cpp::skip_to_macro(error_handler *herr)
 {
@@ -58,23 +71,41 @@ void lexer_cpp::skip_to_macro(error_handler *herr)
           ++pos; continue;
         }
         if (cfile[pos+1] == '/') {
-          while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
+          skip_comment();
           continue;
         }
       }
-      if (cfile[pos] == '"' or cfile[pos] == '\'') {
+      if (cfile[pos] == '"' or cfile[pos] == '\'')
+      {
         register const char endc = cfile[pos];
-        while (++pos < length and cfile[pos] != endc) if (cfile[pos] == '\\') ++pos;
+        while (++pos < length and cfile[pos] != endc)
+        {
+          if (cfile[pos] == '\\') {
+            if (cfile[++pos] == '\n') ++line, lpos = pos;
+            else if (cfile[pos] == '\r') {
+              if (cfile[++pos] != '\n') --pos;
+              ++line, lpos = pos; 
+            }
+          }
+          else if (cfile[pos] == '\n' or cfile[pos] == '\r') {
+            herr->error("Unterminated string literal");
+            break;
+          }
+        }
       }
       ++pos;
     }
     if (pos >= length)
       break;
-    while (is_useless(cfile[pos])) ++pos;
+    while (is_useless(cfile[pos])) {
+      if (cfile[pos] == '\n') lpos = pos, ++line;
+      else if (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)) lpos = pos++, ++line;
+      ++pos;
+    }
     if (cfile[pos] == '#')
       return ++pos, handle_preprocessor(herr);
   }
-  herr->error("Expected closing preprocessors before end of code","some file",0,pos);
+  herr->error("Expected closing preprocessors before end of code",filename,line,pos-lpos);
 }
 
 /**
@@ -145,14 +176,14 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       break;
     case_error: {
           while (pos < length and (cfile[pos] == ' ' or cfile[pos] == '\t')) ++pos;
-          const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\n') ++pos;
+          const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
           if (conditionals.empty() or conditionals.top().is_true)
-            herr->error(token_basics("#error " + string(cfile + espos, pos - espos),"some file",0,pos));
+            herr->error(token_basics("#error " + string(cfile + espos, pos - espos),filename,line,pos-lpos));
         }
       break;
     case_elif:
         if (conditionals.empty())
-          herr->error(token_basics("Unexpected #elif directive; no matching #if","some file",0,pos));
+          herr->error(token_basics("Unexpected #elif directive; no matching #if",filename,line,pos-lpos));
         else {
           if (conditionals.top().is_true)
             conditionals.top().is_true = conditionals.top().can_be_true = false;
@@ -170,7 +201,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       break;
     case_else:
         if (conditionals.empty())
-          herr->error(token_basics("Unexpected #else directive; no matching #if","some file",0,pos));
+          herr->error(token_basics("Unexpected #else directive; no matching #if",filename,line,pos-lpos));
         else {
           if (conditionals.top().is_true)
             conditionals.top().is_true = conditionals.top().can_be_true = false;
@@ -180,7 +211,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       break;
     case_endif:
         if (conditionals.empty())
-          return herr->error(token_basics("Unexpected #endif directive: no open conditionals.","some file",0,pos));
+          return herr->error(token_basics("Unexpected #endif directive: no open conditionals.",filename,line,pos-lpos));
         conditionals.pop();
       break;
     case_if: 
@@ -215,9 +246,9 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       break;
     case_warning: {
           while (pos < length and (cfile[pos] == ' ' or cfile[pos] == '\t')) ++pos;
-          const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\n') ++pos;
+          const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
           if (conditionals.empty() or conditionals.top().is_true)
-            herr->warning(token_basics("#warning " + string(cfile + espos, pos - espos),"some file",0,pos));
+            herr->warning(token_basics("#warning " + string(cfile + espos, pos - espos),filename,line,pos-lpos));
         }
       break;
   }
@@ -228,8 +259,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
   failout:
     while (is_letterd(cfile[pos])) ++pos;
     string ppname(cfile + pspos, pos - pspos);
-    herr->error(token_basics("Invalid preprocessor directive `" + ppname + "'","some file",0,pos));
-    while (pos < length and cfile[pos] != '\r' and cfile[pos] != '\n') ++pos;
+    herr->error(token_basics("Invalid preprocessor directive `" + ppname + "'",filename,line,pos-lpos));
+    while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
 }
 
 token_t lexer_cpp::get_token(error_handler *herr)
@@ -238,7 +269,11 @@ token_t lexer_cpp::get_token(error_handler *herr)
   for (;;) // Loop until we find something or hit world's end
   {
     // Skip all whitespace
-    while (is_useless(cfile[pos])) if (++pos >= length) goto POP_FILE;
+    while (is_useless(cfile[pos])) {
+      if (cfile[pos] == '\n') ++line, lpos = pos;
+      if (cfile[pos] == '\r') { ++line; lpos = pos; if (cfile[++pos] != '\n') --pos; }
+      if (++pos >= length) goto POP_FILE;
+    }
     
     //============================================================================================
     //====: Check for and handle comments. :======================================================
@@ -253,13 +288,15 @@ token_t lexer_cpp::get_token(error_handler *herr)
         }
         if (cfile[pos] == '*') {
           ++pos; // Skip one more char so we don't break on /*/
-          do if (++pos >= length) goto POP_FILE; while (cfile[pos] != '/' or cfile[pos-1] != '*');
+          do if (pos >= length) goto POP_FILE; 
+            else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
+            while (cfile[pos++] != '*' or cfile[pos] != '/');
           ++pos; continue;
         }
         if (cfile[pos] == '=')
-          return token_t(token_basics(TT_OPERATOR,"some file",0,pos), cfile+pos-1, 2);
+          return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1, 2);
       }
-      return token_t(token_basics(TT_OPERATOR,"some file",0,pos), cfile+pos-1,1);
+      return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1,1);
     }
     
     //============================================================================================
@@ -268,28 +305,40 @@ token_t lexer_cpp::get_token(error_handler *herr)
     
     if (is_letter(cfile[pos])) // Check if we're at an identifier or keyword.
     {
-      const char* sp = cfile + pos; // Record where we are
+      const size_t spos = pos; // Record where we are
       while (++pos < length and is_letterd(cfile[pos]));
       
-      string fn(sp, cfile + pos); // We'll need a copy of this thing for lookup purposes
+      string fn(cfile + spos, cfile + pos); // We'll need a copy of this thing for lookup purposes
       
       macro_iter mi = macros.find(fn);
       if (mi != macros.end()) {
-        //printf("ERROR: Unimplemented: macros\n");
+        openfile of(filename, line, lpos, *this);
+        files.enswap(of);
+        filename = fn.c_str();
+        if (mi->second->argc < 0) {
+          macro_scalar *ms = (macro_scalar*)mi->second;
+          this->encapsulate(ms->value);
+          filename = mi->first.c_str();
+          line = lpos = pos = 0;
+          return get_token(herr);
+        }
+        else {
+          cout << "UNSUPPORTED: MACRO FUNCTION" << endl;
+        }
       }
       
       keyword_map::iterator kwit = keywords.find(fn);
       if (kwit != keywords.end())
-        return token_t(token_basics(kwit->second,"some file",0,0));
+        return token_t(token_basics(kwit->second,filename,line,spos-lpos));
       
       tf_iter tfit = builtin_declarators.find(fn);
       if (tfit != builtin_declarators.end()) {
         if ((tfit->second->usage & UF_STANDALONE_FLAG) == UF_PRIMITIVE)
-          return token_t(token_basics(TT_DECLARATOR,"some file",0,0), tfit->second->def);
-        return token_t(token_basics(TT_DECFLAG,"some file",0,0), (definition*)tfit->second);
+          return token_t(token_basics(TT_DECLARATOR,filename,line,spos-lpos), tfit->second->def);
+        return token_t(token_basics(TT_DECFLAG,filename,line,spos-lpos), (definition*)tfit->second);
       }
       
-      return token_t(token_basics(TT_IDENTIFIER,"some file",0,0), sp, fn.length());
+      return token_t(token_basics(TT_IDENTIFIER,filename,line,spos-lpos), cfile + spos, fn.length());
     }
     
     //============================================================================================
@@ -303,19 +352,19 @@ token_t lexer_cpp::get_token(error_handler *herr)
           const size_t sp = pos;
           while (++pos < length and is_hexdigit(cfile[pos]));
           while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-          return token_t(token_basics(TT_HEXLITERAL,"some file",0,pos), cfile+sp, pos-sp);  
+          return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);  
         }
         // Turns out, it's octal.
         const size_t sp = pos;
-        while (++pos < length and is_hexdigit(cfile[pos]));
+        while (pos < length and is_hexdigit(cfile[pos])) pos++;
         while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-        return token_t(token_basics(TT_OCTLITERAL,"some file",0,pos), cfile+sp, pos-sp);
+        return token_t(token_basics(TT_OCTLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's decimal.
       const size_t sp = pos - 1;
       while (pos < length and is_digit(cfile[pos])) pos++;
       while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-      return token_t(token_basics(TT_DECLITERAL,"some file",0,pos), cfile+sp, pos-sp);
+      return token_t(token_basics(TT_DECLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
     }
     
     //============================================================================================
@@ -326,36 +375,36 @@ token_t lexer_cpp::get_token(error_handler *herr)
     switch (cfile[pos++])
     {
       case ';':
-        return token_t(token_basics(TT_SEMICOLON,"some file",0,spos));
+        return token_t(token_basics(TT_SEMICOLON,filename,line,spos-lpos));
       case ',':
-        return token_t(token_basics(TT_COMMA,"some file",0,spos));
+        return token_t(token_basics(TT_COMMA,filename,line,spos-lpos));
       case '+': case '-':
         pos += cfile[pos] == cfile[spos] or cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '=': pos += cfile[pos] == cfile[spos]; case '*': case '/': case '^':
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '&': case '|':  case '!': case '~': 
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '>': case '<':
         pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case ':':
         pos += cfile[pos] == cfile[spos];
-        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,filename,line,spos-lpos), cfile+spos, pos-spos);
         
-      case '(': return token_t(token_basics(TT_LEFTPARENTH,"some file",0,spos));
-      case '[': return token_t(token_basics(TT_LEFTBRACKET,"some file",0,spos));
-      case '{': return token_t(token_basics(TT_LEFTBRACE,  "some file",0,spos));
-      case '}': return token_t(token_basics(TT_RIGHTBRACE,  "some file",0,spos));
-      case ']': return token_t(token_basics(TT_RIGHTBRACKET,"some file",0,spos));
-      case ')': return token_t(token_basics(TT_RIGHTPARENTH,"some file",0,spos));
+      case '(': return token_t(token_basics(TT_LEFTPARENTH,filename,line,spos-lpos));
+      case '[': return token_t(token_basics(TT_LEFTBRACKET,filename,line,spos-lpos));
+      case '{': return token_t(token_basics(TT_LEFTBRACE,  filename,line,spos-lpos));
+      case '}': return token_t(token_basics(TT_RIGHTBRACE,  filename,line,spos-lpos));
+      case ']': return token_t(token_basics(TT_RIGHTBRACKET,filename,line,spos-lpos));
+      case ')': return token_t(token_basics(TT_RIGHTPARENTH,filename,line,spos-lpos));
       
       case '#':
         return handle_preprocessor(herr), get_token(herr);
       
       default:
-        return token_t(token_basics(TT_INVALID,"some file",0,pos++));
+        return token_t(token_basics(TT_INVALID,filename,line,pos-lpos++));
     }
   }
   
@@ -363,14 +412,20 @@ token_t lexer_cpp::get_token(error_handler *herr)
   
   POP_FILE: // This block was created instead of a helper function to piss Rusky off.
   if (files.empty())
-    return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+    return token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos));
+  
+  // Fetch data from top item
+  openfile& of = files.top();
+  line = of.line, lpos = of.lpos;
+  filename = of.filename;
+  consume(of.file);
+  
+  // Pop file stack and return next token in the containing file.
   files.pop();
-  if (files.empty())
-    return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
   return get_token(herr);
 }
   
-lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros), mlex(new lexer_macro(this))
+lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros), filename("stdcall/file.cpp"), line(1), lpos(0), mlex(new lexer_macro(this))
 {
   consume(input); // We are also an llreader. Consume the given one using the inherited method.
   keywords["class"] = TT_CLASS;
@@ -385,17 +440,17 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros), mlex
   keywords["typename"] = TT_TYPENAME;
   keywords["union"] = TT_UNION;
   keywords["using"] = TT_USING;
-  openfile temp("stdcall");
-  files.enswap(temp);
 }
 lexer_cpp::~lexer_cpp() {
   delete mlex;
 }
 
 openfile::openfile() {}
-openfile::openfile(string fname): filename(fname), line(0), lpos(0) {}
+openfile::openfile(const char* fname): filename(fname), line(0), lpos(0) {}
+openfile::openfile(const char* fname, size_t line_num, size_t line_pos, llreader &consume): filename(fname), line(line_num), lpos(line_pos) { file.consume(consume); }
 void openfile::swap(openfile &f) {
-  filename.swap(f.filename);
+  { register const char* tmpl = filename;
+  filename = f.filename, f.filename = tmpl; }
   register size_t tmpl = line;
   line = f.line, f.line = tmpl;
   tmpl = lpos, lpos = f.lpos, f.lpos = tmpl;
@@ -408,15 +463,15 @@ void openfile::swap(openfile &f) {
 #undef cfile
 lexer_macro::lexer_macro(lexer_cpp *enc): pos(enc->pos), lcpp(enc) { }
 void lexer_macro::update() { cfile = lcpp->data; length = lcpp->length; }
-token_t lexer_macro::get_token(error_handler *)
+token_t lexer_macro::get_token(error_handler *herr)
 {
-  if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+  if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
   for (;;) // Loop until we find something or hit world's end
   {
     // Skip all whitespace
     while (cfile[pos] == ' ' or cfile[pos] == '\t')
-      if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
-    if (cfile[pos] == '\n' or cfile[pos] == '\r') return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+      if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
+    if (cfile[pos] == '\n' or cfile[pos] == '\r') return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
     
     //============================================================================================
     //====: Check for and handle comments. :======================================================
@@ -426,19 +481,20 @@ token_t lexer_macro::get_token(error_handler *)
       if (++pos < length) {
         if (cfile[pos] == '/') {
           // Find the end of the line
-          while (cfile[pos] != '\n') if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
+          while (cfile[pos] != '\n') if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
           continue;
         }
         if (cfile[pos] == '*') {
           ++pos; // Skip one more char so we don't break on /*/
-          do if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,"some file",0,pos));
-            while (cfile[pos] != '/' or cfile[pos-1] != '*');
+          do if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
+            else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++lcpp->line, lcpp->lpos = pos;
+            while (cfile[pos++] != '*' or cfile[pos] != '/');
           ++pos; continue;
         }
         if (cfile[pos] == '=')
-          return token_t(token_basics(TT_OPERATOR,"some file",0,pos), cfile+pos-1, 2);
+          return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+pos-1, 2);
       }
-      return token_t(token_basics(TT_OPERATOR,"some file",0,pos), cfile+pos-1,1);
+      return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+pos-1,1);
     }
     
     //============================================================================================
@@ -454,7 +510,7 @@ token_t lexer_macro::get_token(error_handler *)
       
       macro_iter mi = lcpp->macros.find(fn);
       if (mi != lcpp->macros.end()) {
-        //printf("ERROR: Unimplemented: macros\n");
+        cout << "FIX ME" << endl;
       }
       
       static const char zero[] = "0";
@@ -472,19 +528,19 @@ token_t lexer_macro::get_token(error_handler *)
           const size_t sp = pos;
           while (++pos < length and is_hexdigit(cfile[pos]));
           while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-          return token_t(token_basics(TT_HEXLITERAL,"some file",0,pos), cfile+sp, pos-sp);  
+          return token_t(token_basics(TT_HEXLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+sp, pos-sp);  
         }
         // Turns out, it's octal.
         const size_t sp = pos;
-        while (++pos < length and is_hexdigit(cfile[pos]));
+        while (pos < length and is_hexdigit(cfile[pos])) pos++;
         while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-        return token_t(token_basics(TT_OCTLITERAL,"some file",0,pos), cfile+sp, pos-sp);
+        return token_t(token_basics(TT_OCTLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's decimal.
       const size_t sp = pos - 1;
       while (pos < length and is_digit(cfile[pos])) pos++;
       while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-      return token_t(token_basics(TT_DECLITERAL,"some file",0,pos), cfile+sp, pos-sp);
+      return token_t(token_basics(TT_DECLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+sp, pos-sp);
     }
     
     
@@ -496,38 +552,43 @@ token_t lexer_macro::get_token(error_handler *)
     switch (cfile[pos++])
     {
       case ';':
-        return token_t(token_basics(TT_SEMICOLON,"some file",0,spos));
+        return token_t(token_basics(TT_SEMICOLON,lcpp->filename,lcpp->line,spos-lcpp->lpos));
       case ',':
-        return token_t(token_basics(TT_COMMA,"some file",0,spos));
+        return token_t(token_basics(TT_COMMA,lcpp->filename,lcpp->line,spos-lcpp->lpos));
       case '+': case '-':
         pos += cfile[pos] == cfile[spos] or cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case '=': pos += cfile[pos] == cfile[spos]; case '*': case '/': case '^':
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case '&': case '|':  case '!': case '~': 
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case '>': case '<':
         pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case ':':
         pos += cfile[pos] == cfile[spos];
-        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,"some file",0,spos), cfile+spos, pos-spos);
+        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
         
-      case '(': return token_t(token_basics(TT_LEFTPARENTH,"some file",0,spos));
-      case '[': return token_t(token_basics(TT_LEFTBRACKET,"some file",0,spos));
-      case '{': return token_t(token_basics(TT_LEFTBRACE,  "some file",0,spos));
-      case '}': return token_t(token_basics(TT_RIGHTBRACE,  "some file",0,spos));
-      case ']': return token_t(token_basics(TT_RIGHTBRACKET,"some file",0,spos));
-      case ')': return token_t(token_basics(TT_RIGHTPARENTH,"some file",0,spos));
+      case '(': return token_t(token_basics(TT_LEFTPARENTH,lcpp->filename,lcpp->line,spos-lcpp->lpos));
+      case '[': return token_t(token_basics(TT_LEFTBRACKET,lcpp->filename,lcpp->line,spos-lcpp->lpos));
+      case '{': return token_t(token_basics(TT_LEFTBRACE,  lcpp->filename,lcpp->line,spos-lcpp->lpos));
+      case '}': return token_t(token_basics(TT_RIGHTBRACE,  lcpp->filename,lcpp->line,spos-lcpp->lpos));
+      case ']': return token_t(token_basics(TT_RIGHTBRACKET,lcpp->filename,lcpp->line,spos-lcpp->lpos));
+      case ')': return token_t(token_basics(TT_RIGHTPARENTH,lcpp->filename,lcpp->line,spos-lcpp->lpos));
       
       case '#':
-          if (cfile[++pos] == '#') return token_t(token_basics(TTM_CONCAT,"some file",0,spos));
-          return token_t(token_basics(TTM_TOSTRING,"some file",0,spos));
+          if (cfile[pos] == '#') return token_t(token_basics(TTM_CONCAT,lcpp->filename,lcpp->line,spos-lcpp->lpos));
+          return token_t(token_basics(TTM_TOSTRING,lcpp->filename,lcpp->line,spos-lcpp->lpos));
+        break;
+      
+      case '\\':
+          if (cfile[pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or pos--))) lcpp->lpos = pos++, ++lcpp->line;
+          return get_token(herr);
         break;
       
       default:
-        return token_t(token_basics(TT_INVALID,"some file",0,pos++));
+        return token_t(token_basics(TT_INVALID,lcpp->filename,lcpp->line,pos-lcpp->lpos++));
     }
   }
   

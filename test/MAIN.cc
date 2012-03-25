@@ -52,6 +52,7 @@ int main() {
   
   putcap("Test simple macros");
   builtin.add_macro("scalar_macro","simple value");
+  builtin.add_macro("ERROR_INVALID_DECLARATOR","valid_declarator");
   builtin.add_macro_func("simple_function","Takes no parameters");
   builtin.add_macro_func("one_arg_function","x","(1/(1-(x)))",false);
   builtin.add_macro_func("two_arg_function","a","b","(-(b)/(2*(a)))",false);

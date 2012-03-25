@@ -37,11 +37,12 @@
 
 #include "llreader.h"
 
+/// Enumeration of open states for an \c llreader.
 enum {
-  FT_CLOSED,
-  FT_BUFFER,
-  FT_MMAP,
-  FT_ALIAS
+  FT_CLOSED, ///< No file is currently open; either no file was ever opened, or it has since been closed.
+  FT_BUFFER, ///< The file data is stored in a buffer that must be freed at close.
+  FT_MMAP,   ///< The file data is in a memory mapped file which must be closed using the system-specific method.
+  FT_ALIAS   ///< The file data is a pointer to a buffer owned by another object or function, and should not be freed.
 };
 
 using namespace std;
@@ -49,7 +50,7 @@ using namespace std;
 void llreader::encapsulate(string &contents) {
   data = contents.c_str();
   length = contents.length();
-  mode = FT_BUFFER;
+  mode = FT_ALIAS;
 }
 void llreader::copy(string contents) {
   length = contents.length();

@@ -123,6 +123,17 @@ void context::reset_all()
 {
   
 }
+void context::copy(const context &ct)
+{
+  ct.global->copy(global);
+  for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
+    pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
+    if (dest.second) {
+      dest.first->second = mi->second;
+      ++mi->second->refc;
+    }
+  }
+}
 
 string context::get_last_error() {
   return error;
@@ -271,7 +282,7 @@ void context::output_definitions(ostream &out) {
 }
 
 context::context(): parse_open(false), lex(NULL), herr(def_error_handler), global(new definition_scope()) {
-  builtin.global->copy(global);
+  copy(builtin);
 }
 
 context::context(int): parse_open(false), lex(NULL), herr(def_error_handler), global(new definition_scope()) { }
@@ -281,7 +292,8 @@ context::~context() {
   delete lex;
   
   // Clean up macros
-  for (macro_iter it = macros.begin(); it != macros.end(); it++) {
+  for (macro_iter it = macros.begin(); it != macros.end(); it++)
+  if (!-- it->second->refc){
     if (it->second->argc >= 0)
       delete (macro_function*)it->second;
     else

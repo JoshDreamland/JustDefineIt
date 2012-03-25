@@ -1,5 +1,4 @@
 
-
 #if false
 
 #  error Failure
@@ -15,6 +14,7 @@ int zzzzzzzzzzzzzzYOUSHOULDNOTSEETHIS;
   
 #else
   int right_as_rain;
+
   #if 0
     int zzzzzzzzzzzzzzYOUSHOULDNOTSEETHIS;
     
@@ -39,6 +39,7 @@ int zzzzzzzzzzzzzzYOUSHOULDNOTSEETHIS;
     int zzzzzzzzzzzz_YOUSHOULDNTSEETHIS;
   #endif
 
+
 const int a = 10 + 20 + 30, b, c = 5;
 double d, e, f = 10;
 namespace justdefineit {
@@ -60,7 +61,6 @@ unsigned long const int   (  *  level2_better )  [ 10+5+7+9 / 3 ] ;
 int* (*(*level3_confusing)[10][12])[15];
 long double (*(&*level4_whatthefuck[10])[2][4])(char, short, int, long, double, long double);
 long double (*(&*(***level5_okaycutitout[1^2^4^8])(int illegalnest, char (*but)(int oh, int well))[10])[2][4])(char, short, int, long, double, long double);
-
 
 int my_implemented_function(int) {
   implementation
@@ -91,8 +91,8 @@ int (my_implemented_function_3)(const long double) {
   #error FAILURE
 #endif
 
-/*
-
+/*/
+#error lol
 
 int my_overloaded_function(int) {
   implementation 1
@@ -104,6 +104,8 @@ int my_overloaded_function(int,int) {
 template<typename a> int function2(a b) { }
 
 template<typename b> class templateclass { b aidu; }
-*/
+/*/
+
+int ERROR_INVALID_DECLARATOR;
 
 int zzzzz_success;

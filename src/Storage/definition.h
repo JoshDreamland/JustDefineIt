@@ -152,6 +152,7 @@ namespace jdi {
   struct definition_scope: definition {
     typedef map<string, definition*> defmap; ///< Shortcut defined to be the storage container by which definitions are looked up.
     typedef defmap::iterator defiter; ///< Shortcut to an iterator type for \c defmap.
+    typedef defmap::const_iterator defiter_c; ///< Shortcut to a constant iterator type for \c defmap.
     typedef pair<defiter,bool> inspair; ///< The result from an insert operation on our map.
     typedef pair<string, definition*> entry; ///< The type of key-value entry pair stored in our map.
     defmap members; ///< Members of this enum or namespace
@@ -160,8 +161,8 @@ namespace jdi {
     void clear();
     /** Relinquish all content to another definition. **/
     void dump(definition_scope* to);
-    /** Copy content to another definition. **/
-    void copy(definition_scope* to);
+    /** Copy content from another definition. **/
+    void copy(const definition_scope* from);
     /** Swap content with another definition. **/
     void swap(definition_scope* with);
     

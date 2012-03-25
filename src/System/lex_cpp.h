@@ -44,12 +44,18 @@ namespace jdip {
            current line number and the position of the last line break.
   **/
   struct openfile {
-    string filename; ///< The name of the open file.
+    const char* filename; ///< The name of the open file.
     size_t line; ///< The index of the current line.
     size_t lpos; ///< The position of the most recent line break.
     llreader file; ///< The llreader of this file.
     openfile(); ///< Default constructor.
-    openfile(string fname); ///< Construct a new openfile at position 0 with the given filename.
+    openfile(const char* fname); ///< Construct a new openfile at position 0 with the given filename.
+    /// Construct a new openfile with the works.
+    /// @param fname     The name of the file in use
+    /// @param line_num  The number of the line, to store
+    /// @param line_pos  The position of the last newline, to store
+    /// @param consume   The llreader to consume for storage
+    openfile(const char* fname, size_t line_num, size_t line_pos, llreader &consume);
     void swap(openfile&); ///< Copy constructor.
   };
   
@@ -61,6 +67,10 @@ namespace jdip {
     token_t get_token(error_handler *herr = def_error_handler);
     quick::stack<openfile> files; ///< The files we have open, in the order we included them.
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
+    
+    const char* filename; ///< The name of the open file.
+    size_t line; ///< The current line number in the file
+    size_t lpos; ///< The index in the file of the most recent line break.
     
     typedef map<string,TOKEN_TYPE> keyword_map; ///< Map of string to token type; a map-of-keywords type.
     /// List of C++ keywords, mapped to the type of their token.
@@ -84,10 +94,15 @@ namespace jdip {
                    exist or is malformed.
     **/
     void handle_preprocessor(error_handler *herr);
-    /**
-      Second-order utility function to skip lines until a preprocessor
-      directive is encountered, then invoke the handler on the directive it found.
-    **/
+    
+    /// Utility function to skip a single-line comment; invoke with pos indicating one of the slashes.
+    void skip_comment();
+    /// Utility function to skip a multi-line comment; invoke with pos indicating the starting slash.
+    void skip_multiline_comment();
+    /// Utility function to skip a string; invoke with pos indicating the quotation mark.
+    void skip_string(error_handler *herr);
+    /** Second-order utility function to skip lines until a preprocessor
+        directive is encountered, then invoke the handler on the directive it found. **/
     void skip_to_macro(error_handler(*herr));
     
   private:

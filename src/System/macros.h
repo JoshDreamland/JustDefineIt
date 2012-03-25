@@ -51,6 +51,8 @@ namespace jdip {
       Otherwise, this is an instance of macro_function.
     **/
     const int argc;
+    /// Macros are very pliable; this tells how many references are made to this macro.
+    mutable unsigned refc;
     protected:
       /**
         The macro_type constructor is used to set the argument count or flag it inactive.

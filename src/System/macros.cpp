@@ -30,7 +30,7 @@ using namespace std;
 #include <General/parse_basics.h>
 using namespace jdip;
 
-macro_type::macro_type(int ac): argc(ac) {}
+macro_type::macro_type(int ac): argc(ac), refc(1) {}
 macro_type::~macro_type() {}
   
 macro_scalar::macro_scalar(string val): macro_type(-1), value(val) {}

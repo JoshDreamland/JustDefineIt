@@ -61,8 +61,9 @@ namespace jdi
   using std::ostream;
   using std::cout;
   
-  typedef map<string,jdip::macro_type*> macro_map;
+  typedef map<string,const jdip::macro_type*> macro_map;
   typedef macro_map::iterator macro_iter;
+  typedef macro_map::const_iterator macro_iter_c;
   
   /**
     @class context
@@ -133,6 +134,7 @@ namespace jdi
     
     void reset(); ///< Reset back to the built-ins; delete all parsed definitions
     void reset_all(); ///< Reset everything, dumping all built-ins as well as all parsed definitions
+    void copy(const context &ct); ///< Copy the contents of another context.
     
     /** Load standard built-in types, such as int. 
         This function is really only for use with the built-in context.
