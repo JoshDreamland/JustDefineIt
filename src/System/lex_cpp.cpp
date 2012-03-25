@@ -32,6 +32,8 @@
 #include <API/context.h>
 #include <API/AST.h>
 
+#include <API/compile_settings.h>
+
 using namespace jdi;
 using namespace jdip;
 
@@ -47,7 +49,7 @@ static inline bool strbw(char s) { return s == ' ' or s == '\t' or s == '\n' or 
 
 void lexer_cpp::skip_comment()
 {
-  #ifdef ALLOW_MULTILINE_COMMENT
+  #if ALLOW_MULTILINE_COMMENTS
   while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') if (cfile[pos] == '\\') {
     if (cfile[++pos] == '\n') ++line, lpos = pos;
     else if (cfile[pos] == '\r') pos += cfile[pos+1] == '\n', ++line, lpos = pos;
@@ -55,6 +57,34 @@ void lexer_cpp::skip_comment()
   #else
   while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r');
   #endif
+}
+
+void lexer_cpp::skip_multiline_comment()
+{
+  pos += 2; // Skip one more char so we don't break on /*/
+  do if (pos >= length) return;
+    else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
+    while (cfile[pos++] != '*' or cfile[pos] != '/');
+  ++pos;
+}
+
+void lexer_cpp::skip_string(error_handler *herr)
+{
+  register const char endc = cfile[pos];
+  while (++pos < length and cfile[pos] != endc)
+  {
+    if (cfile[pos] == '\\') {
+      if (cfile[++pos] == '\n') ++line, lpos = pos;
+      else if (cfile[pos] == '\r') {
+        if (cfile[++pos] != '\n') --pos;
+        ++line, lpos = pos; 
+      }
+    }
+    else if (cfile[pos] == '\n' or cfile[pos] == '\r') {
+      herr->error("Unterminated string literal");
+      break;
+    }
+  }
 }
 
 /**
@@ -65,34 +95,10 @@ void lexer_cpp::skip_to_macro(error_handler *herr)
 {
   while (pos < length) {
     while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
-      if (cfile[pos] == '/') {
-        if (cfile[pos+1] == '*') {
-          pos += 3; while (pos < length and (cfile[pos] != '/' or cfile[pos-1] != '*')) ++pos;
-          ++pos; continue;
-        }
-        if (cfile[pos+1] == '/') {
-          skip_comment();
-          continue;
-        }
-      }
-      if (cfile[pos] == '"' or cfile[pos] == '\'')
-      {
-        register const char endc = cfile[pos];
-        while (++pos < length and cfile[pos] != endc)
-        {
-          if (cfile[pos] == '\\') {
-            if (cfile[++pos] == '\n') ++line, lpos = pos;
-            else if (cfile[pos] == '\r') {
-              if (cfile[++pos] != '\n') --pos;
-              ++line, lpos = pos; 
-            }
-          }
-          else if (cfile[pos] == '\n' or cfile[pos] == '\r') {
-            herr->error("Unterminated string literal");
-            break;
-          }
-        }
-      }
+      if (cfile[pos] == '/')
+        if (cfile[pos+1] == '*') { skip_multiline_comment(); continue; }
+        else if (cfile[pos+1] == '/') { skip_comment(); continue; } else {}
+      else if (cfile[pos] == '"' or cfile[pos] == '\'') skip_string(herr);
       ++pos;
     }
     if (pos >= length)
@@ -280,22 +286,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
     //============================================================================================
     
     if (cfile[pos] == '/') {
-      if (++pos < length) {
-        if (cfile[pos] == '/') {
-          // Find the end of the line
-          while (cfile[pos] != '\n') if (++pos >= length) goto POP_FILE;
-          continue;
-        }
-        if (cfile[pos] == '*') {
-          ++pos; // Skip one more char so we don't break on /*/
-          do if (pos >= length) goto POP_FILE; 
-            else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
-            while (cfile[pos++] != '*' or cfile[pos] != '/');
-          ++pos; continue;
-        }
-        if (cfile[pos] == '=')
-          return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1, 2);
-      }
+      if (cfile[++pos] == '*') { skip_multiline_comment(); continue; }
+      if (cfile[pos] == '/') { skip_comment(); continue; }
+      if (cfile[pos] == '=')
+        return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1, 2);
       return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1,1);
     }
     
@@ -480,16 +474,12 @@ token_t lexer_macro::get_token(error_handler *herr)
     if (cfile[pos] == '/') {
       if (++pos < length) {
         if (cfile[pos] == '/') {
-          // Find the end of the line
-          while (cfile[pos] != '\n') if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
+          lcpp->skip_comment();
           continue;
         }
         if (cfile[pos] == '*') {
-          ++pos; // Skip one more char so we don't break on /*/
-          do if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
-            else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++lcpp->line, lcpp->lpos = pos;
-            while (cfile[pos++] != '*' or cfile[pos] != '/');
-          ++pos; continue;
+          lcpp->skip_multiline_comment();
+          continue;
         }
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+pos-1, 2);

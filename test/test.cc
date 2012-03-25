@@ -106,6 +106,8 @@ template<typename a> int function2(a b) { }
 template<typename b> class templateclass { b aidu; }
 /*/
 
+int/*comment unobtrusiveness test*/comment_check;
+
 int ERROR_INVALID_DECLARATOR;
 
 int zzzzz_success;
