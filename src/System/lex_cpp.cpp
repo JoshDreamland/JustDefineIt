@@ -167,7 +167,46 @@ bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
   
   return true;  
 }
-  
+
+
+string lexer_cpp::read_macro_params(error_handler *herr)
+{
+  for (;;) {
+    while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return "";
+    if (cfile[pos] == '/') {
+      if (cfile[++pos] == '/') { skip_comment(); return ""; }
+      if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
+      break;
+    }
+    if (cfile[pos] == '\n' or cfile[pos] == '\r') return "";
+    if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) ++pos;
+    break;
+  }
+  string res;
+  res.reserve(256);
+  size_t spos = pos;
+  while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
+    if (cfile[pos] == '/') {
+      if (cfile[++pos] == '/') { res += string(cfile+spos,pos-spos); skip_comment(); return res; }
+      if (cfile[pos] == '*') {
+        res.reserve(res.length()+pos-spos+1);
+        res += string(cfile+spos,pos-spos), res += " ";
+        skip_multiline_comment(); continue; }
+    }
+    if (cfile[pos] == '\'' or cfile[pos] == '"') skip_string(herr);
+    else if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) ++pos;
+    else ++pos;
+  }
+  res += string(cfile+spos,pos-spos);
+  {
+    register size_t trim = res.length() - 1;
+    if (is_useless(res[trim])) {
+      while (is_useless(res[--trim]));
+      res.erase(++trim);
+    }
+  }
+  return res;
+}
 
 /**
   @section Implementation
@@ -233,8 +272,49 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
   for (;;)
   {
     break;
-    case_define:
-      break;
+    case_define: {
+      string argstr = read_macro_params(herr);
+      size_t i = 0;
+      while (is_useless(argstr[i])) ++i;
+      if (!is_letterd(argstr[i])) {
+        herr->error("Expected macro definiendum at this point", filename, line, pos);
+      }
+      const size_t nsi = i;
+      while (is_letterd(argstr[++i]));
+      pair<macro_iter, bool> mins = macros.insert(pair<string,macro_type*>(argstr.substr(nsi,i-nsi),NULL));
+      
+      if (!mins.second) { // If no insertion was made; ie, the macro existed already.
+        herr->warning("Redeclaring macro", filename, line, pos);
+        if (mins.first->second->argc == -1) delete (macro_scalar*)mins.first->second;
+        else delete (macro_function*)mins.first->second;
+        mins.first->second = NULL;
+      }
+      
+      if (argstr[i] == '(') {
+        vector<string> paramlist;
+        while (is_useless(argstr[++i]));
+        if (argstr[i] != ')') for (;;) {
+          if (!is_letter(argstr[i])) {
+            herr->error("Expected parameter name for macro declaration", filename, line, pos);
+            break;
+          }
+          const size_t si = i;
+          while (is_letterd(argstr[++i]));
+          paramlist.push_back(argstr.substr(si, i-si));
+          
+          while (is_useless(argstr[i])) ++i;
+          if (argstr[i] == ')') break;
+          if (argstr[i] == ',') { while (is_useless(argstr[++i])); continue; }
+          herr->error("Expected comma or closing parenthesis at this point");
+        }
+        mins.first->second = new macro_function(paramlist, argstr.substr(++i), false);
+      }
+      else
+      {
+        while (is_useless(argstr[i])) ++i;
+        mins.first->second = new macro_scalar(argstr.substr(i));
+      }
+    } break;
     case_error: {
           while (pos < length and (cfile[pos] == ' ' or cfile[pos] == '\t')) ++pos;
           const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;

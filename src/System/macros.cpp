@@ -153,7 +153,7 @@ bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error
 {
   if (arg_list.size() < args.size())
     return herr->error("Too few arguments to macro function"), false;
-  if ((arg_list.size() > args.size() and arg_list.size() == (unsigned)argc))
+  if ((arg_list.size() > args.size() and args.size() == (unsigned)argc))
     return herr->error("Too many arguments to macro function"), false;
   size_t alloc = 1;
   for (size_t i = 0; i < value.size(); i++) {

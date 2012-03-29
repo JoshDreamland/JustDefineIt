@@ -65,7 +65,7 @@ namespace jdip {
         @see argc
       **/
       macro_type(int argc);
-      /// The base destructor of macro_type does not do anything. DON'T INVOKE IT!
+      /// The base destructor of macro_type does not do anything. DON'T INVOKE IT! Cast to the appropriate child first.
       ~macro_type();
   };
   

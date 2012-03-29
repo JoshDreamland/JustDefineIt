@@ -108,8 +108,11 @@ template<typename b> class templateclass { b aidu; }
 
 int/*comment unobtrusiveness test*/comment_check;
 
+
+#define ERROR_INVALID_DECLARATOR valid_declarator
 int ERROR_INVALID_DECLARATOR;
 
+#define declare_integer(x,y) int x, yes_macros_work, y
 declare_integer(yes_parameters_work, yes_they_still_work);
 
 int zzzzz_success;

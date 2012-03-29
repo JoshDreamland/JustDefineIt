@@ -102,11 +102,12 @@ namespace jdip {
     /// Utility function to skip a string; invoke with pos indicating the quotation mark.
     inline void skip_string(error_handler *herr);
     /// Skip anything that cannot be interpreted as code in any way.
-    /// @return The number of line breaks skipped.
     inline void skip_whitespace();
+    /// Function used by the preprocessor to read in macro parameters in compliance with ISO.
+    string read_macro_params(error_handler *herr);
     /** Second-order utility function to skip lines until a preprocessor
         directive is encountered, then invoke the handler on the directive it found. **/
-    void skip_to_macro(error_handler(*herr));
+    void skip_to_macro(error_handler *herr);
     
     /// Parse for parameters to a given macro function, if there are any.
     /// This call should be made while the position is just after the macro name.
