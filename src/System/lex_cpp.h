@@ -96,14 +96,24 @@ namespace jdip {
     void handle_preprocessor(error_handler *herr);
     
     /// Utility function to skip a single-line comment; invoke with pos indicating one of the slashes.
-    void skip_comment();
+    inline void skip_comment();
     /// Utility function to skip a multi-line comment; invoke with pos indicating the starting slash.
-    void skip_multiline_comment();
+    inline void skip_multiline_comment();
     /// Utility function to skip a string; invoke with pos indicating the quotation mark.
-    void skip_string(error_handler *herr);
+    inline void skip_string(error_handler *herr);
+    /// Skip anything that cannot be interpreted as code in any way.
+    /// @return The number of line breaks skipped.
+    inline void skip_whitespace();
     /** Second-order utility function to skip lines until a preprocessor
         directive is encountered, then invoke the handler on the directive it found. **/
     void skip_to_macro(error_handler(*herr));
+    
+    /// Parse for parameters to a given macro function, if there are any.
+    /// This call should be made while the position is just after the macro name.
+    /// @param mf   The macro function to parse
+    /// @param herr An error handler in case of parameter mismatch or non-terminated literals
+    /// @return Returns whether parameters were encountered and parsed.
+    bool parse_macro_function(macro_function* mf, error_handler *herr);
     
   private:
     /// Storage mechanism for conditionals, such as #if, #ifdef, and #1ifndef

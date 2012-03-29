@@ -57,6 +57,7 @@ int main() {
   builtin.add_macro_func("one_arg_function","x","(1/(1-(x)))",false);
   builtin.add_macro_func("two_arg_function","a","b","(-(b)/(2*(a)))",false);
   builtin.add_macro_func("variadic_three_arg_function","a","b","c","printf(a,b,c)",true);
+  builtin.add_macro_func("declare_integer","a","b","int a, yes_macros_work, b;",false);
   builtin.output_macros();
   
   putcap("Metrics");

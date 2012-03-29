@@ -24,10 +24,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstring>
 using namespace std;
 
 #include "macros.h"
 #include <General/parse_basics.h>
+#include <General/debug_macros.h>
 using namespace jdip;
 
 macro_type::macro_type(int ac): argc(ac), refc(1) {}
@@ -37,12 +39,38 @@ macro_scalar::macro_scalar(string val): macro_type(-1), value(val) {}
 macro_scalar::~macro_scalar() {}
 
 macro_function::macro_function(string val): macro_type(0), value(), args() {
-  value.push_back(val);
+  register const size_t bs = val.length();
+  char *buf = new char[bs]; memcpy(buf, val.c_str(), bs);
+  value.push_back(mv_chunk(buf, bs));
 }
-macro_function::macro_function(vector<string> arglist, string val, bool variadic): macro_type(arglist.size()+variadic), value(), args(arglist) {
-  preparse_macro(value, args, val);
+macro_function::macro_function(const vector<string> &arglist, string val, bool variadic): macro_type(arglist.size()+variadic), value(), args(arglist) {
+  preparse(val);
 }
-macro_function::~macro_function() {}
+macro_function::~macro_function() {
+  for (size_t i = 0; i < value.size(); ++i)
+    if (!value[i].is_arg) delete []value[i].data;
+}
+
+
+//======================================================================================================
+//=====: Macro function data chunk constructors :=======================================================
+//======================================================================================================
+
+macro_function::mv_chunk::mv_chunk(const char* str, size_t start, size_t len): metric(len), is_arg(false) {
+  data = new char[len];
+  memcpy(data, str+start, len);
+}
+macro_function::mv_chunk::mv_chunk(char* ndata, size_t len): data(ndata), metric(len), is_arg(false) {}
+macro_function::mv_chunk::mv_chunk(size_t argnum): data(NULL), metric(argnum), is_arg(true) {}
+
+string macro_function::mv_chunk::toString() {
+  if (is_arg) return "arg";
+  return string(data,metric);
+}
+
+//======================================================================================================
+//=====: Macro function parsing methods :===============================================================
+//======================================================================================================
 
 /**
   @section Implementation
@@ -54,15 +82,15 @@ macro_function::~macro_function() {}
   comments and strings, as well as, according to the expanded-value specification
   in \c jdip::macro_function::value, handle the # and ## operators.
 **/
-void jdip::preparse_macro(vector<string>& output, const vector<string>& params, string val)
+void jdip::macro_function::preparse(string val)
 {
   unsigned push_from = 0;
   map<string,int> parameters;
   
-  output.clear(); // Wipe anything in the output array
+  value.clear(); // Wipe anything in the output array
   
-  for (pt i = 0; i < params.size(); i++) // Load parameters into map for searching
-    parameters[params[i]] = 0;
+  for (pt i = 0; i < args.size(); i++) // Load parameters into map for searching and fetching index
+    parameters[args[i]] = i;
   
   for (pt i = 0; i < val.length(); ) // Iterate the string
   {
@@ -95,11 +123,12 @@ void jdip::preparse_macro(vector<string>& output, const vector<string>& params, 
     {
       const unsigned sp = i; // We record where we're leaving off
       while (is_letterd(val[++i])); // And navigate to the end of the identifier.
-      if (parameters.find(val.substr(sp,i-sp)) != parameters.end()) // Then check if it's a parameter.
+      map<string,int>::iterator pi = parameters.find(val.substr(sp,i-sp));
+      if (pi != parameters.end()) // Then check if it's a parameter.
       {
-        if (sp > push_from) // If we've covered any ground since our last output push,
-          output.push_back(val.substr(push_from, sp-push_from)); // Push it onto our output
-        output.push_back(val.substr(sp, i-sp)); // Push this identifier as a distinct item onto output
+        if (sp > push_from) // If we've covered any ground since our last value push,
+          value.push_back(mv_chunk(val.c_str(), push_from, sp-push_from)); // Push it onto our value
+        value.push_back(mv_chunk(pi->second)); // Push this identifier as a distinct item onto value
         push_from = i; // Indicate the new starting position of data to be pushed
       }
       continue;
@@ -110,11 +139,39 @@ void jdip::preparse_macro(vector<string>& output, const vector<string>& params, 
       pt ie = i++;
       while (ie > 0 and is_useless(val[ie-1])) --ie; // eliminate any leading whitespace
       if (ie > push_from) // If there's anything non-white to push since last time,
-        output.push_back(val.substr(push_from, ie-push_from)); // Then push it
+        value.push_back(mv_chunk(val.c_str(), push_from, ie-push_from)); // Then push it
       while (is_useless(++i)); // Skip any trailing whitespace
     }
     
     i++;
   }
-  output.push_back(val.substr(push_from));
+  value.push_back(mv_chunk(val.c_str(), push_from, val.length() - push_from));
+}
+
+#include <iostream>
+bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error_handler *herr)
+{
+  if (arg_list.size() < args.size())
+    return herr->error("Too few arguments to macro function"), false;
+  if ((arg_list.size() > args.size() and arg_list.size() == (unsigned)argc))
+    return herr->error("Too many arguments to macro function"), false;
+  size_t alloc = 1;
+  for (size_t i = 0; i < value.size(); i++) {
+    alloc += value[i].is_arg? arg_list[value[i].metric].length() : value[i].metric;
+  }
+  
+  char* buf = new char[alloc], *bufat = buf;
+  for (size_t i = 0; i < value.size(); i++)
+    if (value[i].is_arg) {
+      register const string& argname = arg_list[value[i].metric];
+      memcpy(bufat, argname.c_str(), argname.length());
+      bufat += argname.length();
+    }
+    else {
+      memcpy(bufat, value[i].data, value[i].metric);
+      bufat += value[i].metric;
+    }
+  *bufat = 0;
+  dest.consume(buf, alloc-1);
+  return true;
 }

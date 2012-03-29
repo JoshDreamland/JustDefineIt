@@ -110,4 +110,6 @@ int/*comment unobtrusiveness test*/comment_check;
 
 int ERROR_INVALID_DECLARATOR;
 
+declare_integer(yes_parameters_work, yes_they_still_work);
+
 int zzzzz_success;

@@ -165,7 +165,7 @@ void context::output_macros(ostream &out)
         out << mf->args[i] << (i+1 < mf->args.size() ? ", " : ((size_t)it->second->argc > mf->args.size()? "...": ""));
       out << ") \\" << endl;
       for (size_t i = 0; i < mf->value.size(); i++)
-        out << "  " << mf->value[i] << (i+1 < mf->value.size()? "\\" : "") << endl;
+        out << "  " << mf->value[i].toString() << (i+1 < mf->value.size()? "\\" : "") << endl;
     }
     else {
       out << "#define " << it->first << endl << "  " << ((macro_scalar*)it->second)->value << endl;

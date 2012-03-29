@@ -53,6 +53,7 @@
 		<Unit filename="src/API/AST.cpp" />
 		<Unit filename="src/API/AST.h" />
 		<Unit filename="src/API/AST_Export.cpp" />
+		<Unit filename="src/API/compile_settings.h" />
 		<Unit filename="src/API/context.cpp" />
 		<Unit filename="src/API/context.h" />
 		<Unit filename="src/API/error_reporting.cpp" />

@@ -67,6 +67,27 @@ class llreader {
     **/
     void encapsulate(std::string &contents);
     /**
+      Consume a const char*, taking responsibility for its deallocation.
+      @param buffer  The buffer to consume. You should discard this pointer afterward.
+      @param length  The length of the data pointed to by buffer.
+    **/
+    void consume(char* buffer, size_t length);
+    /**
+      Alias the file buffer to a given const char* buffer.
+      @param buffer  The buffer to alias. You are still the owner, and must free it after this class is done with it.
+      @param length  The length of the data pointed to by buffer.
+      @warning  This class will NOT take responsibility for keeping and freeing the memory pointed to by \p buffer.
+                If you do not free the memory, it will be leaked. If you free the memory too soon, an access violation can occur.
+    **/
+    void alias(const char* buffer, size_t length);
+    /**
+      Alias the file buffer to a given const char* buffer.
+      @param llread  The llreader to alias.
+      @warning  Make sure the llreader passed to this function does not leave scope or get freed before this one does,
+                or access violations will still occur.
+    **/
+    void alias(const llreader& llread);
+    /**
       Copies a string into a new buffer and uses it as the data.
       Length will be set to code.length(), and data will be set
       to a buffer containing a copy of its c_str().

@@ -87,6 +87,13 @@ void lexer_cpp::skip_string(error_handler *herr)
   }
 }
 
+/// Space-saving macro to skip comments and string literals.
+#define skip_noncode() {\
+  if (cfile[pos] == '/') \
+    if (cfile[pos+1] == '*') { skip_multiline_comment(); continue; } \
+    else if (cfile[pos+1] == '/') { skip_comment(); continue; } else {} \
+  else if (cfile[pos] == '"' or cfile[pos] == '\'') skip_string(herr); }
+
 /**
   @section implementation
   Outsources to two other skip functions in a loop.
@@ -95,10 +102,7 @@ void lexer_cpp::skip_to_macro(error_handler *herr)
 {
   while (pos < length) {
     while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
-      if (cfile[pos] == '/')
-        if (cfile[pos+1] == '*') { skip_multiline_comment(); continue; }
-        else if (cfile[pos+1] == '/') { skip_comment(); continue; } else {}
-      else if (cfile[pos] == '"' or cfile[pos] == '\'') skip_string(herr);
+      skip_noncode();
       ++pos;
     }
     if (pos >= length)
@@ -113,6 +117,57 @@ void lexer_cpp::skip_to_macro(error_handler *herr)
   }
   herr->error("Expected closing preprocessors before end of code",filename,line,pos-lpos);
 }
+
+void lexer_cpp::skip_whitespace()
+{
+  while (pos < length) {
+    while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return ++line, lpos = pos, void();
+    if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos; continue; }
+    if (cfile[pos] == '/') {
+      if (cfile[++pos] == '/') { skip_comment(); continue; }
+      if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
+      return;
+    }
+    return;
+  }
+}
+  
+bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
+{
+  const size_t spos = pos, slpos = lpos, sline = line;
+  skip_whitespace(); // Move to the next "token"
+  if (pos >= length or cfile[pos] != '(') { pos = spos, lpos = slpos, line = sline; return false; }
+  skip_whitespace();
+  
+  size_t pspos = ++pos;
+  vector<string> params;
+  params.reserve(mf->argc);
+  
+  while (pos < length and cfile[pos] != ')') {
+    if (cfile[pos] == ',') {
+      params.push_back(string(cfile+pspos, pos-pspos));
+      pspos = ++pos;
+      skip_noncode();
+      continue;
+    }
+    ++pos; skip_noncode();
+  }
+  if (pos >= length or cfile[pos] != ')')
+    return false;
+  
+  if (pos > pspos) // If there was a parameter
+    params.push_back(string(cfile+pspos, pos-pspos)); // Nab the final parameter
+  ++pos; // Don't get bitten in the ass by the closing parenthesis after the file pop.
+  
+  // Enter the macro
+  openfile of(filename, line, lpos, *this);
+  files.enswap(of);
+  alias(files.top().file);
+  mf->parse(params, *this, herr);
+  
+  return true;  
+}
+  
 
 /**
   @section Implementation
@@ -306,10 +361,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
       
       macro_iter mi = macros.find(fn);
       if (mi != macros.end()) {
-        openfile of(filename, line, lpos, *this);
-        files.enswap(of);
-        filename = fn.c_str();
         if (mi->second->argc < 0) {
+          openfile of(filename, line, lpos, *this);
+          files.enswap(of);
+          filename = fn.c_str();
           macro_scalar *ms = (macro_scalar*)mi->second;
           this->encapsulate(ms->value);
           filename = mi->first.c_str();
@@ -317,7 +372,8 @@ token_t lexer_cpp::get_token(error_handler *herr)
           return get_token(herr);
         }
         else {
-          cout << "UNSUPPORTED: MACRO FUNCTION" << endl;
+          if (parse_macro_function((macro_function*)mi->second, herr))
+            continue;
         }
       }
       
@@ -408,6 +464,9 @@ token_t lexer_cpp::get_token(error_handler *herr)
   if (files.empty())
     return token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos));
   
+  // Close whatever file we have open now
+  close();
+  
   // Fetch data from top item
   openfile& of = files.top();
   line = of.line, lpos = of.lpos;
@@ -473,14 +532,8 @@ token_t lexer_macro::get_token(error_handler *herr)
     
     if (cfile[pos] == '/') {
       if (++pos < length) {
-        if (cfile[pos] == '/') {
-          lcpp->skip_comment();
-          continue;
-        }
-        if (cfile[pos] == '*') {
-          lcpp->skip_multiline_comment();
-          continue;
-        }
+        if (cfile[pos] == '/') { lcpp->skip_comment(); continue; }
+        if (cfile[pos] == '*') { lcpp->skip_multiline_comment(); continue; }
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+pos-1, 2);
       }

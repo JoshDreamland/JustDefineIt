@@ -31,10 +31,13 @@
 
 #include <string>
 #include <vector>
+#include <General/llreader.h>
+#include <API/error_reporting.h>
 
 namespace jdip {
   using std::string;
   using std::vector;
+  using namespace jdi;
   
   /**
     @struct macro_type
@@ -49,6 +52,7 @@ namespace jdip {
       Argument count, or -1 if not a function.
       Hence, a value of -1 implies that this is an instance of macro_scalar.
       Otherwise, this is an instance of macro_function.
+      If this value is greater than the size of the argument vector in the macro_function, then the function is variadic.
     **/
     const int argc;
     /// Macros are very pliable; this tells how many references are made to this macro.
@@ -80,6 +84,18 @@ namespace jdip {
     @brief  A structure representing a macro function in memory.
   **/
   struct macro_function: macro_type {
+    /// A structure, short for "macro value chunk," which contains either a string or an argument number.
+    struct mv_chunk {
+      char* data; ///< A pointer to the string value of this chunk, if it has one.
+      size_t metric; ///< The argument number if we are an argument, or the length of data otherwise.
+      bool is_arg; ///< True if we are an argument number.
+      mv_chunk(const char* str, size_t start, size_t lenth); ///< Construct a new macro value chunk from a substring
+      mv_chunk(char* data_buf, size_t length); ///< Construct a new macro value chunk as data, with a length, consuming data.
+      mv_chunk(size_t argnum); ///< Construct a new macro value chunk as a reference to the value of a parameter with the given index
+      mv_chunk(); ///< Default constructor; do not use. Created to appease the STL.
+      string toString(); ///< For debugging purposes, convert to a string.
+    };
+    
     /** The expanded value of this macro.
         
         @section Convention
@@ -100,10 +116,10 @@ namespace jdip {
         By this convention, evaluating a macro function is as simple as unloading the argument-value pairs into a
         map and iterating the value vector, substituting value[i] with map[value[i]] where defined.
     **/
-    vector<string> value;
+    vector<mv_chunk> value;
     vector<string> args; //!< The names of each argument.
     
-    /// Construct a zero-parameter macro function with the given value, or an empty value if none is specified.
+    /// Default constructor; construct a zero-parameter macro function with the given value, or an empty value if none is specified.
     macro_function(string val="");
     /** Construct a macro function taking the arguments in arg_list.
         This function parses the given value based on the argument list.
@@ -114,15 +130,20 @@ namespace jdip {
         @note
           If \p arg_list is empty, and \p variadic is false, the behavior is the same as the default constructor. 
     **/
-    macro_function(vector<string> arg_list, string value="", bool variadic=0);
+    macro_function(const vector<string> &arg_list, string value="", bool variadic=0);
+    
+    /** An internal function used to parse the definiens of a macro into a vector for collapse at eval-time.
+        Saves big on CPU when evaluating a function many times.
+        @see jdi::macro_function::value
+    **/
+    void preparse(string definiens);
+    
+    /** Parse an argument vector into an llreader. **/
+    bool parse(const vector<string> &arg_list, llreader &dest, error_handler *herr);
+    
     /// Big surprise: The macro_function destructor also does nothing.
     ~macro_function();
   };
   
-  /** An internal function used to parse the definiens of a macro into a vector for collapse at eval-time.
-      Saves big on CPU when evaluating a function many times.
-      @see jdi::macro_function::value
-  **/
-  void preparse_macro(vector<string>& output, const vector<string>& params, string definiens);
 }
 #endif

@@ -108,6 +108,24 @@ void llreader::open(const char* filename) {
 #endif
 }
 
+void llreader::alias(const char* buffer, size_t len) {
+  mode = FT_ALIAS;
+  pos = 0, length = len;
+  data = buffer;
+}
+
+void llreader::alias(const llreader &llread) {
+  mode = FT_ALIAS;
+  pos = llread.pos, length = llread.length;
+  data = llread.data;
+}
+
+void llreader::consume(char* buffer, size_t len) {
+  mode = FT_BUFFER;
+  pos = 0, length = len;
+  data = buffer;
+}
+
 void llreader::consume(llreader& whom) {
   mode = whom.mode;
   pos = whom.pos;
@@ -120,7 +138,7 @@ void llreader::consume(llreader& whom) {
 
 void llreader::close() {
   switch (mode) {
-    case FT_BUFFER: delete data;
+    case FT_BUFFER: delete []data;
     case FT_CLOSED: break;
     case FT_MMAP:
         #ifdef IO_FALLBACK
