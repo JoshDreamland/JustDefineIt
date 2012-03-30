@@ -285,8 +285,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       
       if (!mins.second) { // If no insertion was made; ie, the macro existed already.
         herr->warning("Redeclaring macro", filename, line, pos);
-        if (mins.first->second->argc == -1) delete (macro_scalar*)mins.first->second;
-        else delete (macro_function*)mins.first->second;
+        macro_type::free(mins.first->second);
         mins.first->second = NULL;
       }
       
@@ -450,8 +449,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           while (is_letterd(cfile[++pos]));
           macro_iter mdel = macros.find(string(cfile+nspos,pos-nspos));
           if (mdel != macros.end()) {
-            if (mdel->second->argc < 0) delete (macro_scalar*)mdel->second;
-            else delete (macro_function*)mdel->second;
+            macro_type::free(mdel->second);
             macros.erase(mdel);
           }
         }
@@ -563,8 +561,12 @@ token_t lexer_cpp::get_token(error_handler *herr)
       }
       // Turns out, it's decimal.
       const size_t sp = pos - 1;
-      while (pos < length and is_digit(cfile[pos])) pos++;
-      while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
+      while (pos < length and is_digit(cfile[pos])) ++pos;
+      if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') {  // Accept exponents
+        if (cfile[pos] == '-') ++pos;
+        while (pos < length and is_digit(cfile[pos])) ++pos;
+      }
+      while (pos < length and is_letter(cfile[pos])) ++pos; // Include the flags, like ull
       return token_t(token_basics(TT_DECLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
     }
     
@@ -732,8 +734,12 @@ token_t lexer_macro::get_token(error_handler *herr)
       }
       // Turns out, it's decimal.
       const size_t sp = pos - 1;
-      while (pos < length and is_digit(cfile[pos])) pos++;
-      while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
+      while (pos < length and is_digit(cfile[pos])) ++pos;
+      if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') { // Accept exponents
+        if (cfile[pos] == '-') ++pos;
+        while (pos < length and is_digit(cfile[pos])) ++pos;
+      }
+      while (pos < length and is_letter(cfile[pos])) ++pos; // Include the flags, like ull
       return token_t(token_basics(TT_DECLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+sp, pos-sp);
     }
     

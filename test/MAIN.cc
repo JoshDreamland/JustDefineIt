@@ -65,6 +65,15 @@ int main() {
   
   test_expression_evaluator();
   
+  builtin.add_search_directory("/usr/include/c++/4.6");
+  builtin.add_search_directory("/usr/include/c++/4.6/x86_64-linux-gnu");
+  builtin.add_search_directory("/usr/include/c++/4.6/backward");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.6.1/include");
+  builtin.add_search_directory("/usr/local/include");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.6.1/include-fixed");
+  builtin.add_search_directory("/usr/include/x86_64-linux-gnu");
+  builtin.add_search_directory("/usr/include");
+  
   
   putcap("Test parser");
   llreader f("test/test.cc");

@@ -51,6 +51,13 @@ macro_function::~macro_function() {
     if (!value[i].is_arg) delete []value[i].data;
 }
 
+void macro_type::free(const macro_type* whom) {
+  if (!-- whom->refc){
+    if (whom->argc >= 0) delete (macro_function*)whom;
+    else delete (macro_scalar*)whom;
+  }
+}
+
 
 //======================================================================================================
 //=====: Macro function data chunk constructors :=======================================================

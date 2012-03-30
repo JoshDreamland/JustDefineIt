@@ -57,6 +57,10 @@ namespace jdip {
     const int argc;
     /// Macros are very pliable; this tells how many references are made to this macro.
     mutable unsigned refc;
+    
+    // Release a macro
+    static void free(const macro_type* whom);
+    
     protected:
       /**
         The macro_type constructor is used to set the argument count or flag it inactive.

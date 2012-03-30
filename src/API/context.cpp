@@ -287,16 +287,14 @@ context::context(): parse_open(false), lex(NULL), herr(def_error_handler), globa
 
 context::context(int): parse_open(false), lex(NULL), herr(def_error_handler), global(new definition_scope()) { }
 
+void context::dump_macros() {
+  // Clean up macros
+  for (macro_iter it = macros.begin(); it != macros.end(); it++)
+    macro_type::free(it->second);
+}
+
 context::~context() {
   delete global;
   delete lex;
-  
-  // Clean up macros
-  for (macro_iter it = macros.begin(); it != macros.end(); it++)
-  if (!-- it->second->refc){
-    if (it->second->argc >= 0)
-      delete (macro_function*)it->second;
-    else
-      delete (macro_scalar*)it->second;
-  }
+  dump_macros();
 }

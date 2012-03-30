@@ -149,6 +149,9 @@ namespace jdi
     void output_macros(ostream &out = cout); ///< Print a list of scoped-in macros.
     void output_definitions(ostream &out = cout); ///< Print a any scoped-in other shit.
     
+    /// Drop all current macros, freeing them.
+    void dump_macros();
+    
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
         @param errhandl  An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
