@@ -104,7 +104,7 @@ namespace jdip {
     /// Skip anything that cannot be interpreted as code in any way.
     inline void skip_whitespace();
     /// Function used by the preprocessor to read in macro parameters in compliance with ISO.
-    string read_macro_params(error_handler *herr);
+    string read_preprocessor_args(error_handler *herr);
     /** Second-order utility function to skip lines until a preprocessor
         directive is encountered, then invoke the handler on the directive it found. **/
     void skip_to_macro(error_handler *herr);

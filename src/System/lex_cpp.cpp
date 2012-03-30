@@ -169,7 +169,7 @@ bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
 }
 
 
-string lexer_cpp::read_macro_params(error_handler *herr)
+string lexer_cpp::read_preprocessor_args(error_handler *herr)
 {
   for (;;) {
     while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return "";
@@ -187,11 +187,11 @@ string lexer_cpp::read_macro_params(error_handler *herr)
   size_t spos = pos;
   while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
     if (cfile[pos] == '/') {
-      if (cfile[++pos] == '/') { res += string(cfile+spos,pos-spos); skip_comment(); return res; }
+      if (cfile[++pos] == '/') { res += string(cfile+spos,pos-spos-1); skip_comment(); return res; }
       if (cfile[pos] == '*') {
-        res.reserve(res.length()+pos-spos+1);
-        res += string(cfile+spos,pos-spos), res += " ";
-        skip_multiline_comment(); continue; }
+        res.reserve(res.length()+pos-spos);
+        res += string(cfile+spos,pos-spos-1), res += " ";
+        skip_multiline_comment(); spos = pos; continue; }
     }
     if (cfile[pos] == '\'' or cfile[pos] == '"') skip_string(herr);
     else if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) ++pos;
@@ -273,7 +273,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
   {
     break;
     case_define: {
-      string argstr = read_macro_params(herr);
+      string argstr = read_preprocessor_args(herr);
       size_t i = 0;
       while (is_useless(argstr[i])) ++i;
       if (!is_letterd(argstr[i])) {
@@ -316,11 +316,10 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       }
     } break;
     case_error: {
-          while (pos < length and (cfile[pos] == ' ' or cfile[pos] == '\t')) ++pos;
-          const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
-          if (conditionals.empty() or conditionals.top().is_true)
-            herr->error(token_basics("#error " + string(cfile + espos, pos - espos),filename,line,pos-lpos));
-        }
+        string emsg = read_preprocessor_args(herr);
+        if (conditionals.empty() or conditionals.top().is_true)
+          herr->error(token_basics("#error " + emsg,filename,line,pos-lpos));
+      } break;
       break;
     case_elif:
         if (conditionals.empty())
@@ -337,8 +336,32 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         }
       break;
     case_elifdef:
+        if (conditionals.empty())
+          herr->error(token_basics("Unexpected #elifdef directive; no matching #if",filename,line,pos-lpos));
+        else {
+          if (conditionals.top().is_true)
+            conditionals.top().is_true = conditionals.top().can_be_true = false;
+          else {
+            if (conditionals.top().can_be_true) {
+              conditionals.pop();
+              goto case_ifdef;
+            }
+          }
+        }
       break;
     case_elifndef:
+        if (conditionals.empty())
+          herr->error(token_basics("Unexpected #elifndef directive; no matching #if",filename,line,pos-lpos));
+        else {
+          if (conditionals.top().is_true)
+            conditionals.top().is_true = conditionals.top().can_be_true = false;
+          else {
+            if (conditionals.top().can_be_true) {
+              conditionals.pop();
+              goto case_ifndef;
+            }
+          }
+        }
       break;
     case_else:
         if (conditionals.empty())
@@ -369,10 +392,46 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         else
           conditionals.push(condition(0,0));
       break;
-    case_ifdef:
-      break;
-    case_ifndef:
-      break;
+    case_ifdef: {
+        while (is_useless(cfile[pos])) ++pos;
+        if (!is_letter(cfile[pos])) {
+          herr->error("Expected identifier to check against macros",filename,line,pos);
+          break;
+        }
+        const size_t msp = pos;
+        while (is_letterd(cfile[++pos]));
+        string macro(cfile+msp, pos-msp);
+        if (conditionals.empty() or conditionals.top().is_true) {
+          if (macros.find(macro) == macros.end()) {
+            token_t res;
+            conditionals.push(condition(0,1));
+            break;
+          }
+          conditionals.push(condition(1,0));
+        }
+        else
+          conditionals.push(condition(0,0));
+      } break;
+    case_ifndef: {
+        while (is_useless(cfile[pos])) ++pos;
+        if (!is_letter(cfile[pos])) {
+          herr->error("Expected identifier to check against macros",filename,line,pos);
+          break;
+        }
+        const size_t msp = pos;
+        while (is_letterd(cfile[++pos]));
+        string macro(cfile+msp, pos-msp);
+        if (conditionals.empty() or conditionals.top().is_true) {
+          if (macros.find(macro) != macros.end()) {
+            token_t res;
+            conditionals.push(condition(0,1));
+            break;
+          }
+          conditionals.push(condition(1,0));
+        }
+        else
+          conditionals.push(condition(0,0));
+      } break;
     case_import:
       break;
     case_include:
@@ -380,18 +439,30 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     case_line:
       break;
     case_pragma:
+        read_preprocessor_args(herr);
       break;
     case_undef:
+        while (is_useless(cfile[pos])) ++pos;
+        if (!is_letterd(cfile[pos]))
+          herr->error("Expected macro identifier at this point", filename, line, pos);
+        else {
+          const size_t nspos = pos;
+          while (is_letterd(cfile[++pos]));
+          macro_iter mdel = macros.find(string(cfile+nspos,pos-nspos));
+          if (mdel != macros.end()) {
+            if (mdel->second->argc < 0) delete (macro_scalar*)mdel->second;
+            else delete (macro_function*)mdel->second;
+            macros.erase(mdel);
+          }
+        }
       break;
     case_using:
       break;
     case_warning: {
-          while (pos < length and (cfile[pos] == ' ' or cfile[pos] == '\t')) ++pos;
-          const size_t espos = pos; while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
-          if (conditionals.empty() or conditionals.top().is_true)
-            herr->warning(token_basics("#warning " + string(cfile + espos, pos - espos),filename,line,pos-lpos));
-        }
-      break;
+        string wmsg = read_preprocessor_args(herr);
+        if (conditionals.empty() or conditionals.top().is_true)
+          herr->warning(token_basics("#warning " + wmsg,filename,line,pos-lpos));
+      } break;
   }
   if (conditionals.empty() or conditionals.top().is_true)
     return;
