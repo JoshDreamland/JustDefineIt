@@ -21,6 +21,7 @@
 
 #include "value_funcs.h"
 #include <cstring>
+#include <cfloat>
 #include <cmath>
 
 static inline char* strdupcat(const char* s1, const char* s2) {
@@ -29,8 +30,8 @@ static inline char* strdupcat(const char* s1, const char* s2) {
   memcpy(res,s1,l1), memcpy(res+l1,s2,l2);
   return res;
 }
-static inline long fcomp(double x, double y) { return fabs(x - y) < 1/double(1<<10); }
-static inline long fcomp(double x, long y) { return fabs(x - y) < 1/double(1<<10); }
+static inline long fcomp(double x, double y) { return fabs(x - y) < DBL_EPSILON; }
+static inline long fcomp(double x, long y) { return fabs(x - y) < DBL_EPSILON; }
 
 namespace jdi {
   value values_add(const value& x, const value& y) {
@@ -74,18 +75,22 @@ namespace jdi {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(x.val.d / pow(2, y.val.d)); else if (y.type == VT_INTEGER) return value(x.val.d / pow(2, y.val.i)); else return value();
     else if (y.type == VT_INTEGER) return value(x.val.i >> y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i / pow(2, y.val.d)); else return value();
   }
-  value values_band(const value& x, const value& y) {
+  value values_bitand(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d) & long(y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d) & y.val.i); else return value();
     else if (y.type == VT_INTEGER) return value(x.val.i & y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i & long(y.val.d)); else return value();
   }
-  value values_bor(const value& x, const value& y) {
+  value values_bitor(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d) | long(y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d) | y.val.i); else return value();
     else if (y.type == VT_INTEGER) return value(x.val.i | y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i | long(y.val.d)); else return value();
   }
-  value values_bxor(const value& x, const value& y) {
+  value values_bitxor(const value& x, const value& y) {
     if (x.type == VT_DOUBLE) if (y.type == VT_DOUBLE) return value(long(x.val.d) ^ long(y.val.d)); else if (y.type == VT_INTEGER) return value(long(x.val.d) ^ y.val.i); else return value();
     else if (y.type == VT_INTEGER) return value(x.val.i ^ y.val.i); else if (y.type == VT_DOUBLE) return value(x.val.i ^ long(y.val.d)); else return value();
   }
+  
+  value values_booland(const value& x, const value& y) { return value(long(value_boolean(x) && value_boolean(y))); }
+  value values_boolxor(const value& x, const value& y) { return value(long(value_boolean(x) != value_boolean(y))); }
+  value values_boolor(const value& x, const value& y)  { return value(long(value_boolean(x) || value_boolean(y))); }
   
   
   value values_greater(const value& x, const value& y) {
@@ -133,6 +138,12 @@ namespace jdi {
   }
   value value_unary_reference(const value&) {
     return value(0l);
+  }
+  value value_unary_negate(const value& x) {
+    if (x.type == VT_DOUBLE) return value(~(long)x.val.d); return value(~x.val.i);
+  }
+  value value_unary_not(const value& x) {
+    if (x.type == VT_DOUBLE) return value((long)(fabs(x.val.d) > DBL_EPSILON)); return value((long)!x.val.i);
   }
 
   bool value_boolean(const value& v) {

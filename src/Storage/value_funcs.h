@@ -38,9 +38,12 @@ namespace jdi {
   value values_modulo(const value& x, const value& y);  ///< Returns the modulo of two real values.
   value values_lshift(const value& x, const value& y);  ///< Returns the value given by x, multiplied by two to the power of y.
   value values_rshift(const value& x, const value& y);  ///< Returns the value given by x, divided by two to the power of y.
-  value values_band(const value& x, const value& y);  ///< Returns the value given by the bitwise AND of x and y.
-  value values_bor(const value& x, const value& y);  ///< Returns the value given by the bitwise OR of x and y.
-  value values_bxor(const value& x, const value& y);  ///< Returns the value given by the bitwise XOR of x and y.
+  value values_bitand(const value& x, const value& y);  ///< Returns the value given by the bitwise AND of x and y.
+  value values_bitor(const value& x, const value& y);  ///< Returns the value given by the bitwise OR of x and y.
+  value values_bitxor(const value& x, const value& y);  ///< Returns the value given by the bitwise XOR of x and y.
+  value values_booland(const value& x, const value& y);  ///< Returns the value given by the bitwise AND of x and y.
+  value values_boolor(const value& x, const value& y);  ///< Returns the value given by the bitwise OR of x and y.
+  value values_boolxor(const value& x, const value& y);  ///< Returns the value given by the bitwise XOR of x and y.
   
   /** Compares two values, x and y.
       If x and y are both real, the result is true iff x > y.
@@ -100,6 +103,8 @@ namespace jdi {
   value value_unary_negative(const value& x); ///< Returns -x, if x is real, or an invalid value otherwise.
   value value_unary_dereference(const value& x); ///< Returns the first character in x, if x is a string, or an invalid value otherwise.
   value value_unary_reference(const value&); ///< Returns zero, as an integer.
+  value value_unary_negate(const value& v); ///< Returns the bitwise negation of the value, cast to an integer.
+  value value_unary_not(const value& v); ///< Returns the integers one or zero, the former when value is not equal to zero.
   
   bool value_boolean(const value& v); ///< Returns true if v is real and v != 0 or if v is a string and v is not empty. If v is invalid, false is returned.
 }

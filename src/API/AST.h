@@ -26,7 +26,10 @@
 **/
 
 #ifndef _AST__H
-#define _AST__H // Used in debug_macros.h. Do not rename on a whim.
+#define _AST__H
+#define _AST__H__DEBUG // Used in debug_macros.h. Do not rename on a whim.
+
+namespace jdi { class AST; }
 
 #include <string>
 #include <System/token.h>

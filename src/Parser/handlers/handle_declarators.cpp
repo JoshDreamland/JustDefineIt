@@ -32,14 +32,6 @@
 using namespace jdip;
 using namespace jdi;
 
-/**
-  @section Implementation
-  This implementation is relatively unremarkable, save for the bouts
-  of dancing around llreader's structure. Normally, I would write such
-  a function to play on null-terminated C strings, however, due to the
-  variety of memory constructs an llreader may actually represent, that
-  isn't actually an option here.
-**/
 int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
   // Outsource to read_type, which will take care of the hard work for us.
@@ -64,7 +56,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   // Add it to our definitions map, without overwriting the existing member.
   definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
   if (ins.second) { // If we successfully inserted,
-    ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags);
+    ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags | inherited_flags);
     ins.first->second->flags |= inherited_flags;
   }
   #ifndef NO_ERROR_REPORTING
@@ -112,28 +104,13 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           token.report_error(herr, "Expected initializer `=' here before literal.");
         return 5;
       
-      case TT_ENDOFCODE:
-      #ifndef NO_ERROR_REPORTING
-          token.report_error(herr, "Expected semicolon here before end of code.");
-        return 5;
-      #else
-        return 0;
-      #endif
-      
       case TT_SEMICOLON:
-        return 0;
       
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_IDENTIFIER:
-      case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
-      case TT_COLON: case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_TILDE:
-      case TT_EQUALS: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default:
-          #ifndef DEBUG_MODE
-          token.report_error(herr, "Unexpected token at this point");
-          #else
-          token.report_error(herr, "Unexpected token at this point: " + string(TOKEN_TYPE_NAME[token.type]));
-          #endif
-        return 5;
+      case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_COLON:
+      case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET: case TT_LEFTBRACE: case TT_RIGHTBRACE:
+      case TT_TILDE: case TT_EQUALS: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_INVALID: default:
+        return 0;
     }
   }
   

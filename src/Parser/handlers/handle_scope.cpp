@@ -54,7 +54,11 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_RIGHTBRACE:   return 0;
       
       case TT_CLASS: case TT_STRUCT:
-      if (handle_class(scope,token)) return 1; break;
+      if (handle_class(scope,token,inherited_flags)) return 1; break;
+      
+      case TT_TYPEDEF:
+        token = lex->get_token(herr);
+        if (handle_declarators(scope,token,inherited_flags | DEF_TYPEDEF | DEF_TYPENAME)) return 1; break;
       
       case TT_ENUM: case TT_UNION:
       case TT_TYPENAME:
@@ -73,14 +77,16 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
       
-      case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_TEMPLATE:
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       default:
         token.report_error(herr, "INVALID TOKEN TYPE RETURNED");
         #ifdef DEBUG_MODE
-          cout << TOKEN_TYPE_NAME[token.type] << endl;
+          cout << TOKEN_TYPE_NAME[token.type];
+          if (token.type == TT_IDENTIFIER) cout << "[" << string((const char*)token.extra.content.str, token.extra.content.len) << "]";
+          cout << endl;
         #endif
         break;
       

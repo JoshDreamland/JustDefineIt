@@ -87,6 +87,8 @@ namespace jdi {
     add_declarator("static",   UF_FLAG);
     add_declarator("const",    UF_FLAG);
     add_declarator("register", UF_FLAG);
+    add_declarator("extern", UF_FLAG);
+    add_declarator("inline", UF_FLAG);
     
     add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
     add_declarator("signed",   UF_STANDALONE_FLAG, "int");

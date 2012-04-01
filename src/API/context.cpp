@@ -43,7 +43,7 @@ void context::read_macros(const char* filename)
   in.close();
 }
 void context::add_macro(string definiendum, string definiens) {
-  macros[definiendum] = (macro_type*)new macro_scalar(definiens);
+  macros[definiendum] = (macro_type*)new macro_scalar(definiendum, definiens);
 }
 void context::add_macro_func(string definiendum, string definiens) {
   macros[definiendum] = (macro_type*)new macro_function(definiens);
@@ -52,14 +52,14 @@ void context::add_macro_func(string definiendum, string p1, string definiens, bo
 {
   vector<string> arglist;
   arglist.push_back(p1);
-  macros[definiendum] = (macro_type*)new macro_function(arglist, definiens, variadic);
+  macros[definiendum] = (macro_type*)new macro_function(definiendum, arglist, definiens, variadic);
 }
 void context::add_macro_func(string definiendum, string p1, string p2, string definiens, bool variadic)
 {
   vector<string> arglist;
   arglist.push_back(p1);
   arglist.push_back(p2);
-  macros[definiendum] = (macro_type*)new macro_function(arglist, definiens, variadic);
+  macros[definiendum] = (macro_type*)new macro_function(definiendum, arglist, definiens, variadic);
 }
 void context::add_macro_func(string definiendum, string p1, string p2, string p3, string definiens, bool variadic)
 {
@@ -67,7 +67,7 @@ void context::add_macro_func(string definiendum, string p1, string p2, string p3
   arglist.push_back(p1);
   arglist.push_back(p2);
   arglist.push_back(p3);
-  macros[definiendum] = (macro_type*)new macro_function(arglist, definiens, variadic);
+  macros[definiendum] = (macro_type*)new macro_function(definiendum, arglist, definiens, variadic);
 }
 
 #ifndef MAX_PATH
@@ -153,24 +153,32 @@ void context::load_gnu_builtins()
 void context::output_types(ostream &out) {
   out << "Unimplemented";
 }
+static inline void print_macro(macro_iter it, ostream &out = cout)
+{
+  if (it->second->argc >= 0)
+  {
+    macro_function *mf = (macro_function*)it->second;
+    out << "#define " << it->first << "(";
+    for (size_t i = 0; i < mf->args.size(); i++)
+      out << mf->args[i] << (i+1 < mf->args.size() ? ", " : ((size_t)it->second->argc > mf->args.size()? "...": ""));
+    out << ") \\" << endl;
+    for (size_t i = 0; i < mf->value.size(); i++)
+      out << "  " << mf->value[i].toString() << (i+1 < mf->value.size()? "\\" : "") << endl;
+  }
+  else {
+    out << "#define " << it->first << endl << "  " << ((macro_scalar*)it->second)->value << endl;
+  }
+}
+void context::output_macro(string macroname, ostream &out)
+{
+  macro_iter it = macros.find(macroname);
+  if (it == macros.end()) out << "Macro `" << macroname << "' has not been defined." << endl;
+  else print_macro(it, out);
+}
 void context::output_macros(ostream &out) 
 {
   for (macro_iter it = macros.begin(); it != macros.end(); it++)
-  {
-    if (it->second->argc >= 0)
-    {
-      macro_function *mf = (macro_function*)it->second;
-      out << "#define " << it->first << "(";
-      for (size_t i = 0; i < mf->args.size(); i++)
-        out << mf->args[i] << (i+1 < mf->args.size() ? ", " : ((size_t)it->second->argc > mf->args.size()? "...": ""));
-      out << ") \\" << endl;
-      for (size_t i = 0; i < mf->value.size(); i++)
-        out << "  " << mf->value[i].toString() << (i+1 < mf->value.size()? "\\" : "") << endl;
-    }
-    else {
-      out << "#define " << it->first << endl << "  " << ((macro_scalar*)it->second)->value << endl;
-    }
-  }
+    print_macro(it, out);
 }
 
 static string fulltype_string(full_type& ft);
@@ -285,7 +293,12 @@ context::context(): parse_open(false), lex(NULL), herr(def_error_handler), globa
   copy(builtin);
 }
 
+const macro_map& context::get_macros() { return macros; }
+
 context::context(int): parse_open(false), lex(NULL), herr(def_error_handler), global(new definition_scope()) { }
+
+size_t context::search_dir_count() { return search_directories.size(); }
+string context::search_dir(size_t index) { return search_directories[index]; }
 
 void context::dump_macros() {
   // Clean up macros

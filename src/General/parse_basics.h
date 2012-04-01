@@ -19,6 +19,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <string>
 #include <cstdlib>
 typedef size_t pt;
 /** Namespace defining basic utility functions.
@@ -84,6 +85,18 @@ namespace parse_bacics {
     inline bool is_useless_macros(char x) {
       return is.whatever[(unsigned char) x] & is.SPACER;
     }
+    
+    using std::string;
+    string toString(int);
+    string toString(long);
+    string toString(short);
+    string toString(unsigned);
+    string toString(unsigned long);
+    string toString(unsigned short);
+    string toString(char);
+    string toString(char*);
+    string toString(float);
+    string toString(double);
   }
 }
 using namespace parse_bacics::visible;

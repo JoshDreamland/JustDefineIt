@@ -23,7 +23,7 @@
 #include <Parser/bodies.h>
 
 static unsigned anon_count = 1111111;
-int jdip::context_parser::handle_class(definition_scope *scope, token_t& token)
+int jdip::context_parser::handle_class(definition_scope *scope, token_t& token, int inherited_flags)
 {
   unsigned protection = 0;
   unsigned incomplete = DEF_INCOMPLETE;
@@ -49,7 +49,7 @@ int jdip::context_parser::handle_class(definition_scope *scope, token_t& token)
   definition_class *nclass;
   pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL));
   if (dins.second) // If a new definition key was created, then allocate a new class representation for it.
-    dins.first->second = nclass = new definition_class(classname,scope);
+    dins.first->second = nclass = new definition_class(classname,scope, DEF_CLASS | DEF_TYPENAME | inherited_flags);
   else { // Make sure the class is incomplete
     nclass = (definition_class*)dins.first->second;
     if (not(dins.first->second->flags & DEF_CLASS)) {

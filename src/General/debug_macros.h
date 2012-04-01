@@ -36,12 +36,6 @@
   #ifndef DEBUG_OUTPUT_PATH
     #define DEBUG_OUTPUT_PATH "/home/josh/Desktop"
   #endif
-
-  #if defined(RENDER_ASTS) && defined(_AST__H)
-    #include <string>
-    #undef render_ast
-    void render_ast(jdi::AST& ast, std::string cat);
-  #endif
   
   #include <assert.h>
   #define dbg_assert(x) assert(x)
@@ -52,3 +46,12 @@
 
 #endif // DEBUG_MODE ELSE
 #endif // Guard
+
+#ifndef _DEBUG_MACROS__H__RENDER_ASTS
+  #if defined(RENDER_ASTS) && defined(_AST__H__DEBUG)
+    #define _DEBUG_MACROS__H__RENDER_ASTS
+    #include <string>
+    #undef render_ast
+    void render_ast(jdi::AST& ast, std::string cat);
+  #endif
+#endif

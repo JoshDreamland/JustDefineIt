@@ -29,6 +29,8 @@ std::string SVG::escape(std::string e) {
       r.replace(i,1,"&lt;");
     else if (r[i] == '>')
       r.replace(i,1,"&gt;");
+    else if (r[i] == '&')
+      r.replace(i,1,"&amp;");
   return r;
 }
 std::string SVG::tostring(int id) { char buf[16]; sprintf(buf,"%d",id); return buf; }

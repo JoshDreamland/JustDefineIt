@@ -51,8 +51,8 @@ symbol_table::symbol_table()
   prec--;
   symbols["++"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
   symbols["--"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_decrement);
-  symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
-  symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_increment);
+  symbols["!"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_not);
+  symbols["~"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,prec,value_unary_negate);
   
   prec--;
   symbols[".*"] = symbol(ST_UNARY_PRE | ST_UNARY_POST,  prec);
@@ -81,13 +81,13 @@ symbol_table::symbol_table()
   symbols["=="]  = symbol(ST_BINARY,prec,values_equal);
   symbols["!="]  = symbol(ST_BINARY,prec,values_notequal);
   
-  prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_band,value_unary_reference);
-  prec--; symbols["^"]  = symbol(ST_BINARY,prec,values_bxor);
-  prec--; symbols["|"]  = symbol(ST_BINARY,prec,values_bor);
+  prec--; symbols["&"]  = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_bitand,value_unary_reference);
+  prec--; symbols["^"]  = symbol(ST_BINARY,prec,values_bitxor);
+  prec--; symbols["|"]  = symbol(ST_BINARY,prec,values_bitor);
   
-  prec--; symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,prec);
-  prec--; symbols["^^"] = symbol(ST_BINARY,prec);
-  prec--; symbols["||"] = symbol(ST_BINARY,prec);
+  prec--; symbols["&&"] = symbol(ST_UNARY_PRE | ST_BINARY,prec,values_booland);
+  prec--; symbols["^^"] = symbol(ST_BINARY,prec,values_boolxor);
+  prec--; symbols["||"] = symbol(ST_BINARY,prec,values_boolor);
   
   prec--; symbols["?"]  = symbol(ST_TERNARY | ST_RTL_PARSED,prec);
   

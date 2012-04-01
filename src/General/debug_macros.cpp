@@ -22,6 +22,8 @@
 **/
 
 #ifdef DEBUG_MODE
+#include <string>
+#include <cstdio>
 #include <API/AST.h>
 #include "debug_macros.h"
 

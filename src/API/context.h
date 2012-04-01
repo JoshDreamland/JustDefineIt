@@ -94,6 +94,9 @@ namespace jdi
     int err_line; ///< The line number on which the error occurred
     int err_pos; ///< The position at which the error occurred
     
+    size_t search_dir_count(); ///< Return the number of search directories
+    string search_dir(size_t index); ///< Return the search directory with the given index, in [0, search_dir_count).
+    
     /** Add a type name to this context
         The type will be added as a primitive. To add a typedef, use \c jdi::context::add_typedef().
         @param name The name of the type, as it appears in code.
@@ -146,18 +149,22 @@ namespace jdi
     void load_gnu_builtins();
     
     void output_types(ostream &out = cout); ///< Print a list of scoped-in types.
+    void output_macro(string macroname, ostream &out = cout); ///< Print a single macro to a given stream.
     void output_macros(ostream &out = cout); ///< Print a list of scoped-in macros.
     void output_definitions(ostream &out = cout); ///< Print a any scoped-in other shit.
     
     /// Drop all current macros, freeing them.
     void dump_macros();
     
+    /// Get a reference to the macro map
+    const macro_map& get_macros();
+    
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
         @param errhandl  An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
                          If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
-    int parse_C_stream(llreader& cfile, error_handler *errhandl = NULL);
+    int parse_C_stream(llreader& cfile, const char* fname = NULL, error_handler *errhandl = NULL);
     
     /** Parse an input stream for definitions using the default C++ lexer.
         @param lang_lexer The lexer which will be polled for tokens. This lexer will already know its token source.

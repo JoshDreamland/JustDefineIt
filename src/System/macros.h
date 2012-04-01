@@ -29,10 +29,17 @@
 #ifndef _MACROS__H
 #define _MACROS__H
 
+namespace jdip {
+  struct macro_type;
+  struct macro_scalar;
+  struct macro_function;
+}
+
 #include <string>
 #include <vector>
 #include <General/llreader.h>
 #include <API/error_reporting.h>
+#include <System/token.h>
 
 namespace jdip {
   using std::string;
@@ -55,8 +62,10 @@ namespace jdip {
       If this value is greater than the size of the argument vector in the macro_function, then the function is variadic.
     **/
     const int argc;
-    /// Macros are very pliable; this tells how many references are made to this macro.
+    /// Macros should not be edited, only replaced, and therefore are easy to copy by reference; this tells how many references are made to this macro.
     mutable unsigned refc;
+    /// A copy of the name of this macro; std::string will take care of the aliasing.
+    string name;
     
     // Release a macro
     static void free(const macro_type* whom);
@@ -68,8 +77,9 @@ namespace jdip {
         the parameter count could cause failure to recognize the type of the current macro.
         @see argc
       **/
-      macro_type(int argc);
-      /// The base destructor of macro_type does not do anything. DON'T INVOKE IT! Cast to the appropriate child first.
+      macro_type(string n, int argc);
+      /// The base destructor of macro_type does not do anything to free memebers: DO NOT INVOKE IT!
+      /// Use macro_type::free instead.
       ~macro_type();
   };
   
@@ -79,7 +89,7 @@ namespace jdip {
   **/
   struct macro_scalar: macro_type {
     string value; ///< The definiens of this macro.
-    macro_scalar(string val=""); ///< The default constructor, taking an optional value parameter.
+    macro_scalar(string n, string val=""); ///< The default constructor, taking an optional value parameter.
     ~macro_scalar(); ///< The macro_scalar destructor is only for debugging purposes.
   };
   
@@ -124,7 +134,7 @@ namespace jdip {
     vector<string> args; //!< The names of each argument.
     
     /// Default constructor; construct a zero-parameter macro function with the given value, or an empty value if none is specified.
-    macro_function(string val="");
+    macro_function(string n, string val="");
     /** Construct a macro function taking the arguments in arg_list.
         This function parses the given value based on the argument list.
         @param arg_list  Contains the arguments to be copied in.
@@ -134,7 +144,7 @@ namespace jdip {
         @note
           If \p arg_list is empty, and \p variadic is false, the behavior is the same as the default constructor. 
     **/
-    macro_function(const vector<string> &arg_list, string value="", bool variadic=0);
+    macro_function(string n, const vector<string> &arg_list, string value="", bool variadic=0);
     
     /** An internal function used to parse the definiens of a macro into a vector for collapse at eval-time.
         Saves big on CPU when evaluating a function many times.
@@ -143,7 +153,7 @@ namespace jdip {
     void preparse(string definiens);
     
     /** Parse an argument vector into an llreader. **/
-    bool parse(const vector<string> &arg_list, llreader &dest, error_handler *herr);
+    bool parse(const vector<string> &arg_list, llreader &dest, error_handler *herr, token_t errtok);
     
     /// Big surprise: The macro_function destructor also does nothing.
     ~macro_function();

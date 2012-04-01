@@ -74,6 +74,11 @@ int main() {
   builtin.add_search_directory("/usr/include/x86_64-linux-gnu");
   builtin.add_search_directory("/usr/include");
   
+  llreader macro_reader("test/defines.txt");
+  if (macro_reader.is_open())
+    builtin.parse_C_stream(macro_reader, "defines.txt");
+  else
+    cout << "ERROR: Could not open GCC macro file for parse!" << endl;
   
   putcap("Test parser");
   llreader f("test/test.cc");
@@ -91,6 +96,11 @@ int main() {
       cout << endl << "====[------------------------------ /FAILURE ------------------------------]====" << endl << endl;
     else
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
+    
+    cout << "Macro defs: " << endl;
+    enigma.output_macro("concat");
+    enigma.output_macro("_Mdouble_");
+    enigma.output_macro("__MATH_PRECNAME");
   }
   else
     cout << "Failed to open file for parsing!" << endl;

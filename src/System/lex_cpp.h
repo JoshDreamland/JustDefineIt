@@ -32,6 +32,8 @@ namespace jdip {
   struct lexer_macro;
 }
 
+#include <set>
+#include <string>
 #include <API/lexer_interface.h>
 #include <General/quickstack.h>
 #include <General/llreader.h>
@@ -81,7 +83,7 @@ namespace jdip {
         @param input    The file from which to read definitions. This file will be manipulated by the system.
         @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
     **/
-    lexer_cpp(llreader& input, macro_map &pmacros);
+    lexer_cpp(llreader& input, macro_map &pmacros, const char *fname = "stdcall/file.cpp");
     /** Destructor; free the attached macro lexer. **/
     ~lexer_cpp();
     
@@ -99,7 +101,7 @@ namespace jdip {
     inline void skip_comment();
     /// Utility function to skip a multi-line comment; invoke with pos indicating the starting slash.
     inline void skip_multiline_comment();
-    /// Utility function to skip a string; invoke with pos indicating the quotation mark.
+    /// Utility function to skip a string; invoke with pos indicating the quotation mark, terminates indicating match.
     inline void skip_string(error_handler *herr);
     /// Skip anything that cannot be interpreted as code in any way.
     inline void skip_whitespace();
@@ -109,6 +111,9 @@ namespace jdip {
         directive is encountered, then invoke the handler on the directive it found. **/
     void skip_to_macro(error_handler *herr);
     
+    /// Enter a scalar macro, if it has any content.
+    /// @param ms   The macro scalar to enter.
+    void enter_macro(macro_scalar *ms);
     /// Parse for parameters to a given macro function, if there are any.
     /// This call should be made while the position is just after the macro name.
     /// @param mf   The macro function to parse
@@ -116,6 +121,11 @@ namespace jdip {
     /// @return Returns whether parameters were encountered and parsed.
     bool parse_macro_function(macro_function* mf, error_handler *herr);
     
+    /// Pop the currently open file or active macro.
+    /// @return Returns whether the end of all input has been reached.
+    bool pop_file();
+    
+    set<string> visited_files; ///< For record and reporting purposes only.
   private:
     /// Storage mechanism for conditionals, such as #if, #ifdef, and #1ifndef
     struct condition {

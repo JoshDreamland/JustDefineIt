@@ -32,18 +32,18 @@ using namespace std;
 #include <General/debug_macros.h>
 using namespace jdip;
 
-macro_type::macro_type(int ac): argc(ac), refc(1) {}
+macro_type::macro_type(string n, int ac): argc(ac), refc(1), name(n) {}
 macro_type::~macro_type() {}
-  
-macro_scalar::macro_scalar(string val): macro_type(-1), value(val) {}
+
+macro_scalar::macro_scalar(string n, string val): macro_type(n,-1), value(val) {}
 macro_scalar::~macro_scalar() {}
 
-macro_function::macro_function(string val): macro_type(0), value(), args() {
+macro_function::macro_function(string n, string val): macro_type(n,0), value(), args() {
   register const size_t bs = val.length();
   char *buf = new char[bs]; memcpy(buf, val.c_str(), bs);
   value.push_back(mv_chunk(buf, bs));
 }
-macro_function::macro_function(const vector<string> &arglist, string val, bool variadic): macro_type(arglist.size()+variadic), value(), args(arglist) {
+macro_function::macro_function(string n, const vector<string> &arglist, string val, bool variadic): macro_type(n,arglist.size()+variadic), value(), args(arglist) {
   preparse(val);
 }
 macro_function::~macro_function() {
@@ -101,16 +101,10 @@ void jdip::macro_function::preparse(string val)
   
   for (pt i = 0; i < val.length(); ) // Iterate the string
   {
-    if (val[i] == '\"') {       // *-*-*-*-*-* Skip strings *-*-*-*-*-* //
-      while (val[++i] != '\"') // We're ultimately searching for the matching quote.
-        if (val[i] == '\\')   // On the way, we may encounter escape sequences.
-          i++; // But we do not need to handle them. Only '\\' and '\"' are of concern.
-      continue;
-    }
-    if (val[i] == '\'')      {  // We handle single quotes the same way,
-      while (val[++i] != '\'') // Looking for the terminating single quote,
-        if (val[i] == '\\')   // Skipping a second character if we encounter a backslash.
-          i++;
+    if (val[i] == '\"' or val[i] == '\'') { // Skip strings
+      register char nc = val[i];
+      while (++i < val.length() and val[i] != nc) // We're ultimately searching for the matching quote.
+        if (val[i] == '\\') ++i; // No need to handle escape sequences; only '\\' and '\"' are of concern.
       continue;
     }
     
@@ -141,13 +135,18 @@ void jdip::macro_function::preparse(string val)
       continue;
     }
     
-    if (val[i] == '#' and val[i+1] == '#')
+    if (val[i] == '#')
     {
-      pt ie = i++;
-      while (ie > 0 and is_useless(val[ie-1])) --ie; // eliminate any leading whitespace
-      if (ie > push_from) // If there's anything non-white to push since last time,
-        value.push_back(mv_chunk(val.c_str(), push_from, ie-push_from)); // Then push it
-      while (is_useless(++i)); // Skip any trailing whitespace
+      if (val[++i] == '#') {
+        if (i <= 1) continue;
+        pt ie = i - 2;
+        while (ie > 0 and is_useless(val[ie-1])) --ie; // eliminate any leading whitespace
+        if (ie > push_from) // If there's anything non-white to push since last time,
+          value.push_back(mv_chunk(val.c_str(), push_from, ie-push_from)); // Then push it
+        while (is_useless(val[++i])); // Skip any trailing whitespace
+        push_from = i;
+        continue;
+      }
     }
     
     i++;
@@ -156,29 +155,53 @@ void jdip::macro_function::preparse(string val)
 }
 
 #include <iostream>
-bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error_handler *herr)
+#include <System/token.h>
+bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error_handler *herr, token_t errtok)
 {
   if (arg_list.size() < args.size())
-    return herr->error("Too few arguments to macro function"), false;
+    return errtok.report_error(herr, "Too few arguments to macro function `" + name + "': provided " + toString(arg_list.size()) + ", requested " + toString(args.size())), false;
   if ((arg_list.size() > args.size() and args.size() == (unsigned)argc))
-    return herr->error("Too many arguments to macro function"), false;
+    return errtok.report_error(herr, "Too many arguments to macro function `" + name + "'"), false;
   size_t alloc = 1;
   for (size_t i = 0; i < value.size(); i++) {
-    alloc += value[i].is_arg? arg_list[value[i].metric].length() : value[i].metric;
+    if (value[i].is_arg)
+      alloc += arg_list[value[i].metric].length();
+    else {
+      if (*value[i].data == '#') {
+        dbg_assert(value[i].metric == 1);
+        alloc += arg_list[value[++i].metric].length() << 1;
+        continue;
+      }
+      alloc += value[i].metric;
+    }
   }
   
+  bool lwa = false; // "Last was arg"--True if the previous chunk was an argument.
   char* buf = new char[alloc], *bufat = buf;
   for (size_t i = 0; i < value.size(); i++)
     if (value[i].is_arg) {
-      register const string& argname = arg_list[value[i].metric];
-      memcpy(bufat, argname.c_str(), argname.length());
-      bufat += argname.length();
+      if (lwa) {
+        while (bufat > buf and is_useless(*--bufat)); ++bufat;
+        const string &ts = arg_list[value[i].metric];
+        register const char* argname = ts.c_str();
+        register size_t sz = ts.length();
+        while (is_useless(*argname)) ++argname, --sz;
+        memcpy(bufat, argname, sz);
+        bufat += sz;
+      }
+      else {
+        register const string& argname = arg_list[value[i].metric];
+        memcpy(bufat, argname.c_str(), argname.length());
+        bufat += argname.length();
+        lwa = false;
+      }
+      lwa = true;
     }
     else {
       memcpy(bufat, value[i].data, value[i].metric);
       bufat += value[i].metric;
     }
   *bufat = 0;
-  dest.consume(buf, alloc-1);
+  dest.consume(buf, bufat-buf);
   return true;
 }

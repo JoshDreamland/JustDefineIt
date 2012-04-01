@@ -81,7 +81,7 @@ void lexer_cpp::skip_string(error_handler *herr)
       }
     }
     else if (cfile[pos] == '\n' or cfile[pos] == '\r') {
-      herr->error("Unterminated string literal");
+      herr->error("Unterminated string literal", filename, line, pos-lpos);
       break;
     }
   }
@@ -131,7 +131,16 @@ void lexer_cpp::skip_whitespace()
     return;
   }
 }
-  
+
+void lexer_cpp::enter_macro(macro_scalar* ms)
+{
+  if (ms->value.empty()) return;
+  openfile of(filename, line, lpos, *this);
+  files.enswap(of);
+  filename = ms->name.c_str();
+  this->encapsulate(ms->value);
+  line = lpos = pos = 0;
+}
 bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
 {
   const size_t spos = pos, slpos = lpos, sline = line;
@@ -163,8 +172,9 @@ bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
   openfile of(filename, line, lpos, *this);
   files.enswap(of);
   alias(files.top().file);
-  mf->parse(params, *this, herr);
-  
+  mf->parse(params, *this, herr, token_t(token_basics(TT_INVALID,filename,line,lpos-pos)));
+  filename = mf->name.c_str();
+  lpos = line = 0;
   return true;  
 }
 
@@ -179,7 +189,7 @@ string lexer_cpp::read_preprocessor_args(error_handler *herr)
       break;
     }
     if (cfile[pos] == '\n' or cfile[pos] == '\r') return "";
-    if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) ++pos;
+    if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) { lpos = pos++; ++line; }
     break;
   }
   string res;
@@ -193,8 +203,8 @@ string lexer_cpp::read_preprocessor_args(error_handler *herr)
         res += string(cfile+spos,pos-spos-1), res += " ";
         skip_multiline_comment(); spos = pos; continue; }
     }
-    if (cfile[pos] == '\'' or cfile[pos] == '"') skip_string(herr);
-    else if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) ++pos;
+    if (cfile[pos] == '\'' or cfile[pos] == '"') skip_string(herr), ++pos;
+    else if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) { lpos = pos++; ++line; }
     else ++pos;
   }
   res += string(cfile+spos,pos-spos);
@@ -207,6 +217,9 @@ string lexer_cpp::read_preprocessor_args(error_handler *herr)
   }
   return res;
 }
+
+/// Optional AST rendering
+#include <General/debug_macros.h>
 
 /**
   @section Implementation
@@ -277,24 +290,18 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       size_t i = 0;
       while (is_useless(argstr[i])) ++i;
       if (!is_letterd(argstr[i])) {
-        herr->error("Expected macro definiendum at this point", filename, line, pos);
+        herr->error("Expected macro definiendum at this point", filename, line, pos-lpos);
       }
       const size_t nsi = i;
       while (is_letterd(argstr[++i]));
       pair<macro_iter, bool> mins = macros.insert(pair<string,macro_type*>(argstr.substr(nsi,i-nsi),NULL));
-      
-      if (!mins.second) { // If no insertion was made; ie, the macro existed already.
-        herr->warning("Redeclaring macro", filename, line, pos);
-        macro_type::free(mins.first->second);
-        mins.first->second = NULL;
-      }
       
       if (argstr[i] == '(') {
         vector<string> paramlist;
         while (is_useless(argstr[++i]));
         if (argstr[i] != ')') for (;;) {
           if (!is_letter(argstr[i])) {
-            herr->error("Expected parameter name for macro declaration", filename, line, pos);
+            herr->error("Expected parameter name for macro declaration", filename, line, pos-lpos);
             break;
           }
           const size_t si = i;
@@ -306,12 +313,25 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           if (argstr[i] == ',') { while (is_useless(argstr[++i])); continue; }
           herr->error("Expected comma or closing parenthesis at this point");
         }
-        mins.first->second = new macro_function(paramlist, argstr.substr(++i), false);
+        
+        if (!mins.second) { // If no insertion was made; ie, the macro existed already.
+        //  if ((size_t)mins.first->second->argc != paramlist.size())
+        //    herr->warning("Redeclaring macro function `" + mins.first->first + '\'', filename, line, pos-lpos);
+          macro_type::free(mins.first->second);
+          mins.first->second = NULL;
+        }
+        mins.first->second = new macro_function(mins.first->first,paramlist, argstr.substr(++i), false);
       }
       else
       {
+        if (!mins.second) { // If no insertion was made; ie, the macro existed already.
+        //  if (mins.first->second->argc != -1 or ((macro_scalar*)mins.first->second)->value != argstr.substr(i))
+        //    herr->warning("Redeclaring macro `" + mins.first->first + '\'', filename, line, pos-lpos);
+          macro_type::free(mins.first->second);
+          mins.first->second = NULL;
+        }
         while (is_useless(argstr[i])) ++i;
-        mins.first->second = new macro_scalar(argstr.substr(i));
+        mins.first->second = new macro_scalar(mins.first->first,argstr.substr(i));
       }
     } break;
     case_error: {
@@ -383,9 +403,11 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           mlex->update();
           if (a.parse_expression(mlex, herr) or !a.eval()) {
             token_t res;
+            render_ast(a, "if_directives");
             conditionals.push(condition(0,1));
             break;
           }
+          render_ast(a, "if_directives");
           conditionals.push(condition(1,0));
         }
         else
@@ -433,8 +455,37 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       } break;
     case_import:
       break;
-    case_include:
-      break;
+    case_include: {
+        string fnfind = read_preprocessor_args(herr);
+        if (!conditionals.empty() and !conditionals.top().is_true)
+          break;
+        bool chklocal = false;
+        char match = '>';
+        if (fnfind[0] == '"') chklocal = true, match = '"';
+        else if (fnfind[0] != '<') {
+          herr->error("Expected filename inside <> or \"\" delimiters", filename, line, pos - lpos);
+          break;
+        }
+        fnfind[0] = '/';
+        for (size_t i = 0; i < fnfind.length(); ++i)
+          if (fnfind[i] == match) { fnfind.erase(i); break; }
+        
+        string incfn;
+        llreader incfile;
+        if (chklocal) incfile.open((incfn = fnfind).c_str());
+        for (size_t i = 0; !incfile.is_open() and i < builtin.search_dir_count(); ++i)
+          incfile.open((incfn = builtin.search_dir(i) + fnfind).c_str());
+        if (!incfile.is_open()) {
+          herr->error("Could not find " + fnfind.substr(1), filename, line, pos-lpos);
+          break;
+        }
+        
+        openfile of(filename, line, lpos, *this);
+        files.enswap(of);
+        pair<set<string>::iterator, bool> fi = visited_files.insert(incfn);
+        filename = fi.first->c_str();
+        this->consume(incfile);
+      } break;
     case_line:
       break;
     case_pragma:
@@ -475,9 +526,10 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
 
 token_t lexer_cpp::get_token(error_handler *herr)
 {
-  if (pos >= length) goto POP_FILE;
   for (;;) // Loop until we find something or hit world's end
   {
+    if (pos >= length) goto POP_FILE;
+    
     // Skip all whitespace
     while (is_useless(cfile[pos])) {
       if (cfile[pos] == '\n') ++line, lpos = pos;
@@ -511,14 +563,8 @@ token_t lexer_cpp::get_token(error_handler *herr)
       macro_iter mi = macros.find(fn);
       if (mi != macros.end()) {
         if (mi->second->argc < 0) {
-          openfile of(filename, line, lpos, *this);
-          files.enswap(of);
-          filename = fn.c_str();
-          macro_scalar *ms = (macro_scalar*)mi->second;
-          this->encapsulate(ms->value);
-          filename = mi->first.c_str();
-          line = lpos = pos = 0;
-          return get_token(herr);
+          enter_macro((macro_scalar*)mi->second);
+          continue;
         }
         else {
           if (parse_macro_function((macro_function*)mi->second, herr))
@@ -606,6 +652,11 @@ token_t lexer_cpp::get_token(error_handler *herr)
       case '#':
         return handle_preprocessor(herr), get_token(herr);
       
+      case '\\':
+        if (cfile[pos] != '\n' and cfile[pos] != '\r')
+          herr->error("Stray backslash", filename, line, pos-lpos);
+        continue;
+      
       default:
         return token_t(token_basics(TT_INVALID,filename,line,pos-lpos++));
     }
@@ -614,8 +665,14 @@ token_t lexer_cpp::get_token(error_handler *herr)
   return token_t();
   
   POP_FILE: // This block was created instead of a helper function to piss Rusky off.
-  if (files.empty())
+  if (pop_file())
     return token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos));
+  return get_token(herr);
+}
+
+bool lexer_cpp::pop_file() {
+  if (files.empty())
+    return true;
   
   // Close whatever file we have open now
   close();
@@ -628,10 +685,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
   
   // Pop file stack and return next token in the containing file.
   files.pop();
-  return get_token(herr);
+  return false;
 }
   
-lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros): macros(pmacros), filename("stdcall/file.cpp"), line(1), lpos(0), mlex(new lexer_macro(this))
+lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): macros(pmacros), filename(fname), line(1), lpos(0), mlex(new lexer_macro(this))
 {
   consume(input); // We are also an llreader. Consume the given one using the inherited method.
   keywords["class"] = TT_CLASS;
@@ -671,12 +728,15 @@ lexer_macro::lexer_macro(lexer_cpp *enc): pos(enc->pos), lcpp(enc) { }
 void lexer_macro::update() { cfile = lcpp->data; length = lcpp->length; }
 token_t lexer_macro::get_token(error_handler *herr)
 {
-  if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
   for (;;) // Loop until we find something or hit world's end
   {
+    if (pos >= length) {
+      if (lcpp->pop_file())
+        return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
+      update();
+    }
     // Skip all whitespace
-    while (cfile[pos] == ' ' or cfile[pos] == '\t')
-      if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
+    if (cfile[pos] == ' ' or cfile[pos] == '\t') { ++pos; continue; }
     if (cfile[pos] == '\n' or cfile[pos] == '\r') return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
     
     //============================================================================================
@@ -704,13 +764,46 @@ token_t lexer_macro::get_token(error_handler *herr)
       
       string fn(sp, cfile + pos); // We'll need a copy of this thing for lookup purposes
       
-      macro_iter mi = lcpp->macros.find(fn);
-      if (mi != lcpp->macros.end()) {
-        cout << "FIX ME" << endl;
+      static const char zero[] = "0", one[] = "1";
+      
+      if (fn == "defined") {
+        while (is_useless_macros(cfile[pos])) ++pos;
+        bool endpar = cfile[pos] == '(';
+        if (endpar) while (is_useless_macros(cfile[++pos]));
+        
+        if (!is_letter(cfile[pos])) {
+          herr->error("Expected identifier to look up as macro", lcpp->filename,lcpp->line,pos-lcpp->lpos);
+          continue;
+        }
+        
+        const size_t spos = pos;
+        while (is_letterd(cfile[++pos]));
+        string macro(cfile + spos, pos-spos);
+        
+        if (endpar) {
+          while (is_useless_macros(cfile[pos])) ++pos;
+          if (cfile[pos] != ')') herr->error("Expected ending parenthesis for defined()", lcpp->filename,lcpp->line,pos-lcpp->lpos);
+        }
+        
+        return token_t(token_basics(TT_DECLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), lcpp->macros.find(macro)==lcpp->macros.end()? zero : one, 1);
       }
       
-      static const char zero[] = "0";
-      return token_t(token_basics(TT_DECLITERAL,"some file",0,0), zero, 1);
+      macro_iter mi = lcpp->macros.find(fn);
+      if (mi != lcpp->macros.end()) {
+        if (mi->second->argc < 0) {
+          lcpp->enter_macro((macro_scalar*)mi->second);
+          update();
+          continue;
+        }
+        else {
+          if (lcpp->parse_macro_function((macro_function*)mi->second, herr)) {
+            update();
+            continue;
+          }
+        }
+      }
+      
+      return token_t(token_basics(TT_DECLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), zero, 1);
     }
     
     //============================================================================================

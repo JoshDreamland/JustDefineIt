@@ -17,6 +17,17 @@
 					<Add option="-DDEBUG_MODE" />
 				</Compiler>
 			</Target>
+			<Target title="Debug-Render">
+				<Option output="bin/Debug/JustDefineIt" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DDEBUG_MODE" />
+					<Add option="-DRENDER_ASTS" />
+				</Compiler>
+			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/JustDefineIt" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
@@ -109,6 +120,7 @@
 		<Unit filename="test/MAIN.cc" />
 		<Unit filename="test/debug_lexer.cpp" />
 		<Unit filename="test/debug_lexer.h" />
+		<Unit filename="test/defines.txt" />
 		<Unit filename="test/modifiers.txt" />
 		<Unit filename="test/primitives.txt" />
 		<Unit filename="test/test.cc">

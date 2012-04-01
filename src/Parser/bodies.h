@@ -151,6 +151,22 @@ namespace jdip {
     int handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags);
     
     /**
+      Parse a list of declarations, copying them into the given scope.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  token  The token that was read before this function was invoked.
+                     This will be updated to represent the next non-type token
+                     in the stream. [in-out]
+      @param inherited_flags Any flags which should be given to each declared definition.
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_typedef(definition_scope *scope, token_t& token, unsigned inherited_flags);
+    
+    /**
       Parse a namespace definition.
       
       This function is a complete handler. All inputs are liable to be modified.
@@ -178,10 +194,13 @@ namespace jdip {
                      either TT_CLASS or TT_STRUCT. Upon termination, the type
                      of this token will be TT_DECLARATOR with extra info set to
                      the new definition unless an error occurs. [in-out]
+      @param inherited_flags  The flags that will be given to the class, if a new
+                              definition is instantiated for it. These flags are
+                              NOT given to memebers of the class.
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_class(definition_scope *scope, token_t& token);
+    int handle_class(definition_scope *scope, token_t& token, int inherited_flags);
     
     /**
       Handle parsing an entire scope.
