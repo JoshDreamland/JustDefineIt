@@ -186,8 +186,11 @@ static string fulltype_string(full_type& ft);
 static string typeflags_string(definition *type, unsigned flags) {
   string res;
   for (int i = 1; i <= 0x10000; i <<= 1)
-    if (flags & i)
-      res += builtin_decls_byflag[i]->name + " ";
+    if (flags & i) {
+      jdip::tf_flag_map::iterator tfi = builtin_decls_byflag.find(i);
+      if (tfi == builtin_decls_byflag.end()) res += "<ERROR:NOSUCHFLAG> ";
+      else res += tfi->second->name + " ";
+    }
   if (type)
     res += type->name;
   else res += "<NULL>";

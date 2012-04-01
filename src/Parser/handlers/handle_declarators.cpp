@@ -56,7 +56,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   // Add it to our definitions map, without overwriting the existing member.
   definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
   if (ins.second) { // If we successfully inserted,
-    ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags | inherited_flags);
+    ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
     ins.first->second->flags |= inherited_flags;
   }
   #ifndef NO_ERROR_REPORTING

@@ -114,7 +114,7 @@ namespace jdi {
     ref_stack referencers; ///< Any referencers modifying the type, such as *, &, [], or (*)().
     unsigned int flags; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
     /// Construct with all information. Consumes the given \c ref_stack.
-    definition_typed(string name, definition* p, definition* tp, ref_stack &rf, unsigned int flgs);
+    definition_typed(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_TYPED);
   };
   /**
     @struct jdi::function_overload
