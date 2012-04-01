@@ -130,4 +130,7 @@ declare_integer(yes_parameters_work, yes_they_still_work);
   #endif
 #endif
 
+#define empty_function()
+empty_function();
+
 int zzzzz_success;

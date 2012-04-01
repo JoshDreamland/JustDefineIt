@@ -40,8 +40,10 @@ macro_scalar::~macro_scalar() {}
 
 macro_function::macro_function(string n, string val): macro_type(n,0), value(), args() {
   register const size_t bs = val.length();
-  char *buf = new char[bs]; memcpy(buf, val.c_str(), bs);
-  value.push_back(mv_chunk(buf, bs));
+  if (bs) {
+    char *buf = new char[bs]; memcpy(buf, val.c_str(), bs);
+    value.push_back(mv_chunk(buf, bs));
+  }
 }
 macro_function::macro_function(string n, const vector<string> &arglist, string val, bool variadic): macro_type(n,arglist.size()+variadic), value(), args(arglist) {
   preparse(val);
@@ -66,8 +68,13 @@ void macro_type::free(const macro_type* whom) {
 macro_function::mv_chunk::mv_chunk(const char* str, size_t start, size_t len): metric(len), is_arg(false) {
   data = new char[len];
   memcpy(data, str+start, len);
+  if (!metric)
+    cout << "IDIOT!" << endl;
 }
-macro_function::mv_chunk::mv_chunk(char* ndata, size_t len): data(ndata), metric(len), is_arg(false) {}
+macro_function::mv_chunk::mv_chunk(char* ndata, size_t len): data(ndata), metric(len), is_arg(false) {
+  if (!metric)
+    cout << "IDIOT!" << endl;
+}
 macro_function::mv_chunk::mv_chunk(size_t argnum): data(NULL), metric(argnum), is_arg(true) {}
 
 string macro_function::mv_chunk::toString() {
@@ -151,7 +158,8 @@ void jdip::macro_function::preparse(string val)
     
     i++;
   }
-  value.push_back(mv_chunk(val.c_str(), push_from, val.length() - push_from));
+  if (val.length() > push_from)
+    value.push_back(mv_chunk(val.c_str(), push_from, val.length() - push_from));
 }
 
 #include <iostream>
@@ -163,10 +171,15 @@ bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error
   if ((arg_list.size() > args.size() and args.size() == (unsigned)argc))
     return errtok.report_error(herr, "Too many arguments to macro function `" + name + "'"), false;
   size_t alloc = 1;
+  
+  if (value.empty())
+    return true;
+  
   for (size_t i = 0; i < value.size(); i++) {
     if (value[i].is_arg)
       alloc += arg_list[value[i].metric].length();
     else {
+      dbg_assert(value[i].metric > 0);
       if (*value[i].data == '#') {
         dbg_assert(value[i].metric == 1);
         alloc += arg_list[value[++i].metric].length() << 1;

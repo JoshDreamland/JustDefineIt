@@ -101,6 +101,7 @@ int main() {
     enigma.output_macro("concat");
     enigma.output_macro("_Mdouble_");
     enigma.output_macro("__MATH_PRECNAME");
+    enigma.output_macro("declare_integer");
   }
   else
     cout << "Failed to open file for parsing!" << endl;
