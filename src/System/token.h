@@ -36,6 +36,8 @@ namespace jdip {
     TT_UNION,      ///< The `union' keyword.
     TT_NAMESPACE,  ///< The `namespace' keyword.
     
+    TT_ASM,        ///< The `asm' keyboard
+    
     TT_IDENTIFIER, ///< A standard identifier.
     
     TT_TEMPLATE,   ///< The `template' keyword, which should be followed by <...>
@@ -61,7 +63,6 @@ namespace jdip {
     TT_GREATERTHAN,   ///< A greater-than symbol, or right triangle bracket, `>'.
     
     TT_TILDE,         ///< The tilde `~' symbol.
-    TT_EQUALS,        ///< An equals sign, `='. Used for assigning default values and const values.
     TT_OPERATOR,      ///< Any sort of operator. This token is used only when the token has no other purpose but as an operator.
     
     TT_COMMA,         ///< A comma, `,'. Separates items in lists.

@@ -88,7 +88,7 @@ namespace jdip {
     @return Returns the \c full_type read from the stream. Leaves \p token indicating the
             first unhandled token.
   **/
-  full_type read_type(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr = def_error_handler);
+  full_type read_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
   /**
     Read a series of referencers from the given input stream.
     
@@ -110,7 +110,7 @@ namespace jdip {
     @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
              error state, as the error will have already been reported to the given error handler.
   **/
-  int read_referencers(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, error_handler *herr = def_error_handler);
+  int read_referencers(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
   /**
     @class context_parser
     @brief A field-free utility class extending \c context, implementing the
@@ -140,7 +140,7 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  scope  The scope in which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      This will be updated to represent the next non-type token
                      in the stream. [in-out]
@@ -151,28 +151,12 @@ namespace jdip {
     int handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags);
     
     /**
-      Parse a list of declarations, copying them into the given scope.
-      
-      This function is a complete handler. All inputs are liable to be modified.
-      See \section Handlers for details.
-      
-      @param  scope  The scope into which declarations will be stored. [in-out]
-      @param  token  The token that was read before this function was invoked.
-                     This will be updated to represent the next non-type token
-                     in the stream. [in-out]
-      @param inherited_flags Any flags which should be given to each declared definition.
-      
-      @return Zero if no error occurred, a non-zero exit status otherwise.
-    **/
-    int handle_typedef(definition_scope *scope, token_t& token, unsigned inherited_flags);
-    
-    /**
       Parse a namespace definition.
       
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  scope  The scope in which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      At the start of this call, the type of this token must be
                      TT_NAMESPACE. Upon termination, the type of this token will
@@ -188,7 +172,7 @@ namespace jdip {
       This function is a complete handler. All inputs are liable to be modified.
       See \section Handlers for details.
       
-      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  scope  The scope in which declarations will be stored. [in-out]
       @param  token  The token that was read before this function was invoked.
                      At the start of this call, the type of this token must be
                      either TT_CLASS or TT_STRUCT. Upon termination, the type
@@ -198,9 +182,29 @@ namespace jdip {
                               definition is instantiated for it. These flags are
                               NOT given to memebers of the class.
       
-      @return Zero if no error occurred, a non-zero exit status otherwise.
+      @return The enum created/referenced, or NULL if some unrecoverable error occurred
     **/
-    int handle_class(definition_scope *scope, token_t& token, int inherited_flags);
+    definition_class* handle_class(definition_scope *scope, token_t& token, int inherited_flags);
+    
+    /**
+      Parse an enumeration. Reads the enumeration and its constants into the given scope.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope in which declarations will be stored. [in-out]
+      @param  token  The token that was read before this function was invoked.
+                     At the start of this call, the type of this token must be
+                     either TT_CLASS or TT_STRUCT. Upon termination, the type
+                     of this token will be TT_DECLARATOR with extra info set to
+                     the new definition unless an error occurs. [in-out]
+      @param inherited_flags  The flags that will be given to the class, if a new
+                              definition is instantiated for it. These flags are
+                              NOT given to memebers of the class.
+      
+      @return The enum created/referenced, or NULL if some unrecoverable error occurred.
+    **/
+    definition_enum* handle_enum(definition_scope *scope, token_t& token, int inherited_flags);
     
     /**
       Handle parsing an entire scope.
@@ -249,7 +253,7 @@ namespace jdip {
       @return  A token representing the found result. For instance, given name = "int", a
                token type \c TT_DECLARATOR would be returned.
     **/
-    token_t look_up_token(definition_scope* scope, string name, token_t def);
+    static token_t look_up_token(definition_scope* scope, string name, token_t def);
   };
 }
 

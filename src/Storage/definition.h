@@ -29,21 +29,20 @@ namespace jdi {
   enum DEF_FLAGS
   {
     DEF_TEMPLATE =     1 <<  0, ///< This definition has template parameters attached.
-    DEF_TYPENAME =     1 <<  1, ///< This definition can be used as a typename. This does not imply that it has a valid type.
+    DEF_TYPENAME =     1 <<  1, ///< This definition can be used as a typename. This does not imply that it has a valid type; see DEF_TYPED.
     DEF_NAMESPACE =    1 <<  2, ///< This definition is a namespace.
     DEF_CLASS =        1 <<  3, ///< This definition is a class or structure. 
     DEF_ENUM =         1 <<  4, ///< This definition is an enumeration of valued constants.
-    DEF_TYPED =        1 <<  5, ///< This definition contains a type and referencer list.
+    DEF_TYPED =        1 <<  5, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
     DEF_FUNCTION =     1 <<  6, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_TYPEDEF =      1 <<  7, ///< This type is aliased to another type; the type member exists but may be NULL.
-    DEF_VALUED =       1 <<  8, ///< This definition has a constant integer value attached.
-    DEF_DEFAULTED =    1 <<  9, ///< This definition has a default expression attached.
-    DEF_TEMPPARAM =    1 << 10, ///< This definition is a parameter of a template.
-    DEF_EXTERN =       1 << 11, ///< This definition was declared with the "extern" flag.
-    DEF_HYPOTHETICAL = 1 << 12, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_PRIVATE =      1 << 13, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 14, ///< This definition was declared as a protected member.
-    DEF_INCOMPLETE =   1 << 15  ///< This definition was declared but not implemented.
+    DEF_VALUED =       1 <<  7, ///< This definition has a constant integer value attached.
+    DEF_DEFAULTED =    1 <<  8, ///< This definition has a default expression attached.
+    DEF_TEMPPARAM =    1 <<  9, ///< This definition is a parameter of a template.
+    DEF_EXTERN =       1 << 10, ///< This definition was declared with the "extern" flag.
+    DEF_HYPOTHETICAL = 1 << 11, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
+    DEF_PRIVATE =      1 << 12, ///< This definition was declared as a private member.
+    DEF_PROTECTED =    1 << 13, ///< This definition was declared as a protected member.
+    DEF_INCOMPLETE =   1 << 14  ///< This definition was declared but not implemented.
   };
   
   struct definition;
@@ -53,6 +52,7 @@ namespace jdi {
   struct definition_valued;
   struct definition_scope;
   struct definition_class;
+  struct definition_enum;
   struct definition_template;
 }
 
@@ -112,8 +112,9 @@ namespace jdi {
   struct definition_typed: definition {
     definition* type; ///< The definition of the type of this definition. This is not guaranteed to be non-NULL.
     ref_stack referencers; ///< Any referencers modifying the type, such as *, &, [], or (*)().
-    unsigned int flags; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
+    unsigned int modifiers; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
     /// Construct with all information. Consumes the given \c ref_stack.
+    definition_typed(string name, definition* p, definition* tp, unsigned int typeflags, int flags = DEF_TYPED);
     definition_typed(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_TYPED);
   };
   /**
@@ -141,12 +142,14 @@ namespace jdi {
   **/
   struct definition_valued: definition_typed {
     value value_of; ///< The constant value of this definition.
+    definition_valued(); ///< Default constructor; invalidates value.
+    definition_valued(string vname, definition *parnt, definition* type, unsigned int flgs, value &val); ///< Construct with a value and type.
   };
   
   /**
     @struct jdi::definition_scope
     A piece of a definition for anything containing its own scope.
-    This class is meant for enums and namespaces, mostly. It is a base
+    This class is meant for namespaces, mostly. It is a base
     class for structs and classes; see \c jdi::definition_polyscope.
   **/
   struct definition_scope: definition {
@@ -190,9 +193,10 @@ namespace jdi {
     **/
     ~definition_scope();
   };
+  
   /**
     @struct jdi::definition_class
-    An extension of \c jdi::definition_class for classes and structures, which can have ancestors.
+    An extension of \c jdi::definition_scope for classes and structures, which can have ancestors.
   **/
   struct definition_class: definition_scope {
     /// Simple structure for storing an inheritance type and the \c definition* of an ancestor.
@@ -204,6 +208,15 @@ namespace jdi {
     };
     vector<ancestor> ancestors; ///< Ancestors of this structure or class
     definition_class(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_TYPENAME);
+  };
+  
+  /**
+    @struct jdi::definition_enum
+    An extension of \c jdi::definition for enums, which contain mirrors of members in the parent scope.
+  **/
+  struct definition_enum: definition_typed {
+    definition_scope::defmap constants;
+    definition_enum(string classname, definition_scope* parent, unsigned flags = DEF_ENUM | DEF_TYPENAME);
   };
   
   /**

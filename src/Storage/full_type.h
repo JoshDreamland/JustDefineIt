@@ -26,8 +26,13 @@ namespace jdi {
   struct full_type;
 }
 
+#endif
+
 #include <Storage/definition.h>
 #include <Storage/references.h>
+
+#ifndef _FULL_TYPE__H__DETAIL
+#define _FULL_TYPE__H__DETAIL
 
 namespace jdi {
   /**
@@ -44,6 +49,7 @@ namespace jdi {
     
     full_type(); ///< Default constructor.
     full_type(jdi::definition*); ///< Construct with only a definition.
+    full_type(jdi::definition* d, int f); ///< Construct with a definition and flags, but no refs.
     full_type(jdi::definition*, jdi::ref_stack, int); ///< Construct from individual components. Consumes the given \c ref_stack.
     full_type(const full_type&); ///< Copy constructor. Makes a copy, so slowish.
   };

@@ -39,22 +39,6 @@ using namespace jdi;
 **/
 token_t jdip::context_parser::read_next_token(definition_scope *scope)
 {
-  token_t r = lex->get_token(herr);
-  if (r.type == TT_IDENTIFIER)
-    return look_up_token(scope,string((const char*)r.extra.content.str,r.extra.content.len),r);
-  return r;
+  return lex->get_token_in_scope(scope, herr);
 }
 
-token_t jdip::context_parser::look_up_token(definition_scope* scope, string name, token_t defalt)
-{
-  definition *def = scope->look_up(name);
-  if (!def) return defalt;
-  
-  if (def->flags & DEF_TYPENAME) {
-    defalt.extra.def = def;
-    defalt.type = TT_DECLARATOR;
-    return defalt;
-  }
-  
-  return defalt;
-}

@@ -37,7 +37,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   // Outsource to read_type, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
   // This means an identifier if the syntax is correct.
-  full_type tp = read_type(lex, token, scope);
+  full_type tp = read_type(lex, token, scope, this, herr);
   
   // Make sure we actually read a valid type.
   if (!tp.def) {
@@ -48,16 +48,13 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   after_comma:
   
   // Make sure we do indeed find ourselves at an identifier to declare.
-  if (tp.refs.name.empty()) {
-    token.report_error(herr, "Declaration doesn't declare anything");
-    return 2;
-  }
+  if (tp.refs.name.empty())
+    return 0;
   
   // Add it to our definitions map, without overwriting the existing member.
   definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
   if (ins.second) { // If we successfully inserted,
     ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
-    ins.first->second->flags |= inherited_flags;
   }
   #ifndef NO_ERROR_REPORTING
   else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
@@ -95,7 +92,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           token = read_next_token(scope);
           
           // Read a new type
-          read_referencers(tp.refs, lex, token, scope);
+          read_referencers(tp.refs, lex, token, scope, this, herr);
           
           // Just hop into the error checking above and pass through the definition addition again.
         goto after_comma;
@@ -109,7 +106,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_IDENTIFIER:
       case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_COLON:
       case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET: case TT_LEFTBRACE: case TT_RIGHTBRACE:
-      case TT_TILDE: case TT_EQUALS: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_INVALID: default:
+      case TT_ASM: case TT_TILDE: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_INVALID: default:
         return 0;
     }
   }

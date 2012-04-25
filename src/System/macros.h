@@ -107,7 +107,7 @@ namespace jdip {
       mv_chunk(char* data_buf, size_t length); ///< Construct a new macro value chunk as data, with a length, consuming data.
       mv_chunk(size_t argnum); ///< Construct a new macro value chunk as a reference to the value of a parameter with the given index
       mv_chunk(); ///< Default constructor; do not use. Created to appease the STL.
-      string toString(); ///< For debugging purposes, convert to a string.
+      string toString(macro_function *mf); ///< For debugging purposes, convert to a string.
     };
     
     /** The expanded value of this macro.
@@ -144,16 +144,16 @@ namespace jdip {
         @note
           If \p arg_list is empty, and \p variadic is false, the behavior is the same as the default constructor. 
     **/
-    macro_function(string n, const vector<string> &arg_list, string value="", bool variadic=0);
+    macro_function(string n, const vector<string> &arg_list, string value="", bool variadic=0, error_handler *herr = def_error_handler);
     
     /** An internal function used to parse the definiens of a macro into a vector for collapse at eval-time.
         Saves big on CPU when evaluating a function many times.
         @see jdi::macro_function::value
     **/
-    void preparse(string definiens);
+    void preparse(string definiens, error_handler *herr);
     
     /** Parse an argument vector into an llreader. **/
-    bool parse(const vector<string> &arg_list, llreader &dest, error_handler *herr, token_t errtok);
+    bool parse(vector<string> &arg_list, llreader &dest, error_handler *herr, token_t errtok);
     
     /// Big surprise: The macro_function destructor also does nothing.
     ~macro_function();

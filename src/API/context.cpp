@@ -149,6 +149,7 @@ void context::load_gnu_builtins()
 }
 
 #include <iostream>
+#include <General/parse_basics.h>
 
 void context::output_types(ostream &out) {
   out << "Unimplemented";
@@ -163,7 +164,7 @@ static inline void print_macro(macro_iter it, ostream &out = cout)
       out << mf->args[i] << (i+1 < mf->args.size() ? ", " : ((size_t)it->second->argc > mf->args.size()? "...": ""));
     out << ") \\" << endl;
     for (size_t i = 0; i < mf->value.size(); i++)
-      out << "  " << mf->value[i].toString() << (i+1 < mf->value.size()? "\\" : "") << endl;
+      out << "  " << mf->value[i].toString(mf) << (i+1 < mf->value.size()? "\\" : "") << endl;
   }
   else {
     out << "#define " << it->first << endl << "  " << ((macro_scalar*)it->second)->value << endl;
@@ -188,7 +189,7 @@ static string typeflags_string(definition *type, unsigned flags) {
   for (int i = 1; i <= 0x10000; i <<= 1)
     if (flags & i) {
       jdip::tf_flag_map::iterator tfi = builtin_decls_byflag.find(i);
-      if (tfi == builtin_decls_byflag.end()) res += "<ERROR:NOSUCHFLAG> ";
+      if (tfi == builtin_decls_byflag.end()) res += "<ERROR:NOSUCHFLAG:" + toString(i) + "> ";
       else res += tfi->second->name + " ";
     }
   if (type)
@@ -249,7 +250,7 @@ static string fulltype_string(full_type& ft) {
 }
 
 static void utility_printtype(definition_typed* t, ostream &out) {
-  out << typeflags_string(t->type, t->flags) << " ";
+  out << typeflags_string(t->type, t->modifiers) << " ";
   out << type_referencers_string_prefix(t->referencers);
   out << t->name;
   out << type_referencers_string_postfix(t->referencers);
@@ -261,6 +262,8 @@ static void utility_printrc(definition_scope* scope, ostream &out, string indent
     out << indent;
     if (it->second->flags & DEF_TYPED)
     {
+      if (it->second->flags & DEF_TYPENAME)
+        out << "typedef ";
       utility_printtype((definition_typed*)it->second, out);
       out << ";" << endl;
     }

@@ -1,3 +1,27 @@
+#define asm(x) {}
+#define __asm(x) {}
+#define __asm__(x) {}
+
+#include <math.h>
+
+//#include <math.h>
+
+typedef struct {
+  int a;
+} C_Decl_Struct;
+
+int assemblyfunction() asm(":mov $0, %eax");
+
+#define tostr(x) #x
+char *a = tostr(Hello world);
+
+enum consts {
+  xconst1 = 0,
+  xconst2 = 1,
+  xconst3 = 2
+};
+
+const void *lmaoparserdoesntdovoid();
 
 #if false
 
@@ -132,5 +156,15 @@ declare_integer(yes_parameters_work, yes_they_still_work);
 
 #define empty_function()
 empty_function();
+
+class aggregate_class *x_aggregate;
+
+struct C_struct *zci_a;
+namespace gertrude {
+  struct C_struct* a;
+  struct C_struct {
+    int ololol;
+  };
+}
 
 int zzzzz_success;

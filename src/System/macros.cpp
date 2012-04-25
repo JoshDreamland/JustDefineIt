@@ -45,8 +45,8 @@ macro_function::macro_function(string n, string val): macro_type(n,0), value(), 
     value.push_back(mv_chunk(buf, bs));
   }
 }
-macro_function::macro_function(string n, const vector<string> &arglist, string val, bool variadic): macro_type(n,arglist.size()+variadic), value(), args(arglist) {
-  preparse(val);
+macro_function::macro_function(string n, const vector<string> &arglist, string val, bool variadic, error_handler *herr): macro_type(n,arglist.size()+variadic), value(), args(arglist) {
+  preparse(val, herr);
 }
 macro_function::~macro_function() {
   for (size_t i = 0; i < value.size(); ++i)
@@ -68,17 +68,12 @@ void macro_type::free(const macro_type* whom) {
 macro_function::mv_chunk::mv_chunk(const char* str, size_t start, size_t len): metric(len), is_arg(false) {
   data = new char[len];
   memcpy(data, str+start, len);
-  if (!metric)
-    cout << "IDIOT!" << endl;
 }
-macro_function::mv_chunk::mv_chunk(char* ndata, size_t len): data(ndata), metric(len), is_arg(false) {
-  if (!metric)
-    cout << "IDIOT!" << endl;
-}
+macro_function::mv_chunk::mv_chunk(char* ndata, size_t len): data(ndata), metric(len), is_arg(false) {}
 macro_function::mv_chunk::mv_chunk(size_t argnum): data(NULL), metric(argnum), is_arg(true) {}
 
-string macro_function::mv_chunk::toString() {
-  if (is_arg) return "arg";
+string macro_function::mv_chunk::toString(macro_function *mf) {
+  if (is_arg) return "{{" + mf->args[metric] + "}}";
   return string(data,metric);
 }
 
@@ -96,7 +91,7 @@ string macro_function::mv_chunk::toString() {
   comments and strings, as well as, according to the expanded-value specification
   in \c jdip::macro_function::value, handle the # and ## operators.
 **/
-void jdip::macro_function::preparse(string val)
+void jdip::macro_function::preparse(string val, error_handler *herr)
 {
   unsigned push_from = 0;
   map<string,int> parameters;
@@ -154,6 +149,21 @@ void jdip::macro_function::preparse(string val)
         push_from = i;
         continue;
       }
+      if (--i > push_from) // If we've covered any ground since our last value push,
+        value.push_back(mv_chunk(val.c_str(), push_from, i-push_from)); // Push it onto our value
+      while (is_useless_macros(val[++i]));
+      push_from = i; // Store current position just in case something stupid happens
+      if (!is_letter(val[i])) { herr->error("Expected parameter name following '#' token; `" + val + "'[" + toString(i) + "] is not a valid identifier character"); continue; }
+      const size_t asi = i;
+      while (is_letterd(val[++i]));
+      map<string,int>::iterator pi = parameters.find(val.substr(asi,i-asi));
+      if (pi == parameters.end()) { herr->error("Expected parameter name following '#' token: `" + val.substr(asi,i-asi) + "' does not name a parameter"); continue; }
+      
+      // Push our string junk
+      value.push_back(mv_chunk("#", 0, 1));
+      value.push_back(mv_chunk(pi->second));
+      
+      push_from = i; // Indicate the new starting position of data to be pushed
     }
     
     i++;
@@ -164,16 +174,19 @@ void jdip::macro_function::preparse(string val)
 
 #include <iostream>
 #include <System/token.h>
-bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error_handler *herr, token_t errtok)
+bool macro_function::parse(vector<string> &arg_list, llreader &dest, error_handler *herr, token_t errtok)
 {
-  if (arg_list.size() < args.size())
-    return errtok.report_error(herr, "Too few arguments to macro function `" + name + "': provided " + toString(arg_list.size()) + ", requested " + toString(args.size())), false;
-  if ((arg_list.size() > args.size() and args.size() == (unsigned)argc))
+  if (arg_list.size() < args.size()) {
+    if (arg_list.size() + 1 < args.size())
+      return errtok.report_error(herr, "Too few arguments to macro function `" + name + "': provided " + toString(arg_list.size()) + ", requested " + toString(args.size())), false;
+    arg_list.push_back("");
+  }
+  else if ((arg_list.size() > args.size() and args.size() == (unsigned)argc))
     return errtok.report_error(herr, "Too many arguments to macro function `" + name + "'"), false;
   size_t alloc = 1;
   
   if (value.empty())
-    return true;
+    return false;
   
   for (size_t i = 0; i < value.size(); i++) {
     if (value[i].is_arg)
@@ -182,18 +195,19 @@ bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error
       dbg_assert(value[i].metric > 0);
       if (*value[i].data == '#') {
         dbg_assert(value[i].metric == 1);
-        alloc += arg_list[value[++i].metric].length() << 1;
+        alloc += (1 + arg_list[value[++i].metric].length()) << 1; // Make sure we have enough room for a string of nothing but newlines and backslashes
         continue;
       }
       alloc += value[i].metric;
     }
   }
   
-  bool lwa = false; // "Last was arg"--True if the previous chunk was an argument.
+  bool last_was_arg = false; // True if the previous chunk was an argument.
   char* buf = new char[alloc], *bufat = buf;
   for (size_t i = 0; i < value.size(); i++)
-    if (value[i].is_arg) {
-      if (lwa) {
+    if (value[i].is_arg)
+    {
+      if (last_was_arg) {
         while (bufat > buf and is_useless(*--bufat)); ++bufat;
         const string &ts = arg_list[value[i].metric];
         register const char* argname = ts.c_str();
@@ -206,11 +220,24 @@ bool macro_function::parse(const vector<string> &arg_list, llreader &dest, error
         register const string& argname = arg_list[value[i].metric];
         memcpy(bufat, argname.c_str(), argname.length());
         bufat += argname.length();
-        lwa = false;
       }
-      lwa = true;
+      last_was_arg = true;
     }
     else {
+      last_was_arg = false;
+      dbg_assert(value[i].metric > 0);
+      if (value[i].metric == 1 and *value[i].data == '#') {
+        *bufat++ = '"';
+        dbg_assert(value[i+1].is_arg /* This should be guaranteed by the preparser. */);
+        for (const char* bi = arg_list[value[++i].metric].c_str(); *bi; bi++) {
+          if (*bi == '\n') { *bufat++ = '\\', *bufat++ = 'n'; continue; }
+          if (*bi == '\\') { *bufat++ = '\\', *bufat++ = '\\'; continue; }
+          if (*bi == '\r') { *bufat++ = '\\', *bufat++ = 'r'; continue; }
+          *bufat++ = *bi;
+        }
+        *bufat++ = '"';
+        continue;
+      }
       memcpy(bufat, value[i].data, value[i].metric);
       bufat += value[i].metric;
     }

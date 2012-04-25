@@ -101,7 +101,6 @@ namespace jdi
         token.report_error(herr, "Expected expression");
         return NULL;
       
-      case TT_EQUALS:
       case TT_STRINGLITERAL:
       
       case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
@@ -113,7 +112,7 @@ namespace jdi
       
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
-      case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
+      case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
         token.report_error(herr, "Expected expression before %s token");
         return NULL;
@@ -193,7 +192,6 @@ namespace jdi
       case TT_LEFTBRACE:
       case TT_COMMA:
       case TT_SEMICOLON:
-      case TT_EQUALS:
       case TT_STRINGLITERAL:
       case TT_DECLITERAL:
       case TT_HEXLITERAL:
@@ -202,7 +200,7 @@ namespace jdi
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left_node;
       
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
-      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_ASM:
       return left_node;
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: return left_node;
@@ -242,6 +240,7 @@ namespace jdi
   
   value AST::AST_Node::eval() {
     if (type == AT_DECLITERAL) {
+      dec_literal:
       bool is_float = false;
       while (is_letter(content[content.length()-1])) {
         if (content[content.length()-1] == 'f' or content[content.length()-1] == 'd')
@@ -255,6 +254,11 @@ namespace jdi
       if (is_float)
         return value(atof(content.c_str()));
       return value(atol(content.c_str()));
+    }
+    if (type == AT_OCTLITERAL) {
+      if (content.length() == 1)
+        goto dec_literal; // A single octal digit is no different from a decimal digit
+      // TODO: IMPLEMENT
     }
     return value();
   }

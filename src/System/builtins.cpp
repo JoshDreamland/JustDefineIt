@@ -74,6 +74,7 @@ namespace jdi {
       if (usage_flags & UF_FLAG)
       {
         const unsigned long fb = 1 << builtin_decls_byflag.size();
+        cout << type_name << "=>" << fb << endl;
         builtin_decls_byflag[fb] = insit.first->second;
         insit.first->second->flagbit = fb;
       }
@@ -87,14 +88,16 @@ namespace jdi {
     add_declarator("static",   UF_FLAG);
     add_declarator("const",    UF_FLAG);
     add_declarator("register", UF_FLAG);
-    add_declarator("extern", UF_FLAG);
-    add_declarator("inline", UF_FLAG);
+    add_declarator("extern",   UF_FLAG);
+    add_declarator("inline",   UF_FLAG);
+    add_declarator("throw",    UF_FLAG);
     
     add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
     add_declarator("signed",   UF_STANDALONE_FLAG, "int");
     add_declarator("long",     UF_PRIMITIVE_FLAG);
     add_declarator("short",    UF_PRIMITIVE_FLAG);
     
+    add_declarator("void",     UF_PRIMITIVE);
     add_declarator("char",     UF_PRIMITIVE);
     add_declarator("int",      UF_PRIMITIVE);
     add_declarator("float",    UF_PRIMITIVE);

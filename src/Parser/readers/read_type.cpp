@@ -31,7 +31,7 @@
 using namespace jdip;
 using namespace jdi;
 
-full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr)
+full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
   definition* inferred_type = NULL;
   definition* overridable_type = NULL;
@@ -42,7 +42,16 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
   
   if (token.type != TT_DECLARATOR) {
     if (token.type != TT_DECFLAG) {
-      if (token.type != TT_DECLARATOR) {
+      if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_ENUM) {
+        if (cp)
+          rdef = token.type == TT_ENUM? (definition*)cp->handle_enum(scope,token,0): (definition*)cp->handle_class(scope,token,0);
+        else {
+          token = lex->get_token(herr);
+          if (token.type != TT_DECLARATOR)
+            token.report_error(herr, "Pre-defined class name must follow class/struct token at this point");
+        }
+      }
+      else {
         token.report_error(herr,"Type name expected here");
         return full_type();
       }
@@ -58,13 +67,15 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
           inferred_type = tf->def;
         rflags = tf->flagbit;
       }
+      token = lex->get_token_in_scope(scope,herr);
     }
   }
-  else
+  else {
     rdef = token.extra.def;
+    token = lex->get_token_in_scope(scope,herr);
+  }
   
   // Read any additional type info
-  token = lex->get_token();
   while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
   {
     if (token.type == TT_DECLARATOR) {
@@ -99,7 +110,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, e
   if (rdef == NULL)
     rdef = inferred_type;
   if (rdef)
-    jdip::read_referencers(rrefs, lex, token, scope, herr);
+    jdip::read_referencers(rrefs, lex, token, scope, cp, herr);
   return full_type(rdef, rrefs, rflags);
 }
 
@@ -115,7 +126,7 @@ static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_
 }
 static void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = code_ignorer;
 
-int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, error_handler *herr)
+int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
   ref_stack append;
   ref_stack postfix;
@@ -142,16 +153,19 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         token = lex->get_token(herr);
         if (!rhs) { // If we're still on the left-hand side
           rhs = true;
-          read_referencers(append, lex, token, scope, herr);
+          read_referencers(append, lex, token, scope, cp, herr);
           if (token.type != TT_RIGHTPARENTH) {
             token.report_error(herr, "Expected right parenthesis after nested referencers");
           }
         }
-        else {
+        else // Otherwise, we're on the right-hand side of the identifier, and we assume we are at function parameters.
+        {
           ref_stack::parameter_ct params;
+          
+          // Navigate to the end of the function parametr list
           while (token.type != TT_RIGHTPARENTH)
           {
-            full_type a = read_type(lex,token,scope,herr);
+            full_type a = read_type(lex,token,scope,cp,herr);
             params.throw_on(a);
             if (token.type != TT_COMMA) {
               if (token.type == TT_RIGHTPARENTH) break;
@@ -160,13 +174,23 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
             }
             token = lex->get_token();
           }
+          
+          // Push our function information onto the reference stack
           postfix.push_func(params);
           if (token.type != TT_RIGHTPARENTH) {
             token.report_error(herr,"Expected closing parenthesis to function parameters");
             return 1;
           }
-          if (append.empty()) {
-            token = lex->get_token(herr);
+          
+          // If there's no other special garbage being tacked onto this, then we are not a pointer-to function,
+          // and we are not an array of functions, and we aren't a function returning a function.
+          // Ergo, the function can be implemented here. FIXME: Function returning function pointer can still be implemented?
+          if (append.empty())
+          {
+            token = lex->get_token(herr); // Read in our next token to see if it's a brace or extra info
+            while (token.type == TT_DECFLAG) { // It is legal to put the flags throw and const here.
+              token = lex->get_token(herr);
+            }
             if (token.type == TT_LEFTBRACE) {
               refs.implementation = handle_function_implementation(lex,token,scope,herr);
               if (token.type != TT_RIGHTBRACE) {
@@ -174,6 +198,10 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
                 continue;
               }
               token.type = TT_SEMICOLON;
+            }
+            else if (token.type == TT_ASM)
+            {
+              cout << "What the fuck" << endl;
             }
             continue;
           }
@@ -194,7 +222,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_SCOPE: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_EQUALS:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_ASM:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default:
           refs.append(postfix);

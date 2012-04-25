@@ -86,7 +86,7 @@ int main() {
   {
     context enigma;
     start_time(ts);
-    int res = enigma.parse_C_stream(f);
+    int res = enigma.parse_C_stream(f, "test.cc");
     end_time(te,tel);
     cout << "Parse finished in " << tel << " microseconds." << endl;
     if (res)
@@ -98,10 +98,10 @@ int main() {
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
     
     cout << "Macro defs: " << endl;
-    enigma.output_macro("concat");
-    enigma.output_macro("_Mdouble_");
-    enigma.output_macro("__MATH_PRECNAME");
-    enigma.output_macro("declare_integer");
+    enigma.output_macro("__asm");
+    enigma.output_macro("__asm__");
+    enigma.output_macro("__REDIRECT_NTH");
+    enigma.output_macro("tostr");
   }
   else
     cout << "Failed to open file for parsing!" << endl;

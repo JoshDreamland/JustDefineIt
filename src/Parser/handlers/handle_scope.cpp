@@ -23,6 +23,7 @@
 **/
 
 #include <Parser/bodies.h>
+#include <API/compile_settings.h>
 
 int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
@@ -31,10 +32,11 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
   {
     switch (token.type) {
       case TT_DECLARATOR: case TT_DECFLAG:
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM:
           if (handle_declarators(scope, token, inherited_flags))
             return 1;
           if (token.type != TT_SEMICOLON)
-            return (token.report_error(herr, "Expected semicolon at this point"), 1);
+            return (token.report_error(herr, "Expected semicolon here after declaration"), 1);
         break;
       
       case TT_COMMA:
@@ -53,15 +55,14 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_LEFTBRACE:    token.report_error(herr, "Expected scope declaration before opening brace."); return 1;
       case TT_RIGHTBRACE:   return 0;
       
-      case TT_CLASS: case TT_STRUCT:
-      if (handle_class(scope,token,inherited_flags)) return 1; break;
-      
       case TT_TYPEDEF:
         token = lex->get_token(herr);
-        if (handle_declarators(scope,token,inherited_flags | DEF_TYPEDEF | DEF_TYPENAME)) return 1; break;
+        if (handle_declarators(scope,token,inherited_flags | DEF_TYPENAME)) FATAL_RETURN(1); break;
       
-      case TT_ENUM: case TT_UNION:
+      case TT_UNION:
       case TT_TYPENAME:
+      
+      case TT_ASM:
       
       case TT_IDENTIFIER:
       
@@ -70,7 +71,6 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       
       case TT_SCOPE:
       case TT_TILDE:
-      case TT_EQUALS:
       case TT_STRINGLITERAL:
       
       case TT_DECLITERAL:

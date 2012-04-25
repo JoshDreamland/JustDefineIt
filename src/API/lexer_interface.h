@@ -45,6 +45,7 @@ namespace jdi {
         @param herr  The error handler which will receive any lexing errors.
     **/
     virtual jdip::token_t get_token(error_handler *herr = def_error_handler) = 0;
+    jdip::token_t get_token_in_scope(jdi::definition_scope *scope, error_handler *herr = def_error_handler);
     virtual ~lexer(); ///< Destruct and free any non-POD or pointer members.
   };
 }

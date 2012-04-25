@@ -92,7 +92,7 @@ void lexer_cpp::skip_string(error_handler *herr)
   if (cfile[pos] == '/') \
     if (cfile[pos+1] == '*') { skip_multiline_comment(); continue; } \
     else if (cfile[pos+1] == '/') { skip_comment(); continue; } else {} \
-  else if (cfile[pos] == '"' or cfile[pos] == '\'') skip_string(herr); }
+  else if (cfile[pos] == '"' or cfile[pos] == '\'') skip_string(herr), ++pos; }
 
 /**
   @section implementation
@@ -152,17 +152,23 @@ bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
   vector<string> params;
   params.reserve(mf->argc);
   
-  while (pos < length and cfile[pos] != ')') {
-    if (cfile[pos] == ',') {
+  int nestcnt = 1;
+  while (pos < length and nestcnt > 0) {
+    if (cfile[pos] == ',' and nestcnt == 1) {
       params.push_back(string(cfile+pspos, pos-pspos));
       pspos = ++pos;
       skip_noncode();
       continue;
-    }
+    } else if (cfile[pos] == ')') { if (--nestcnt) ++pos; continue; }
+      else if (cfile[pos] == '(') ++nestcnt;
+      else if (cfile[pos] == '"' or cfile[pos] == '\'') 
+        skip_string(herr);
     ++pos; skip_noncode();
   }
-  if (pos >= length or cfile[pos] != ')')
+  if (pos >= length or cfile[pos] != ')') {
+    herr->error("Unterminated parameters to macro function", filename, line, pos - lpos);
     return false;
+  }
   
   if (pos > pspos) // If there was a parameter
     params.push_back(string(cfile+pspos, pos-pspos)); // Nab the final parameter
@@ -172,7 +178,11 @@ bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
   openfile of(filename, line, lpos, *this);
   files.enswap(of);
   alias(files.top().file);
-  mf->parse(params, *this, herr, token_t(token_basics(TT_INVALID,filename,line,lpos-pos)));
+  if (!mf->parse(params, *this, herr, token_t(token_basics(TT_INVALID,filename,line,lpos-pos)))) {
+    this->consume(files.top().file);
+    files.pop();
+    return true;
+  }
   filename = mf->name.c_str();
   lpos = line = 0;
   return true;  
@@ -591,8 +601,8 @@ token_t lexer_cpp::get_token(error_handler *herr)
     //============================================================================================
     
     if (is_digit(cfile[pos])) {
-      if (cfile[pos++] == '0') { // Check if the number is hexadecimal or octal.
-        if (cfile[pos] == 'x') { // Check if the number is hexadecimal.
+      if (cfile[pos] == '0') { // Check if the number is hexadecimal or octal.
+        if (cfile[++pos] == 'x') { // Check if the number is hexadecimal.
           // Yes, it is hexadecimal.
           const size_t sp = pos;
           while (++pos < length and is_hexdigit(cfile[pos]));
@@ -600,15 +610,15 @@ token_t lexer_cpp::get_token(error_handler *herr)
           return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);  
         }
         // Turns out, it's octal.
-        const size_t sp = pos;
-        while (pos < length and is_hexdigit(cfile[pos])) pos++;
+        const size_t sp = --pos;
+        while (++pos < length and is_hexdigit(cfile[pos]));
         while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
         return token_t(token_basics(TT_OCTLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's decimal.
-      const size_t sp = pos - 1;
-      while (pos < length and is_digit(cfile[pos])) ++pos;
-      if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') {  // Accept exponents
+      const size_t sp = pos;
+      while (++pos < length and is_digit(cfile[pos]));
+      if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') { // Accept exponents
         if (cfile[pos] == '-') ++pos;
         while (pos < length and is_digit(cfile[pos])) ++pos;
       }
@@ -691,6 +701,9 @@ bool lexer_cpp::pop_file() {
 lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): macros(pmacros), filename(fname), line(1), lpos(0), mlex(new lexer_macro(this))
 {
   consume(input); // We are also an llreader. Consume the given one using the inherited method.
+  keywords["asm"] = TT_ASM;
+  keywords["__asm"] = TT_ASM;
+  keywords["__asm__"] = TT_ASM;
   keywords["class"] = TT_CLASS;
   keywords["enum"] = TT_ENUM;
   keywords["namespace"] = TT_NAMESPACE;
@@ -811,8 +824,8 @@ token_t lexer_macro::get_token(error_handler *herr)
     //============================================================================================
     
     if (is_digit(cfile[pos])) {
-      if (cfile[pos++] == '0') { // Check if the number is hexadecimal or octal.
-        if (cfile[pos] == 'x') { // Check if the number is hexadecimal.
+      if (cfile[pos] == '0') { // Check if the number is hexadecimal or octal.
+        if (cfile[++pos] == 'x') { // Check if the number is hexadecimal.
           // Yes, it is hexadecimal.
           const size_t sp = pos;
           while (++pos < length and is_hexdigit(cfile[pos]));
@@ -820,14 +833,14 @@ token_t lexer_macro::get_token(error_handler *herr)
           return token_t(token_basics(TT_HEXLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+sp, pos-sp);  
         }
         // Turns out, it's octal.
-        const size_t sp = pos;
-        while (pos < length and is_hexdigit(cfile[pos])) pos++;
+        const size_t sp = --pos;
+        while (++pos < length and is_hexdigit(cfile[pos]));
         while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
         return token_t(token_basics(TT_OCTLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's decimal.
-      const size_t sp = pos - 1;
-      while (pos < length and is_digit(cfile[pos])) ++pos;
+      const size_t sp = pos;
+      while (++pos < length and is_digit(cfile[pos]));
       if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') { // Accept exponents
         if (cfile[pos] == '-') ++pos;
         while (pos < length and is_digit(cfile[pos])) ++pos;
