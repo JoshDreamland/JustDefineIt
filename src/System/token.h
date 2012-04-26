@@ -35,6 +35,7 @@ namespace jdip {
     TT_ENUM,       ///< The `enum' keyword.
     TT_UNION,      ///< The `union' keyword.
     TT_NAMESPACE,  ///< The `namespace' keyword.
+    TT_EXTERN,     ///< The `extern' keyword.
     
     TT_ASM,        ///< The `asm' keyboard
     

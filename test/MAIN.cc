@@ -102,6 +102,9 @@ int main() {
     enigma.output_macro("__asm__");
     enigma.output_macro("__REDIRECT_NTH");
     enigma.output_macro("__BEGIN_DECLS");
+    enigma.output_macro("__nonnull");
+    enigma.output_macro("__THROW");
+    enigma.output_macro("__MATHDECL");
   }
   else
     cout << "Failed to open file for parsing!" << endl;

@@ -505,6 +505,9 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         read_preprocessor_args(herr);
       break;
     case_undef:
+        if (!conditionals.empty() and !conditionals.top().is_true)
+          break;
+        
         while (is_useless(cfile[pos])) ++pos;
         if (!is_letterd(cfile[pos]))
           herr->error("Expected macro identifier at this point", filename, line, pos);
@@ -670,6 +673,12 @@ token_t lexer_cpp::get_token(error_handler *herr)
           herr->error("Stray backslash", filename, line, pos-lpos);
         continue;
       
+      case '"': {
+        size_t sspos = --pos;
+        skip_string(herr);
+        return token_t(token_basics(TT_STRINGLITERAL,filename,line,spos-lpos), cfile + sspos, ++pos-sspos);
+      }
+      
       default:
         return token_t(token_basics(TT_INVALID,filename,line,pos-lpos++));
     }
@@ -709,6 +718,7 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
   keywords["__asm__"] = TT_ASM;
   keywords["class"] = TT_CLASS;
   keywords["enum"] = TT_ENUM;
+  keywords["extern"] = TT_EXTERN;
   keywords["namespace"] = TT_NAMESPACE;
   keywords["private"] = TT_PRIVATE;
   keywords["protected"] = TT_PROTECTED;

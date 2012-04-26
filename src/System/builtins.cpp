@@ -77,6 +77,11 @@ namespace jdi {
         cout << type_name << "=>" << fb << endl;
         builtin_decls_byflag[fb] = insit.first->second;
         insit.first->second->flagbit = fb;
+        if (type_name[0] != '_')
+        {
+          pair<tf_iter, bool> redit = builtin_declarators.insert(pair<string,typeflag*>("__" + type_name,NULL));
+          if (redit.second) redit.first->second = new typeflag(*insit.first->second);
+        }
       }
     }
     else
@@ -88,7 +93,6 @@ namespace jdi {
     add_declarator("static",   UF_FLAG);
     add_declarator("const",    UF_FLAG);
     add_declarator("register", UF_FLAG);
-    add_declarator("extern",   UF_FLAG);
     add_declarator("inline",   UF_FLAG);
     add_declarator("throw",    UF_FLAG);
     

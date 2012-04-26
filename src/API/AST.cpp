@@ -47,7 +47,7 @@ namespace jdi
     bool handled_basics = false; // True at the end of this switch if the basic token info was already read in.
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN:
         //full_type ft = ?????->read_type(token); // Read complete type
         //if (token.type == TT_RIGHTPARENTH) // Check if we are a C-style cast (eg, (int)a)
         //  return new unary_cast(ft, parse_expression(token = lex->get_token(herr), prec_unary_postfix));
@@ -137,7 +137,7 @@ namespace jdi
   AST::AST_Node* AST::parse_binary_or_unary_post(token_t &token, AST::AST_Node *left_node, int prec_min) {
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN:
         return left_node;
       
       case TT_IDENTIFIER:

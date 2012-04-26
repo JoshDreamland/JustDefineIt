@@ -27,7 +27,7 @@ using namespace jdip;
 namespace jdip {
   /// A debug listing of token descriptions by value ID
   const char* TOKEN_TYPE_NAME[TT_INVALID+1] = {
-    "TT_DECLARATOR","TT_DECFLAG","TT_CLASS","TT_STRUCT","TT_ENUM","TT_UNION","TT_NAMESPACE",
+    "TT_DECLARATOR","TT_DECFLAG","TT_CLASS","TT_STRUCT","TT_ENUM","TT_UNION","TT_NAMESPACE","TT_EXTERN",
     "TT_ASM",
     "TT_IDENTIFIER",
     "TT_TEMPLATE","TT_TYPENAME",

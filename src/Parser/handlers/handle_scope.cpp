@@ -27,13 +27,33 @@
 
 int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
-  token = read_next_token( scope);
+  token = read_next_token(scope);
   for (;;)
   {
-    switch (token.type) {
+    switch (token.type)
+    {
       case TT_DECLARATOR: case TT_DECFLAG:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM:
           if (handle_declarators(scope, token, inherited_flags))
+            return 1;
+          if (token.type != TT_SEMICOLON)
+            return (token.report_error(herr, "Expected semicolon here after declaration"), 1);
+        break;
+      
+      case TT_EXTERN:
+          token = read_next_token(scope);
+          if (token.type == TT_STRINGLITERAL) {
+            token = read_next_token(scope);
+            if (token.type == TT_LEFTBRACE) {
+              FATAL_RETURN_IF(handle_scope(scope, token, inherited_flags), 1);
+              if (token.type != TT_RIGHTBRACE) {
+                token.report_error(herr, "Expected closing brace to extern block");
+                FATAL_RETURN(1);
+              }
+              break;
+            }
+          }
+          if (handle_declarators(scope, token, inherited_flags | DEF_EXTERN))
             return 1;
           if (token.type != TT_SEMICOLON)
             return (token.report_error(herr, "Expected semicolon here after declaration"), 1);
@@ -56,7 +76,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_RIGHTBRACE:   return 0;
       
       case TT_TYPEDEF:
-        token = lex->get_token(herr);
+        token = read_next_token(scope);
         if (handle_declarators(scope,token,inherited_flags | DEF_TYPENAME)) FATAL_RETURN(1); break;
       
       case TT_UNION:

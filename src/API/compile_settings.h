@@ -16,5 +16,5 @@
   #undef  FATAL_RETURN_IF
   #define FATAL_ERRORS_T(x,y) (y)
   #define FATAL_RETURN(ret_value) {}
-  #define FATAL_RETURN_IF(expression,ret_value) {}
+  #define FATAL_RETURN_IF(expression,ret_value) expression
 #endif
