@@ -2,7 +2,8 @@
 #define __asm(x) {}
 #define __asm__(x) {}
 
-#include <math.h>
+//#include <math.h>
+#include <string.h>
 
 //#include <math.h>
 
@@ -102,7 +103,7 @@ int (my_implemented_function_3)(const long double) {
 #if 1+1==2
   #if 2+2==3
     #error POOZER
-  "#endif"
+  //"#endif"
   /*#endif*/
   //#endif"
   '\
@@ -166,5 +167,7 @@ namespace gertrude {
     int ololol;
   };
 }
+
+#error line
 
 int zzzzz_success;

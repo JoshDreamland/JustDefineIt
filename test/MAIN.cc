@@ -101,7 +101,7 @@ int main() {
     enigma.output_macro("__asm");
     enigma.output_macro("__asm__");
     enigma.output_macro("__REDIRECT_NTH");
-    enigma.output_macro("tostr");
+    enigma.output_macro("__BEGIN_DECLS");
   }
   else
     cout << "Failed to open file for parsing!" << endl;

@@ -85,7 +85,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         token.report_error(herr, "INVALID TOKEN TYPE RETURNED");
         #ifdef DEBUG_MODE
           cout << TOKEN_TYPE_NAME[token.type];
-          if (token.type == TT_IDENTIFIER) cout << "[" << string((const char*)token.extra.content.str, token.extra.content.len) << "]";
+          if (token.type == TT_IDENTIFIER || token.type == TT_OPERATOR) cout << "[" << string((const char*)token.extra.content.str, token.extra.content.len) << "]";
           cout << endl;
         #endif
         break;

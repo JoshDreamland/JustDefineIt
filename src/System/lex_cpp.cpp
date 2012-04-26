@@ -61,7 +61,8 @@ void lexer_cpp::skip_comment()
 
 void lexer_cpp::skip_multiline_comment()
 {
-  pos += 2; // Skip one more char so we don't break on /*/
+  if (cfile[pos++] == '/')
+    ++pos; // Skip one more char so we don't break on /*/
   do if (pos >= length) return;
     else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
     while (cfile[pos++] != '*' or cfile[pos] != '/');
@@ -88,11 +89,11 @@ void lexer_cpp::skip_string(error_handler *herr)
 }
 
 /// Space-saving macro to skip comments and string literals.
-#define skip_noncode() {\
+#define skip_noncode(cond) {\
   if (cfile[pos] == '/') \
-    if (cfile[pos+1] == '*') { skip_multiline_comment(); continue; } \
-    else if (cfile[pos+1] == '/') { skip_comment(); continue; } else {} \
-  else if (cfile[pos] == '"' or cfile[pos] == '\'') skip_string(herr), ++pos; }
+    if (cfile[pos+1] == '*') { skip_multiline_comment(); cond; } \
+    else if (cfile[pos+1] == '/') { skip_comment(); cond; } else {} \
+  else if (cfile[pos] == '"' or cfile[pos] == '\'') { skip_string(herr), ++pos; cond; } }
 
 /**
   @section implementation
@@ -102,7 +103,7 @@ void lexer_cpp::skip_to_macro(error_handler *herr)
 {
   while (pos < length) {
     while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
-      skip_noncode();
+      skip_noncode(continue);
       ++pos;
     }
     if (pos >= length)
@@ -157,13 +158,13 @@ bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
     if (cfile[pos] == ',' and nestcnt == 1) {
       params.push_back(string(cfile+pspos, pos-pspos));
       pspos = ++pos;
-      skip_noncode();
+      skip_noncode(continue);
       continue;
     } else if (cfile[pos] == ')') { if (--nestcnt) ++pos; continue; }
       else if (cfile[pos] == '(') ++nestcnt;
       else if (cfile[pos] == '"' or cfile[pos] == '\'') 
         skip_string(herr);
-    ++pos; skip_noncode();
+    ++pos; skip_noncode(continue);
   }
   if (pos >= length or cfile[pos] != ')') {
     herr->error("Unterminated parameters to macro function", filename, line, pos - lpos);
@@ -297,6 +298,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     break;
     case_define: {
       string argstr = read_preprocessor_args(herr);
+      if (!conditionals.empty() and !conditionals.top().is_true)
+        break;
       size_t i = 0;
       while (is_useless(argstr[i])) ++i;
       if (!is_letterd(argstr[i])) {
@@ -796,6 +799,7 @@ token_t lexer_macro::get_token(error_handler *herr)
         if (endpar) {
           while (is_useless_macros(cfile[pos])) ++pos;
           if (cfile[pos] != ')') herr->error("Expected ending parenthesis for defined()", lcpp->filename,lcpp->line,pos-lcpp->lpos);
+          pos++;
         }
         
         return token_t(token_basics(TT_DECLITERAL,lcpp->filename,lcpp->line,pos-lcpp->lpos), lcpp->macros.find(macro)==lcpp->macros.end()? zero : one, 1);
