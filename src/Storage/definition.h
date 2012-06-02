@@ -202,8 +202,8 @@ namespace jdi {
     /// Simple structure for storing an inheritance type and the \c definition* of an ancestor.
     struct ancestor {
       unsigned protection; ///< The protection level of this inheritance, as one of the DEF_ constants, or 0 for public.
-      definition* def; ///< The \c definition of the structure or class from which this one inherits members.
-      ancestor(unsigned protection_level, definition* inherit_from); ///< Convenience constructor with both members.
+      definition_class* def; ///< The \c definition of the structure or class from which this one inherits members.
+      ancestor(unsigned protection_level, definition_class* inherit_from); ///< Convenience constructor with both members.
       ancestor(); ///< Default constructor for vector.
     };
     vector<ancestor> ancestors; ///< Ancestors of this structure or class

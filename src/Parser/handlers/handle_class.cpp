@@ -116,7 +116,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
         if (token.type == TT_IDENTIFIER) err += "; `" + string((const char*)token.extra.content.str,token.extra.content.len) + "' does not name a type";
         token.report_error(herr, err);
       }
-      nclass->ancestors.push_back(definition_class::ancestor(iprotection, token.extra.def));
+      nclass->ancestors.push_back(definition_class::ancestor(iprotection, (definition_class*)token.extra.def));
       token = read_next_token(scope);
     }
     while (token.type == TT_COMMA);
