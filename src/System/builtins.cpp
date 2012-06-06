@@ -46,6 +46,12 @@ using namespace jdip;
 namespace jdi {
   jdi::context builtin(0);
   
+  unsigned long builtin_flag__volatile;
+  unsigned long builtin_flag__static;
+  unsigned long builtin_flag__const;
+  unsigned long builtin_flag__register;
+  unsigned long builtin_flag__inline;
+  
   definition *builtin_type__void;
   definition *builtin_type__char;
   definition *builtin_type__int;
@@ -67,8 +73,9 @@ namespace jdi {
     }
     in.close();
   }
-  definition* add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name)
+  add_decl_info add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name)
   {
+    unsigned long flag;
     pair<tf_iter, bool> insit = builtin_declarators.insert(pair<string,typeflag*>(type_name,NULL));
     if (insit.second) {
       insit.first->second = new typeflag(type_name, usage_flags);
@@ -82,10 +89,10 @@ namespace jdi {
       }
       if (usage_flags & UF_FLAG)
       {
-        const unsigned long fb = 1 << builtin_decls_byflag.size();
-        cout << type_name << "=>" << fb << endl;
-        builtin_decls_byflag[fb] = insit.first->second;
-        insit.first->second->flagbit = fb;
+        flag = 1 << builtin_decls_byflag.size();
+        cout << type_name << "=>" << flag << endl;
+        builtin_decls_byflag[flag] = insit.first->second;
+        insit.first->second->flagbit = flag;
         if (type_name[0] != '_')
         {
           pair<tf_iter, bool> redit = builtin_declarators.insert(pair<string,typeflag*>("__" + type_name,NULL));
@@ -95,30 +102,32 @@ namespace jdi {
     }
     else
       insit.first->second->usage = USAGE_FLAG(insit.first->second->usage | usage_flags);
-    return insit.first->second->def;
+    return add_decl_info(insit.first->second->def, flag);
   }
   
+  add_decl_info::add_decl_info(definition *d, unsigned long f): def(d), flag(f) {}
+  
   void add_gnu_declarators() {
-    add_declarator("volatile", UF_FLAG);
-    add_declarator("static",   UF_FLAG);
-    add_declarator("const",    UF_FLAG);
-    add_declarator("register", UF_FLAG);
-    add_declarator("inline",   UF_FLAG);
-    add_declarator("throw",    UF_FLAG);
+    builtin_flag__volatile = add_declarator("volatile", UF_FLAG).flag;
+    builtin_flag__static   = add_declarator("static",   UF_FLAG).flag;
+    builtin_flag__const    = add_declarator("const",    UF_FLAG).flag;
+    builtin_flag__register = add_declarator("register", UF_FLAG).flag;
+    builtin_flag__inline   = add_declarator("inline",   UF_FLAG).flag;
+    add_declarator("throw", UF_FLAG);
     
     add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
     add_declarator("signed",   UF_STANDALONE_FLAG, "int");
     add_declarator("long",     UF_PRIMITIVE_FLAG);
     add_declarator("short",    UF_PRIMITIVE_FLAG);
     
-    builtin_type__void   = add_declarator("void",    UF_PRIMITIVE);
-    builtin_type__char   = add_declarator("char",    UF_PRIMITIVE);
-    builtin_type__int    = add_declarator("int",     UF_PRIMITIVE);
-    builtin_type__float  = add_declarator("float",   UF_PRIMITIVE);
-    builtin_type__double = add_declarator("double",  UF_PRIMITIVE);
+    builtin_type__void   = add_declarator("void",    UF_PRIMITIVE).def;
+    builtin_type__char   = add_declarator("char",    UF_PRIMITIVE).def;
+    builtin_type__int    = add_declarator("int",     UF_PRIMITIVE).def;
+    builtin_type__float  = add_declarator("float",   UF_PRIMITIVE).def;
+    builtin_type__double = add_declarator("double",  UF_PRIMITIVE).def;
     
-    builtin_type__wchar_t = add_declarator("wchar_t",   UF_PRIMITIVE);
-    builtin_type__va_list = add_declarator("__builtin_va_list",   UF_PRIMITIVE);
+    builtin_type__wchar_t = add_declarator("wchar_t",   UF_PRIMITIVE).def;
+    builtin_type__va_list = add_declarator("__builtin_va_list",   UF_PRIMITIVE).def;
     
     builtin.variadics.insert(builtin_type__va_list);
   }

@@ -68,9 +68,9 @@ int main() {
   builtin.add_search_directory("/usr/include/c++/4.6");
   builtin.add_search_directory("/usr/include/c++/4.6/x86_64-linux-gnu");
   builtin.add_search_directory("/usr/include/c++/4.6/backward");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.6.1/include");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.6/include");
   builtin.add_search_directory("/usr/local/include");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.6.1/include-fixed");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.6/include-fixed");
   builtin.add_search_directory("/usr/include/x86_64-linux-gnu");
   builtin.add_search_directory("/usr/include");
   
@@ -91,20 +91,13 @@ int main() {
     cout << "Parse finished in " << tel << " microseconds." << endl;
     if (res)
       cout << "ERROR: " << enigma.get_last_error() << endl;
-    enigma.output_definitions();
+    //enigma.output_definitions();
     if (res)
       cout << endl << "====[------------------------------ /FAILURE ------------------------------]====" << endl << endl;
     else
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
     
-    cout << "Macro defs: " << endl;
-    enigma.output_macro("__asm");
-    enigma.output_macro("__asm__");
-    enigma.output_macro("__REDIRECT_NTH");
-    enigma.output_macro("__BEGIN_DECLS");
-    enigma.output_macro("__nonnull");
-    enigma.output_macro("__THROW");
-    enigma.output_macro("__MATHDECL");
+    cout << "Macro defs: [None requested]" << endl;
   }
   else
     cout << "Failed to open file for parsing!" << endl;

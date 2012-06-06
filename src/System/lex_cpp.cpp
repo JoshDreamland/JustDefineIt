@@ -490,6 +490,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           incfile.open((incfn = builtin.search_dir(i) + fnfind).c_str());
         if (!incfile.is_open()) {
           herr->error("Could not find " + fnfind.substr(1), filename, line, pos-lpos);
+          for (size_t i = 0; !incfile.is_open() and i < builtin.search_dir_count(); ++i)
+            cout << "  Checked " << builtin.search_dir(i) << endl;
           break;
         }
         

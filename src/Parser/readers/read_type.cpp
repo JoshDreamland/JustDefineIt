@@ -84,7 +84,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   }
   
   // Read any additional type info
-  while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
+  typeloop: while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
   {
     if (token.type == TT_DECLARATOR) {
       if (rdef)
@@ -111,6 +111,16 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         rflags |= tf->flagbit;
     }
     token = lex->get_token_in_scope(scope, herr);
+  }
+  if (rdef == NULL and (token.type == TT_CLASS or token.type == TT_STRUCT))
+  {
+    if (cp)
+      // FIXME: I don't have any inherited flags to pass here. Is that OK?
+      rdef = cp->handle_class(scope,token,0);
+    else {
+      token = lex->get_token_in_scope(scope, herr);
+      goto typeloop;
+    }
   }
   
   if (rdef == NULL)
@@ -146,16 +156,21 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_LEFTBRACKET: { // Array bound indicator
         AST ast;
         rhs = true;
-        if (ast.parse_expression(lex,token,herr))
-          return 1; // This error has already been reported, just return empty.
+        token = lex->get_token_in_scope(scope, herr);
         if (token.type != TT_RIGHTBRACKET) {
-          token.report_error(herr,"Expected closing square bracket here before %s");
-          return 1;
+          if (ast.parse_expression(token,lex,herr))
+            return 1; // This error has already been reported, just return empty.
+          if (token.type != TT_RIGHTBRACKET) {
+            token.report_error(herr,"Expected closing square bracket here before %s");
+            return 1;
+          }
+          render_ast(ast, "ArrayBounds");
+          value as = ast.eval();
+          size_t boundsize = (as.type == VT_INTEGER)? as.val.i : ref_stack::node_array::nbound;
+          postfix.push_array(boundsize);
         }
-        render_ast(ast, "ArrayBounds");
-        value as = ast.eval();
-        size_t boundsize = (as.type == VT_INTEGER)? as.val.i : ref_stack::node_array::nbound;
-        postfix.push_array(boundsize);
+        else
+          postfix.push_array(ref_stack::node_array::nbound);
       } break;
       case TT_LEFTPARENTH: { // Either a function or a grouping
         token = lex->get_token_in_scope(scope, herr);
@@ -229,15 +244,23 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           break;
         } // Else overflow
       
+      case TT_DECFLAG:
+          if (((typeflag*)token.extra.def)->flagbit == builtin_flag__const) {
+            // TODO: Give RT_POINTERTO node a bool constant; to denote that the pointer is const; set it to TRUE here.
+            token = lex->get_token_in_scope(scope, herr);
+            continue;
+          }
+        goto default_;
+      
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
       
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
+      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_SCOPE: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_ASM:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
-      case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default:
+      case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
           refs.append(postfix);
           refs.append_nest(append);
         return 0;

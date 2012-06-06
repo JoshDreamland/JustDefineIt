@@ -68,6 +68,79 @@ void token_t::report_error(error_handler *herr, std::string error)
   herr->error(error, fn, l, p);
 }
 
+static struct token_info_c {
+  const char *name[TT_INVALID+1];
+  token_info_c() {
+    for (int i = 0; i <= TT_INVALID; ++i)
+      name[i] = "GLITCH: No name data afilliated with token. Oops.";
+    TOKEN_TYPE a(TT_INVALID);
+    switch (a) {
+      default:
+      case TT_INVALID: name[TT_INVALID] = "invalid token";
+      case TT_DECLARATOR:
+      case TT_DECFLAG: name[TT_DECFLAG] = "declarator";
+      case TT_CLASS: name[TT_CLASS] = "`class' token";
+      case TT_STRUCT: name[TT_STRUCT] = "`struct' token";
+      case TT_ENUM: name[TT_ENUM] = "`enum' token";
+      case TT_UNION: name[TT_UNION] = "`union' token";
+      case TT_NAMESPACE: name[TT_NAMESPACE] = "`namespace' token";
+      case TT_EXTERN: name[TT_EXTERN] = "`extern' token";
+      case TT_ASM: name[TT_ASM] = "`asm' token";
+      case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier";
+      case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token";
+      case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token";
+      case TT_TYPEDEF: name[TT_TYPEDEF] = "`typedef' token";
+      case TT_USING: name[TT_USING] = "`using' token";
+      case TT_PUBLIC: name[TT_PUBLIC] = "`public' token";
+      case TT_PRIVATE: name[TT_PRIVATE] = "`private' token";
+      case TT_PROTECTED: name[TT_PROTECTED] = "`protected' token";
+      case TT_COLON: name[TT_COLON] = "`:' token";
+      case TT_SCOPE: name[TT_SCOPE] = "`::' token";
+      case TT_LEFTPARENTH: name[TT_LEFTPARENTH] = "'(' token";
+      case TT_RIGHTPARENTH: name[TT_RIGHTPARENTH] = "')' token";
+      case TT_LEFTBRACKET: name[TT_LEFTBRACKET] = "'[' token";
+      case TT_RIGHTBRACKET: name[TT_RIGHTBRACKET] = "']' token";
+      case TT_LEFTBRACE: name[TT_LEFTBRACE] = "'{' token";
+      case TT_RIGHTBRACE: name[TT_RIGHTBRACE] = "'}' token";
+      case TT_LESSTHAN: name[TT_LESSTHAN] = "'<' token";
+      case TT_GREATERTHAN: name[TT_GREATERTHAN] = "'>' token";
+      case TT_TILDE: name[TT_TILDE] = "'~' token";
+      case TT_ELLIPSIS: name[TT_ELLIPSIS] = "`...' token";
+      case TT_OPERATOR: name[TT_OPERATOR] = "operator";
+      case TT_COMMA: name[TT_COMMA] = "',' token";
+      case TT_SEMICOLON: name[TT_SEMICOLON] = "';' token";
+      case TT_STRINGLITERAL: name[TT_STRINGLITERAL] = "string literal";
+      case TT_CHARLITERAL: name[TT_CHARLITERAL] = "character literal";
+      case TT_DECLITERAL: name[TT_DECLITERAL] = "decimal literal";
+      case TT_HEXLITERAL: name[TT_HEXLITERAL] = "hexadecimal literal";
+      case TT_OCTLITERAL: name[TT_OCTLITERAL] = "octal literal";
+      case TTM_CONCAT:   name[TTM_CONCAT] = "`##' token";
+      case TTM_TOSTRING: name[TTM_TOSTRING] = "`#' token";
+      case TT_ENDOFCODE: name[TT_ENDOFCODE] = "end of code";
+    }
+  }
+} token_info;
+
+void token_t::report_errorf(error_handler *herr, std::string error)
+{
+  string fn; // Default values for non-existing info members
+  int l = -1, p = -1;
+  
+  // Overwrite those which exist
+  token_basics(p = -1,
+    fn = (const char*)file,
+    l = linenum,
+    p = pos
+  );
+  
+  size_t f = error.find("%s");
+  while (f != string::npos) {
+    error.replace(f,2,token_info.name[type]);
+    f = error.find("%s");
+  }
+  
+  herr->error(error, fn, l, p);
+}
 void token_t::report_warning(error_handler *herr, std::string error)
 {
   string fn; // Default values for non-existing info members

@@ -46,6 +46,12 @@ namespace jdi {
     @param usage_flags   The usage flag to be enabled for the read declarators.
   **/
   void read_declarators(const char* filename, USAGE_FLAG usage_flags);
+  /// Structure for getting info about newly-added declarator
+  struct add_decl_info {
+    definition* def;
+    unsigned long flag;
+    add_decl_info(definition *d, unsigned long f);
+  };
   /**
     Add a single declarator, toggling on its usage for the given flag.
     @param type_name     The name of the declarator, as it appears in the code.
@@ -53,7 +59,7 @@ namespace jdi {
     @param prim_name     If this declarator can be used as a type, this is the name of that type if it is different from type_name.
     @return  Returns the definition of the primitive object by that type.
   **/
-  definition* add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name = "");
+  add_decl_info add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name = "");
   /// Add declarator flags used in the default GNU implementation.
   void add_gnu_declarators();
   /// Free memory for all declarators. This should be called only at program end.
@@ -62,6 +68,12 @@ namespace jdi {
   
   //==== Builtin Types ========================================
   //===========================================================
+  
+  extern unsigned long builtin_flag__volatile; ///< Builtin volatile flag
+  extern unsigned long builtin_flag__static;   ///< Builtin static flag
+  extern unsigned long builtin_flag__const;    ///< Builtin const flag
+  extern unsigned long builtin_flag__register; ///< Builtin register flag
+  extern unsigned long builtin_flag__inline;   ///< Builtin inline flag
   
   extern definition *builtin_type__void;   ///< Builtin void type
   extern definition *builtin_type__char;   ///< Builtin char type
@@ -77,7 +89,7 @@ namespace jdip {
   using namespace jdi;
   /// Class for storing information about a 'typeflag,' declarators such as 'int', 'short', and 'const' which refer to or modify primitives.
   class typeflag {
-    friend definition* jdi::add_declarator(string, USAGE_FLAG, string);
+    friend add_decl_info jdi::add_declarator(string, USAGE_FLAG, string);
     friend void jdi::cleanup_declarators();
     
     typeflag(); ///< Construct a new type flag.

@@ -117,7 +117,7 @@ namespace jdi
         // Overflow; same error.
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
-        token.report_error(herr, "Expected expression before %s token");
+        token.report_errorf(herr, "Expected expression before %s");
         return NULL;
       
       case TTM_CONCAT: case TTM_TOSTRING: token.report_error(herr, "Illogical token type returned!"); break;

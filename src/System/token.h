@@ -181,14 +181,22 @@ namespace jdip {
     token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition*);
     
     /**
-      Copy error information to a parse context.
+      Pass error information to an error handler.
       If no information is available, then zeros are copied in its place.
       @param herr  The error_handler which will receive this notification.
       @param error The text of the error.
     **/
     void report_error(error_handler *herr, std::string error);
     /**
-      Copy error information to a parse context.
+      Pass error information to an error handler, inserting token name.
+      If no information is available, then zeros are copied in its place.
+      The token is inserted in place of any %s in the error string.
+      @param herr  The error_handler which will receive this notification.
+      @param error The text of the error; use %s for token name.
+    **/
+    void report_errorf(error_handler *herr, std::string error);
+    /**
+      Pass error information to an error handler.
       If no information is available, then zeros are copied in its place.
       @param herr  The error_handler which will receive this notification.
       @param error The text of the error.
