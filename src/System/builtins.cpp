@@ -46,6 +46,15 @@ using namespace jdip;
 namespace jdi {
   jdi::context builtin(0);
   
+  definition *builtin_type__void;
+  definition *builtin_type__char;
+  definition *builtin_type__int;
+  definition *builtin_type__float;
+  definition *builtin_type__double;
+  
+  definition *builtin_type__wchar_t;
+  definition *builtin_type__va_list;
+  
   void read_declarators(const char* filename, USAGE_FLAG usage_flags)
   {
     string tname; // The name of this type, as it appears in code.
@@ -58,7 +67,7 @@ namespace jdi {
     }
     in.close();
   }
-  void add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name)
+  definition* add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name)
   {
     pair<tf_iter, bool> insit = builtin_declarators.insert(pair<string,typeflag*>(type_name,NULL));
     if (insit.second) {
@@ -86,6 +95,7 @@ namespace jdi {
     }
     else
       insit.first->second->usage = USAGE_FLAG(insit.first->second->usage | usage_flags);
+    return insit.first->second->def;
   }
   
   void add_gnu_declarators() {
@@ -101,11 +111,16 @@ namespace jdi {
     add_declarator("long",     UF_PRIMITIVE_FLAG);
     add_declarator("short",    UF_PRIMITIVE_FLAG);
     
-    add_declarator("void",     UF_PRIMITIVE);
-    add_declarator("char",     UF_PRIMITIVE);
-    add_declarator("int",      UF_PRIMITIVE);
-    add_declarator("float",    UF_PRIMITIVE);
-    add_declarator("double",   UF_PRIMITIVE);
+    builtin_type__void   = add_declarator("void",    UF_PRIMITIVE);
+    builtin_type__char   = add_declarator("char",    UF_PRIMITIVE);
+    builtin_type__int    = add_declarator("int",     UF_PRIMITIVE);
+    builtin_type__float  = add_declarator("float",   UF_PRIMITIVE);
+    builtin_type__double = add_declarator("double",  UF_PRIMITIVE);
+    
+    builtin_type__wchar_t = add_declarator("wchar_t",   UF_PRIMITIVE);
+    builtin_type__va_list = add_declarator("__builtin_va_list",   UF_PRIMITIVE);
+    
+    builtin.variadics.insert(builtin_type__va_list);
   }
   
   void cleanup_declarators() {

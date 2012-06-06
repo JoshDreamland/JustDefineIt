@@ -63,6 +63,7 @@ namespace jdi {
       RT_FUNCTION ///< This referencer is a set of function parameters.
     };
     
+    struct parameter;
     struct parameter_ct;
     
     class iterator;
@@ -152,15 +153,24 @@ namespace jdi {
 //===: Specializations with extended dependencies :========================================================
 //=========================================================================================================
 
+#include <Storage/full_type.h>
 #include <Storage/definition.h>
 #include <General/quickvector.h>
 
 namespace jdi {
+  /// Parameter storage type; contains type info and other important parameter info.
+  struct ref_stack::parameter: full_type {
+    bool variadic; ///< True if this parameter can be passed several values; in C/C++, this is mandated to be the last parameter.
+    bool defaulted; ///< True if this parameter was given a default value. Convenience boolean to remove subtraction as a factor; same as defaulted_value.type != VT_INVALID.
+    value default_value; ///< The default value of this parameter, or an invalid value if none was given.
+    void swap_in(full_type& param); ///< Swap contents with another parameter class.
+    void swap(parameter& param); ///< Swap contents with another parameter class.
+  };
   /// Parameter storage container type. Guaranteed to have a push_back(full_type) method.
-  struct ref_stack::parameter_ct: public quick::vector<jdi::full_type> {
+  struct ref_stack::parameter_ct: public quick::vector<parameter> {
     /// Throw a full_type onto this list, consuming it.
     /// @param ft  The \c full_type that will be consumed and added to the stack.
-    void throw_on(jdi::full_type& ft);
+    void throw_on(parameter& ft);
   };
   /// A special ref_stack node with an array bound size member.
   struct ref_stack::node_array: ref_stack::node {

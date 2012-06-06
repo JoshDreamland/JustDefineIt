@@ -115,6 +115,11 @@ void context::add_search_directory(string dir)
   search_directories.push_back(dir);
 }
 
+static definition* find_mirror(definition *x, definition_scope* root) {
+  if (x) return ((definition_scope*)find_mirror(x->parent, root))->look_up(x->name);
+  return root;
+}
+
 void context::reset()
 {
   
@@ -132,6 +137,12 @@ void context::copy(const context &ct)
       dest.first->second = mi->second;
       ++mi->second->refc;
     }
+  }
+  for (set<definition*>::iterator it = ct.variadics.begin(); it != ct.variadics.end(); ++it) {
+    if ((*it)->parent)
+      variadics.insert(find_mirror(*it, global));
+    else
+      variadics.insert(*it);
   }
 }
 
@@ -229,7 +240,7 @@ static string type_referencers_string_postfix(ref_stack& rf) {
         res += '(';
         ref_stack::node_func* nf = (ref_stack::node_func*)*it;
         for (size_t i = 0; i < nf->params.size(); i++) {
-          res += fulltype_string(nf->params[i]);
+          res += nf->params[i].variadic? "..." : fulltype_string(nf->params[i]);
           if (i + 1 < nf->params.size()) res += ", ";
         }
         res += ')';

@@ -97,10 +97,11 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           // Just hop into the error checking above and pass through the definition addition again.
         goto after_comma;
       
-      case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
+      case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
           token.report_error(herr, "Expected initializer `=' here before literal.");
         return 5;
       
+      case TT_ELLIPSIS:
       case TT_SEMICOLON:
       
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_EXTERN: case TT_IDENTIFIER:

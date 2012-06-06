@@ -302,7 +302,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         break;
       size_t i = 0;
       while (is_useless(argstr[i])) ++i;
-      if (!is_letterd(argstr[i])) {
+      if (!is_letter(argstr[i])) {
         herr->error("Expected macro definiendum at this point", filename, line, pos-lpos);
       }
       const size_t nsi = i;
@@ -509,7 +509,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           break;
         
         while (is_useless(cfile[pos])) ++pos;
-        if (!is_letterd(cfile[pos]))
+        if (!is_letter(cfile[pos]))
           herr->error("Expected macro identifier at this point", filename, line, pos);
         else {
           const size_t nspos = pos;
@@ -542,6 +542,11 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
 
 token_t lexer_cpp::get_token(error_handler *herr)
 {
+  #ifdef DEBUG_MODE
+    static int number_of_times_GDB_has_dropped_its_ass = 0;
+    ++number_of_times_GDB_has_dropped_its_ass;
+  #endif
+  
   for (;;) // Loop until we find something or hit world's end
   {
     if (pos >= length) goto POP_FILE;
@@ -573,6 +578,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
     {
       const size_t spos = pos; // Record where we are
       while (++pos < length and is_letterd(cfile[pos]));
+      if (cfile[spos] == 'L' and pos - spos == 1 and cfile[pos] == '\'') {
+        skip_string(herr);
+        return token_t(token_basics(TT_CHARLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
+      }
       
       string fn(cfile + spos, cfile + pos); // We'll need a copy of this thing for lookup purposes
       
@@ -622,6 +631,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
         return token_t(token_basics(TT_OCTLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's decimal.
+      handle_decimal:
       const size_t sp = pos;
       while (++pos < length and is_digit(cfile[pos]));
       if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') { // Accept exponents
@@ -657,7 +667,18 @@ token_t lexer_cpp::get_token(error_handler *herr)
       case ':':
         pos += cfile[pos] == cfile[spos];
         return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,filename,line,spos-lpos), cfile+spos, pos-spos);
-        
+      
+      case '.':
+          if (is_digit(cfile[pos]))
+            goto handle_decimal;
+          else if (cfile[pos] == '.') {
+            if (cfile[++pos] == '.')
+              return token_t(token_basics(TT_ELLIPSIS,filename,line,spos-lpos), cfile+spos, pos++ - spos);
+            else
+              pos -= 2;
+          }
+        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
+      
       case '(': return token_t(token_basics(TT_LEFTPARENTH,filename,line,spos-lpos));
       case '[': return token_t(token_basics(TT_LEFTBRACKET,filename,line,spos-lpos));
       case '{': return token_t(token_basics(TT_LEFTBRACE,  filename,line,spos-lpos));
@@ -674,9 +695,13 @@ token_t lexer_cpp::get_token(error_handler *herr)
         continue;
       
       case '"': {
-        size_t sspos = --pos;
-        skip_string(herr);
-        return token_t(token_basics(TT_STRINGLITERAL,filename,line,spos-lpos), cfile + sspos, ++pos-sspos);
+        --pos; skip_string(herr);
+        return token_t(token_basics(TT_STRINGLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
+      }
+      
+      case '\'': {
+        --pos; skip_string(herr);
+        return token_t(token_basics(TT_STRINGLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
       }
       
       default:
@@ -785,8 +810,14 @@ token_t lexer_macro::get_token(error_handler *herr)
     
     if (is_letter(cfile[pos])) // Check if we're at an identifier or keyword.
     {
+      const size_t sspos = pos;
       const char* sp = cfile + pos; // Record where we are
       while (++pos < length and is_letterd(cfile[pos]));
+      
+      if (*sp == 'L' and cfile+pos - sp == 1 and cfile[pos] == '\'') {
+        lcpp->skip_string(herr);
+        return token_t(token_basics(TT_CHARLITERAL,lcpp->filename,lcpp->line,sspos-lcpp->lpos), sp, ++pos - sspos);
+      }
       
       string fn(sp, cfile + pos); // We'll need a copy of this thing for lookup purposes
       

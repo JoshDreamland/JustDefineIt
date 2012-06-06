@@ -143,7 +143,28 @@ namespace jdi {
   
   bool ref_stack::empty() { return !bottom; }
   
-  void ref_stack::parameter_ct::throw_on(full_type &ft) {
+  void ref_stack::parameter_ct::throw_on(parameter &ft) {
     enswap(ft);
+  }
+  
+  void ref_stack::parameter::swap(ref_stack::parameter &param) {
+    full_type::swap(param);
+    
+    register bool swb;
+    swb = param.variadic;
+    param.variadic = variadic;
+    variadic = swb;
+    
+    swb = param.defaulted;
+    param.defaulted = defaulted;
+    defaulted = swb;
+    
+    value v = param.default_value;
+    param.default_value = default_value;
+    default_value = v;
+  }
+  
+  void ref_stack::parameter::swap_in(full_type &param) {
+    full_type::swap(param);
   }
 }

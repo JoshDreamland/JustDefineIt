@@ -64,12 +64,14 @@ namespace jdip {
     TT_GREATERTHAN,   ///< A greater-than symbol, or right triangle bracket, `>'.
     
     TT_TILDE,         ///< The tilde `~' symbol.
+    TT_ELLIPSIS,      ///< An ellipsis: Three dots. (...)
     TT_OPERATOR,      ///< Any sort of operator. This token is used only when the token has no other purpose but as an operator.
     
     TT_COMMA,         ///< A comma, `,'. Separates items in lists.
     TT_SEMICOLON,     ///< A semicolon, `;'. Separates statements and declarations.
     
     TT_STRINGLITERAL, ///< A string literal, such as "hello, world!"
+    TT_CHARLITERAL,   ///< A character literal, such as 'h'
     TT_DECLITERAL,    ///< A decimal literal, such as 12345
     TT_HEXLITERAL,    ///< A hexadecimal literal, such as 0xDEC0DED
     TT_OCTLITERAL,    ///< An octal literal, such as 07654321.

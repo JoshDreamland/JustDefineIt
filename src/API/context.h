@@ -34,6 +34,7 @@
 #define _JDI_CONTEXT__H
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -87,12 +88,14 @@ namespace jdi
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.
     
-    
     public:
     string error; ///< Any error text from parse calls in this context
     string err_file; ///< The file in which an error occurred
     int err_line; ///< The line number on which the error occurred
     int err_pos; ///< The position at which the error occurred
+    set<definition*> variadics; ///< Set of variadic types.
+    
+    definition_scope* get_global(); ///< Return the global scope.
     
     size_t search_dir_count(); ///< Return the number of search directories
     string search_dir(size_t index); ///< Return the search directory with the given index, in [0, search_dir_count).

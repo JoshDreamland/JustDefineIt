@@ -58,6 +58,7 @@ namespace jdi {
       AT_DECLITERAL,
       AT_HEXLITERAL,
       AT_OCTLITERAL,
+      AT_CHRLITERAL,
       AT_IDENTIFIER,
       AT_OPEN_PARENTH,
       AT_PARAMETER_START

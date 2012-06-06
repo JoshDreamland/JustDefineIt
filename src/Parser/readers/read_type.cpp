@@ -21,6 +21,7 @@
 
 #include <Parser/bodies.h>
 #include <API/context.h>
+#include <API/compile_settings.h>
 #include <API/AST.h>
 #include <API/error_reporting.h>
 #include <General/parse_basics.h>
@@ -33,7 +34,7 @@ using namespace jdi;
 
 full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
-  definition* inferred_type = NULL;
+  definition* inferred_type = NULL; // This is the type we will use if absolutely no other type is given
   definition* overridable_type = NULL;
   long int rflags = 0; // Return flags.
   long int swif = 0; // Swap-in flags: or'd in when a flag is determined not to be the main type.
@@ -48,8 +49,12 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         else {
           token = lex->get_token_in_scope(scope, herr);
           if (token.type != TT_DECLARATOR)
-            token.report_error(herr, "Pre-defined class name must follow class/struct token at this point");
+            token.report_error(herr, "Existing class name must follow class/struct token at this point");
         }
+      }
+      else if (token.type == TT_ELLIPSIS) {
+        rdef = builtin_type__va_list;
+        token = lex->get_token_in_scope(scope,herr);
       }
       else {
         if (token.type == TT_IDENTIFIER)
@@ -169,7 +174,9 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           while (token.type != TT_RIGHTPARENTH)
           {
             full_type a = read_type(lex,token,scope,cp,herr);
-            params.throw_on(a);
+            ref_stack::parameter param; param.swap_in(a);
+            param.variadic = cp? cp->variadics.find(param.def) != cp->variadics.end() : false;
+            params.throw_on(param);
             if (token.type != TT_COMMA) {
               if (token.type == TT_RIGHTPARENTH) break;
               token.report_error(herr,"Expected comma or closing parenthesis to function parameters");
@@ -187,7 +194,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           
           // If there's no other special garbage being tacked onto this, then we are not a pointer-to function,
           // and we are not an array of functions, and we aren't a function returning a function.
-          // Ergo, the function can be implemented here. FIXME: Function returning function pointer can still be implemented?
+          // Ergo, the function can be implemented here. FIXME: Make sure parser allows implementing function returning function pointer.
           if (append.empty())
           {
             token = lex->get_token_in_scope(scope, herr); // Read in our next token to see if it's a brace or extra info
@@ -222,11 +229,14 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           break;
         } // Else overflow
       
+      case TT_ELLIPSIS:
+          token.report_error(herr, "`...' not allowed as general modifier");
+      
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_SCOPE: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_ASM:
-      case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
+      case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default:
           refs.append(postfix);
           refs.append_nest(append);

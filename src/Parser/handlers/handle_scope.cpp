@@ -86,12 +86,13 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       
       case TT_IDENTIFIER:
       
-      case TT_OPERATOR: case TT_LESSTHAN: case TT_GREATERTHAN:
+      case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN:
       case TT_COLON:
       
       case TT_SCOPE:
       case TT_TILDE:
       case TT_STRINGLITERAL:
+      case TT_CHARLITERAL:
       
       case TT_DECLITERAL:
       case TT_HEXLITERAL:

@@ -3,7 +3,8 @@
 #define __asm__(x) {}
 #define __attribute__(x)
 #define __extension__
+#define union struct
 
-#include <math.h>
-#include <string.h>
-#include <stdio.h>
+//#include <wchar.h>
+
+int printf(const char* format, ...);

@@ -102,6 +102,8 @@ namespace jdi
         return NULL;
       
       case TT_STRINGLITERAL:
+      case TT_CHARLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+                           track(myroot->content); at = AT_CHRLITERAL; break;
       
       case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
                           track(myroot->content); at = AT_DECLITERAL; break;
@@ -110,6 +112,7 @@ namespace jdi
       case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
                           track(myroot->content); at = AT_OCTLITERAL; break;
       
+      case TT_ELLIPSIS:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
@@ -193,9 +196,12 @@ namespace jdi
       case TT_COMMA:
       case TT_SEMICOLON:
       case TT_STRINGLITERAL:
+      case TT_CHARLITERAL:
       case TT_DECLITERAL:
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
+      
+      case TT_ELLIPSIS:
       
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left_node;
       
