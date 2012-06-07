@@ -27,9 +27,7 @@
 #include <termios.h>
 #include <utime.h>
 
-
-// MACRO LOOPS FOREVER
-// #include <unistd.h>
+#include <unistd.h>
 
 
 /*

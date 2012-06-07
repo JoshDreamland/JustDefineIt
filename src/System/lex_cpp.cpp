@@ -141,6 +141,7 @@ void lexer_cpp::enter_macro(macro_scalar* ms)
   filename = ms->name.c_str();
   this->encapsulate(ms->value);
   line = lpos = pos = 0;
+  ++open_macro_count;
 }
 bool lexer_cpp::parse_macro_function(macro_function* mf, error_handler *herr)
 {
@@ -590,8 +591,15 @@ token_t lexer_cpp::get_token(error_handler *herr)
       macro_iter mi = macros.find(fn);
       if (mi != macros.end()) {
         if (mi->second->argc < 0) {
-          enter_macro((macro_scalar*)mi->second);
-          continue;
+          bool already_open = false; // Test if we're in this macro already
+          quick::stack<openfile>::iterator it = files.begin();
+          for (unsigned i = 0; i < open_macro_count; ++i)
+            if (it->filename == fn) { already_open = true; break; }
+            else --it;
+          if (!already_open) {
+            enter_macro((macro_scalar*)mi->second);
+            continue;
+          }
         }
         else {
           if (parse_macro_function((macro_function*)mi->second, herr))
@@ -734,6 +742,11 @@ bool lexer_cpp::pop_file() {
   
   // Pop file stack and return next token in the containing file.
   files.pop();
+  
+  // Remove any open macro
+  if (open_macro_count)
+      --open_macro_count;
+  
   return false;
 }
   

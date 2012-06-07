@@ -74,6 +74,8 @@ namespace jdip {
     size_t line; ///< The current line number in the file
     size_t lpos; ///< The index in the file of the most recent line break.
     
+    unsigned open_macro_count;
+    
     typedef map<string,TOKEN_TYPE> keyword_map; ///< Map of string to token type; a map-of-keywords type.
     /// List of C++ keywords, mapped to the type of their token.
     /// This list is assumed to contain tokens whose contents are unambiguous; one string maps to one token, and vice-versa.
