@@ -143,7 +143,8 @@ namespace jdi {
   struct definition_valued: definition_typed {
     value value_of; ///< The constant value of this definition.
     definition_valued(); ///< Default constructor; invalidates value.
-    definition_valued(string vname, definition *parnt, definition* type, unsigned int flgs, value &val); ///< Construct with a value and type.
+    //definition_valued(string vname, definition *parnt, definition* type, unsigned int flags, value &val); ///< Construct with a value and type.
+    definition_valued(string vname, definition *parnt, definition* type, unsigned int typeflags, unsigned int flags, value &val); ///< Construct with a value and type.
   };
   
   /**

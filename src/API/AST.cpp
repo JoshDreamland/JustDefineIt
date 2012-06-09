@@ -50,14 +50,23 @@ namespace jdi
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN:
         //full_type ft = ?????->read_type(token); // Read complete type
         //if (token.type == TT_RIGHTPARENTH) // Check if we are a C-style cast (eg, (int)a)
-        //  return new unary_cast(ft, parse_expression(token = lex->get_token(herr), prec_unary_postfix));
+        //  return new unary_cast(ft, parse_expression(token = get_next_token(), prec_unary_postfix));
         //if (token.type == TT_LEFTPARENTH) // We could also be a C++ cast (eg, int(a))
-        //  return new func_cast(ft, parse_expression(token = lex->get_token(herr)));
+        //  return new func_cast(ft, parse_expression(token = get_next_token()));
         token.report_error(herr, "Expected expression before declarator");
         return NULL;
       
-      case TT_IDENTIFIER: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
-                          track(myroot->content); at = AT_IDENTIFIER; break;
+      case TT_IDENTIFIER: {
+          if (search_scope) {
+            string n((const char*)token.extra.content.str,token.extra.content.len);
+            definition *def = search_scope->look_up(n);
+            myroot = new AST_Node_Definition(def);
+          }
+          else
+            myroot = new AST_Node();
+          myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+          track(myroot->content); at = AT_IDENTIFIER;
+        } break;
       
       case TT_TYPENAME:
         token.report_error(herr, "Unimplemented.");
@@ -70,7 +79,7 @@ namespace jdi
           return NULL;
         }
         track(ct);
-        token = lex->get_token();
+        token = get_next_token();
         myroot = new AST_Node_Unary(parse_expression(token, 1000), ct);
         read_next = true;
         break;
@@ -83,7 +92,7 @@ namespace jdi
       
       case TT_LEFTPARENTH:
         track(string("("));
-        token = lex->get_token();
+        token = get_next_token();
         myroot = parse_expression(token, 0);
         if (token.type != TT_RIGHTPARENTH) {
           token.report_error(herr, "Expected closing parenthesis at this point");
@@ -131,7 +140,7 @@ namespace jdi
         myroot->pos = token.pos
       );
     if (!read_next)
-      token = lex->get_token();
+      token = get_next_token();
     
     myroot = parse_binary_or_unary_post(token,myroot,prec_min);
     return myroot;
@@ -159,7 +168,7 @@ namespace jdi
           symbol &s = symbols[op];
           if (s.type & ST_BINARY) {
             if (s.prec < prec_min) return left_node;
-            token = lex->get_token();
+            token = get_next_token();
             track(op);
             AST_Node *right = parse_expression(token, s.prec + !(s.type & ST_RTL_PARSED));
             if (!right) {
@@ -174,13 +183,13 @@ namespace jdi
             string ct((const char*)token.extra.content.str,token.extra.content.len);
             track(ct);
             
-            token = lex->get_token();
+            token = get_next_token();
             AST_Node* exptrue = parse_expression(token, 0);
             if (!exptrue) return NULL;
             if (token.type != TT_COLON) { token.report_error(herr, "Colon expected"); return NULL; }
             track(string(":"));
             
-            token = lex->get_token();
+            token = get_next_token();
             AST_Node* expfalse = parse_expression(token, 0);
             if (!exptrue) return NULL;
             
@@ -214,6 +223,15 @@ namespace jdi
     return parse_binary_or_unary_post(token,left_node,prec_min);
   }
   
+  token_t AST::get_next_token() {
+    return search_scope? lex->get_token_in_scope(search_scope,herr) : lex->get_token(herr);
+  }
+  
+  
+  //===========================================================================================================================
+  //=: Public API :============================================================================================================
+  //===========================================================================================================================
+  
   int AST::parse_expression(lexer *ulex, error_handler *uherr) {
     lex = ulex, herr = uherr;
     token_t token = lex->get_token();
@@ -234,6 +252,12 @@ namespace jdi
     return 0;
   }
   
+  int AST::parse_expression(token_t &token, lexer *ulex, definition_scope *scope, error_handler *uherr) {
+    search_scope = scope;
+    lex = ulex, herr = uherr;
+    root = parse_expression(token, 0);
+    return 0;
+  }
   
   //===========================================================================================================================
   //=: Evaluators :============================================================================================================
@@ -264,8 +288,18 @@ namespace jdi
     if (type == AT_OCTLITERAL) {
       if (content.length() == 1)
         goto dec_literal; // A single octal digit is no different from a decimal digit
-      // TODO: IMPLEMENT
+      return value(strtol(content.c_str(),NULL,8));
     }
+    if (type == AT_HEXLITERAL) {
+      if (content.length() == 1)
+        goto dec_literal; // A single octal digit is no different from a decimal digit
+      return value(strtol(content.c_str(),NULL,16));
+    }
+    return value();
+  }
+  value AST::AST_Node_Definition::eval() {
+    if (def and (def->flags & DEF_VALUED))
+      return ((definition_valued*)def)->value_of;
     return value();
   }
   value AST::AST_Node_Ternary::eval() {
@@ -305,6 +339,7 @@ namespace jdi
   
   AST::AST_Node::AST_Node(): parent(NULL) {}
   AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
+  AST::AST_Node_Definition::AST_Node_Definition(definition* d): def(d) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): right(r) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct): AST_Node(ct), right(r) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) {}
@@ -338,7 +373,10 @@ namespace jdi
     #endif
     root = current = NULL;
   }
+
   
+  AST::AST(): root(NULL), current(NULL), search_scope(NULL) {}
+    
   AST::~AST() {
     delete root;
   }

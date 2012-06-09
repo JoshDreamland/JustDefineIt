@@ -5,6 +5,10 @@
 #define __extension__
 #define union struct
 
+
+char shit[15 * sizeof(int)];
+
+/*
 #include <errno.h>
 #include <float.h>
 #include <iso646.h>
@@ -28,13 +32,15 @@
 #include <utime.h>
 
 #include <unistd.h>
-
+*/
 
 /*
 // Finish with errors
 #include <tgmath.h>
 #include <complex.h>
+
 #include <ctype.h>
+
 #include <fenv.h>
 #include <wctype.h>
 #include <stdint.h> // include_next missing

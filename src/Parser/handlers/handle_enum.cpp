@@ -26,7 +26,7 @@
 #include <General/debug_macros.h>
 #include <API/compile_settings.h>
 
-static unsigned anon_count = 1111111;
+static unsigned anon_count = 1;
 jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope, token_t& token, int inherited_flags)
 {
   dbg_assert(token.type == TT_ENUM);
@@ -117,7 +117,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
       }
       token = read_next_token(scope);
       AST ast;
-      if (ast.parse_expression(token,lex,herr)) {
+      if (ast.parse_expression(token,lex,scope,herr)) {
         token.report_error(herr, "Expected const expression here");
         continue;
       }
@@ -128,19 +128,19 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
         this_value = value(++this_value.val.i);
       else this_value = v;
     }
-    else
-      this_value = value(++this_value.val.i);
     
     pair<definition_scope::defiter, bool> cins = nenum->constants.insert(pair<string,definition*>(cname,NULL));
     if (cins.second) { // If a new definition key was created, then allocate a new enum representation for it.
       pair<definition_scope::defiter, bool> sins = scope->members.insert(pair<string,definition*>(cname,cins.first->second));
       if (sins.second)
-        cins.first->second = sins.first->second = new definition_valued(cname, nenum, nenum->type, nenum->modifiers, this_value);
+        cins.first->second = sins.first->second = new definition_valued(cname, nenum, nenum->type, nenum->modifiers, 0, this_value);
       else
         token.report_error(herr, "Declatation of constant `" + classname + "' in enumeration conflicts with definition in parent scope");
     }
     else
       token.report_error(herr, "Redeclatation of constant `" + classname + "' in enumeration");
+    
+    ++this_value.val.i;
     
     if (token.type == TT_COMMA)
       token = read_next_token(scope);

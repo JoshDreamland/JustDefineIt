@@ -28,6 +28,9 @@
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
 #include <Parser/parse_context.h>
+#include <System/builtins.h>
+#include <API/compile_settings.h>
+#include <API/AST.h>
 #include <cstdio>
 using namespace jdip;
 using namespace jdi;
@@ -96,6 +99,22 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           
           // Just hop into the error checking above and pass through the definition addition again.
         goto after_comma;
+        
+      case TT_COLON:
+        if (tp.def != builtin_type__int) {
+          token.report_error(herr,"Attempt to assign bit count in non-integer declaration");
+          return 1;
+        }
+        else {
+          AST bitcountexp;
+          bitcountexp.parse_expression(token = read_next_token(scope), lex, scope, herr);
+          value bc = bitcountexp.eval();
+          if (bc.type != VT_INTEGER) {
+            token.report_error(herr,"Bit count is not an integer");
+            FATAL_RETURN(1);
+          }
+        }
+        break;
       
       case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
           token.report_error(herr, "Expected initializer `=' here before literal.");
@@ -105,7 +124,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_SEMICOLON:
       
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_EXTERN: case TT_IDENTIFIER:
-      case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_COLON:
+      case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET: case TT_LEFTBRACE: case TT_RIGHTBRACE:
       case TT_ASM: case TT_TILDE: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_INVALID: default:
         return 0;

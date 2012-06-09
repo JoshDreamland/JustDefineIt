@@ -45,6 +45,7 @@ static inline bool strbw(const char* s1, const char (&s2)[4]) { return *s1 == *s
 static inline bool strbw(const char* s1, const char (&s2)[5]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and (s1[4] == ' ' or s1[4] == '\t' or s1[4] == '\n' or s1[4] == '\r'); }
 static inline bool strbw(const char* s1, const char (&s2)[6]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and (s1[5] == ' ' or s1[5] == '\t' or s1[5] == '\n' or s1[5] == '\r'); }
 static inline bool strbw(const char* s1, const char (&s2)[7]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and s1[5] == s2[5] and (s1[6] == ' ' or s1[6] == '\t' or s1[6] == '\n' or s1[6] == '\r'); }
+static inline bool strbw(const char* s1, const char (&s2)[11]){ return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and s1[5] == s2[5] and s1[6] == s2[6] and s1[7] == s2[7] and s1[8] == s2[8] and s1[9] == s2[9] and (s1[10] == ' ' or s1[10] == '\t' or s1[10] == '\n' or s1[10] == '\r'); }
 static inline bool strbw(char s) { return s == ' ' or s == '\t' or s == '\n' or s == '\r'; }
 
 void lexer_cpp::skip_comment()
@@ -275,7 +276,11 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         if (cfile[pos] == 'n') { if (strbw(cfile+pos+1, "def")) { pos += 4; goto case_ifndef; } goto failout; }
         goto failout;
       }
-      if (cfile[pos] == 'n') { if (strbw(cfile+pos+1, "clude")) { pos += 6; goto case_include; } goto failout; }
+      if (cfile[pos] == 'n') {
+        if (strbw(cfile+pos+1, "clude")) { pos += 6; goto case_include; }
+        if (strbw(cfile+pos+1, "clude_next")) { pos += 11; goto case_include_next; }
+        goto failout;
+      }
       if (cfile[pos] == 'm') { if (strbw(cfile+pos+1, "port"))  { pos += 5; goto case_import;  } goto failout; }
       goto failout;
 	  case 'l':
@@ -470,12 +475,20 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     case_import:
       break;
     case_include: {
+        bool incnext;
+        if (true)
+            incnext = false;
+        else {
+          case_include_next:
+          incnext = true;
+        }
         string fnfind = read_preprocessor_args(herr);
         if (!conditionals.empty() and !conditionals.top().is_true)
           break;
         bool chklocal = false;
         char match = '>';
-        if (fnfind[0] == '"') chklocal = true, match = '"';
+        if (!incnext and fnfind[0] == '"')
+          chklocal = true, match = '"';
         else if (fnfind[0] != '<') {
           herr->error("Expected filename inside <> or \"\" delimiters", filename, line, pos - lpos);
           break;
@@ -487,8 +500,13 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         string incfn;
         llreader incfile;
         if (chklocal) incfile.open((incfn = fnfind).c_str());
-        for (size_t i = 0; !incfile.is_open() and i < builtin.search_dir_count(); ++i)
+        for (size_t i = 0; i < builtin.search_dir_count(); ++i) {
           incfile.open((incfn = builtin.search_dir(i) + fnfind).c_str());
+          if (incfile.is_open()) {
+            if (incnext) incnext = incfn != files.top().filename;
+            else break;
+          }
+        }
         if (!incfile.is_open()) {
           herr->error("Could not find " + fnfind.substr(1), filename, line, pos-lpos);
           for (size_t i = 0; !incfile.is_open() and i < builtin.search_dir_count(); ++i)

@@ -23,6 +23,8 @@
 **/
 
 #include "definition.h"
+#include <iostream>
+using namespace std;
 
 namespace jdi {
   definition *definition::duplicate() {
@@ -32,7 +34,7 @@ namespace jdi {
   definition::definition(): flags(0), name(), parent(NULL) {}
   definition::~definition() {}
   
-  definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(), modifiers(typeflags) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {}
   definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
   
   definition *definition_scope::look_up(string sname) {
@@ -68,7 +70,8 @@ namespace jdi {
   definition_class::ancestor::ancestor() {}
   definition_class::definition_class(string classname, definition_scope* prnt, unsigned flgs): definition_scope(classname, prnt, flgs) {}
   
-  definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, flgs), value_of(val) {}
+  //definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, 0, flgs | DEF_VALUED), value_of(val) {}
+  definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned tflgs, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, tflgs, flgs | DEF_VALUED), value_of(val) {}
   
   definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_typed(classname, parnt, NULL, 0, flgs) {}
 }

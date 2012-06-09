@@ -116,6 +116,12 @@ namespace jdi {
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+    /// Child of AST_Node for tokens with an attached \c definition.
+    struct AST_Node_Definition: AST_Node {
+      definition *def; ///< The \c definition of the constant or type this token represents.
+      value eval(); ///< Evaluates this node recursively, returning a value containing its result.
+      AST_Node_Definition(definition *def); ///< Construct with a definition
+    };
     /// Child of AST_Node for binary operators.
     struct AST_Node_Binary: AST_Node {
       AST_Node *left, ///< The left-hand side of the expression.
@@ -210,6 +216,10 @@ namespace jdi {
     AST_Node *current; ///< A buffer containing the tokens to be lexed.
     error_handler *herr; ///< The error handler which will receive any error messages.
     lexer *lex; ///< The lexer from which tokens will be read.
+    definition_scope *search_scope; ///< The scope from which token values will be harvested.
+    
+    /// Private method to fetch the next token from the lexer, with or without a scope.
+    jdip::token_t get_next_token();
     
     // State flags
     bool tt_greater_is_op; ///< True if the greater-than symbol is to be interpreted as an operator.
@@ -281,12 +291,20 @@ namespace jdi {
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
     int parse_expression(lexer *lex, jdip::token_t& token, error_handler *herr = def_error_handler);
+    /** Parse in an expression, building an AST, with scope information, starting with the given token.
+        @param lex    The lexer which will be polled for tokens.
+        @param token  A buffer for the first unhandled token. [out]
+        @param scope  The scope from which values of definitions will be read. [in]
+        @param herr   The error handler which will receive any warning or error messages.
+        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
+    **/
+    int parse_expression(jdip::token_t &token, lexer *lex, definition_scope *scope, error_handler *uherr);
     
     /// Evaluate the current AST, returning its \c value.
     value eval();
     
     /// Coerce the current AST for the type of its result.
-    definition coerce();
+    definition *coerce();
     
     /// Clear the AST out, effectively creating a new instance of this class
     void clear();

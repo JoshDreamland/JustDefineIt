@@ -31,10 +31,6 @@ namespace jdi {
     cout << "   Current={" << (current?current->content:"NULL") << "}" << endl;
   }
   
-  AST::AST(): root(NULL), current(NULL) {
-    
-  }
-  
   /// A wrapper to \c SVG which generates IDs based on an internally-stored node count.
   struct AST::SVGrenderInfo {
     SVG *svg;
