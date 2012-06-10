@@ -25,6 +25,11 @@
 
 namespace jdip {
   using namespace jdi;
+  
+  enum {
+    PRECEDENCE_MAX = 19 ///< A precedence so high that no operator has it.
+  };
+  
   /**
     Enumeration of usage types of symbols used in this AST.
   **/

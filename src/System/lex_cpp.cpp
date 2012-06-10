@@ -775,12 +775,15 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
   keywords["__asm"] = TT_ASM;
   keywords["__asm__"] = TT_ASM;
   keywords["class"] = TT_CLASS;
+  keywords["decltype"] = TT_DECLTYPE;
   keywords["enum"] = TT_ENUM;
   keywords["extern"] = TT_EXTERN;
   keywords["namespace"] = TT_NAMESPACE;
+  keywords["operator"] = TT_OPERATORKW;
   keywords["private"] = TT_PRIVATE;
   keywords["protected"] = TT_PROTECTED;
   keywords["public"] = TT_PUBLIC;
+  keywords["sizeof"] = TT_SIZEOF;
   keywords["struct"] = TT_STRUCT;
   keywords["template"] = TT_TEMPLATE;
   keywords["typedef"] = TT_TYPEDEF;

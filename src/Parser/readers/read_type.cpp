@@ -161,7 +161,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           if (ast.parse_expression(token,lex,herr))
             return 1; // This error has already been reported, just return empty.
           if (token.type != TT_RIGHTBRACKET) {
-            token.report_error(herr,"Expected closing square bracket here before %s");
+            token.report_errorf(herr,"Expected closing square bracket here before %s");
             return 1;
           }
           render_ast(ast, "ArrayBounds");
@@ -172,13 +172,16 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         else
           postfix.push_array(ref_stack::node_array::nbound);
       } break;
+      
       case TT_LEFTPARENTH: { // Either a function or a grouping
         token = lex->get_token_in_scope(scope, herr);
-        if (!rhs) { // If we're still on the left-hand side
+        if (!rhs) // If we're still on the left-hand side
+        {
           rhs = true;
           read_referencers(append, lex, token, scope, cp, herr);
           if (token.type != TT_RIGHTPARENTH) {
             token.report_error(herr, "Expected right parenthesis after nested referencers");
+            FATAL_RETURN(1);
           }
         }
         else // Otherwise, we're on the right-hand side of the identifier, and we assume we are at function parameters.
@@ -195,7 +198,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
             if (token.type != TT_COMMA) {
               if (token.type == TT_RIGHTPARENTH) break;
               token.report_error(herr,"Expected comma or closing parenthesis to function parameters");
-              return 1;
+              FATAL_RETURN(1);
             }
             token = lex->get_token_in_scope(scope, herr);
           }
@@ -204,7 +207,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           postfix.push_func(params);
           if (token.type != TT_RIGHTPARENTH) {
             token.report_error(herr,"Expected closing parenthesis to function parameters");
-            return 1;
+            FATAL_RETURN(1);
           }
           
           // If there's no other special garbage being tacked onto this, then we are not a pointer-to function,
@@ -232,10 +235,39 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           }
         }
       } break;
+      
       case TT_IDENTIFIER: // The name associated with this type, be it the name of a parameter or of a declaration or what have you.
         refs.name = string((const char*)token.extra.content.str, token.extra.content.len);
         rhs = true; // Officially on the right hand side
       break;
+      
+      case TT_OPERATORKW:
+          token = lex->get_token_in_scope(scope, herr);
+          if (token.type == TT_OPERATOR) {
+            refs.name = "operator" + string((const char*)token.extra.content.str, token.extra.content.len);
+          }
+          else if (token.type == TT_LEFTBRACKET) {
+            refs.name = "operator[]";
+            token = lex->get_token_in_scope(scope, herr);
+            if (token.type != TT_RIGHTBRACKET) {
+              token.report_error(herr, "Expected closing bracket for `operator[]' definition");
+              FATAL_RETURN(1);
+            }
+          }
+          else if (token.type == TT_LEFTPARENTH) {
+            refs.name = "operator()";
+            token = lex->get_token_in_scope(scope, herr);
+            if (token.type != TT_RIGHTPARENTH) {
+              token.report_error(herr, "Expected closing parenthesis for `operator()' definition");
+              FATAL_RETURN(1);
+            }
+          }
+          else {
+            token.report_errorf(herr, "Unexpected %s following `operator' keyword; does not form a valid operator");
+            FATAL_RETURN(1);
+          }
+          rhs = true;
+        break;
       
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
@@ -258,7 +290,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_SCOPE: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_ASM:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_DECLTYPE:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
           refs.append(postfix);

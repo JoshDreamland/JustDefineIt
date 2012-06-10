@@ -39,7 +39,9 @@ using namespace jdip;
 /// Simply maps all the symbols with their AST generation and evaluation information.
 symbol_table::symbol_table()
 {
-  int prec = 18; // Count down precedence levels to avoid accidental decrements.
+  int prec = PRECEDENCE_MAX; // Count down precedence levels to avoid accidental decrements.
+  
+  prec--;
   symbols["::"] = symbol(ST_BINARY, prec);
   
   prec--;
@@ -108,5 +110,5 @@ symbol_table::symbol_table()
   symbols[","]  = symbol(ST_BINARY,prec,values_latter);
   
   if (prec != 1)
-    printf("INTERNAL ERROR. INCORRECT PRECENDENCE COUNT GIVEN.\n");
+    perror("INTERNAL ERROR. INCORRECT PRECENDENCE COUNT GIVEN.\n");
 }

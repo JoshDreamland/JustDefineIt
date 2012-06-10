@@ -8,14 +8,14 @@
 
 char shit[15 * sizeof(int)];
 
-/*
+#include <stdio.h>
+
 #include <errno.h>
 #include <float.h>
 #include <iso646.h>
 #include <math.h>
 #include <locale.h>
 #include <stdarg.h>
-#include <stdio.h>
 #include <wchar.h>
 #include <string.h>
 #include <stdbool.h>
@@ -32,18 +32,18 @@ char shit[15 * sizeof(int)];
 #include <utime.h>
 
 #include <unistd.h>
-*/
+#include <stdint.h>
+
+#include <stdlib.h>
 
 /*
 // Finish with errors
+#include <fenv.h>
 #include <tgmath.h>
 #include <complex.h>
 
 #include <ctype.h>
-
-#include <fenv.h>
 #include <wctype.h>
-#include <stdint.h> // include_next missing
 
 #include <sys/utsname.h>
 */

@@ -51,17 +51,18 @@ namespace jdi {
         operators and the four types of data.
     **/
     enum AST_TYPE {
-      AT_UNARY_PREFIX,
-      AT_UNARY_POSTFIX,
-      AT_BINARYOP,
-      AT_TERNARYOP,
-      AT_DECLITERAL,
-      AT_HEXLITERAL,
-      AT_OCTLITERAL,
-      AT_CHRLITERAL,
-      AT_IDENTIFIER,
-      AT_OPEN_PARENTH,
-      AT_PARAMETER_START
+      AT_UNARY_PREFIX, ///< This node is some kind of unary prefix operator, such as *, &, ~, or -.
+      AT_UNARY_POSTFIX, ///< This node is some kind of unary postfix operator, such as ++, [], or ().
+      AT_BINARYOP, ///< This node is a binary operator, like /, *, -, or +.
+      AT_TERNARYOP, ///< This node is a ternary operator. Note that ?: is the only one currently supported.
+      AT_DECLITERAL, ///< This node is a decimal literal, such as 1337.
+      AT_HEXLITERAL, ///< This node is a hexadecimal literal, such as 0x539
+      AT_OCTLITERAL, ///< This node is an octal literal, such as 2471.
+      AT_CHRLITERAL, ///< This node is a character literal, such as 'a'.
+      AT_IDENTIFIER, ///< This node is an identifier that could not be looked up.
+      AT_DEFINITION, ///< This node is a definition; an identifier that has been looked up.
+      AT_TYPE,       ///< This node is a full type.
+      AT_FUNCCALL    ///< This node is a function call. FIXME: This value is probably never used.
     };
     
     /// Structure containing info for use when rendering SVGs.
@@ -116,11 +117,24 @@ namespace jdi {
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+    /// Child of AST_Node_Unary specifically for sizeof
+    struct AST_Node_sizeof: AST_Node_Unary {
+      value eval(); /// Behaves funny for sizeof; coerces instead, then takes size of result type.
+      definition *coerce(); /// Behaves funny for sizeof; returns unsigned long every time.
+      AST_Node_sizeof(AST_Node* param);
+    };
     /// Child of AST_Node for tokens with an attached \c definition.
     struct AST_Node_Definition: AST_Node {
       definition *def; ///< The \c definition of the constant or type this token represents.
       value eval(); ///< Evaluates this node recursively, returning a value containing its result.
       AST_Node_Definition(definition *def); ///< Construct with a definition
+    };
+    /// Child of AST_Node for tokens with an attached \c full_type.
+    struct AST_Node_Type: AST_Node {
+      full_type type; ///< The \c full_type read into this node.
+      value eval(); ///< Returns zero; output should never be of integral importance.
+      definition *coerce(); ///< Returns the type contained.
+      AST_Node_Type(full_type &ft); ///< Construct consuming a \c full_type.
     };
     /// Child of AST_Node for binary operators.
     struct AST_Node_Binary: AST_Node {

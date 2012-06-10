@@ -28,7 +28,7 @@ namespace jdip {
   /// A debug listing of token descriptions by value ID
   const char* TOKEN_TYPE_NAME[TT_INVALID+1] = {
     "TT_DECLARATOR","TT_DECFLAG","TT_CLASS","TT_STRUCT","TT_ENUM","TT_UNION","TT_NAMESPACE","TT_EXTERN",
-    "TT_ASM",
+    "TT_ASM","TT_OPERATORKW","TT_SIZEOF","TT_DECLTYPE",
     "TT_IDENTIFIER",
     "TT_TEMPLATE","TT_TYPENAME",
     "TT_TYPEDEF","TT_USING",
@@ -86,6 +86,9 @@ static struct token_info_c {
       case TT_NAMESPACE: name[TT_NAMESPACE] = "`namespace' token";
       case TT_EXTERN: name[TT_EXTERN] = "`extern' token";
       case TT_ASM: name[TT_ASM] = "`asm' token";
+      case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token";
+      case TT_SIZEOF: name[TT_OPERATORKW] = "`sizeof' token";
+      case TT_DECLTYPE: name[TT_OPERATORKW] = "`decltype' token";
       case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier";
       case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token";
       case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token";

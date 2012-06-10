@@ -37,7 +37,10 @@ namespace jdip {
     TT_NAMESPACE,  ///< The `namespace' keyword.
     TT_EXTERN,     ///< The `extern' keyword.
     
-    TT_ASM,        ///< The `asm' keyboard
+    TT_ASM,        ///< The `asm' keyword.
+    TT_OPERATORKW, ///< The `operator' keyword; TT_OPERATOR is a generic operator.
+    TT_SIZEOF,     ///< The `sizeof' keyword.
+    TT_DECLTYPE,   ///< The `decltype' keyword.
     
     TT_IDENTIFIER, ///< A standard identifier.
     

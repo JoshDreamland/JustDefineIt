@@ -32,7 +32,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
   {
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_DECFLAG:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_DECLTYPE:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM:
           if (handle_declarators(scope, token, inherited_flags))
             return 1;
@@ -99,7 +99,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_OCTLITERAL:
       
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
-      case TT_TEMPLATE:
+      case TT_TEMPLATE: case TT_SIZEOF: case TT_OPERATORKW:
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       default:

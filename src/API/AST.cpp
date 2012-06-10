@@ -23,7 +23,9 @@
 #include "AST.h"
 #include <General/parse_basics.h>
 #include <Storage/value_funcs.h>
+#include <System/builtins.h>
 #include <System/symbols.h>
+#include <Parser/bodies.h>
 #include <cstdio>
 #include <map>
 
@@ -47,26 +49,30 @@ namespace jdi
     bool handled_basics = false; // True at the end of this switch if the basic token info was already read in.
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN:
-        //full_type ft = ?????->read_type(token); // Read complete type
-        //if (token.type == TT_RIGHTPARENTH) // Check if we are a C-style cast (eg, (int)a)
-        //  return new unary_cast(ft, parse_expression(token = get_next_token(), prec_unary_postfix));
-        //if (token.type == TT_LEFTPARENTH) // We could also be a C++ cast (eg, int(a))
-        //  return new func_cast(ft, parse_expression(token = get_next_token()));
-        token.report_error(herr, "Expected expression before declarator");
-        return NULL;
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
+          full_type ft = read_type(lex,token,search_scope,NULL,herr); // Read complete type
+          myroot = new AST_Node_Type(ft);
+          at = AT_TYPE; read_next = true;
+        } break;
       
       case TT_IDENTIFIER: {
           if (search_scope) {
             string n((const char*)token.extra.content.str,token.extra.content.len);
             definition *def = search_scope->look_up(n);
             myroot = new AST_Node_Definition(def);
+            at = AT_DEFINITION;
           }
-          else
+          else {
             myroot = new AST_Node();
+            at = AT_IDENTIFIER;
+          }
           myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
-          track(myroot->content); at = AT_IDENTIFIER;
+          track(myroot->content);
         } break;
+      
+      case TT_OPERATORKW:
+        token.report_error(herr,"Please refer to operators in their binary format; explicit use of operator functions not presently supported.");
+        break;
       
       case TT_TYPENAME:
         token.report_error(herr, "Unimplemented.");
@@ -95,7 +101,7 @@ namespace jdi
         token = get_next_token();
         myroot = parse_expression(token, 0);
         if (token.type != TT_RIGHTPARENTH) {
-          token.report_error(herr, "Expected closing parenthesis at this point");
+          token.report_errorf(herr, "Expected closing parenthesis here before %s");
           return NULL;
         }
         track(string(")"));
@@ -121,11 +127,22 @@ namespace jdi
       case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
                           track(myroot->content); at = AT_OCTLITERAL; break;
       
+      case TT_DECLTYPE:
+        
+        break;
+      
+      case TT_SIZEOF:
+          token = get_next_token(); track(string("sizeof")); 
+          myroot = new AST_Node_sizeof(parse_expression(token,PRECEDENCE_MAX));
+          at = AT_UNARY_PREFIX;
+          read_next = true;
+        break;
+      
       case TT_ELLIPSIS:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
-      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: 
         token.report_errorf(herr, "Expected expression before %s");
         return NULL;
       
@@ -200,6 +217,9 @@ namespace jdi
       case TT_TILDE:
       
       case TT_LEFTPARENTH:
+          if (left_node->type == AT_DEFINITION)
+        break;
+      
       case TT_LEFTBRACKET:
       case TT_LEFTBRACE:
       case TT_COMMA:
@@ -215,7 +235,9 @@ namespace jdi
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left_node;
       
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
-      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_ASM:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      
+      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_DECLTYPE:
       return left_node;
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: return left_node;
@@ -331,6 +353,21 @@ namespace jdi
   value AST::AST_Node_Parameters::eval() {
     return value(); // We can't evaluate a function call ;_;
   }
+  value AST::AST_Node_Type::eval() {
+    return 0L;
+  }
+  value AST::AST_Node_sizeof::eval() {
+    return 0L; // TODO: right->coerce()->calculate_size();
+  }
+  
+  
+  //===========================================================================================================================
+  //=: Coercers :==============================================================================================================
+  //===========================================================================================================================
+  
+  definition* AST::AST_Node_sizeof::coerce() {
+    return builtin_type__int; // FIXME: Replace with long
+  }
   
   
   //===========================================================================================================================
@@ -340,8 +377,10 @@ namespace jdi
   AST::AST_Node::AST_Node(): parent(NULL) {}
   AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
   AST::AST_Node_Definition::AST_Node_Definition(definition* d): def(d) {}
+  AST::AST_Node_Type::AST_Node_Type(full_type &ft) { type.swap(ft); }
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): right(r) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct): AST_Node(ct), right(r) {}
+  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) {}
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) {}
