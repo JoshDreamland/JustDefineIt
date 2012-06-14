@@ -33,7 +33,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
     switch (token.type)
     {
       case TT_DECLARATOR: case TT_DECFLAG: case TT_DECLTYPE:
-      case TT_CLASS: case TT_STRUCT: case TT_ENUM:
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION:
           if (handle_declarators(scope, token, inherited_flags))
             return 1;
           if (token.type != TT_SEMICOLON)
@@ -79,7 +79,6 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         token = read_next_token(scope);
         if (handle_declarators(scope,token,inherited_flags | DEF_TYPENAME)) FATAL_RETURN(1); break;
       
-      case TT_UNION:
       case TT_TYPENAME:
       
       case TT_ASM:
@@ -103,12 +102,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       default:
-        token.report_error(herr, "INVALID TOKEN TYPE RETURNED");
-        #ifdef DEBUG_MODE
-          cout << TOKEN_TYPE_NAME[token.type];
-          if (token.type == TT_IDENTIFIER || token.type == TT_OPERATOR) cout << "[" << string((const char*)token.extra.content.str, token.extra.content.len) << "]";
-          cout << endl;
-        #endif
+        token.report_errorf(herr, "Unexpected %s in this scope");
         break;
       
       case TT_ENDOFCODE:

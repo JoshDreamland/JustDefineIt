@@ -93,7 +93,7 @@ static inline void dump_in(const char* name, llreader* dest) {
 
 void llreader::open(const char* filename) {
 #if defined(IO_FALLBACK)
-  #warn Compiling in fallback file mode. May lead to slowness.
+  #warning Compiling in fallback file mode. May lead to slowness.
   dump_in(filename);
 #elif defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
   #error unimplemented

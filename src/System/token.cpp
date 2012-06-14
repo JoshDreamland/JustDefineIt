@@ -68,16 +68,20 @@ void token_t::report_error(error_handler *herr, std::string error)
   herr->error(error, fn, l, p);
 }
 
+#include <cstdio>
 static struct token_info_c {
-  const char *name[TT_INVALID+1];
+  string name[TT_INVALID+1];
   token_info_c() {
-    for (int i = 0; i <= TT_INVALID; ++i)
-      name[i] = "GLITCH: No name data afilliated with token. Oops.";
+    for (int i = 0; i <= TT_INVALID; ++i) {
+      char buf[128];
+      sprintf(buf, "GLITCH: No name data afilliated with token %d. Oops.", i);
+      name[i] = buf;
+    }
     TOKEN_TYPE a(TT_INVALID);
     switch (a) {
       default:
       case TT_INVALID: name[TT_INVALID] = "invalid token";
-      case TT_DECLARATOR:
+      case TT_DECLARATOR:name[TT_DECLARATOR] = "declarator";
       case TT_DECFLAG: name[TT_DECFLAG] = "declarator";
       case TT_CLASS: name[TT_CLASS] = "`class' token";
       case TT_STRUCT: name[TT_STRUCT] = "`struct' token";
@@ -87,8 +91,8 @@ static struct token_info_c {
       case TT_EXTERN: name[TT_EXTERN] = "`extern' token";
       case TT_ASM: name[TT_ASM] = "`asm' token";
       case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token";
-      case TT_SIZEOF: name[TT_OPERATORKW] = "`sizeof' token";
-      case TT_DECLTYPE: name[TT_OPERATORKW] = "`decltype' token";
+      case TT_SIZEOF: name[TT_SIZEOF] = "`sizeof' token";
+      case TT_DECLTYPE: name[TT_DECLTYPE] = "`decltype' token";
       case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier";
       case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token";
       case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token";
@@ -109,7 +113,7 @@ static struct token_info_c {
       case TT_GREATERTHAN: name[TT_GREATERTHAN] = "'>' token";
       case TT_TILDE: name[TT_TILDE] = "'~' token";
       case TT_ELLIPSIS: name[TT_ELLIPSIS] = "`...' token";
-      case TT_OPERATOR: name[TT_OPERATOR] = "operator";
+      case TT_OPERATOR: name[TT_OPERATOR] = "`%s' operator";
       case TT_COMMA: name[TT_COMMA] = "',' token";
       case TT_SEMICOLON: name[TT_SEMICOLON] = "';' token";
       case TT_STRINGLITERAL: name[TT_STRINGLITERAL] = "string literal";
@@ -124,6 +128,7 @@ static struct token_info_c {
   }
 } token_info;
 
+#include <cstdio>
 void token_t::report_errorf(error_handler *herr, std::string error)
 {
   string fn; // Default values for non-existing info members
@@ -136,13 +141,30 @@ void token_t::report_errorf(error_handler *herr, std::string error)
     p = pos
   );
   
-  size_t f = error.find("%s");
+  size_t f;
+  string str = token_info.name[type];
+  f = str.find("%s");
   while (f != string::npos) {
-    error.replace(f,2,token_info.name[type]);
+    str.replace(f,2,string((const char*)extra.content.str,extra.content.len));
+    f = str.find("%s");
+  }
+  
+  f = error.find("%s");
+  while (f != string::npos) {
+    error.replace(f,2,str);
     f = error.find("%s");
   }
   
+  #ifdef DEBUG_MODE
+    if (herr)
+  #endif
   herr->error(error, fn, l, p);
+  #ifdef DEBUG_MODE
+    else {
+      perror("NULL ERROR HANDLER PASSED TO REPORT METHOD\n");
+      perror((error + "\n").c_str());
+    }
+  #endif
 }
 void token_t::report_warning(error_handler *herr, std::string error)
 {

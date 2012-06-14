@@ -46,7 +46,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
   else if (token.type == TT_DECLARATOR) {
     nenum = (jdi::definition_enum*)token.extra.def;
     classname = nenum->name;
-    if (not(nenum->flags & DEF_CLASS)) {
+    if (not(nenum->flags & DEF_ENUM)) {
       if (nenum->parent == scope)
         token.report_error(herr, "Attempt to redeclare `" + classname + "' as enum in this scope");
       nenum = NULL;

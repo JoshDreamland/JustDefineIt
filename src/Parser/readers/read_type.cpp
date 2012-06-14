@@ -43,9 +43,10 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   
   if (token.type != TT_DECLARATOR) {
     if (token.type != TT_DECFLAG) {
-      if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_ENUM) {
+      if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_ENUM or token.type == TT_UNION) {
         if (cp)
-          rdef = token.type == TT_ENUM? (definition*)cp->handle_enum(scope,token,0): (definition*)cp->handle_class(scope,token,0);
+          rdef = token.type == TT_ENUM? (definition*)cp->handle_enum(scope,token,0): 
+            token.type == TT_UNION? (definition*)cp->handle_union(scope,token,0) : (definition*)cp->handle_class(scope,token,0);
         else {
           token = lex->get_token_in_scope(scope, herr);
           if (token.type != TT_DECLARATOR)
@@ -87,8 +88,12 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   typeloop: while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
   {
     if (token.type == TT_DECLARATOR) {
-      if (rdef)
+      if (rdef) {
+        if (token.extra.def->flags & DEF_CLASS)
+          break;
         token.report_error(herr,"Two types named in declaration");
+        FATAL_RETURN(1);
+      }
       rdef = token.extra.def;
       rflags |= swif;
     }
@@ -287,7 +292,14 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
       
-      case TT_DECLARATOR: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
+      case TT_DECLARATOR:
+        if (!rhs and refs.name.empty() and (token.extra.def->flags & DEF_CLASS)) { //
+          refs.name = token.extra.def->name;
+          rhs = true;
+          break;
+        }
+      
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_SCOPE: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN:case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_DECLTYPE:

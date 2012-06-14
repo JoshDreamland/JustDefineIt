@@ -52,6 +52,16 @@ namespace jdi {
   unsigned long builtin_flag__register;
   unsigned long builtin_flag__inline;
   
+  unsigned long builtin_flag__unsigned;
+  unsigned long builtin_flag__signed;
+  unsigned long builtin_flag__short;
+  unsigned long builtin_flag__long;
+  
+  definition *builtin_type__unsigned;
+  definition *builtin_type__signed;
+  definition *builtin_type__short;
+  definition *builtin_type__long;
+  
   definition *builtin_type__void;
   definition *builtin_type__char;
   definition *builtin_type__int;
@@ -99,9 +109,10 @@ namespace jdi {
           if (redit.second) redit.first->second = new typeflag(*insit.first->second);
         }
       }
+      else flag = 0;
     }
     else
-      insit.first->second->usage = USAGE_FLAG(insit.first->second->usage | usage_flags);
+      insit.first->second->usage = USAGE_FLAG(insit.first->second->usage | usage_flags), flag = 0;
     return add_decl_info(insit.first->second->def, flag);
   }
   
@@ -115,10 +126,15 @@ namespace jdi {
     builtin_flag__inline   = add_declarator("inline",   UF_FLAG).flag;
     add_declarator("throw", UF_FLAG);
     
-    add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
-    add_declarator("signed",   UF_STANDALONE_FLAG, "int");
-    add_declarator("long",     UF_PRIMITIVE_FLAG);
-    add_declarator("short",    UF_PRIMITIVE_FLAG);
+    jdi::add_decl_info
+    c = add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
+    builtin_type__unsigned = c.def, builtin_flag__unsigned = c.flag;
+    c = add_declarator("signed",   UF_STANDALONE_FLAG, "int");
+    builtin_type__signed   = c.def, builtin_flag__signed   = c.flag;
+    c = add_declarator("short",    UF_PRIMITIVE_FLAG);
+    builtin_type__short    = c.def, builtin_flag__short    = c.flag;
+    c = add_declarator("long",     UF_PRIMITIVE_FLAG);
+    builtin_type__long     = c.def, builtin_flag__long     = c.flag;
     
     builtin_type__void   = add_declarator("void",    UF_PRIMITIVE).def;
     builtin_type__char   = add_declarator("char",    UF_PRIMITIVE).def;

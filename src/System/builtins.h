@@ -75,6 +75,16 @@ namespace jdi {
   extern unsigned long builtin_flag__register; ///< Builtin register flag
   extern unsigned long builtin_flag__inline;   ///< Builtin inline flag
   
+  extern unsigned long builtin_flag__unsigned; ///< Builtin unsigned flag
+  extern unsigned long builtin_flag__signed;  ///< Builtin signed flag
+  extern unsigned long builtin_flag__short;  ///< Builtin short flag
+  extern unsigned long builtin_flag__long;  ///< Builtin long flag
+  
+  extern definition *builtin_type__unsigned; ///< Builtin unsigned flag
+  extern definition *builtin_type__signed;  ///< Builtin signed flag
+  extern definition *builtin_type__short;  ///< Builtin short flag
+  extern definition *builtin_type__long;  ///< Builtin long flag
+  
   extern definition *builtin_type__void;   ///< Builtin void type
   extern definition *builtin_type__char;   ///< Builtin char type
   extern definition *builtin_type__int;    ///< Builtin int type

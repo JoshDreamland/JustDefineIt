@@ -95,6 +95,10 @@ namespace jdi
     int err_pos; ///< The position at which the error occurred
     set<definition*> variadics; ///< Set of variadic types.
     
+    /// This is a map of structures which conflict with other declarations,
+    /// which is allowed by the rules of C.
+    map<string, definition*> c_structs;
+    
     definition_scope* get_global(); ///< Return the global scope.
     
     size_t search_dir_count(); ///< Return the number of search directories

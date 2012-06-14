@@ -326,5 +326,7 @@ void context::dump_macros() {
 context::~context() {
   delete global;
   delete lex;
+  for (map<string,definition*>::iterator it = c_structs.begin(); it != c_structs.end(); ++it)
+    delete it->second;
   dump_macros();
 }

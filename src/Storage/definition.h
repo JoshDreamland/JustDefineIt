@@ -33,16 +33,17 @@ namespace jdi {
     DEF_NAMESPACE =    1 <<  2, ///< This definition is a namespace.
     DEF_CLASS =        1 <<  3, ///< This definition is a class or structure. 
     DEF_ENUM =         1 <<  4, ///< This definition is an enumeration of valued constants.
-    DEF_TYPED =        1 <<  5, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
-    DEF_FUNCTION =     1 <<  6, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_VALUED =       1 <<  7, ///< This definition has a constant integer value attached.
-    DEF_DEFAULTED =    1 <<  8, ///< This definition has a default expression attached.
-    DEF_TEMPPARAM =    1 <<  9, ///< This definition is a parameter of a template.
-    DEF_EXTERN =       1 << 10, ///< This definition was declared with the "extern" flag.
-    DEF_HYPOTHETICAL = 1 << 11, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_PRIVATE =      1 << 12, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 13, ///< This definition was declared as a protected member.
-    DEF_INCOMPLETE =   1 << 14  ///< This definition was declared but not implemented.
+    DEF_UNION =        1 <<  5, ///< This definition is an enumeration of valued constants.
+    DEF_TYPED =        1 <<  6, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
+    DEF_FUNCTION =     1 <<  7, ///< This definition is a function containing a list of zero or more overloads.
+    DEF_VALUED =       1 <<  8, ///< This definition has a constant integer value attached.
+    DEF_DEFAULTED =    1 <<  9, ///< This definition has a default expression attached.
+    DEF_TEMPPARAM =    1 << 10, ///< This definition is a parameter of a template.
+    DEF_EXTERN =       1 << 11, ///< This definition was declared with the "extern" flag.
+    DEF_HYPOTHETICAL = 1 << 12, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
+    DEF_PRIVATE =      1 << 13, ///< This definition was declared as a private member.
+    DEF_PROTECTED =    1 << 14, ///< This definition was declared as a protected member.
+    DEF_INCOMPLETE =   1 << 15  ///< This definition was declared but not implemented.
   };
   
   struct definition;
@@ -209,6 +210,14 @@ namespace jdi {
     };
     vector<ancestor> ancestors; ///< Ancestors of this structure or class
     definition_class(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_TYPENAME);
+  };
+  
+  /**
+    @struct jdi::definition_union
+    An extension of \c jdi::definition_scope for unions, which have a unified tyoe and unique sizeof() operator.
+  **/
+  struct definition_union: definition_scope {
+    definition_union(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_UNION | DEF_TYPENAME);
   };
   
   /**

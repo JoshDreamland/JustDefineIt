@@ -119,9 +119,18 @@ namespace jdi {
     };
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_sizeof: AST_Node_Unary {
-      value eval(); /// Behaves funny for sizeof; coerces instead, then takes size of result type.
-      definition *coerce(); /// Behaves funny for sizeof; returns unsigned long every time.
+      value eval(); ///< Behaves funny for sizeof; coerces instead, then takes size of result type.
+      definition *coerce(); ///< Behaves funny for sizeof; returns unsigned long every time.
+      void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       AST_Node_sizeof(AST_Node* param);
+    };
+    /// Child of AST_Node_Unary specifically for sizeof
+    struct AST_Node_Cast: AST_Node_Unary {
+      full_type cast_type; ///< The type this cast represents.
+      value eval(); ///< Performs a cast, as it is able.
+      definition *coerce(); ///< Returns \c cast_type.
+      void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      AST_Node_Cast(AST_Node* param);
     };
     /// Child of AST_Node for tokens with an attached \c definition.
     struct AST_Node_Definition: AST_Node {
@@ -131,9 +140,9 @@ namespace jdi {
     };
     /// Child of AST_Node for tokens with an attached \c full_type.
     struct AST_Node_Type: AST_Node {
-      full_type type; ///< The \c full_type read into this node.
-      value eval(); ///< Returns zero; output should never be of integral importance.
-      definition *coerce(); ///< Returns the type contained.
+      full_type dec_type; ///< The \c full_type read into this node.
+      value eval(); ///< Returns zero; output should never be queried.
+      definition *coerce(); ///< Returns the type contained, \c dec_type.
       AST_Node_Type(full_type &ft); ///< Construct consuming a \c full_type.
     };
     /// Child of AST_Node for binary operators.

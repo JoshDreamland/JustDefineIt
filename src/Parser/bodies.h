@@ -182,9 +182,29 @@ namespace jdip {
                               definition is instantiated for it. These flags are
                               NOT given to memebers of the class.
       
-      @return The enum created/referenced, or NULL if some unrecoverable error occurred
+      @return The enum created/referenced, or NULL if some unrecoverable error occurred.
     **/
     definition_class* handle_class(definition_scope *scope, token_t& token, int inherited_flags);
+    
+    /**
+      Parse a union definition.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope in which declarations will be stored. [in-out]
+      @param  token  The token that was read before this function was invoked.
+                     At the start of this call, the type of this token must be
+                     either TT_CLASS or TT_STRUCT. Upon termination, the type
+                     of this token will be TT_DECLARATOR with extra info set to
+                     the new definition unless an error occurs. [in-out]
+      @param inherited_flags  The flags that will be given to the class, if a new
+                              definition is instantiated for it. These flags are
+                              NOT given to memebers of the class.
+      
+      @return The union created/referenced, or NULL if some unrecoverable error occurred.
+    **/
+    jdi::definition_union* handle_union(definition_scope *scope, token_t& token, int inherited_flags);
     
     /**
       Parse an enumeration. Reads the enumeration and its constants into the given scope.

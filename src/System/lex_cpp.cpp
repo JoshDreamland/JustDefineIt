@@ -418,8 +418,9 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       break;
     case_if: 
         if (conditionals.empty() or conditionals.top().is_true) {
-          AST a;
           mlex->update();
+          
+          AST a;
           if (a.parse_expression(mlex, herr) or !a.eval()) {
             token_t res;
             render_ast(a, "if_directives");
@@ -768,7 +769,7 @@ bool lexer_cpp::pop_file() {
   return false;
 }
   
-lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): macros(pmacros), filename(fname), line(1), lpos(0), mlex(new lexer_macro(this))
+lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): macros(pmacros), filename(fname), line(1), lpos(0), open_macro_count(0), mlex(new lexer_macro(this))
 {
   consume(input); // We are also an llreader. Consume the given one using the inherited method.
   keywords["asm"] = TT_ASM;
@@ -815,12 +816,17 @@ lexer_macro::lexer_macro(lexer_cpp *enc): pos(enc->pos), lcpp(enc) { }
 void lexer_macro::update() { cfile = lcpp->data; length = lcpp->length; }
 token_t lexer_macro::get_token(error_handler *herr)
 {
+  #ifdef DEBUG_MODE
+    static int number_of_times_GDB_has_dropped_its_ass_in_this_function = 0;
+    ++number_of_times_GDB_has_dropped_its_ass_in_this_function;
+  #endif
+  
   for (;;) // Loop until we find something or hit world's end
   {
     if (pos >= length) {
       if (lcpp->pop_file())
         return token_t(token_basics(TT_ENDOFCODE,lcpp->filename,lcpp->line,pos-lcpp->lpos));
-      update();
+      update(); continue;
     }
     // Skip all whitespace
     if (cfile[pos] == ' ' or cfile[pos] == '\t') { ++pos; continue; }

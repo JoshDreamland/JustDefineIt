@@ -70,8 +70,12 @@ int jdi::context::parse_stream(lexer *lang_lexer, error_handler *errhandl)
   err_line = -1;
   err_pos = -1;
   
-  token_t dummy; // An invalid token to appease the parameter chain.
-  int res = ((context_parser*)this)->handle_scope(global, dummy);
+  token_t eoc; // An invalid token to appease the parameter chain.
+  int res = ((context_parser*)this)->handle_scope(global, eoc);
+  while (eoc.type != TT_ENDOFCODE) {
+    eoc.report_errorf(herr, "Premature abort caused by %s here; relaunching");
+    ((context_parser*)this)->handle_scope(global, eoc);
+  }
   
   parse_open = false; // Now a parse can be called in this context again
   

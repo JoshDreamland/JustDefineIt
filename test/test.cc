@@ -5,9 +5,6 @@
 #define __extension__
 #define union struct
 
-
-char shit[15 * sizeof(int)];
-
 #include <stdio.h>
 
 #include <errno.h>
@@ -35,18 +32,31 @@ char shit[15 * sizeof(int)];
 #include <stdint.h>
 
 #include <stdlib.h>
+#include <time.h>
+
+#include <fcntl.h>
+#include <sys/sem.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <setjmp.h>
+#include <inttypes.h>
+#include <sys/utsname.h>
 
 /*
-// Finish with errors
+// Two types named in declaration (Redeclaring size_t for some reason. Macro related?)
 #include <fenv.h>
 #include <tgmath.h>
 #include <complex.h>
 
+/*
 #include <ctype.h>
 #include <wctype.h>
-
-#include <sys/utsname.h>
+#include <limits.h>
+#include <pthread.h>
+#include <assert.h>
 */
+
 
 /*
 // Not found
@@ -58,20 +68,9 @@ char shit[15 * sizeof(int)];
 */
 
 /*
-// Die in fire
-#include <stdlib.h>
-#include <time.h>
-#include <limits.h>
-#include <inttypes.h>
-#include <setjmp.h>
-#include <signal.h>
-#include <assert.h>
-
-#include <fcntl.h>
-#include <pthread.h>
-#include <sys/sem.h>
+// Unexpected behavior
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 */
+
+

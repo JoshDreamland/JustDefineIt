@@ -52,7 +52,15 @@ namespace jdi
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
           full_type ft = read_type(lex,token,search_scope,NULL,herr); // Read complete type
           myroot = new AST_Node_Type(ft);
-          at = AT_TYPE; read_next = true;
+          token_basics(
+            myroot->type = AT_TYPE,
+            myroot->filename = (const char*)token.file,
+            myroot->linenum = token.linenum,
+            myroot->pos = token.pos
+          );
+          if (token.type == TT_RIGHTPARENTH) // Facilitate casts
+            return myroot;
+          handled_basics = read_next = true;
         } break;
       
       case TT_IDENTIFIER: {
@@ -86,7 +94,7 @@ namespace jdi
         }
         track(ct);
         token = get_next_token();
-        myroot = new AST_Node_Unary(parse_expression(token, 1000), ct);
+        myroot = new AST_Node_Unary(parse_expression(token, PRECEDENCE_MAX), ct);
         read_next = true;
         break;
       
@@ -94,7 +102,7 @@ namespace jdi
         token.report_error(herr, "Expected expression here before operator");
         return NULL;
       
-      case TT_SCOPE:
+      case TT_SCOPE: break;
       
       case TT_LEFTPARENTH:
         track(string("("));
@@ -105,6 +113,13 @@ namespace jdi
           return NULL;
         }
         track(string(")"));
+        if (myroot->type == AT_TYPE) {
+          AST_Node_Type *ad = (AST_Node_Type*)myroot;
+          token = get_next_token(); read_next = true;
+          AST_Node_Cast *nr = new AST_Node_Cast(parse_expression(token, PRECEDENCE_MAX));
+          nr->cast_type.swap(ad->dec_type); nr->content = nr->cast_type.def->name;
+          delete myroot; myroot = nr;
+        }
         handled_basics = true;
         break;
       case TT_LEFTBRACKET:
@@ -133,7 +148,16 @@ namespace jdi
       
       case TT_SIZEOF:
           token = get_next_token(); track(string("sizeof")); 
-          myroot = new AST_Node_sizeof(parse_expression(token,PRECEDENCE_MAX));
+          if (token.type == TT_LEFTPARENTH) {
+              token = get_next_token(); track(string("(")); 
+              myroot = new AST_Node_sizeof(parse_expression(token,PRECEDENCE_MAX));
+              if (token.type != TT_RIGHTPARENTH)
+                token.report_errorf(herr, "Expected closing parenthesis to sizeof before %s");
+              else { track(string("(")); }
+              token = get_next_token();
+          }
+          else
+            myroot = new AST_Node_sizeof(parse_expression(token,PRECEDENCE_MAX));
           at = AT_UNARY_PREFIX;
           read_next = true;
         break;
@@ -359,6 +383,29 @@ namespace jdi
   value AST::AST_Node_sizeof::eval() {
     return 0L; // TODO: right->coerce()->calculate_size();
   }
+  value AST::AST_Node_Cast::eval() {
+    if (cast_type.def == builtin_type__int)
+      if (cast_type.flags & builtin_flag__long)
+        if (cast_type.flags & builtin_flag__unsigned)
+          return value((long)right->eval());
+        else
+          return value((long)(int)right->eval());
+      else if (cast_type.flags & builtin_flag__short)
+        if (cast_type.flags & builtin_flag__unsigned)
+          return value((long)right->eval());
+        else
+          return value((long)(short)(long)right->eval());
+      else
+        if (cast_type.flags & builtin_flag__unsigned)
+          return value((long)(unsigned int)(long)right->eval());
+        else
+          return value((long)(int)(long)right->eval());
+    else if (cast_type.def == builtin_type__float)
+      return value((double)(float)(double)right->eval());
+    else if (cast_type.def == builtin_type__double)
+      return value((double)right->eval());
+    else return value();
+  }
   
   
   //===========================================================================================================================
@@ -366,25 +413,32 @@ namespace jdi
   //===========================================================================================================================
   
   definition* AST::AST_Node_sizeof::coerce() {
-    return builtin_type__int; // FIXME: Replace with long
+    return builtin_type__int; // FIXME: Replace with unsigned long
   }
   
+  definition* AST::AST_Node_Cast::coerce() {
+    return cast_type.def; // FIXME: Replace with cast_type (fulltype)
+  }
   
   //===========================================================================================================================
   //=: Constructors :==========================================================================================================
   //===========================================================================================================================
   
+  static string str_sizeof("sizeof",6);
+  static string str_cast("cast",4);
+  
   AST::AST_Node::AST_Node(): parent(NULL) {}
   AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
   AST::AST_Node_Definition::AST_Node_Definition(definition* d): def(d) {}
-  AST::AST_Node_Type::AST_Node_Type(full_type &ft) { type.swap(ft); }
+  AST::AST_Node_Type::AST_Node_Type(full_type &ft) { dec_type.swap(ft); }
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): right(r) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct): AST_Node(ct), right(r) {}
-  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param) {}
-  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) {}
-  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) {}
-  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) {}
-  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct), exp(expression), left(exp_true), right(exp_false) {}
+  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param,str_sizeof) {}
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param,str_cast) {}
+  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) { type = AT_BINARYOP; }
+  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) { type = AT_BINARYOP; }
+  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
+  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
   AST::AST_Node_Group::AST_Node_Group(): root(NULL) {}
   AST::AST_Node_Parameters::AST_Node_Parameters(): func(NULL) {}
   

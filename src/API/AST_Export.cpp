@@ -38,6 +38,7 @@ namespace jdi {
     int nodes_written;
     
     void draw_circle(int nid,int x,int y,int r,unsigned fill,unsigned stroke = 0xFF000000,int stroke_width = 2) { svg->draw_circle("Node"+svg->tostring(nid),x,y,r,fill,stroke,stroke_width); }
+    void draw_rectangle(int nid,int x1,int y1,int x2,int y2,unsigned fill,unsigned stroke = 0xFF000000,int stroke_width = 2) { svg->draw_rectangle("Node"+svg->tostring(nid),x1,y1,x2,y2,fill,stroke,stroke_width); }
     void draw_line(int nid,char s_id,int x1,int y1,int x2,int y2,unsigned stroke = 0xFF000000,int stroke_width = 2) { svg->draw_line("Connector_"+svg->tostring(nid)+"_"+s_id,x1,y1,x2,y2,stroke,stroke_width); }
     void draw_text(int nid,int cx,int bly,string t,unsigned fill = 0xFF000000) { svg->draw_text("Label_"+svg->tostring(nid),cx,bly,t,12,fill); }
     
@@ -73,6 +74,30 @@ namespace jdi {
     
     svg->draw_line(nid,'m',x,y,xx,yy);
     svg->draw_circle(nid,x,y,r,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
+    svg->draw_text(nid,x,y+4,content);
+    if (right)
+      right->toSVG(xx,yy,svg);
+  }
+  void AST::AST_Node_sizeof::toSVG(int x, int y, SVGrenderInfo *svg)
+  {
+    const int nid = svg->nodes_written++;
+    int r = own_width()/2;
+    int xx = x, yy = y+r+16+(right?right->own_width()/2:0);
+    
+    svg->draw_line(nid,'m',x,y,xx,yy);
+    svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
+    svg->draw_text(nid,x,y+4,content);
+    if (right)
+      right->toSVG(xx,yy,svg);
+  }
+  void AST::AST_Node_Cast::toSVG(int x, int y, SVGrenderInfo *svg)
+  {
+    const int nid = svg->nodes_written++;
+    int r = own_width()/2;
+    int xx = x, yy = y+r+16+(right?right->own_width()/2:0);
+    
+    svg->draw_line(nid,'m',x,y,xx,yy);
+    svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
     if (right)
       right->toSVG(xx,yy,svg);

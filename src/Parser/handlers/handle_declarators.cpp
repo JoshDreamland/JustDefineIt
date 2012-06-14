@@ -35,6 +35,7 @@
 using namespace jdip;
 using namespace jdi;
 
+static unsigned anon_count = 0;
 int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
   // Outsource to read_type, which will take care of the hard work for us.
@@ -51,17 +52,37 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   after_comma:
   
   // Make sure we do indeed find ourselves at an identifier to declare.
-  if (tp.refs.name.empty())
-    return 0;
+  if (tp.refs.name.empty()) {
+    if (token.type == TT_COLON) {
+      if (scope->flags & DEF_CLASS) {
+        char anonname[32];
+        sprintf(anonname,"<anonymousField%010d>",anon_count);
+        tp.refs.name = anonname;
+      }
+      else
+        token.report_warning(herr, "Declaration without name is meaningless outside of a class");
+    }
+    else
+      return 0;
+  }
   
   // Add it to our definitions map, without overwriting the existing member.
   definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
   if (ins.second) { // If we successfully inserted,
+    insert_anyway:
     ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
   }
-  #ifndef NO_ERROR_REPORTING
   else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {
+    if (ins.first->second->flags & DEF_CLASS) {
+      pair<map<string,definition*>::iterator,bool> cins
+        = c_structs.insert(pair<string,definition*>(ins.first->first,ins.first->second));
+      if (!cins.second and cins.first->second != ins.first->second) {
+        token.report_error(herr, "Attempt to redeclare `" + tp.refs.name + "' failed due to conflicts");
+        FATAL_RETURN(1);
+      }
+      else goto insert_anyway;
+    }
     if (not(ins.first->second->flags & DEF_TYPED)) {
       token.report_error(herr, "Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
       return 3;
@@ -71,7 +92,6 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       return 4;
     }
   }
-  #endif
   
   for (;;)
   {
