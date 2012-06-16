@@ -1,11 +1,17 @@
-#define asm(x) {}
-#define __asm(x) {}
-#define __asm__(x) {}
 #define __attribute__(x)
 #define __extension__
-#define union struct
+
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <ncurses.h>
+
+#include <stdio.h> //printf, NULL
+#include <stdlib.h> //malloc
+#include <unistd.h> //usleep
+#include <time.h> //clock
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <errno.h>
 #include <float.h>
@@ -17,6 +23,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <malloc.h>
 
 #include <cpio.h>
 #include <dirent.h>
@@ -31,7 +38,6 @@
 #include <unistd.h>
 #include <stdint.h>
 
-#include <stdlib.h>
 #include <time.h>
 
 #include <fcntl.h>
@@ -43,29 +49,23 @@
 #include <inttypes.h>
 #include <sys/utsname.h>
 
-/*
-// Two types named in declaration (Redeclaring size_t for some reason. Macro related?)
-#include <fenv.h>
-#include <tgmath.h>
-#include <complex.h>
-
-/*
+// Once affected by lack of '?' operator token
 #include <ctype.h>
 #include <wctype.h>
 #include <limits.h>
-#include <pthread.h>
 #include <assert.h>
-*/
 
+// Once affected by lack of support for public/private/protected, now affected by lack of support for constructors.
+#include <pthread.h>
 
 /*
-// Not found
-#include <stdnoreturn.h>
-#include <uchar.h>
-#include <stdatomic.h>
-#include <stdalign.h>
-#include <threads.h>
+// Two types named in expression (Redeclaring size_t for some reason. Macro related?)
+#include <fenv.h>
+#include <tgmath.h>
+#include <complex.h>
+#include <X11/Xlib.h>
 */
+
 
 /*
 // Unexpected behavior

@@ -37,8 +37,8 @@ namespace jdip {
   tf_map builtin_declarators;
   prim_map builtin_primitives;
   tf_flag_map builtin_decls_byflag;
-  typeflag::typeflag(): usage(), def(NULL) {}
-  typeflag::typeflag(string n, USAGE_FLAG u): name(n), usage(u), def(NULL) {}
+  typeflag::typeflag(): usage(), flagbit(0), def(NULL) {}
+  typeflag::typeflag(string n, USAGE_FLAG u): name(n), usage(u), flagbit(0), def(NULL) {}
   typeflag::~typeflag() { }
 }
 
@@ -63,6 +63,7 @@ namespace jdi {
   definition *builtin_type__long;
   
   definition *builtin_type__void;
+  definition *builtin_type__bool;
   definition *builtin_type__char;
   definition *builtin_type__int;
   definition *builtin_type__float;
@@ -137,6 +138,7 @@ namespace jdi {
     builtin_type__long     = c.def, builtin_flag__long     = c.flag;
     
     builtin_type__void   = add_declarator("void",    UF_PRIMITIVE).def;
+    builtin_type__bool   = add_declarator("bool",    UF_PRIMITIVE).def;
     builtin_type__char   = add_declarator("char",    UF_PRIMITIVE).def;
     builtin_type__int    = add_declarator("int",     UF_PRIMITIVE).def;
     builtin_type__float  = add_declarator("float",   UF_PRIMITIVE).def;

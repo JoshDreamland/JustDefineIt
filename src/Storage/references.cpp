@@ -36,13 +36,13 @@
 #include <iostream>
 
 namespace jdi {
-  ref_stack::ref_stack(): bottom(NULL), top(NULL) {}
+  ref_stack::ref_stack(): ntop(NULL), nbottom(NULL), sz(0) {}
+  ref_stack::ref_stack(ref_stack& rf): ntop(NULL), nbottom(NULL), sz(0) { swap(rf); }
+  ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
   ref_stack::~ref_stack() { clear(); }
   
-  ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
   ref_stack &ref_stack::operator= (const ref_stack& rf) { clear(); copy(rf); return *this; }
   
-  ref_stack::ref_stack(ref_stack& rf): bottom(NULL), top(NULL) { swap(rf); }
   ref_stack &ref_stack::operator= (ref_stack& rf) { swap(rf); return *this; }
   
   ref_stack::node::node(node* p, ref_type rt): previous(p), type(rt) {}
@@ -71,67 +71,75 @@ namespace jdi {
   ref_stack::iterator::operator bool() { return n; }
   ref_stack::iterator::iterator(ref_stack::node *nconstruct): n(nconstruct) { }
   
-  ref_stack::iterator ref_stack::begin() { return ref_stack::iterator(top); }
+  ref_stack::iterator ref_stack::begin() { return ref_stack::iterator(ntop); }
   ref_stack::iterator ref_stack::end() { return ref_stack::iterator(NULL); }
   
   void ref_stack::push(ref_stack::ref_type reference_type) {
-    top = new node(top, reference_type);
-    if (!bottom) bottom = top;
+    ntop = new node(ntop, reference_type);
+    if (!nbottom) nbottom = ntop;
+    ++sz;
   }
   void ref_stack::push_array(size_t array_size) {
-    node* bo = bottom;
-    bottom = new node_array(NULL, array_size);
-    if (bo) bo->previous = bottom;
-    else top = bottom;
+    node* bo = nbottom;
+    nbottom = new node_array(NULL, array_size);
+    if (bo) bo->previous = nbottom;
+    else ntop = nbottom;
+    ++sz;
   }
   void ref_stack::push_func(parameter_ct &parameters) {
-    node* bo = bottom;
-    bottom = new node_func(NULL, parameters);
-    if (bo) bo->previous = bottom;
-    else top = bottom;
+    node* bo = nbottom;
+    nbottom = new node_func(NULL, parameters);
+    if (bo) bo->previous = nbottom;
+    else ntop = nbottom;
+    ++sz;
   }
   
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;
     cout << "DUPLICATED REF STACK" << endl;
-    if (!rf.bottom) {
-      top = bottom = NULL;
+    if (!rf.nbottom) {
+      ntop = nbottom = NULL;
       return;
     }
-    bottom = top = rf.top->duplicate();
-    for (node *c = rf.top->previous; c; c = c->previous) {
-      bottom->previous = c->duplicate();
-      bottom = bottom->previous;
+    nbottom = ntop = rf.ntop->duplicate();
+    for (node *c = rf.ntop->previous; c; c = c->previous) {
+      nbottom->previous = c->duplicate();
+      nbottom = nbottom->previous;
     }
+    sz = rf.sz;
   }
   void ref_stack::swap(ref_stack& rf) {
     name.swap(rf.name);
-    node *ts = top, *bs= bottom;
-    top = rf.top, bottom = rf.bottom;
-    rf.top = ts, rf.bottom = bs;
+    node *ts = ntop, *bs= nbottom;
+    ntop = rf.ntop, nbottom = rf.nbottom;
+    rf.ntop = ts, rf.nbottom = bs;
+    const size_t ss = rf.sz;
+    rf.sz = sz; sz = ss;
   }
   
   void ref_stack::append(ref_stack &rf) {
-    if (!rf.bottom) return; // Appending an empty stack is meaningless
-    if (!bottom) bottom = rf.bottom; // If we didn't have anything on our stack, our bottom is now its bottom.
-    rf.bottom->previous = top; // If we had anything on our stack, then our top item comes before its bottom item.
-    top = rf.top; // Since we threw that stack on top of ours, its top is now our top.
-    rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
+    if (!rf.nbottom) return; // Appending an empty stack is meaningless
+    if (!nbottom) nbottom = rf.nbottom; // If we didn't have anything on our stack, our nbottom is now its nbottom.
+    rf.nbottom->previous = ntop; // If we had anything on our stack, then our ntop item comes before its nbottom item.
+    ntop = rf.ntop; // Since we threw that stack on ntop of ours, its ntop is now our ntop.
+    rf.ntop = rf.nbottom = NULL; // Make sure it doesn't free what we just stole
+    sz += rf.sz; rf.sz = 0; // Steal its size, too.
   }
   void ref_stack::append_nest(ref_stack &rf) {
-    if (!rf.bottom) {
+    if (!rf.nbottom) {
       if (!rf.name.empty()) name = rf.name; // Grab the name, if it's meaningful
       return; // Appending an empty stack is meaningless
     }
-    if (!bottom) bottom = rf.bottom; // If we didn't have anything on our stack, our bottom is now its bottom.
-    rf.bottom->previous = top; // If we had anything on our stack, then our top item comes before its bottom item.
-    top = rf.top; // Since we threw that stack on top of ours, its top is now our top.
-    rf.top = rf.bottom = NULL; // Make sure it doesn't free what we just stole
+    if (!nbottom) nbottom = rf.nbottom; // If we didn't have anything on our stack, our nbottom is now its nbottom.
+    rf.nbottom->previous = ntop; // If we had anything on our stack, then our ntop item comes before its nbottom item.
+    ntop = rf.ntop; // Since we threw that stack on ntop of ours, its ntop is now our ntop.
+    rf.ntop = rf.nbottom = NULL; // Make sure it doesn't free what we just stole
+    sz += rf.sz; rf.sz = 0; // Steal its size, too.
     name = rf.name; // Steal the name from the nested expression.
   }
   
   void ref_stack::clear() {
-    for (node* n = top, *p; n; n = p) {
+    for (node* n = ntop, *p; n; n = p) {
       p = n->previous;
       switch (n->type) {
         case RT_FUNCTION: delete (node_func*)n; break;
@@ -139,9 +147,14 @@ namespace jdi {
         case RT_POINTERTO: case RT_REFERENCE: default: delete n; break;
       }
     }
+    sz = 0;
   }
   
-  bool ref_stack::empty() { return !bottom; }
+  bool ref_stack::empty() { return !nbottom; }
+  size_t ref_stack::size() { return sz; }
+  
+  ref_stack::node& ref_stack::top() { return *ntop; }
+  ref_stack::node& ref_stack::bottom() { return *nbottom; }
   
   void ref_stack::parameter_ct::throw_on(parameter &ft) {
     enswap(ft);

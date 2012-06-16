@@ -111,6 +111,8 @@ namespace jdip {
              error state, as the error will have already been reported to the given error handler.
   **/
   int read_referencers(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  
+  extern definition* dangling_pointer;
   /**
     @class context_parser
     @brief A field-free utility class extending \c context, implementing the
@@ -145,10 +147,28 @@ namespace jdip {
                      This will be updated to represent the next non-type token
                      in the stream. [in-out]
       @param inherited_flags Any flags which should be given to each declared definition.
+      @param res     A pointer to receive the last definition declared. [out]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
-    int handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags);
+    int handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags, definition* &res = dangling_pointer);
+    /**
+      Parse a list of declarations assuming the given type, copying them into the given scope.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope in which declarations will be stored. [in-out]
+      @param  token  The token that was read before this function was invoked.
+                     This will be updated to represent the next non-type token
+                     in the stream. [in-out]
+      @param type    The type we assume was already read. Referencers will be toasted if a comma is encountered. [in-out]
+      @param inherited_flags Any flags which should be given to each declared definition.
+      @param res     A pointer to receive the last definition declared. [out]
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_declarators(definition_scope *scope, token_t& token, full_type& type, unsigned inherited_flags, definition* &res = dangling_pointer);
     
     /**
       Parse a namespace definition.

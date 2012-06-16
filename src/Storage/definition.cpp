@@ -37,6 +37,9 @@ namespace jdi {
   definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {}
   definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
   
+  definition_function::definition_function(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): 
+    definition_typed(n, p, tp, rf, typeflags, flgs | DEF_FUNCTION) {}
+  
   definition *definition_scope::look_up(string sname) {
     defiter it = members.find(sname);
     if (it != members.end())

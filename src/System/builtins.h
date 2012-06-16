@@ -86,6 +86,7 @@ namespace jdi {
   extern definition *builtin_type__long;  ///< Builtin long flag
   
   extern definition *builtin_type__void;   ///< Builtin void type
+  extern definition *builtin_type__bool;   ///< Builtin char type
   extern definition *builtin_type__char;   ///< Builtin char type
   extern definition *builtin_type__int;    ///< Builtin int type
   extern definition *builtin_type__float;  ///< Builtin float type

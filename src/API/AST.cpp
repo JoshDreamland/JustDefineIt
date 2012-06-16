@@ -26,6 +26,7 @@
 #include <System/builtins.h>
 #include <System/symbols.h>
 #include <Parser/bodies.h>
+#include <API/compile_settings.h>
 #include <cstdio>
 #include <map>
 
@@ -86,7 +87,7 @@ namespace jdi
         token.report_error(herr, "Unimplemented.");
         return NULL;
       
-      case TT_OPERATOR:
+      case TT_OPERATOR: case TT_TILDE:
         ct = string((const char*)token.extra.content.str,token.extra.content.len);
         if (not(symbols[ct].type & ST_UNARY_PRE)) {
           token.report_error(herr,"Operator cannot be used as unary prefix");
@@ -124,7 +125,7 @@ namespace jdi
         break;
       case TT_LEFTBRACKET:
       case TT_LEFTBRACE:
-      case TT_TILDE: break;
+      break;
       
       case TT_COMMA:
       case TT_SEMICOLON:
@@ -241,7 +242,19 @@ namespace jdi
       case TT_TILDE:
       
       case TT_LEFTPARENTH:
-          if (left_node->type == AT_DEFINITION)
+          if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE) {
+            AST_Node *params = parse_expression(token, 0);
+            if (!params) {
+              token.report_error(herr, "Expected secondary expression after binary operator");
+              return left_node;
+            }
+            if (token.type != TT_RIGHTPARENTH) {
+              token.report_errorf(herr, "Expected closing parenthesis here before %s");
+              FATAL_RETURN(left_node);
+            }
+            left_node = new AST_Node_Binary(left_node,params,"(");
+            break;
+          }
         break;
       
       case TT_LEFTBRACKET:

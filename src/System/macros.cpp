@@ -144,7 +144,7 @@ void jdip::macro_function::preparse(string val, error_handler *herr)
         pt ie = i - 2;
         while (ie > 0 and is_useless(val[ie-1])) --ie; // eliminate any leading whitespace
         if (ie > push_from) // If there's anything non-white to push since last time,
-          value.push_back(mv_chunk(val.c_str(), push_from, ie-push_from)); // Then push it
+          value.push_back(mv_chunk(val.c_str(), push_from, ie-push_from+1)); // Then push it
         while (is_useless(val[++i])); // Skip any trailing whitespace
         push_from = i;
         continue;

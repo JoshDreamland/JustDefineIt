@@ -23,12 +23,12 @@
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 
-static unsigned anon_count = 1111111;
+static unsigned anon_count = 1;
 jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scope, token_t& token, int inherited_flags)
 {
   #ifdef DEBUG_MODE
   if (token.type != TT_UNION)
-    token.report_error(herr, "PARSE ERROR: handle_union invoked with non-class, non-union token.");
+    token.report_error(herr, "PARSE ERROR: handle_union invoked with non-union token.");
   #endif
   
   token = read_next_token(scope);
@@ -56,7 +56,7 @@ jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scop
     classname = nclass->name;
     if (not(nclass->flags & DEF_UNION)) {
       if (nclass->parent == scope)
-        token.report_error(herr, "Attempt to redeclare `" + classname + "' as class in this scope");
+        token.report_error(herr, "Attempt to redeclare `" + classname + "' as union in this scope");
       nclass = NULL;
     }
     else {
@@ -80,7 +80,7 @@ jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scop
   #define insnew() { \
     pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL)); \
     if (!dins.second) { derr("Class `" + classname + "' instantiated inadvertently during parse by another thread. Freeing."); delete dins.first->second; } \
-    dins.first->second = nclass = new definition_union(classname,scope, DEF_CLASS | DEF_TYPENAME | inherited_flags); \
+    dins.first->second = nclass = new definition_union(classname,scope, DEF_UNION | DEF_TYPENAME | inherited_flags); \
   }
   
   if (!nclass)

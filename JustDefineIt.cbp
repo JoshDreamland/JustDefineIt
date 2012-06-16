@@ -90,6 +90,12 @@
 		<Unit filename="src/Parser/handlers/handle_class.cpp" />
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />
 		<Unit filename="src/Parser/handlers/handle_enum.cpp" />
+		<Unit filename="src/Parser/handlers/handle_function_implementation.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="src/Parser/handlers/handle_function_implementation.cpp" />
+		<Unit filename="src/Parser/handlers/handle_function_implementation.h" />
 		<Unit filename="src/Parser/handlers/handle_namespace.cpp" />
 		<Unit filename="src/Parser/handlers/handle_scope.cpp" />
 		<Unit filename="src/Parser/handlers/handle_union.cpp" />

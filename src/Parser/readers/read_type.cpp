@@ -61,7 +61,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         if (token.type == TT_IDENTIFIER)
           token.report_error(herr,"Type name expected here; `" + string((const char*)token.extra.content.str, token.extra.content.len) + "' does not name a type");
         else
-          token.report_error(herr,"Type name expected here");
+          token.report_errorf(herr,"Type name expected here before %s");
         return full_type();
       }
     }
@@ -89,9 +89,9 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   {
     if (token.type == TT_DECLARATOR) {
       if (rdef) {
-        if (token.extra.def->flags & DEF_CLASS)
+        if (token.extra.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION))
           break;
-        token.report_error(herr,"Two types named in declaration");
+        token.report_error(herr,"Two types named in expression");
         FATAL_RETURN(1);
       }
       rdef = token.extra.def;
@@ -102,7 +102,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       if (tf->usage & UF_PRIMITIVE) {
         if (tf->usage == UF_PRIMITIVE) {
           if (rdef)
-            token.report_error(herr,"Two types named in declaration");
+            token.report_error(herr,"Two types named in expression");
           rdef = tf->def;
           rflags |= swif;
         } else {
@@ -117,11 +117,12 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
     }
     token = lex->get_token_in_scope(scope, herr);
   }
-  if (rdef == NULL and (token.type == TT_CLASS or token.type == TT_STRUCT))
+  if (rdef == NULL and (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM))
   {
     if (cp)
       // FIXME: I don't have any inherited flags to pass here. Is that OK?
-      rdef = cp->handle_class(scope,token,0);
+      rdef = (token.type == TT_UNION? (definition*)cp->handle_union(scope,token,0) :
+              token.type == TT_ENUM?  (definition*)cp->handle_enum(scope,token,0)  :  (definition*)cp->handle_class(scope,token,0));
     else {
       token = lex->get_token_in_scope(scope, herr);
       goto typeloop;
@@ -138,17 +139,6 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
 }
 
 #include <General/debug_macros.h>
-
-///TODO: EXPORTME
-static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_handler *herr) {
-  for (size_t bc = 0;;) {
-    if (token.type == TT_LEFTBRACE) ++bc;
-    else if (token.type == TT_RIGHTBRACE and !--bc) return NULL;
-    token = lex->get_token(herr);
-  }
-}
-static void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = code_ignorer;
-
 int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
   ref_stack append;
@@ -183,14 +173,17 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         if (!rhs) // If we're still on the left-hand side
         {
           rhs = true;
+          if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_RIGHTPARENTH || token.type == TT_DECLTYPE)
+            goto handle_params;
           read_referencers(append, lex, token, scope, cp, herr);
           if (token.type != TT_RIGHTPARENTH) {
-            token.report_error(herr, "Expected right parenthesis after nested referencers");
+            token.report_errorf(herr, "Expected right parenthesis before %s to close nested referencers");
             FATAL_RETURN(1);
           }
         }
         else // Otherwise, we're on the right-hand side of the identifier, and we assume we are at function parameters.
         {
+          handle_params:
           ref_stack::parameter_ct params;
           
           // Navigate to the end of the function parametr list
@@ -223,18 +216,6 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
             token = lex->get_token_in_scope(scope, herr); // Read in our next token to see if it's a brace or extra info
             while (token.type == TT_DECFLAG) { // It is legal to put the flags throw and const here.
               token = lex->get_token_in_scope(scope, herr);
-            }
-            if (token.type == TT_LEFTBRACE) {
-              refs.implementation = handle_function_implementation(lex,token,scope,herr);
-              if (token.type != TT_RIGHTBRACE) {
-                token.report_error(herr, "Expected closing brace to function");
-                continue;
-              }
-              token.type = TT_SEMICOLON;
-            }
-            else if (token.type == TT_ASM)
-            {
-              cout << "What the fuck" << endl;
             }
             continue;
           }
@@ -281,19 +262,20 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           break;
         } // Else overflow
       
-      case TT_DECFLAG:
-          if (((typeflag*)token.extra.def)->flagbit == builtin_flag__const) {
-            // TODO: Give RT_POINTERTO node a bool constant; to denote that the pointer is const; set it to TRUE here.
+      case TT_DECFLAG: {
+          typeflag* a = ((typeflag*)token.extra.def);
+          if (a->flagbit == builtin_flag__const || a->flagbit == builtin_flag__volatile) {
+            // TODO: Give RT_POINTERTO node a bool/volatile flag; to denote that the pointer is const or volatile; set it here.
             token = lex->get_token_in_scope(scope, herr);
             continue;
           }
-        goto default_;
+        } goto default_;
       
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
       
       case TT_DECLARATOR:
-        if (!rhs and refs.name.empty() and (token.extra.def->flags & DEF_CLASS)) { //
+        if (!rhs and refs.name.empty() and (token.extra.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM))) { //
           refs.name = token.extra.def->name;
           rhs = true;
           break;

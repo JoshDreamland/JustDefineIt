@@ -687,15 +687,21 @@ token_t lexer_cpp::get_token(error_handler *herr)
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '=': pos += cfile[pos] == cfile[spos]; case '*': case '/': case '^':
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '&': case '|':  case '!': case '~': 
+      case '&': case '|':  case '!':
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
+      case '~':
+        if (cfile[pos] == '=')
+          return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, ++pos-spos);
+        return token_t(token_basics(TT_TILDE,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '>': case '<':
         pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case ':':
         pos += cfile[pos] == cfile[spos];
         return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,filename,line,spos-lpos), cfile+spos, pos-spos);
+      case '?':
+        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       
       case '.':
           if (is_digit(cfile[pos]))
@@ -953,15 +959,21 @@ token_t lexer_macro::get_token(error_handler *herr)
         return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case '=': pos += cfile[pos] == cfile[spos]; case '*': case '/': case '^':
         return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
-      case '&': case '|':  case '!': case '~': 
+      case '&': case '|':  case '!':
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
+      case '~':
+        if (cfile[pos] == '=')
+          return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, ++pos-spos);
+        return token_t(token_basics(TT_TILDE,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case '>': case '<':
         pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
       case ':':
         pos += cfile[pos] == cfile[spos];
         return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
+      case '?':
+        return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
         
       case '(': return token_t(token_basics(TT_LEFTPARENTH,lcpp->filename,lcpp->line,spos-lcpp->lpos));
       case '[': return token_t(token_basics(TT_LEFTBRACKET,lcpp->filename,lcpp->line,spos-lcpp->lpos));

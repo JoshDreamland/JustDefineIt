@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -80,7 +80,9 @@ namespace jdi {
         node(node* p, ref_type rt); ///< Allow constructing a new node easily.
         ~node(); ///< Virtual destructor so \c node_func can be complicated.
     };
+    /// Node containing an array boundary.
     struct node_array;
+    /// Node containing function parameters.
     struct node_func;
     
     /// Push a node onto this stack by a given type.
@@ -117,6 +119,14 @@ namespace jdi {
     /// Swap contents with another ref_stack. This method is completely safe.
     void swap(ref_stack &rf);
     
+    /// Get the top node.
+    node &top();
+    /// Get the bottom node.
+    node &bottom();
+    
+    /// Return the number of nodes contained.
+    size_t size();
+    
     /// Return iterator from topmost item.
     iterator begin();
     /// Return invalid iterator for comparison.
@@ -142,10 +152,10 @@ namespace jdi {
     };
     
     string name; ///< The name of the object with the contained referencers.
-    void *implementation; ///< Any data harvested from a function implementation, if we are one.
     private:
-      node *bottom; ///< The bottommost node on the list; used in the prepend method.
-      node *top; ///< The topmost node on the list, for everything else.
+      node *ntop; ///< The topmost node on the list, for everything else.
+      node *nbottom; ///< The bottommost node on the list; used in the prepend method.
+      size_t sz; ///< The number of nodes on the list
   };
 }
 

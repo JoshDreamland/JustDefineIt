@@ -108,7 +108,7 @@ namespace jdi {
     @struct jdi::definition_typed
     A piece of a definition for anything simply declared with a type.
     Use of this class includes regular variables, as well as typedefs. This is
-    onle part of the class for functions; see \c jdi::definition_function.
+    only part of the class for functions; see \c jdi::definition_function.
   **/
   struct definition_typed: definition {
     definition* type; ///< The definition of the type of this definition. This is not guaranteed to be non-NULL.
@@ -123,9 +123,8 @@ namespace jdi {
     A structure detailing an alternate overload of a function without using too much memory.
   **/
   struct function_overload {
-    definition *type; ///< The non-null return type of this overload.
-    ref_stack  *referencers; ///< The complete stack of referencers modifying our result type.
-    string      declaration; ///< The full prototype for the function.
+    full_type type; ///< The non-null return type of this overload.
+    string declaration; ///< The full prototype for the function.
   };
   /**
     @struct jdi::definition_function
@@ -133,7 +132,10 @@ namespace jdi {
     The class is based on implements a method of storing overload information.
   **/
   struct definition_function: definition_typed {
-    function_overload *overloads;  ///< Array of reference stacks for each overload of this function.
+    function_overload *overloads; ///< Array of reference stacks for each overload of this function.
+    string declaration; ///< The full prototype for the function.
+    void *implementation; ///< The implementation of this function as harvested by an external system.
+    definition_function(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION);
   };
   
   

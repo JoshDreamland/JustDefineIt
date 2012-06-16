@@ -97,7 +97,10 @@ int main() {
     else
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
     
-    cout << "Macro defs: [None requested]" << endl;
+    cout << "Macro defs:" << endl;
+    enigma.output_macro("_ISbit", cout);
+    enigma.output_macro("__GNUC_PREREQ", cout);
+    enigma.output_macro("__intN_t", cout);
   }
   else
     cout << "Failed to open file for parsing!" << endl;

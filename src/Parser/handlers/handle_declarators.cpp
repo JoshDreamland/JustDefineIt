@@ -36,12 +36,25 @@ using namespace jdip;
 using namespace jdi;
 
 static unsigned anon_count = 0;
-int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags)
+namespace jdip { definition *dangling_pointer = NULL; }
+int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags, definition* &res)
 {
+  // Skip destructor tildes; log if we are a destructor
+  bool dtor = token.type == TT_TILDE;
+  if (dtor) token = read_next_token(scope);
+  
   // Outsource to read_type, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
   // This means an identifier if the syntax is correct.
   full_type tp = read_type(lex, token, scope, this, herr);
+  if (dtor) {
+    if (tp.refs.name.empty() and tp.def == scope and !tp.flags and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION)
+      tp.refs.name = "<destruct>";
+    else {
+      token.report_error(herr, "Junk destructor; remove tilde?");
+      FATAL_RETURN(1);
+    }
+  }
   
   // Make sure we actually read a valid type.
   if (!tp.def) {
@@ -49,11 +62,28 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
     return 1;
   }
   
-  after_comma:
-  
+  return handle_declarators(scope, token, tp, inherited_flags, res);
+}
+
+int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, full_type &tp, unsigned inherited_flags, definition* &res)
+{
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (tp.refs.name.empty()) {
-    if (token.type == TT_COLON) {
+    // Handle constructors; this might need moved to a handle_constructors method.
+    if (tp.def == scope and !tp.flags and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION) {
+      tp.refs.name = "<construct>";
+      if (token.type == TT_COLON) {
+        // TODO: When you have a place to store constructor data, 
+        do {
+          token = read_next_token(scope);
+          if (token.type == TT_SEMICOLON) {
+            token.report_error(herr, "Expected constructor body here after initializers.");
+            FATAL_RETURN(1);
+          }
+        } while (token.type != TT_LEFTBRACE);
+      }
+    }
+    else if (token.type == TT_COLON) {
       if (scope->flags & DEF_CLASS) {
         char anonname[32];
         sprintf(anonname,"<anonymousField%010d>",anon_count);
@@ -70,11 +100,13 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
   if (ins.second) { // If we successfully inserted,
     insert_anyway:
-    ins.first->second = new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
+    res = ins.first->second = (!tp.refs.empty() && tp.refs.top().type == ref_stack::RT_FUNCTION)?
+      new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags):
+      new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
   }
   else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {
-    if (ins.first->second->flags & DEF_CLASS) {
+    if (ins.first->second->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM)) {
       pair<map<string,definition*>::iterator,bool> cins
         = c_structs.insert(pair<string,definition*>(ins.first->first,ins.first->second));
       if (!cins.second and cins.first->second != ins.first->second) {
@@ -91,6 +123,8 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       token.report_error(herr, "Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
       return 4;
     }
+    res = ins.first->second;
+    // TODO: This is where to handle function overloading.
   }
   
   for (;;)
@@ -118,14 +152,13 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           read_referencers(tp.refs, lex, token, scope, this, herr);
           
           // Just hop into the error checking above and pass through the definition addition again.
-        goto after_comma;
+        return handle_declarators(scope, token, tp, inherited_flags, res);
         
-      case TT_COLON:
-        if (tp.def != builtin_type__int) {
-          token.report_error(herr,"Attempt to assign bit count in non-integer declaration");
-          return 1;
-        }
-        else {
+      case TT_COLON: {
+          if (tp.def != builtin_type__int) {
+            token.report_error(herr,"Attempt to assign bit count in non-integer declaration");
+            FATAL_RETURN(1);
+          }
           AST bitcountexp;
           bitcountexp.parse_expression(token = read_next_token(scope), lex, scope, herr);
           value bc = bitcountexp.eval();
@@ -133,8 +166,8 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             token.report_error(herr,"Bit count is not an integer");
             FATAL_RETURN(1);
           }
-        }
-        break;
+          // TODO: Store the bit count somewhere
+        } break;
       
       case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
           token.report_error(herr, "Expected initializer `=' here before literal.");
