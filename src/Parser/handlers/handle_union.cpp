@@ -23,6 +23,37 @@
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 
+using namespace jdip;
+
+static inline definition_union* insnew(definition_scope *const &scope, int inherited_flags, const string& classname, const token_t &token, error_handler* const& herr, context *ct) {
+  definition_union* nclass = NULL;
+  pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL));
+  if (!dins.second) {
+    if (dins.first->second->flags & DEF_TYPENAME) {
+      token.report_error(herr, "Union `" + classname + "' instantiated inadvertently during parse by another thread. Freeing.");
+      delete dins.first->second;
+    }
+    else {
+      dins = ct->c_structs.insert(pair<string,definition*>(classname,NULL));
+      if (dins.second)
+        goto my_else;
+      if (dins.first->second->flags & DEF_UNION)
+        nclass = (definition_union*)dins.first->second;
+      else {
+        #if FATAL_ERRORS
+          return NULL;
+        #else
+          delete dins.first->second;
+          goto my_else;
+        #endif
+      }
+    }
+  } else { my_else:
+    dins.first->second = nclass = new definition_union(classname,scope, DEF_UNION | DEF_TYPENAME | inherited_flags);
+  }
+  return nclass;
+}
+
 static unsigned anon_count = 1;
 jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scope, token_t& token, int inherited_flags)
 {
@@ -67,24 +98,13 @@ jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scop
   }
   else {
     char buf[32];
-    sprintf(buf, "<anonymous%08d>", anon_count++);
+    sprintf(buf, "<anonymousUnion%08d>", anon_count++);
     classname = buf;
   }
   
-  #ifdef DEBUG_MODE
-    #define derr(x) token.report_error(herr, x);
-  #else
-    #define derr(x)
-  #endif
-  
-  #define insnew() { \
-    pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL)); \
-    if (!dins.second) { derr("Class `" + classname + "' instantiated inadvertently during parse by another thread. Freeing."); delete dins.first->second; } \
-    dins.first->second = nclass = new definition_union(classname,scope, DEF_UNION | DEF_TYPENAME | inherited_flags); \
-  }
-  
   if (!nclass)
-    insnew();
+    if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+      return NULL;
   
   if (token.type == TT_COLON) {
     token.report_error(herr, "Attempting to add ancestors to previously defined class `" + classname + "'");
@@ -98,7 +118,8 @@ jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scop
     incomplete = 0;
     if (will_redeclare) {
       will_redeclare = false;
-      insnew();
+      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+        return NULL;
     }
     else if (already_complete) {
       token.report_error(herr, "Attempting to add members to previously defined union `" + classname + "'");

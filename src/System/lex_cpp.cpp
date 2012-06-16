@@ -246,6 +246,7 @@ string lexer_cpp::read_preprocessor_args(error_handler *herr)
 **/
 void lexer_cpp::handle_preprocessor(error_handler *herr)
 {
+  bool variadic = false; // Whether this function is variadic
   while (cfile[pos] == ' ' or cfile[pos] == '\t') ++pos;
   const size_t pspos = pos;
   switch (cfile[pos++])
@@ -303,7 +304,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
   {
     break;
     case_define: {
-      string argstr = read_preprocessor_args(herr);
+      string argstrs = read_preprocessor_args(herr);
+      const char* argstr = argstrs.c_str();
       if (!conditionals.empty() and !conditionals.top().is_true)
         break;
       size_t i = 0;
@@ -313,7 +315,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       }
       const size_t nsi = i;
       while (is_letterd(argstr[++i]));
-      pair<macro_iter, bool> mins = macros.insert(pair<string,macro_type*>(argstr.substr(nsi,i-nsi),NULL));
+      pair<macro_iter, bool> mins = macros.insert(pair<string,macro_type*>(argstrs.substr(nsi,i-nsi),NULL));
       
       if (argstr[i] == '(') {
         vector<string> paramlist;
@@ -325,12 +327,21 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           }
           const size_t si = i;
           while (is_letterd(argstr[++i]));
-          paramlist.push_back(argstr.substr(si, i-si));
+          paramlist.push_back(argstrs.substr(si, i-si));
           
           while (is_useless(argstr[i])) ++i;
           if (argstr[i] == ')') break;
           if (argstr[i] == ',') { while (is_useless(argstr[++i])); continue; }
-          herr->error("Expected comma or closing parenthesis at this point");
+          
+          // Handle variadic macros (if we are at ...)
+          if (argstr[i] == '.' and argstr[i+1] == '.' and argstr[i+2] == '.') {
+            i += 2; while (is_useless(argstr[++i]));
+            variadic = true;
+            if (argstr[i] == ')') break;
+            herr->error("Expected closing parenthesis at this point; further parameters not allowed following variadic", filename, line, pos-lpos);
+          }
+          else
+            herr->error("Expected comma or closing parenthesis at this point", filename, line, pos-lpos);
         }
         
         if (!mins.second) { // If no insertion was made; ie, the macro existed already.
@@ -339,7 +350,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           macro_type::free(mins.first->second);
           mins.first->second = NULL;
         }
-        mins.first->second = new macro_function(mins.first->first,paramlist, argstr.substr(++i), false);
+        mins.first->second = new macro_function(mins.first->first,paramlist, argstrs.substr(++i), variadic, herr);
       }
       else
       {
@@ -350,7 +361,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           mins.first->second = NULL;
         }
         while (is_useless(argstr[i])) ++i;
-        mins.first->second = new macro_scalar(mins.first->first,argstr.substr(i));
+        mins.first->second = new macro_scalar(mins.first->first,argstrs.substr(i));
       }
     } break;
     case_error: {
@@ -481,7 +492,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
             incnext = false;
         else {
           case_include_next:
-          incnext = true;
+          incnext = !files.empty();
         }
         string fnfind = read_preprocessor_args(herr);
         if (!conditionals.empty() and !conditionals.top().is_true)
@@ -562,6 +573,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
 }
 
+#include <cstdio>
 token_t lexer_cpp::get_token(error_handler *herr)
 {
   #ifdef DEBUG_MODE
@@ -739,8 +751,12 @@ token_t lexer_cpp::get_token(error_handler *herr)
         return token_t(token_basics(TT_STRINGLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
       }
       
-      default:
+      default: {
+        char errbuf[320];
+        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'", (int)cfile[spos], cfile[pos]);
+        herr->error(errbuf);
         return token_t(token_basics(TT_INVALID,filename,line,pos-lpos++));
+      }
     }
   }
   

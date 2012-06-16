@@ -26,6 +26,38 @@
 #include <General/debug_macros.h>
 #include <API/compile_settings.h>
 
+using namespace jdip;
+
+static inline definition_enum* insnew(definition_scope *const &scope, int inherited_flags, const string& classname, const token_t &token, error_handler* const& herr, context *ct) {
+  definition_enum* nclass = NULL;
+  pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL));
+  if (!dins.second) {
+    if (dins.first->second->flags & DEF_TYPENAME) {
+      token.report_error(herr, "Enum `" + classname + "' instantiated inadvertently during parse by another thread. Freeing.");
+      delete dins.first->second;
+    }
+    else {
+      dins = ct->c_structs.insert(pair<string,definition*>(classname,NULL));
+      if (dins.second)
+        goto my_else;
+      if (dins.first->second->flags & DEF_ENUM)
+        nclass = (definition_enum*)dins.first->second;
+      else {
+        #if FATAL_ERRORS
+          return NULL;
+        #else
+          token.report_error(herr, "Redeclaring `" + classname + "' as different kind of symbol.");
+          delete dins.first->second;
+          goto my_else;
+        #endif
+      }
+    }
+  } else { my_else:
+    dins.first->second = nclass = new definition_enum(classname,scope, DEF_ENUM | DEF_TYPENAME | inherited_flags);
+  }
+  return nclass;
+}
+
 static unsigned anon_count = 1;
 jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope, token_t& token, int inherited_flags)
 {
@@ -63,25 +95,15 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     classname = buf;
   }
   
-  #ifdef DEBUG_MODE
-    #define derr(x) token.report_error(herr, x);
-  #else
-    #define derr(x)
-  #endif
-  
-  #define insnew() { \
-    pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL)); \
-    if (!dins.second) { derr("Enum `" + classname + "' instantiated inadvertently during parse by another thread. Freeing."); delete dins.first->second; } \
-    dins.first->second = nenum = new definition_enum(classname,scope, DEF_ENUM | DEF_TYPENAME | inherited_flags); \
-  }
-  
   if (!nenum)
-    insnew();
+    if (not(nenum = insnew(scope,inherited_flags,classname,token,herr,this)))
+      return NULL;
   
   if (token.type == TT_COLON) {
     if (will_redeclare) {
       will_redeclare = false;
-      insnew();
+      if (not(nenum = insnew(scope,inherited_flags,classname,token,herr,this)))
+      return NULL;
     }
     else if (already_complete) {
       token.report_error(herr, "Attempting to define type of previously defined enum `" + classname + "'");

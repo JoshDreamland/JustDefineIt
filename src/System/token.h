@@ -189,7 +189,7 @@ namespace jdip {
       @param herr  The error_handler which will receive this notification.
       @param error The text of the error.
     **/
-    void report_error(error_handler *herr, std::string error);
+    void report_error(error_handler *herr, std::string error) const;
     /**
       Pass error information to an error handler, inserting token name.
       If no information is available, then zeros are copied in its place.
@@ -197,14 +197,14 @@ namespace jdip {
       @param herr  The error_handler which will receive this notification.
       @param error The text of the error; use %s for token name.
     **/
-    void report_errorf(error_handler *herr, std::string error);
+    void report_errorf(error_handler *herr, std::string error) const;
     /**
       Pass error information to an error handler.
       If no information is available, then zeros are copied in its place.
       @param herr  The error_handler which will receive this notification.
       @param error The text of the error.
     **/
-    void report_warning(error_handler *herr, std::string error);
+    void report_warning(error_handler *herr, std::string error) const;
   };
 }
 

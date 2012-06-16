@@ -53,7 +53,7 @@ token_t::extra_::extra_() {}
 token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
 token_t::extra_::extra_(definition* d): def(d) {}
 
-void token_t::report_error(error_handler *herr, std::string error)
+void token_t::report_error(error_handler *herr, std::string error) const
 {
   string fn; // Default values for non-existing info members
   int l = -1, p = -1;
@@ -129,7 +129,7 @@ static struct token_info_c {
 } token_info;
 
 #include <cstdio>
-void token_t::report_errorf(error_handler *herr, std::string error)
+void token_t::report_errorf(error_handler *herr, std::string error) const
 {
   string fn; // Default values for non-existing info members
   int l = -1, p = -1;
@@ -166,7 +166,7 @@ void token_t::report_errorf(error_handler *herr, std::string error)
     }
   #endif
 }
-void token_t::report_warning(error_handler *herr, std::string error)
+void token_t::report_warning(error_handler *herr, std::string error) const
 {
   string fn; // Default values for non-existing info members
   int l = -1, p = -1;

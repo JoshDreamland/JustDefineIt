@@ -23,7 +23,39 @@
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 
-static unsigned anon_count = 1111111;
+
+using namespace jdip;
+#define alloc_class() new definition_class(classname,scope, DEF_CLASS | DEF_TYPENAME | inherited_flags)
+static inline definition_class* insnew(definition_scope *const &scope, int inherited_flags, const string& classname, const token_t &token, error_handler* const& herr, context *ct) {
+  definition_class* nclass = NULL;
+  pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL));
+  if (!dins.second) {
+    if (dins.first->second->flags & DEF_TYPENAME) {
+      token.report_error(herr, "Class `" + classname + "' instantiated inadvertently during parse by another thread. Freeing.");
+      delete dins.first->second;
+    }
+    else {
+      dins = ct->c_structs.insert(pair<string,definition*>(classname,NULL));
+      if (dins.second)
+        goto my_else;
+      if (dins.first->second->flags & DEF_CLASS)
+        nclass = (definition_class*)dins.first->second;
+      else {
+        #if FATAL_ERRORS
+          return NULL;
+        #else
+          delete dins.first->second;
+          goto my_else;
+        #endif
+      }
+    }
+  } else { my_else:
+    dins.first->second = nclass = alloc_class();
+  }
+  return nclass;
+}
+
+static unsigned anon_count = 1;
 jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scope, token_t& token, int inherited_flags)
 {
   unsigned protection = 0;
@@ -58,9 +90,21 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     nclass = (jdi::definition_class*)token.extra.def;
     classname = nclass->name;
     if (not(nclass->flags & DEF_CLASS)) {
-      if (nclass->parent == scope)
-        token.report_error(herr, "Attempt to redeclare `" + classname + "' as class in this scope");
-      nclass = NULL;
+      if (nclass->parent == scope) {
+        pair<definition_scope::defiter, bool> dins = c_structs.insert(pair<string,definition*>(classname, NULL));
+        if (dins.second)
+          dins.first->second = nclass = alloc_class();
+        else {
+          if (dins.first->second->flags & DEF_CLASS)
+            nclass = (definition_class*)dins.first->second;
+          else {
+            token.report_error(herr, "Attempt to redeclare `" + classname + "' as class in this scope");
+            FATAL_RETURN(NULL);
+          }
+        }
+      }
+      else
+        nclass = NULL;
     }
     else {
       will_redeclare = nclass->parent != scope;
@@ -70,29 +114,19 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
   }
   else {
     char buf[32];
-    sprintf(buf, "<anonymous%08d>", anon_count++);
+    sprintf(buf, "<anonymousClass%08d>", anon_count++);
     classname = buf;
   }
   
-  #ifdef DEBUG_MODE
-    #define derr(x) token.report_error(herr, x);
-  #else
-    #define derr(x)
-  #endif
-  
-  #define insnew() { \
-    pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL)); \
-    if (!dins.second) { derr("Class `" + classname + "' instantiated inadvertently during parse by another thread. Freeing."); delete dins.first->second; } \
-    dins.first->second = nclass = new definition_class(classname,scope, DEF_CLASS | DEF_TYPENAME | inherited_flags); \
-  }
-  
   if (!nclass)
-    insnew();
+    if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+      return NULL;
   
   if (token.type == TT_COLON) {
     if (will_redeclare) {
       will_redeclare = false;
-      insnew();
+      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+        return NULL;
     }
     else if (already_complete) {
       token.report_error(herr, "Attempting to add ancestors to previously defined class `" + classname + "'");
@@ -127,7 +161,8 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     incomplete = 0;
     if (will_redeclare) {
       will_redeclare = false;
-      insnew();
+      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+        return NULL;
     }
     else if (already_complete) {
       token.report_error(herr, "Attempting to add members to previously defined class `" + classname + "'");

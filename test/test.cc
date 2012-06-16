@@ -4,6 +4,9 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <ncurses.h>
+#include <X11/Xlib.h>
+#include <AL/al.h>
+#include <zlib.h>
 
 #include <stdio.h> //printf, NULL
 #include <stdlib.h> //malloc
@@ -58,19 +61,9 @@
 // Once affected by lack of support for public/private/protected, now affected by lack of support for constructors.
 #include <pthread.h>
 
-/*
-// Two types named in expression (Redeclaring size_t for some reason. Macro related?)
+#include <sys/stat.h>
+#include <sys/time.h>
+
 #include <fenv.h>
 #include <tgmath.h>
 #include <complex.h>
-#include <X11/Xlib.h>
-*/
-
-
-/*
-// Unexpected behavior
-#include <sys/stat.h>
-#include <sys/time.h>
-*/
-
-

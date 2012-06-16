@@ -89,7 +89,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   {
     if (token.type == TT_DECLARATOR) {
       if (rdef) {
-        if (token.extra.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION))
+        if (token.extra.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION | DEF_TYPED))
           break;
         token.report_error(herr,"Two types named in expression");
         FATAL_RETURN(1);

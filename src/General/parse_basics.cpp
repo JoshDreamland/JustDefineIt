@@ -48,6 +48,7 @@ namespace parse_bacics {
     whatever['\t'] |= is_::SPACER;
     whatever['\r'] |= is_::NEWLINE;
     whatever['\n'] |= is_::NEWLINE;
+    whatever[0x0C] |= is_::NEWLINE;
   }
 
   is_ is;
