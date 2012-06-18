@@ -275,7 +275,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           token.report_error(herr, "`...' not allowed as general modifier");
       
       case TT_DECLARATOR:
-        if (!rhs and refs.name.empty() and (token.extra.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM))) { //
+        if (!rhs and refs.name.empty() and (token.extra.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM | DEF_TYPED))) { //
           refs.name = token.extra.def->name;
           rhs = true;
           break;

@@ -8,6 +8,7 @@ namespace a {
 //*/ Get This working first
 using namespace a;
 b c;
+
 /*/// Then get this working so your life doesn't suck later
 a::b c;
 /*/
@@ -20,7 +21,7 @@ template<typename a> class b {
 
 //#include <string>
 
-/*
+
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <ncurses.h>
