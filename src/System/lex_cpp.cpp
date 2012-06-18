@@ -124,7 +124,7 @@ void lexer_cpp::skip_whitespace()
 {
   while (pos < length) {
     while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return ++line, lpos = pos, void();
-    if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos; continue; }
+    if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos++; continue; }
     if (cfile[pos] == '/') {
       if (cfile[++pos] == '/') { skip_comment(); continue; }
       if (cfile[pos] == '*') { skip_multiline_comment(); continue; }

@@ -109,6 +109,7 @@ namespace jdi
         track(string("("));
         token = get_next_token();
         myroot = parse_expression(token, 0);
+        if (myroot == NULL) return NULL;
         if (token.type != TT_RIGHTPARENTH) {
           token.report_errorf(herr, "Expected closing parenthesis here before %s");
           return NULL;
@@ -294,21 +295,24 @@ namespace jdi
   int AST::parse_expression(lexer *ulex, error_handler *uherr) {
     lex = ulex, herr = uherr;
     token_t token = lex->get_token();
-    root = parse_expression(token, 0);
-    return 0;
+    if ((root = parse_expression(token, 0)))
+      return 0;
+    return 1;
   }
   
   int AST::parse_expression(lexer *ulex, token_t &token, error_handler *uherr) {
     lex = ulex, herr = uherr;
     token = lex->get_token();
-    root = parse_expression(token, 0);
-    return 0;
+    if ((root = parse_expression(token, 0)))
+      return 0;
+    return 1;
   }
   
   int AST::parse_expression(token_t &token, lexer *ulex, error_handler *uherr) {
     lex = ulex, herr = uherr;
-    root = parse_expression(token, 0);
-    return 0;
+    if ((root = parse_expression(token, 0)))
+      return 0;
+    return 1;
   }
   
   int AST::parse_expression(token_t &token, lexer *ulex, definition_scope *scope, error_handler *uherr) {

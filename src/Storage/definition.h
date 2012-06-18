@@ -162,7 +162,20 @@ namespace jdi {
     typedef defmap::const_iterator defiter_c; ///< Shortcut to a constant iterator type for \c defmap.
     typedef pair<defiter,bool> inspair; ///< The result from an insert operation on our map.
     typedef pair<string, definition*> entry; ///< The type of key-value entry pair stored in our map.
+    
     defmap members; ///< Members of this enum or namespace
+    
+    /// Linked list node to contain using scopes
+    struct using_node {
+      definition_scope *use; ///< Scope to search
+      private: friend class definition_scope;
+        using_node *next; ///< The next node on our list, or NULL
+        using_node(definition_scope* scope, using_node* prev); ///< Construct with previous node
+        using_node(); ///< Construct plain
+    };
+    using_node using_general; ///< General using scope, for using single definitions.
+    /** Add a namespace to the using list. This can technically be used on any scope. **/
+    void use_namespace(definition_scope* scope);
     
     /** Free all contents of this scope. No copy is made. **/
     void clear();
@@ -179,6 +192,7 @@ namespace jdi {
     **/
     definition* look_up(string name);
     
+    /** @return Returns a duplicate of this scope, duplicating its children. */
     definition* duplicate();
     
     /** Default constructor. Only to be used for global! **/
@@ -187,7 +201,7 @@ namespace jdi {
     definition_scope(const definition_scope&);
     /** Construct with a name and type.
         @param  name   The name of this scope.
-        @param  parent The parent scope of this scope. Non-NULL (except when constructing global scope).
+        @param  parent The parent scope of this scope. Non-NULL (only global scope can have null parent).
         @param  flags  The type of this scope, such as DEF_NAMESPACE.
     **/
     definition_scope(string name, definition *parent, unsigned int flags);
@@ -196,6 +210,10 @@ namespace jdi {
                  these references will be invalidated after that scope is destroyed.
     **/
     ~definition_scope();
+    
+    private:
+      /// Final linked list entry
+      using_node *using_back;
   };
   
   /**

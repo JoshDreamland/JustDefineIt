@@ -141,6 +141,26 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         if ((token = read_next_token(scope)).type != TT_COLON)
           token.report_error(herr, "Colon expected following `protected' token"); break;
       
+      case TT_USING:
+          token = read_next_token(scope);
+          if (token.type == TT_NAMESPACE) {
+            token = lex->get_token(herr);
+            if (token.type == TT_IDENTIFIER) {
+              definition* d = scope->look_up(token.extra.content.toString());
+              if (d->flags & DEF_NAMESPACE)
+                scope->use_namespace((definition_scope*)d);
+              else
+                token.report_error(herr, "Expected namespace name following `namespace' token");
+              token = read_next_token(scope);
+            }
+            else
+              token.report_error(herr, "Expected namespace name following `namespace' token");
+          }
+          else {
+              // TODO: Implement me
+          }
+        break;
+      
       case TT_IDENTIFIER:
           token.report_error(herr, "Unexpected identifier in this scope; `" + string((const char*)token.extra.content.str,token.extra.content.len) + "' does not name a type");
         break;
@@ -160,7 +180,6 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
       
-      case TT_USING:
       case TT_TEMPLATE: case TT_SIZEOF: case TT_OPERATORKW:
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:

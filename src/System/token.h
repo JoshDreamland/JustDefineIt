@@ -166,6 +166,9 @@ namespace jdip {
         
         /// The length of the string pointed to by \c content.
         int len;
+        
+        /// Get the string contents of this token: This operation is somewhat costly.
+        inline string toString() { return string((const char*)str,len); }
       } content;
       
       /// For types, namespace-names, etc., the definition by which the type of this token was determined.

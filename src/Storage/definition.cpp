@@ -44,9 +44,15 @@ namespace jdi {
     defiter it = members.find(sname);
     if (it != members.end())
       return it->second;
+    for (using_node* n = &using_general; n; n = n->next)
+      if (n->use and (it = n->use->members.find(sname)) != n->use->members.end())
+        return it->second;
     if (parent == NULL)
       return NULL;
     return parent->look_up(sname);
+  }
+  void definition_scope::use_namespace(definition_scope *ns) {
+    using_back = new using_node(ns, using_back);
   }
   void definition_scope::copy(const definition_scope* from) {
     for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
@@ -60,14 +66,18 @@ namespace jdi {
     copy(res);
     return res;
   }
-  definition_scope::definition_scope(): definition() { }
-  definition_scope::definition_scope(const definition_scope&): definition() { }
-  definition_scope::definition_scope(string name_, definition *parent_, unsigned int flags_): definition(name_,parent_,flags_) {}
+  definition_scope::definition_scope(): definition(), using_back(&using_general) { }
+  definition_scope::definition_scope(const definition_scope&): definition(), using_back(&using_general) {
+    // TODO: Implement
+  }
+  definition_scope::definition_scope(string name_, definition *parent_, unsigned int flags_): definition(name_,parent_,flags_), using_back(&using_general) {}
   definition_scope::~definition_scope() {
     for (defiter it = members.begin(); it != members.end(); it++)
       delete it->second;
     members.clear();
   }
+  definition_scope::using_node::using_node(): use(NULL), next(NULL) {}
+  definition_scope::using_node::using_node(definition_scope* scope, using_node* prev): use(scope), next(NULL) { prev->next = this; }
   
   definition_class::ancestor::ancestor(unsigned protection_level, definition_class* inherit_from): protection(protection_level), def(inherit_from) {}
   definition_class::ancestor::ancestor() {}

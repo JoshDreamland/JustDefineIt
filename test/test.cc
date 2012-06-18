@@ -1,6 +1,26 @@
 #define __attribute__(x)
 #define __extension__
 
+namespace a {
+  typedef int b;
+}
+
+//*/ Get This working first
+using namespace a;
+b c;
+/*/// Then get this working so your life doesn't suck later
+a::b c;
+/*/
+
+/* 
+// Then this will follow
+template<typename a> class b {
+  a c;
+}; /*/
+
+//#include <string>
+
+/*
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <ncurses.h>
@@ -58,7 +78,7 @@
 #include <limits.h>
 #include <assert.h>
 
-// Once affected by lack of support for public/private/protected, now affected by lack of support for constructors.
+// Once affected by lack of support for public/private/protected, and by lack of support for constructors.
 #include <pthread.h>
 
 #include <sys/stat.h>
