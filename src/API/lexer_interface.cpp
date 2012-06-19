@@ -9,15 +9,22 @@ token_t lexer::get_token_in_scope(jdi::definition_scope *scope, error_handler *h
   token_t res = get_token(herr);
   
   if (res.type == TT_IDENTIFIER) {
-    const string name((const char*)res.extra.content.str, res.extra.content.len);
+    const string name(res.content.toString());
     definition *def = scope->look_up(name);
-    if (!def) return res;
+    if (!def) {
+      #ifdef DEBUG_MODE
+        res.def = NULL;
+      #endif
+      return res;
+    }
+    res.def = def;
     
     if (def->flags & DEF_TYPENAME) {
-      res.extra.def = def;
       res.type = TT_DECLARATOR;
       return res;
     }
+    
+    res.type = TT_DEFINITION;
   }
   
   return res;

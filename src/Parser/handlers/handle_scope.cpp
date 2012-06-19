@@ -146,7 +146,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           if (token.type == TT_NAMESPACE) {
             token = lex->get_token(herr);
             if (token.type == TT_IDENTIFIER) {
-              definition* d = scope->look_up(token.extra.content.toString());
+              definition* d = scope->look_up(token.content.toString());
               if (d->flags & DEF_NAMESPACE)
                 scope->use_namespace((definition_scope*)d);
               else
@@ -161,27 +161,34 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           }
         break;
       
+      case TT_SCOPE:
+          token = read_next_token((definition_scope*)token.def);
+        continue;
+      case TT_DEFINITION: {
+        if (token.def->flags & DEF_NAMESPACE) {
+          definition_scope* dscope = (definition_scope*)token.def;
+          token = read_next_token(scope);
+          if (token.type == TT_SCOPE) {
+            token = read_next_token(dscope);
+            continue;
+          }
+          token.report_errorf(herr, "Expected `::' and identifier before %s");
+          FATAL_RETURN(1); break;
+        }
+      }
       case TT_IDENTIFIER:
-          token.report_error(herr, "Unexpected identifier in this scope; `" + string((const char*)token.extra.content.str,token.extra.content.len) + "' does not name a type");
+          token.report_error(herr, "Unexpected identifier in this scope; `" + string(token.content.toString()) + "' does not name a type");
         break;
       
-      case TT_TYPENAME:
+      case TT_TEMPLATE:
+        //break;
       
-      case TT_ASM:
+      case TT_OPERATORKW:
+        //break;
       
-      case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN:
-      case TT_COLON:
-      
-      case TT_SCOPE:
-      case TT_STRINGLITERAL:
-      case TT_CHARLITERAL:
-      
-      case TT_DECLITERAL:
-      case TT_HEXLITERAL:
-      case TT_OCTLITERAL:
-      
-      case TT_TEMPLATE: case TT_SIZEOF: case TT_OPERATORKW:
-      
+      case TT_TYPENAME: case TT_ASM: case TT_SIZEOF:
+      case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
+      case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_STRINGLITERAL: case TT_CHARLITERAL:
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       default:
         token.report_errorf(herr, "Unexpected %s in this scope");

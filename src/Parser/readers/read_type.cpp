@@ -58,15 +58,15 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         token = lex->get_token_in_scope(scope,herr);
       }
       else {
-        if (token.type == TT_IDENTIFIER)
-          token.report_error(herr,"Type name expected here; `" + string((const char*)token.extra.content.str, token.extra.content.len) + "' does not name a type");
+        if (token.type == TT_IDENTIFIER or token.type == TT_DEFINITION)
+          token.report_error(herr,"Type name expected here; `" + string(token.content.toString()) + "' does not name a type");
         else
           token.report_errorf(herr,"Type name expected here before %s");
         return full_type();
       }
     }
     else {
-      typeflag *const tf = ((typeflag*)token.extra.def);
+      typeflag *const tf = ((typeflag*)token.def);
       if (tf->usage & UF_PRIMITIVE) {
         (tf->usage == UF_PRIMITIVE? rdef : overridable_type) = tf->def,
         swif = tf->flagbit;
@@ -80,7 +80,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
     }
   }
   else {
-    rdef = token.extra.def;
+    rdef = token.def;
     token = lex->get_token_in_scope(scope,herr);
   }
   
@@ -89,16 +89,16 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   {
     if (token.type == TT_DECLARATOR) {
       if (rdef) {
-        if (token.extra.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION | DEF_TYPED))
+        if (token.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION | DEF_TYPED))
           break;
         token.report_error(herr,"Two types named in expression");
         FATAL_RETURN(1);
       }
-      rdef = token.extra.def;
+      rdef = token.def;
       rflags |= swif;
     }
     else {
-      typeflag *const tf = ((typeflag*)token.extra.def);
+      typeflag *const tf = ((typeflag*)token.def);
       if (tf->usage & UF_PRIMITIVE) {
         if (tf->usage == UF_PRIMITIVE) {
           if (rdef)
@@ -222,15 +222,15 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         }
       } break;
       
-      case TT_IDENTIFIER: // The name associated with this type, be it the name of a parameter or of a declaration or what have you.
-        refs.name = string((const char*)token.extra.content.str, token.extra.content.len);
+      case TT_IDENTIFIER: case TT_DEFINITION: // The name associated with this type, be it the name of a parameter or of a declaration or what have you.
+        refs.name = string(token.content.toString());
         rhs = true; // Officially on the right hand side
       break;
       
       case TT_OPERATORKW:
           token = lex->get_token_in_scope(scope, herr);
           if (token.type == TT_OPERATOR) {
-            refs.name = "operator" + string((const char*)token.extra.content.str, token.extra.content.len);
+            refs.name = "operator" + string(token.content.toString());
           }
           else if (token.type == TT_LEFTBRACKET) {
             refs.name = "operator[]";
@@ -257,13 +257,13 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
-        if ((token.extra.content.str[0] == '&' or token.extra.content.str[0] == '*') and token.extra.content.len == 1) {
-          refs.push(token.extra.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
+        if ((token.content.str[0] == '&' or token.content.str[0] == '*') and token.content.len == 1) {
+          refs.push(token.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
-        } // Else overflow
+        } goto default_; // Else overflow
       
       case TT_DECFLAG: {
-          typeflag* a = ((typeflag*)token.extra.def);
+          typeflag* a = ((typeflag*)token.def);
           if (a->flagbit == builtin_flag__const || a->flagbit == builtin_flag__volatile) {
             // TODO: Give RT_POINTERTO node a bool/volatile flag; to denote that the pointer is const or volatile; set it here.
             token = lex->get_token_in_scope(scope, herr);
@@ -275,8 +275,8 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           token.report_error(herr, "`...' not allowed as general modifier");
       
       case TT_DECLARATOR:
-        if (!rhs and refs.name.empty() and (token.extra.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM | DEF_TYPED))) { //
-          refs.name = token.extra.def->name;
+        if (!rhs and refs.name.empty() and (token.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM | DEF_TYPED))) { //
+          refs.name = token.def->name;
           rhs = true;
           break;
         }

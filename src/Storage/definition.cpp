@@ -74,6 +74,11 @@ namespace jdi {
   definition_scope::~definition_scope() {
     for (defiter it = members.begin(); it != members.end(); it++)
       delete it->second;
+    delete using_general.use;
+    for (using_node *n = using_general.next; n; ) {
+      using_node *dm = n; n = n->next;
+      delete dm;
+    }
     members.clear();
   }
   definition_scope::using_node::using_node(): use(NULL), next(NULL) {}

@@ -43,6 +43,7 @@ namespace jdip {
     TT_DECLTYPE,   ///< The `decltype' keyword.
     
     TT_IDENTIFIER, ///< A standard identifier.
+    TT_DEFINITION, ///< Something previously declared that is not immediately useful, like a field or function.
     
     TT_TEMPLATE,   ///< The `template' keyword, which should be followed by <...>
     TT_TYPENAME,   ///< The `typename' keyword.
@@ -152,32 +153,26 @@ namespace jdip {
       #define full_token_constructor_parameters TOKEN_TYPE, const char*, int
     #endif
     
-    /** A simple union detailing more information about the token.
-        This union is meant to contain either data about what text constituted
-        the token or what definition was found to justify the token, or neither
-        depending on how self-explanatory the type of the token is. **/
-    union extra_ {
-      struct {
-        /// A pointer to a substring of a larger buffer of code. NEITHER is null-terminated!
-        /// This pointer is to be considered volatile as the buffer belongs to the system and
-        /// can be modified or freed as soon as the file is closed. As such, any use of it must
-        /// be made before the file is closed.
-        volatile const char* str;
-        
-        /// The length of the string pointed to by \c content.
-        int len;
-        
-        /// Get the string contents of this token: This operation is somewhat costly.
-        inline string toString() { return string((const char*)str,len); }
-      } content;
+    /// Structure containing a pointer inside a string, and a length, representing a substring.
+    struct content {
+      /// A pointer to a substring of a larger buffer of code. NEITHER is null-terminated!
+      /// This pointer is to be considered volatile as the buffer belongs to the system and
+      /// can be modified or freed as soon as the file is closed. As such, any use of it must
+      /// be made before the file is closed.
+      volatile const char* str;
       
-      /// For types, namespace-names, etc., the definition by which the type of this token was determined.
-      definition* def;
+      /// The length of the string pointed to by \c content.
+      int len;
       
-      extra_();
-      extra_(const char*, int);
-      extra_(definition*);
-    } extra;
+      /// Get the string contents of this token: This operation is somewhat costly.
+      inline string toString() { return string((const char*)str,len); }
+      
+      inline content() {}
+      inline content(const char* s, int l): str(s), len(l) {}
+    } content;
+    
+    /// For types, namespace-names, etc., the definition by which the type of this token was determined.
+    definition* def;
     
     /// Construct a token with the requested amount of information.
     token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p));

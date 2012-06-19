@@ -131,9 +131,9 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   {
     switch (token.type) {
       case TT_OPERATOR:
-          if (*token.extra.content.str != '=' or token.extra.content.len != 1) { // If this operator isn't =, this is a fatal error. No idea where we are.
+          if (*token.content.str != '=' or token.content.len != 1) { // If this operator isn't =, this is a fatal error. No idea where we are.
             case TT_GREATERTHAN: case TT_LESSTHAN:
-            token.report_error(herr, "Unexpected operator " + string((const char*)token.extra.content.str,token.extra.content.len) + " at this point");
+            token.report_error(herr, "Unexpected operator " + string(token.content.toString()) + " at this point");
             return 5;
           }
           else {
@@ -177,7 +177,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_SEMICOLON:
       
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_EXTERN: case TT_IDENTIFIER:
-      case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      case TT_DEFINITION: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET: case TT_LEFTBRACE: case TT_RIGHTBRACE:
       case TT_ASM: case TT_TILDE: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_SIZEOF: case TT_OPERATORKW: case TT_DECLTYPE: case TT_INVALID: default:
         return 0;

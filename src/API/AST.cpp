@@ -64,9 +64,9 @@ namespace jdi
           handled_basics = read_next = true;
         } break;
       
-      case TT_IDENTIFIER: {
+      case TT_IDENTIFIER: case TT_DEFINITION: {
           if (search_scope) {
-            string n((const char*)token.extra.content.str,token.extra.content.len);
+            string n(token.content.toString());
             definition *def = search_scope->look_up(n);
             myroot = new AST_Node_Definition(def);
             at = AT_DEFINITION;
@@ -75,7 +75,7 @@ namespace jdi
             myroot = new AST_Node();
             at = AT_IDENTIFIER;
           }
-          myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+          myroot->content = string(token.content.toString());
           track(myroot->content);
         } break;
       
@@ -88,7 +88,7 @@ namespace jdi
         return NULL;
       
       case TT_OPERATOR: case TT_TILDE:
-        ct = string((const char*)token.extra.content.str,token.extra.content.len);
+        ct = string(token.content.toString());
         if (not(symbols[ct].type & ST_UNARY_PRE)) {
           token.report_error(herr,"Operator cannot be used as unary prefix");
           return NULL;
@@ -134,14 +134,14 @@ namespace jdi
         return NULL;
       
       case TT_STRINGLITERAL:
-      case TT_CHARLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+      case TT_CHARLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
                            track(myroot->content); at = AT_CHRLITERAL; break;
       
-      case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+      case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
                           track(myroot->content); at = AT_DECLITERAL; break;
-      case TT_HEXLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+      case TT_HEXLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
                           track(myroot->content); at = AT_HEXLITERAL; break;
-      case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = string((const char*)token.extra.content.str,token.extra.content.len);
+      case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
                           track(myroot->content); at = AT_OCTLITERAL; break;
       
       case TT_DECLTYPE:
@@ -195,7 +195,7 @@ namespace jdi
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN:
         return left_node;
       
-      case TT_IDENTIFIER:
+      case TT_IDENTIFIER: case TT_DEFINITION:
       
       case TT_TYPENAME:
         token.report_error(herr, "Unimplemented.");
@@ -207,7 +207,7 @@ namespace jdi
       case TT_SCOPE: token.report_error(herr, "Unimplemented."); return NULL;
       
       case TT_OPERATOR: {
-          string op((const char*)token.extra.content.str,token.extra.content.len);
+          string op(token.content.toString());
           symbol &s = symbols[op];
           if (s.type & ST_BINARY) {
             if (s.prec < prec_min) return left_node;
@@ -223,7 +223,7 @@ namespace jdi
           }
           if (s.type & ST_TERNARY) {
             if (s.prec < prec_min) return left_node;
-            string ct((const char*)token.extra.content.str,token.extra.content.len);
+            string ct(token.content.toString());
             track(ct);
             
             token = get_next_token();

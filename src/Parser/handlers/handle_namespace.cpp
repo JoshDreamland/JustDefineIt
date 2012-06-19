@@ -30,7 +30,7 @@ int jdip::context_parser::handle_namespace(definition_scope *scope, token_t& tok
   }
   
   // Copy the name and ensure it's a member of this scope.
-  string nsname((const char*)token.extra.content.str, token.extra.content.len);
+  string nsname(token.content.toString());
   pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(nsname,NULL));
   
   definition_scope *nscope;

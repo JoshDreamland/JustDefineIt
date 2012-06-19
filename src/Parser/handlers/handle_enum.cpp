@@ -71,12 +71,12 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
   bool will_redeclare = false; // True if this enum is from another scope; so true if implementing this enum will allocate it.
   unsigned incomplete = DEF_INCOMPLETE; // DEF_INCOMPLETE if this enum has a body, zero otherwise.
   
-  if (token.type == TT_IDENTIFIER) {
-    classname = string((const char*)token.extra.content.str, token.extra.content.len);
+  if (token.type == TT_IDENTIFIER || token.type == TT_DEFINITION) {
+    classname = string(token.content.toString());
     token = read_next_token(scope);
   }
   else if (token.type == TT_DECLARATOR) {
-    nenum = (jdi::definition_enum*)token.extra.def;
+    nenum = (jdi::definition_enum*)token.def;
     classname = nenum->name;
     if (not(nenum->flags & DEF_ENUM)) {
       if (nenum->parent == scope)
@@ -130,11 +130,11 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     }
     if (token.type != TT_IDENTIFIER)
       { token.report_error(herr, "Expected identifier at this point"); token = read_next_token(scope); continue; }
-    string cname((const char*)token.extra.content.str, token.extra.content.len);
+    string cname(token.content.toString());
     
     token = read_next_token(scope);
     if (token.type == TT_OPERATOR) {
-      if (token.extra.content.len != 1 or token.extra.content.str[0] != '=') {
+      if (token.content.len != 1 or token.content.str[0] != '=') {
         token.report_error(herr, "Expected assignment operator `=' here before secondary operator");
       }
       token = read_next_token(scope);

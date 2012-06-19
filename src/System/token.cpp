@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -24,34 +24,15 @@
 using namespace jdip;
 
 #ifdef DEBUG_MODE
-namespace jdip {
-  /// A debug listing of token descriptions by value ID
-  const char* TOKEN_TYPE_NAME[TT_INVALID+1] = {
-    "TT_DECLARATOR","TT_DECFLAG","TT_CLASS","TT_STRUCT","TT_ENUM","TT_UNION","TT_NAMESPACE","TT_EXTERN",
-    "TT_ASM","TT_OPERATORKW","TT_SIZEOF","TT_DECLTYPE",
-    "TT_IDENTIFIER",
-    "TT_TEMPLATE","TT_TYPENAME",
-    "TT_TYPEDEF","TT_USING",
-    "TT_PUBLIC","TT_PRIVATE","TT_PROTECTED",
-    "TT_COLON","TT_SCOPE",
-    "TT_LEFTPARENTH","TT_RIGHTPARENTH","TT_LEFTBRACKET","TT_RIGHTBRACKET","TT_LEFTBRACE","TT_RIGHTBRACE","TT_LESSTHAN","TT_GREATERTHAN",
-    "TT_TILDE","TT_ELLIPSIS","TT_OPERATOR","TT_COMMA","TT_SEMICOLON",
-    "TT_STRINGLITERAL","TT_CHARLITERAL","TT_DECLITERAL","TT_HEXLITERAL","TT_OCTLITERAL",
-    "TTM_CONCAT", "TTM_TOSTRING",
-    "TT_ENDOFCODE","TT_INVALID"
-    //,"error"
-  };
-}
+  #define cdebuginit(x,y) ,x(y)
+#else
+  #define cdebuginit(x,y)
 #endif
-
+  
 token_t::token_t(): token_basics(type(TT_INVALID), file(""), linenum(), pos()) {}
-token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p)): token_basics(type(t), file(fn), linenum(l), pos(p)) {}
-token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), const char* ct, int ctl): token_basics(type(t), file(fn), linenum(l), pos(p)), extra(ct, ctl) {}
-token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition* def): token_basics(type(t), file(fn), linenum(l), pos(p)), extra(def) {}
-
-token_t::extra_::extra_() {}
-token_t::extra_::extra_(const char* ct, int ctl) { content.str = ct; content.len = ctl; }
-token_t::extra_::extra_(definition* d): def(d) {}
+token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p)): token_basics(type(t), file(fn), linenum(l), pos(p)) cdebuginit(def,NULL) {}
+token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), const char* ct, int ctl): token_basics(type(t), file(fn), linenum(l), pos(p)), content(ct, ctl) cdebuginit(def,NULL) {}
+token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition* d): token_basics(type(t), file(fn), linenum(l), pos(p)), def(d) {}
 
 void token_t::report_error(error_handler *herr, std::string error) const
 {
@@ -94,6 +75,7 @@ static struct token_info_c {
       case TT_SIZEOF: name[TT_SIZEOF] = "`sizeof' token";
       case TT_DECLTYPE: name[TT_DECLTYPE] = "`decltype' token";
       case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier";
+      case TT_DEFINITION: name[TT_DEFINITION] = "identifier";
       case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token";
       case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token";
       case TT_TYPEDEF: name[TT_TYPEDEF] = "`typedef' token";
@@ -145,7 +127,7 @@ void token_t::report_errorf(error_handler *herr, std::string error) const
   string str = token_info.name[type];
   f = str.find("%s");
   while (f != string::npos) {
-    str.replace(f,2,string((const char*)extra.content.str,extra.content.len));
+    str.replace(f,2,string((const char*)content.str,content.len));
     f = str.find("%s");
   }
   

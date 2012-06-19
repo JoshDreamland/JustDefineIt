@@ -78,12 +78,12 @@ jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scop
   // Non-NULL  True               False           Complete class in this scope. MUST be used as a type, not implemented.
   // Non-NULL  True               True            Complete class in another scope; can be redeclared (reallocated and reimplemented) in this scope.
   
-  if (token.type == TT_IDENTIFIER) {
-    classname = string((const char*)token.extra.content.str, token.extra.content.len);
+  if (token.type == TT_IDENTIFIER || token.type == TT_DEFINITION) {
+    classname = string(token.content.toString());
     token = read_next_token(scope);
   }
   else if (token.type == TT_DECLARATOR) {
-    nclass = (jdi::definition_union*)token.extra.def;
+    nclass = (jdi::definition_union*)token.def;
     classname = nclass->name;
     if (not(nclass->flags & DEF_UNION)) {
       if (nclass->parent == scope)
