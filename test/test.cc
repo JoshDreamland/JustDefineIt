@@ -18,7 +18,7 @@ template<typename a> class b {
   a c;
 }; /* */
 
-// #include <string>
+//#include <string>
 
 #include <GL/gl.h>
 #include <GL/glu.h>

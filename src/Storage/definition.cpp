@@ -67,7 +67,10 @@ namespace jdi {
     return NULL;
   }
   void definition_scope::use_namespace(definition_scope *ns) {
-    using_back = new using_node(ns, using_back);
+    if (using_back)
+      using_back = new using_node(ns, using_back);
+    else
+      using_front = using_back = new using_node(ns);
   }
   void definition_scope::use_general(string n, definition *def) {
     using_general.insert(pair<string,definition*>(n,def));
@@ -98,6 +101,7 @@ namespace jdi {
     }
     members.clear();
   }
+  definition_scope::using_node::using_node(definition_scope* scope): use(scope), next(NULL) { }
   definition_scope::using_node::using_node(definition_scope* scope, using_node* prev): use(scope), next(NULL) { prev->next = this; }
   
   definition_class::ancestor::ancestor(unsigned protection_level, definition_class* inherit_from): protection(protection_level), def(inherit_from) {}

@@ -235,6 +235,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               break;
             if (token.type != TT_COMMA)
               token.report_errorf(herr, "Expected '>' or ',' before %s");
+            token = read_next_token(scope);
           }
           definition* nd;
           token = read_next_token(scope);

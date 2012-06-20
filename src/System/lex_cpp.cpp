@@ -702,7 +702,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
       case '&': case '|':  case '!':
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '~':
+      case '~': case '%':
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, ++pos-spos);
         return token_t(token_basics(TT_TILDE,filename,line,spos-lpos), cfile+spos, pos-spos);
@@ -753,7 +753,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
       
       default: {
         char errbuf[320];
-        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'", (int)cfile[spos], cfile[pos]);
+        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'", (int)cfile[spos], cfile[spos]);
         herr->error(errbuf);
         return token_t(token_basics(TT_INVALID,filename,line,pos-lpos++));
       }
@@ -978,7 +978,7 @@ token_t lexer_macro::get_token(error_handler *herr)
       case '&': case '|':  case '!':
         pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
         return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);
-      case '~':
+      case '~': case '%':
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, ++pos-spos);
         return token_t(token_basics(TT_TILDE,lcpp->filename,lcpp->line,spos-lcpp->lpos), cfile+spos, pos-spos);

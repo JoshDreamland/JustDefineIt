@@ -171,6 +171,7 @@ namespace jdi {
       definition_scope *use; ///< Scope to search
       private: friend class definition_scope;
         using_node *next; ///< The next node on our list, or NULL
+        using_node(definition_scope* scope); ///< Construct with a scope to use
         using_node(definition_scope* scope, using_node* prev); ///< Construct with previous node
     };
     /** Add a namespace to the using list. This can technically be used on any scope. **/
