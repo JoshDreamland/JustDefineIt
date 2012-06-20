@@ -16,7 +16,7 @@ a::b c;
 // Then this will follow
 template<typename a> class b {
   a c;
-}; /*/
+}; /* */
 
 // #include <string>
 

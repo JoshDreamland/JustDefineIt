@@ -201,11 +201,15 @@ namespace jdi
         token.report_error(herr, "Unimplemented.");
         return NULL;
       
-      case TT_GREATERTHAN: if (!tt_greater_is_op) return left_node; 
-      case TT_LESSTHAN: 
-      case TT_COLON: return left_node;
+      case TT_COLON:
+        return left_node;
+      
       case TT_SCOPE: token.report_error(herr, "Unimplemented."); return NULL;
       
+      case TT_GREATERTHAN:
+        if (!tt_greater_is_op)
+          return left_node; 
+      case TT_LESSTHAN:
       case TT_OPERATOR: {
           string op(token.content.toString());
           symbol &s = symbols[op];
