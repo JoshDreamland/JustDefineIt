@@ -164,6 +164,7 @@ namespace jdi {
     typedef pair<string, definition*> entry; ///< The type of key-value entry pair stored in our map.
     
     defmap members; ///< Members of this enum or namespace
+    defmap using_general; ///< A separate map of definitions to use
     
     /// Linked list node to contain using scopes
     struct using_node {
@@ -171,11 +172,11 @@ namespace jdi {
       private: friend class definition_scope;
         using_node *next; ///< The next node on our list, or NULL
         using_node(definition_scope* scope, using_node* prev); ///< Construct with previous node
-        using_node(); ///< Construct plain
     };
-    using_node using_general; ///< General using scope, for using single definitions.
     /** Add a namespace to the using list. This can technically be used on any scope. **/
     void use_namespace(definition_scope* scope);
+    /** Add a namespace to the using list. This can technically be used on any scope. **/
+    void use_general(string name, definition* def);
     
     /** Free all contents of this scope. No copy is made. **/
     void clear();
@@ -187,10 +188,15 @@ namespace jdi {
     void swap(definition_scope* with);
     
     /** Look up a \c definition* given its identifier.
-        @param   name  The identifier by which the definition can be referenced. This is NOT qualified!
+        @param name  The identifier by which the definition can be referenced. This is NOT qualified!
         @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
     **/
     definition* look_up(string name);
+    /** Look up a \c definition* in the current scope or its using scopes given its identifier.
+        @param name  The identifier by which the definition can be referenced. This is NOT qualified!
+        @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
+    **/
+    definition* find_local(string name);
     
     /** @return Returns a duplicate of this scope, duplicating its children. */
     definition* duplicate();
@@ -212,6 +218,8 @@ namespace jdi {
     ~definition_scope();
     
     private:
+      /// First linked list entry
+      using_node *using_front;
       /// Final linked list entry
       using_node *using_back;
   };
@@ -254,7 +262,9 @@ namespace jdi {
     A piece of a definition for anything with template parameters.
     This class can be used alongside structs, classes, and functions.
   **/
-  struct definition_template {
+  struct definition_template: definition {
+    /** The definition to which template parameters here contained are applied. **/
+    definition* def;
     /** A list of template parameters or arguments, as typedefs.
         The definition pointed to by this vector must be a typedef.
         
@@ -265,7 +275,35 @@ namespace jdi {
         instantiation of the parent function/class (the definition containing
         the vector).
     **/
-    vector<definition*> tempargs;
+    vector<definition*> params;
+    
+    /** Structure containing template arguments; can be used as the key in an std::map. **/
+    class arg_key {
+      definition** values;
+      // const unsigned sz;
+    public:
+      inline bool operator<(const arg_key& other) const {
+        for (definition **i = values, **j = other.values; *j; ++i) {
+          if (!*i) return true;
+          const int comp = (*i)->name.compare((*j)->name);
+          if (comp) return comp < 0;
+        } return false;
+      }
+      inline void put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
+      inline void put_type(size_t argnum, definition* type) { if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; } values[argnum] = type; }
+      inline arg_key(size_t n): values(new definition*[n+1]) { values[n] = 0; }
+      inline arg_key(arg_key& other): values(other.values) { other.values = NULL; }
+      inline arg_key(): values(NULL) {}
+      inline ~arg_key() { delete values; }
+    };
+    
+    /** A list of all specializations **/
+    map<arg_key, definition_template*> specializations;
+    /** A list of all existing instantiations **/
+    map<arg_key, definition*> instantiations;
+    
+    /** Destructor to free template parameters, instantiations, etc. **/
+    ~definition_template();
   };
 }
 

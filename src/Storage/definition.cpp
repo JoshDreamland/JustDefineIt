@@ -44,15 +44,33 @@ namespace jdi {
     defiter it = members.find(sname);
     if (it != members.end())
       return it->second;
-    for (using_node* n = &using_general; n; n = n->next)
-      if (n->use and (it = n->use->members.find(sname)) != n->use->members.end())
-        return it->second;
+    if ((it = using_general.find(sname)) != using_general.end())
+      return it->second;
+    definition *res;
+    for (using_node* n = using_front; n; n = n->next)
+      if ((res = n->use->find_local(sname)))
+        return res;
     if (parent == NULL)
       return NULL;
     return parent->look_up(sname);
   }
+  definition *definition_scope::find_local(string sname) {
+    defiter it = members.find(sname);
+    if (it != members.end())
+      return it->second;
+    if ((it = using_general.find(sname)) != using_general.end())
+      return it->second;
+    definition *res;
+    for (using_node* n = using_front; n; n = n->next)
+      if ((res = n->use->find_local(sname)))
+        return res;
+    return NULL;
+  }
   void definition_scope::use_namespace(definition_scope *ns) {
     using_back = new using_node(ns, using_back);
+  }
+  void definition_scope::use_general(string n, definition *def) {
+    using_general.insert(pair<string,definition*>(n,def));
   }
   void definition_scope::copy(const definition_scope* from) {
     for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
@@ -66,22 +84,20 @@ namespace jdi {
     copy(res);
     return res;
   }
-  definition_scope::definition_scope(): definition(), using_back(&using_general) { }
-  definition_scope::definition_scope(const definition_scope&): definition(), using_back(&using_general) {
+  definition_scope::definition_scope(): definition(), using_front(NULL), using_back(NULL) { }
+  definition_scope::definition_scope(const definition_scope&): definition() {
     // TODO: Implement
   }
-  definition_scope::definition_scope(string name_, definition *parent_, unsigned int flags_): definition(name_,parent_,flags_), using_back(&using_general) {}
+  definition_scope::definition_scope(string name_, definition *parent_, unsigned int flags_): definition(name_,parent_,flags_), using_front(NULL), using_back(NULL) {}
   definition_scope::~definition_scope() {
     for (defiter it = members.begin(); it != members.end(); it++)
       delete it->second;
-    delete using_general.use;
-    for (using_node *n = using_general.next; n; ) {
+    for (using_node *n = using_front; n; ) {
       using_node *dm = n; n = n->next;
       delete dm;
     }
     members.clear();
   }
-  definition_scope::using_node::using_node(): use(NULL), next(NULL) {}
   definition_scope::using_node::using_node(definition_scope* scope, using_node* prev): use(scope), next(NULL) { prev->next = this; }
   
   definition_class::ancestor::ancestor(unsigned protection_level, definition_class* inherit_from): protection(protection_level), def(inherit_from) {}
@@ -94,4 +110,10 @@ namespace jdi {
   definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned tflgs, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, tflgs, flgs | DEF_VALUED), value_of(val) {}
   
   definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_typed(classname, parnt, NULL, 0, flgs) {}
+  
+  definition_template::~definition_template() {
+    for (size_t i = 0; i < params.size(); ++i)
+      delete params[i];
+    delete def;
+  }
 }

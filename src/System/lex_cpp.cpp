@@ -708,7 +708,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
         return token_t(token_basics(TT_TILDE,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '>': case '<':
         pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
+        return token_t(token_basics((pos-spos==1?cfile[spos]=='<'?TT_LESSTHAN:TT_GREATERTHAN:TT_OPERATOR),filename,line,spos-lpos), cfile+spos, pos-spos);
       case ':':
         pos += cfile[pos] == cfile[spos];
         return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,filename,line,spos-lpos), cfile+spos, pos-spos);

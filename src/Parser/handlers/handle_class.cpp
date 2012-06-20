@@ -30,7 +30,7 @@ static inline definition_class* insnew(definition_scope *const &scope, int inher
   definition_class* nclass = NULL;
   pair<definition_scope::defiter, bool> dins = scope->members.insert(pair<string,definition*>(classname,NULL));
   if (!dins.second) {
-    if (dins.first->second->flags & DEF_TYPENAME) {
+    if (dins.first->second->flags & DEF_TYPENAME) { // This error is displayed because if the class existed earlier when we were checking, we'd have gotten a different token.
       token.report_error(herr, "Class `" + classname + "' instantiated inadvertently during parse by another thread. Freeing.");
       delete dins.first->second;
     }
