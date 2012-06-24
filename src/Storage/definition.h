@@ -282,20 +282,16 @@ namespace jdi {
     class arg_key {
       definition** values;
       // const unsigned sz;
-    public:
-      inline bool operator<(const arg_key& other) const {
-        for (definition **i = values, **j = other.values; *j; ++i) {
-          if (!*i) return true;
-          const int comp = (*i)->name.compare((*j)->name);
-          if (comp) return comp < 0;
-        } return false;
-      }
-      inline void put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
-      inline void put_type(size_t argnum, definition* type) { if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; } values[argnum] = type; }
-      inline arg_key(size_t n): values(new definition*[n+1]) { values[n] = 0; }
-      inline arg_key(arg_key& other): values(other.values) { other.values = NULL; }
-      inline arg_key(): values(NULL) {}
-      inline ~arg_key() { delete values; }
+      public:
+        bool operator<(const arg_key& other) const;
+        void mirror(definition_template* temp);
+        inline void put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
+        inline void put_type(size_t argnum, definition* type) { if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; } values[argnum] = type; }
+        inline definition* operator[](int i) const { return values[i]; }
+        inline arg_key() {}
+        inline arg_key(size_t n): values(new definition*[n+1]) { values[n] = 0; }
+        inline arg_key(const arg_key& other): values(other.values) { ((arg_key*)&other)->values = NULL; }
+        inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) delete *i; delete[] values; } }
     };
     
     /** A list of all specializations **/
@@ -303,6 +299,13 @@ namespace jdi {
     /** A list of all existing instantiations **/
     map<arg_key, definition*> instantiations;
     
+    /** Instantiate this template with the values given in the passed key.
+        If this template has been instantiated previously, that instantiation is given.
+        @param key  The \c arg_key structure containing the template parameter values to use. **/
+    definition *instantiate(arg_key& key);
+    
+    /** Construct with name, parent, and flags **/
+    definition_template(string name, definition *parent, unsigned flags);
     /** Destructor to free template parameters, instantiations, etc. **/
     ~definition_template();
   };

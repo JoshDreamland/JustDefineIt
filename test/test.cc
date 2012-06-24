@@ -1,24 +1,10 @@
 #define __attribute__(x)
 #define __extension__
 
-namespace a {
-  typedef int b;
-}
+template<typename a> struct bstring {};
+typedef bstring<char> astring;
 
-/*/ Get This working first
-using namespace a;
-b c;
-
-/*/// Then get this working so your life doesn't suck later
-a::b c;
-/* */
-
-// Then this will follow
-template<typename a> class b {
-  a c;
-}; /* */
-
-//#include <string>
+int x(int y = 10);
 
 #include <GL/gl.h>
 #include <GL/glu.h>

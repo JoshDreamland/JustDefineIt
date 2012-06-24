@@ -338,6 +338,9 @@ namespace jdi {
     /// Render the AST to an SVG file.
     void writeSVG(const char* filename);
     
+    /// Use this AST for template parameters
+    inline void set_use_for_templates(bool use) { tt_greater_is_op = !use; }
+    
     /// Default constructor. Zeroes some stuff.
     AST();
     

@@ -53,11 +53,87 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
             token.report_error(herr, "Existing class name must follow class/struct token at this point");
         }
       }
+      else if (token.type == TT_DEFINITION)
+      {
+        if (token.def->flags & DEF_TEMPLATE)
+        {
+          definition_template* dt = (definition_template*)token.def;
+          if (dt->def->flags & DEF_CLASS)
+          {
+            token = lex->get_token_in_scope(scope, herr);
+            definition_template::arg_key k(dt->params.size());
+            k.mirror(dt);
+            unsigned args_given = 0;
+            if (token.type == TT_LESSTHAN)
+            {
+              for (;;++args_given)
+              {
+                token = lex->get_token_in_scope(scope, herr);
+                if (token.type == TT_GREATERTHAN)
+                  break;
+                if (token.type == TT_SEMICOLON || token.type == TT_LEFTBRACE) {
+                  token.report_errorf(herr, "Expected closing triangle bracket to template parameters before %s");
+                  break;
+                }
+                
+                if (token.type == TT_COMMA) continue;
+                
+                if (args_given < dt->params.size() and dt->params[args_given]->flags & DEF_TYPENAME) {
+                  full_type ft = read_type(lex, token, scope, cp, herr);
+                  if (ft.def) {
+                    definition_typed* const t = (definition_typed*)k[args_given];
+                    t->type = ft.def;
+                    t->referencers.swap(ft.refs);
+                    t->modifiers = ft.flags;
+                  }
+                } else {
+                  AST a;
+                  a.set_use_for_templates(true);
+                  token = lex->get_token_in_scope(scope);
+                  a.parse_expression(token, lex, scope, herr);
+                  if (args_given < dt->params.size())
+                    ((definition_valued*)k[args_given])->value_of = a.eval();
+                }
+                
+                if (token.type == TT_GREATERTHAN)
+                  break;
+                if (token.type != TT_COMMA) {
+                  token.report_errorf(herr, "Comma expected here before %s");
+                  break;
+                }
+              }
+              if (args_given > dt->params.size()) {
+                  token.report_error(herr, "Too many template parameters provided to template `" + dt->name + "'");
+                  FATAL_RETURN(full_type());
+              }
+              int bad_params = 0;
+              for (size_t i = 0; i < dt->params.size(); ++i)
+                if (((k[i]->flags & DEF_TYPENAME) and !((definition_typed*)k[i])->type)
+                or  ((k[i]->flags & DEF_VALUED) and ((definition_valued*)k[i])->value_of.type == VT_NONE))
+                  ++bad_params;
+              if (bad_params) {
+                token.report_error(herr, "Insufficient parameters to template `" + dt->name + "'");
+                FATAL_RETURN(full_type());
+              }
+              
+              rdef = dt->instantiate(k);
+              token = lex->get_token_in_scope(scope, herr);
+            }
+            
+          }
+          else {
+            token.report_error(herr, "Template `" + token.def->name + "' cannot be used as a type");
+            return full_type();
+          }
+        }
+        else goto some_error;
+      }
       else if (token.type == TT_ELLIPSIS) {
         rdef = builtin_type__va_list;
         token = lex->get_token_in_scope(scope,herr);
       }
       else {
+        some_error:
         if (token.type == TT_IDENTIFIER or token.type == TT_DEFINITION)
           token.report_error(herr,"Type name expected here; `" + string(token.content.toString()) + "' does not name a type");
         else
@@ -92,7 +168,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         if (token.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION | DEF_TYPED))
           break;
         token.report_error(herr,"Two types named in expression");
-        FATAL_RETURN(1);
+        FATAL_RETURN(full_type());
       }
       rdef = token.def;
       rflags |= swif;
@@ -193,6 +269,17 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
             ref_stack::parameter param; param.swap_in(a);
             param.variadic = cp? cp->variadics.find(param.def) != cp->variadics.end() : false;
             params.throw_on(param);
+            if (token.type == TT_OPERATOR) {
+              if (token.content.len != 1 or *token.content.str != '=') {
+                token.report_errorf(herr, "Unexpected operator at this point; expected '=' or ')' before %s");
+                FATAL_RETURN(1);
+              }
+              else {
+                AST dv;
+                token = lex->get_token_in_scope(scope, herr);
+                dv.parse_expression(token, lex, scope, herr);
+              }
+            }
             if (token.type != TT_COMMA) {
               if (token.type == TT_RIGHTPARENTH) break;
               token.report_error(herr,"Expected comma or closing parenthesis to function parameters");

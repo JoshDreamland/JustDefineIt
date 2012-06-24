@@ -38,10 +38,10 @@
 namespace jdi {
   ref_stack::ref_stack(): ntop(NULL), nbottom(NULL), sz(0) {}
   ref_stack::ref_stack(ref_stack& rf): ntop(NULL), nbottom(NULL), sz(0) { swap(rf); }
-  ref_stack::ref_stack(const ref_stack& rf) { copy(rf); }
+  ref_stack::ref_stack(const ref_stack& rf) { cout << "IMPLICITLY DUPLICATED REF STACK" << endl; copy(rf); }
   ref_stack::~ref_stack() { clear(); }
   
-  ref_stack &ref_stack::operator= (const ref_stack& rf) { clear(); copy(rf); return *this; }
+  ref_stack &ref_stack::operator= (const ref_stack& rf) { clear(); cout << "IMPLICITLY DUPLICATED REF STACK" << endl; copy(rf); return *this; }
   
   ref_stack &ref_stack::operator= (ref_stack& rf) { swap(rf); return *this; }
   
@@ -96,7 +96,6 @@ namespace jdi {
   
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;
-    cout << "DUPLICATED REF STACK" << endl;
     if (!rf.nbottom) {
       ntop = nbottom = NULL;
       return;

@@ -164,7 +164,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         break;
       
       case TT_SCOPE:
-          token = read_next_token((definition_scope*)token.def);
+          token = read_next_token(global);
         continue;
       case TT_DEFINITION: {
         if (token.def->flags & DEF_NAMESPACE) {
@@ -189,7 +189,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
             FATAL_RETURN(1); break;
           }
           definition_scope hijack("<template>",scope, DEF_NAMESPACE | DEF_TEMPLATE);
-          definition_template *temp = new definition_template();
+          definition_template *temp = new definition_template("", scope, inherited_flags);
           token = read_next_token(scope);
           for (;;) {
             string pname; // The name given to this parameter
@@ -237,7 +237,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               token.report_errorf(herr, "Expected '>' or ',' before %s");
             token = read_next_token(scope);
           }
-          definition* nd;
+          definition* nd = NULL;
           token = read_next_token(scope);
           if (token.type == TT_CLASS || token.type == TT_STRUCT) {
             if (!(nd = handle_class(&hijack, token, DEF_TEMPLATE)))

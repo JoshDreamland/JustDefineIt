@@ -115,9 +115,34 @@ namespace jdi {
   
   definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_typed(classname, parnt, NULL, 0, flgs) {}
   
+  definition_template::definition_template(string n, definition *p, unsigned f): definition(n, p, f | DEF_TEMPLATE), def(NULL)  {}
   definition_template::~definition_template() {
     for (size_t i = 0; i < params.size(); ++i)
       delete params[i];
     delete def;
+  }
+  definition* definition_template::instantiate(arg_key& key) {
+    pair<arg_key&,definition*> insme(key,NULL);
+    /*pair<map<arg_key,definition*>::iterator, bool> ins =*/ instantiations.insert(insme);
+    return def;//ins.first->second;
+  }
+  bool definition_template::arg_key::operator<(const arg_key& other) const {
+    for (definition **i = values, **j = other.values; *j; ++i) {
+      if (!*i) return true;
+      const ptrdiff_t comp = *i - *j;
+      if (comp) return comp < 0;
+    } return false;
+  }
+  void definition_template::arg_key::mirror(definition_template *temp) {
+    for (size_t i = 0; i < temp->params.size(); ++i)
+      if (temp->params[i]->flags & DEF_TYPENAME) {
+        definition_typed* dt = (definition_typed*)temp->params[i];
+        ref_stack dup; dup.copy(dt->referencers);
+        values[i] = new definition_typed(dt->name, dt->parent, dt->type, dup, dt->modifiers, dt->flags);
+      }
+      else {
+        definition_valued* dv = (definition_valued*)temp->params[i];
+        values[i] = new definition_valued(dv->name, dv->parent, dv->type, dv->modifiers, dv->flags, dv->value_of);
+      }
   }
 }
