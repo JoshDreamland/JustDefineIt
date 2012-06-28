@@ -59,7 +59,7 @@ namespace jdi {
     @param prim_name     If this declarator can be used as a type, this is the name of that type if it is different from type_name.
     @return  Returns the definition of the primitive object by that type.
   **/
-  add_decl_info add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name = "");
+  add_decl_info add_declarator(string type_name, USAGE_FLAG usage_flags, size_t sz = 0, string prim_name = "");
   /// Add declarator flags used in the default GNU implementation.
   void add_gnu_declarators();
   /// Free memory for all declarators. This should be called only at program end.
@@ -94,13 +94,15 @@ namespace jdi {
   
   extern definition *builtin_type__wchar_t; ///< Builtin wchar_t type
   extern definition *builtin_type__va_list; ///< Builtin va_list type
+  
+  string typeflags_string(definition *type, unsigned flags);
 }
 
 namespace jdip {
   using namespace jdi;
   /// Class for storing information about a 'typeflag,' declarators such as 'int', 'short', and 'const' which refer to or modify primitives.
   class typeflag {
-    friend add_decl_info jdi::add_declarator(string, USAGE_FLAG, string);
+    friend add_decl_info jdi::add_declarator(string, USAGE_FLAG, size_t, string);
     friend void jdi::cleanup_declarators();
     
     typeflag(); ///< Construct a new type flag.

@@ -98,11 +98,20 @@ namespace jdi {
     void append(ref_stack &rf);
     /// Similar to append, but for reference stacks composed in a nest. Copies the name member as well.
     void append_nest(ref_stack &rf);
+    /// Pop a reference from this stack, or dereference it once.
+    void pop();
     /// Clear the stack, undoing all referencers.
     void clear();
     
+    bool operator==(const ref_stack& other) const; ///< Compare for equality across all three attributes.
+    bool operator!=(const ref_stack& other) const; ///< Compare against equality across all three attributes.
+    bool operator< (const ref_stack& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator> (const ref_stack& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator<= (const ref_stack& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator>= (const ref_stack& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    
     /// Return whether this stack is empty.
-    bool empty();
+    bool empty() const;
     
     /// Constructor wrapper to the copy() method so copying doesn't bite someone in the ass.
     ref_stack(const ref_stack&);
@@ -119,13 +128,20 @@ namespace jdi {
     /// Swap contents with another ref_stack. This method is completely safe.
     void swap(ref_stack &rf);
     
+    /// Represent this set of referencers as a string.
+    string toString();
+    /// Represent the left-hand side of this set of referencers as a string (the part before the name).
+    string toStringLHS();
+    /// Represent the right-hand side of this set of referencers as a string (the part after the name).
+    string toStringRHS();
+    
     /// Get the top node.
     node &top();
     /// Get the bottom node.
     node &bottom();
     
     /// Return the number of nodes contained.
-    size_t size();
+    size_t size() const;
     
     /// Return iterator from topmost item.
     iterator begin();
@@ -175,12 +191,26 @@ namespace jdi {
     value default_value; ///< The default value of this parameter, or an invalid value if none was given.
     void swap_in(full_type& param); ///< Swap contents with another parameter class.
     void swap(parameter& param); ///< Swap contents with another parameter class.
+    
+    bool operator==(const parameter& other) const; ///< Compare for equality across all three attributes.
+    bool operator!=(const parameter& other) const; ///< Compare against equality across all three attributes.
+    bool operator< (const parameter& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator> (const parameter& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator<= (const parameter& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator>= (const parameter& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
   };
   /// Parameter storage container type. Guaranteed to have a push_back(full_type) method.
   struct ref_stack::parameter_ct: public quick::vector<parameter> {
     /// Throw a full_type onto this list, consuming it.
     /// @param ft  The \c full_type that will be consumed and added to the stack.
     void throw_on(parameter& ft);
+    
+    bool operator==(const parameter_ct& other) const; ///< Compare for equality across all three attributes.
+    bool operator!=(const parameter_ct& other) const; ///< Compare against equality across all three attributes.
+    bool operator< (const parameter_ct& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator> (const parameter_ct& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator<= (const parameter_ct& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
+    bool operator>= (const parameter_ct& other) const; ///< Inequality comparison, just in case someone needs to shove these in a map.
   };
   /// A special ref_stack node with an array bound size member.
   struct ref_stack::node_array: ref_stack::node {

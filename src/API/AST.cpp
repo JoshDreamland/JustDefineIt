@@ -392,9 +392,9 @@ namespace jdi
     //cout << content << "(" << b4.val.i << ") = " << after.val.i << endl;
     return after;
   }
-  value AST::AST_Node_Group::eval() {
+  /*value AST::AST_Node_Group::eval() {
     return root?root->eval():value();
-  }
+  }*/
   value AST::AST_Node_Parameters::eval() {
     return value(); // We can't evaluate a function call ;_;
   }
@@ -433,12 +433,96 @@ namespace jdi
   //=: Coercers :==============================================================================================================
   //===========================================================================================================================
   
-  definition* AST::AST_Node_sizeof::coerce() {
-    return builtin_type__int; // FIXME: Replace with unsigned long
+  full_type AST::coerce() {
+    return root? root->coerce() : full_type();
   }
   
-  definition* AST::AST_Node_Cast::coerce() {
+  full_type AST::AST_Node::coerce() {
+    full_type res;
+    res.def = builtin_type__int;
+    bool islong = false, isunsigned = false;
+    for (size_t i = content.length(); i and is_letter(content[i]); --i)
+      if (content[i] == 'l' or content[i] == 'L') islong = true;
+      else if (content[i] == 'u' or content[i] == 'U') isunsigned = true;
+    res.flags = 0;
+    if (islong) res.flags |= builtin_flag__long;
+    if (isunsigned) res.flags |= builtin_flag__unsigned;
+    return res;
+  }
+  
+  full_type AST::AST_Node_Binary::coerce() {
+    //TODO: Implement using operator() functions.
+    return left->coerce();
+  }
+  
+  full_type AST::AST_Node_Cast::coerce() {
     return cast_type.def; // FIXME: Replace with cast_type (fulltype)
+  }
+  
+  full_type AST::AST_Node_Definition::coerce() {
+    full_type res;
+    if (def && (def->flags & DEF_TYPED)) {
+      res.def = ((definition_typed*)def)->type;
+      res.refs.copy(((definition_typed*)def)->referencers);
+      res.flags = ((definition_typed*)def)->modifiers;
+    }
+    return res;
+  }
+  
+  full_type AST::AST_Node_Parameters::coerce() {
+    #ifdef DEBUG_MODE
+      if (func->type != AT_DEFINITION or !((AST_Node_Definition*)func)->def or !(((AST_Node_Definition*)func)->def->flags & DEF_FUNCTION)) {
+        cerr << "Left-hand of parameter list not a function";
+        return full_type();
+      }
+    #endif
+    vector<full_type> param_types;
+    param_types.reserve(params.size());
+    for (vector<AST_Node*>::iterator it = params.begin(); it != params.end(); ++it)
+      param_types.push_back((*it)->coerce());
+    definition_function* df = (definition_function*)((AST_Node_Definition*)func)->def;
+    // TODO: Overload resolution
+    full_type res;
+    res.def = df->type;
+    res.refs.copy(df->referencers);
+    res.refs.pop();
+    res.flags = df->flags;
+    return res;
+  }
+  
+  full_type AST::AST_Node_sizeof::coerce() {
+    full_type res;
+    res.def = builtin_type__long;
+    res.flags = builtin_flag__unsigned;
+    return res;
+  }
+  
+  full_type AST::AST_Node_Ternary::coerce() {
+    full_type t1 = left->coerce();
+    #ifdef DEBUG_MODE
+      if (t1 != right->coerce()) cerr << "ERROR: Operands to ternary operator differ in type.";
+    #endif
+    return t1;
+  }
+  
+  full_type AST::AST_Node_Type::coerce() {
+    return dec_type;
+  }
+  
+  full_type AST::AST_Node_Unary::coerce() {
+    switch (content[0]) {
+      case '+':
+      case '-':
+      case '~': return right->coerce();
+      case '*': { full_type res = right->coerce(); res.refs.pop(); return res; }
+      case '&': { full_type res = right->coerce(); res.refs.push(ref_stack::RT_POINTERTO); return res; }
+      case '!': return builtin_type__bool;
+      default:
+        #ifdef DEBUG_MODE
+          cerr << "ERROR: Unknown coercion pattern for ternary operator `" << content << "'" << endl;
+        #endif
+        return right->coerce();
+    }
   }
   
   //===========================================================================================================================
@@ -460,7 +544,6 @@ namespace jdi
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) { type = AT_BINARYOP; }
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
-  AST::AST_Node_Group::AST_Node_Group(): root(NULL) {}
   AST::AST_Node_Parameters::AST_Node_Parameters(): func(NULL) {}
   
   
@@ -472,7 +555,6 @@ namespace jdi
   AST::AST_Node_Binary::~AST_Node_Binary() { delete left; delete right; }
   AST::AST_Node_Unary::~AST_Node_Unary() { delete right; }
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
-  AST::AST_Node_Group::~AST_Node_Group() { delete root; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
   
   

@@ -84,7 +84,7 @@ namespace jdi {
     }
     in.close();
   }
-  add_decl_info add_declarator(string type_name, USAGE_FLAG usage_flags, string prim_name)
+  add_decl_info add_declarator(string type_name, USAGE_FLAG usage_flags, size_t sz, string prim_name)
   {
     unsigned long flag;
     pair<tf_iter, bool> insit = builtin_declarators.insert(pair<string,typeflag*>(type_name,NULL));
@@ -95,7 +95,7 @@ namespace jdi {
           prim_name = type_name;
         pair<prim_iter, bool> ntit = builtin_primitives.insert(pair<string,definition*>(prim_name,NULL));
         if (ntit.second)
-          ntit.first->second = new definition(prim_name, NULL, DEF_TYPENAME);
+          ntit.first->second = new definition_atomic(prim_name, NULL, DEF_TYPENAME, sz);
         insit.first->second->def = ntit.first->second;
       }
       if (usage_flags & UF_FLAG)
@@ -128,24 +128,24 @@ namespace jdi {
     add_declarator("throw", UF_FLAG);
     
     jdi::add_decl_info
-    c = add_declarator("unsigned", UF_STANDALONE_FLAG, "int");
+    c = add_declarator("unsigned", UF_STANDALONE_FLAG, 4, "int");
     builtin_type__unsigned = c.def, builtin_flag__unsigned = c.flag;
-    c = add_declarator("signed",   UF_STANDALONE_FLAG, "int");
+    c = add_declarator("signed",   UF_STANDALONE_FLAG, 4, "int");
     builtin_type__signed   = c.def, builtin_flag__signed   = c.flag;
-    c = add_declarator("short",    UF_PRIMITIVE_FLAG);
+    c = add_declarator("short",    UF_PRIMITIVE_FLAG, 4);
     builtin_type__short    = c.def, builtin_flag__short    = c.flag;
-    c = add_declarator("long",     UF_PRIMITIVE_FLAG);
+    c = add_declarator("long",     UF_PRIMITIVE_FLAG, 4);
     builtin_type__long     = c.def, builtin_flag__long     = c.flag;
     
     builtin_type__void   = add_declarator("void",    UF_PRIMITIVE).def;
-    builtin_type__bool   = add_declarator("bool",    UF_PRIMITIVE).def;
-    builtin_type__char   = add_declarator("char",    UF_PRIMITIVE).def;
-    builtin_type__int    = add_declarator("int",     UF_PRIMITIVE).def;
-    builtin_type__float  = add_declarator("float",   UF_PRIMITIVE).def;
-    builtin_type__double = add_declarator("double",  UF_PRIMITIVE).def;
+    builtin_type__bool   = add_declarator("bool",    UF_PRIMITIVE, 1).def;
+    builtin_type__char   = add_declarator("char",    UF_PRIMITIVE, 1).def;
+    builtin_type__int    = add_declarator("int",     UF_PRIMITIVE, 4).def;
+    builtin_type__float  = add_declarator("float",   UF_PRIMITIVE, 4).def;
+    builtin_type__double = add_declarator("double",  UF_PRIMITIVE, 8).def;
     
-    builtin_type__wchar_t = add_declarator("wchar_t",   UF_PRIMITIVE).def;
-    builtin_type__va_list = add_declarator("__builtin_va_list",   UF_PRIMITIVE).def;
+    builtin_type__wchar_t = add_declarator("wchar_t",   UF_PRIMITIVE, 2).def;
+    builtin_type__va_list = add_declarator("__builtin_va_list",   UF_PRIMITIVE, 8).def;
     
     builtin.variadics.insert(builtin_type__va_list);
   }
@@ -155,5 +155,20 @@ namespace jdi {
       delete tfit->second;
     for (prim_iter prit = builtin_primitives.begin(); prit != builtin_primitives.end(); prit++)
       delete prit->second;
+  }
+  
+  static inline string tostr(int x) { char buf[16]; sprintf(buf, "%d", x); return buf; }
+  string typeflags_string(definition *type, unsigned flags) {
+    string res;
+    for (int i = 1; i <= 0x10000; i <<= 1)
+      if (flags & i) {
+        jdip::tf_flag_map::iterator tfi = builtin_decls_byflag.find(i);
+        if (tfi == builtin_decls_byflag.end()) res += "<ERROR:NOSUCHFLAG:" + tostr(i) + "> ";
+        else res += tfi->second->name + " ";
+      }
+    if (type)
+      res += type->name;
+    else res += "<NULL>";
+    return res;
   }
 }

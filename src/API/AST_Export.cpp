@@ -53,7 +53,6 @@ namespace jdi {
   //===========================================================================================================================
   
   int AST::AST_Node::own_width() { return content.length()*8 + 16; }
-  int AST::AST_Node_Group::own_width() { return 32; }
   
   
   //===========================================================================================================================
@@ -138,18 +137,6 @@ namespace jdi {
     if (right)
       right->toSVG(rx,y2,svg);
   }
-  void AST::AST_Node_Group::toSVG(int x, int y, SVGrenderInfo *svg)
-  {
-    const int nid = svg->nodes_written++;
-    int r = own_width()/2;
-    int xx = x, yy = y+r+16+(root?root->own_width()/2:0);
-    
-    svg->draw_line(nid,'m',x,y,xx,yy);
-    svg->draw_circle(nid,x,y,r,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
-    svg->draw_text(nid,x,y+4,"()");
-    if (root)
-      root->toSVG(xx,yy,svg);
-  }
   void AST::AST_Node_Parameters::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
@@ -199,13 +186,11 @@ namespace jdi {
   int AST::AST_Node_Binary::width() { return 24 + (left?left->width():0) + (right?right->width():0); }
   int AST::AST_Node_Unary::width() { return right?max(right->width(),own_width()):own_width(); }
   int AST::AST_Node_Ternary::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }
-  int AST::AST_Node_Group::width() { return root?max(root->width(),own_width()):own_width(); }
   int AST::AST_Node_Parameters::width() { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width(), res); }
   int AST::AST_Node::height() { return own_width(); }
   int AST::AST_Node_Binary::height() { return max((left?left->height():0), (right?right->height():0)) + 16 + own_width(); }
   int AST::AST_Node_Unary::height() { return own_width() + (right?16 + right->height():0); }
   int AST::AST_Node_Ternary::height() { return own_width() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
-  int AST::AST_Node_Group::height() { return own_width() + (root?16 + root->height():0); }
   int AST::AST_Node_Parameters::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
   
   
@@ -217,6 +202,5 @@ namespace jdi {
   void AST::AST_Node_Unary::print() {}
   void AST::AST_Node_Binary::print() { cout << "( " << content << " )["; if (left) left->print(); else cout << "(...)"; if (right) right->print(); else cout << "(...)"; cout << "]"; }
   void AST::AST_Node_Ternary::print() {}
-  void AST::AST_Node_Group::print() { cout << "("; if (root) root->print(); else cout << "..."; cout << ")" << endl; }
   void AST::AST_Node_Parameters::print() {}
 }

@@ -44,6 +44,8 @@ static void putcap(string cap) {
   cout << "============================================================================" << endl << endl;
 }
 
+void do_cli(context &ct);
+
 int main() {
   add_gnu_declarators();
   builtin.load_standard_builtins();
@@ -102,12 +104,111 @@ int main() {
     enigma.output_macro("__GNUC_PREREQ", cout);
     enigma.output_macro("__intN_t", cout);*/
     cout << "None requested." << endl;
+    
+    do_cli(enigma);
   }
   else
     cout << "Failed to open file for parsing!" << endl;
   
   cleanup_declarators();
   return 0;
+}
+
+#ifdef __linux__d
+#include <ncurses>
+#else
+static char getch() {
+  int c = fgetc(stdin);
+  int ignore = c;
+  while (ignore != '\n') ignore = fgetc(stdin);
+  return c;
+}
+#endif
+
+#include <cstring>
+#include <System/lex_cpp.h>
+#include <General/parse_basics.h>
+
+void do_cli(context &ct) {
+  putcap("Command Line Interface");
+  char c = ' ';
+  macro_map undamageable = ct.get_macros();
+  while (c != 'q' and c != '\n') { switch (c) {
+    case 'd': {
+        cout << "Enter the item to define:" << endl << ">> " << flush;
+        char buf[4096]; cin.getline(buf, 4096);
+        size_t start, e = 0;
+        while (is_useless(buf[e]) or buf[e] == ':') ++e;
+        definition* def = ct.get_global();
+        while (buf[e] and def) {
+          if (!is_letter(buf[e])) { cout << "Unexpected symbol '" << buf[e] << "'" << endl; break; }
+          start = e;
+          while (is_letterd(buf[++e]));
+          if (def->flags & DEF_SCOPE) {
+            string name(buf+start, e-start);
+            definition_scope::defiter it = ((definition_scope*)def)->members.find(name);
+            if (it == ((definition_scope*)def)->members.end()) {
+              cout << "No `" << name << "' found in scope `" << def->name << "'" << endl;
+              def = NULL;
+              break;
+            }
+            def = it->second;
+            cout << "::" << def->name << flush;
+          }
+          else {
+            cout << "Definition `" << def->name << "' is not a scope" << endl;
+            def = NULL;
+            break;
+          }
+          while (is_useless(buf[e]) or buf[e] == ':') ++e;
+        }
+        if (def and e)
+          cout << endl << def->toString() << endl;
+      } break;
+    
+    case 'e': {
+        bool eval;
+        if (1)
+          eval = true;
+        else {
+          case 'c':
+          eval = false;
+        }
+        cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
+        char buf[4096]; cin.getline(buf, 4096);
+        llreader llr(buf, strlen(buf));
+        AST a;
+        lexer_cpp c_lex(llr, undamageable, "User expression");
+        token_t dummy = c_lex.get_token_in_scope(ct.get_global());
+        a.parse_expression(dummy, &c_lex, ct.get_global(), def_error_handler);
+        if (eval) {
+          value v = a.eval();
+          cout << "Value returned: " << v.toString() << endl;
+        }
+        else {
+          full_type t = a.coerce();
+          cout << "Type of expression: " << t.toString() << endl;
+        }
+      } break;
+    
+    case 'h':
+      cout <<
+      "'c' Coerce an expression, printing its type"
+      "'d' Define a symbol, printing it recursively\n"
+      "'e' Evaluate an expression, printing its result\n"
+      "'h' Print this help information\n"
+      "'m' Define a macro, printing a breakdown of its definition\n"
+      "'q' Quit this interface\n";
+    break;
+      
+    
+    default: cout << "Unrecognized command. Empty command or 'q' to quit." << endl << endl; break;
+    case ' ': cout << "Commands are single-letter; 'h' for help." << endl << "Follow commands with ENTER on non-unix." << endl;
+  } 
+  cout << "> " << flush;
+  c = getch();
+  }
+  cout << endl << "Goodbye" << endl;
 }
 
 void test_expression_evaluator() {

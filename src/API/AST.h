@@ -89,6 +89,8 @@ namespace jdi {
       
       /// Evaluates this node recursively, returning a value containing its result.
       virtual value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      virtual full_type coerce();
       
       AST_Node(); ///< Default constructor.
       AST_Node(string ct); ///< Constructor, with content string.
@@ -106,6 +108,8 @@ namespace jdi {
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      full_type coerce();
       
       AST_Node_Unary(AST_Node* r = NULL); ///< Default constructor. Sets children to NULL.
       AST_Node_Unary(AST_Node* r, string ct); ///< Complete constructor, with child node and operator string.
@@ -120,7 +124,7 @@ namespace jdi {
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_sizeof: AST_Node_Unary {
       value eval(); ///< Behaves funny for sizeof; coerces instead, then takes size of result type.
-      definition *coerce(); ///< Behaves funny for sizeof; returns unsigned long every time.
+      full_type coerce(); ///< Behaves funny for sizeof; returns unsigned long every time.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       AST_Node_sizeof(AST_Node* param);
     };
@@ -128,7 +132,7 @@ namespace jdi {
     struct AST_Node_Cast: AST_Node_Unary {
       full_type cast_type; ///< The type this cast represents.
       value eval(); ///< Performs a cast, as it is able.
-      definition *coerce(); ///< Returns \c cast_type.
+      full_type coerce(); ///< Returns \c cast_type.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       AST_Node_Cast(AST_Node* param);
     };
@@ -136,13 +140,14 @@ namespace jdi {
     struct AST_Node_Definition: AST_Node {
       definition *def; ///< The \c definition of the constant or type this token represents.
       value eval(); ///< Evaluates this node recursively, returning a value containing its result.
+      full_type coerce(); ///< Returns the type of the given definition, if it has one.
       AST_Node_Definition(definition *def); ///< Construct with a definition
     };
     /// Child of AST_Node for tokens with an attached \c full_type.
     struct AST_Node_Type: AST_Node {
       full_type dec_type; ///< The \c full_type read into this node.
       value eval(); ///< Returns zero; output should never be queried.
-      definition *coerce(); ///< Returns the type contained, \c dec_type.
+      full_type coerce(); ///< Returns the type contained, \c dec_type.
       AST_Node_Type(full_type &ft); ///< Construct consuming a \c full_type.
     };
     /// Child of AST_Node for binary operators.
@@ -152,6 +157,8 @@ namespace jdi {
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      full_type coerce();
       
       AST_Node_Binary(AST_Node* left=NULL, AST_Node* right=NULL); ///< Default constructor. Sets children to NULL.
       AST_Node_Binary(AST_Node* left, AST_Node* right, string op); ///< Default constructor. Sets children to NULL.
@@ -170,6 +177,8 @@ namespace jdi {
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      full_type coerce();
       
       AST_Node_Ternary(AST_Node *expression = NULL, AST_Node *exp_true = NULL, AST_Node *exp_false = NULL); ///< Default constructor. Sets children to NULL.
       AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct); ///< Complete constructor, with children and a content string.
@@ -180,22 +189,6 @@ namespace jdi {
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
-    /// Child of AST_Node for parenthetical groupings. @deprecated
-    struct AST_Node_Group: AST_Node {
-      AST_Node *root;
-      
-      /// Evaluates this node recursively, returning a value containing its result.
-      value eval();
-      
-      AST_Node_Group(); ///< Default constructor. Sets children to NULL.
-      ~AST_Node_Group(); ///< Default destructor. Frees children recursively.
-      
-      void print(); ///< Prints the contents of this node to stdout, recursively.
-      void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
-      int width(); ///< Returns the width which will be used to render this node and all its children.
-      int own_width(); ///< Returns the width of this individual node, regardless of children.
-      int height(); ///< Returns the height which will be used to render this node and all its children.
-    };
     /// Child of AST_Node for array subscripts.
     struct AST_Node_Subscript: AST_Node {
       AST_Node *left;
@@ -203,6 +196,8 @@ namespace jdi {
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      full_type coerce();
       
       AST_Node_Subscript(); ///< Default constructor. Sets children to NULL.
       ~AST_Node_Subscript(); ///< Default destructor. Frees children recursively.
@@ -222,6 +217,8 @@ namespace jdi {
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      full_type coerce();
       
       AST_Node_Parameters(); ///< Default constructor. Sets children to NULL.
       ~AST_Node_Parameters(); ///< Default destructor. Frees children recursively.
@@ -327,7 +324,7 @@ namespace jdi {
     value eval();
     
     /// Coerce the current AST for the type of its result.
-    definition *coerce();
+    full_type coerce();
     
     /// Clear the AST out, effectively creating a new instance of this class
     void clear();

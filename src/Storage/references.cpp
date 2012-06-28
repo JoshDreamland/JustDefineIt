@@ -34,14 +34,15 @@
   #endif
 #endif
 #include <iostream>
+#include <cstdio>
 
 namespace jdi {
   ref_stack::ref_stack(): ntop(NULL), nbottom(NULL), sz(0) {}
   ref_stack::ref_stack(ref_stack& rf): ntop(NULL), nbottom(NULL), sz(0) { swap(rf); }
-  ref_stack::ref_stack(const ref_stack& rf) { cout << "IMPLICITLY DUPLICATED REF STACK" << endl; copy(rf); }
+  ref_stack::ref_stack(const ref_stack& rf) { cout << "IMPLICITLY DUPLICATED REF STACK (CTOR)" << endl; copy(rf); }
   ref_stack::~ref_stack() { clear(); }
   
-  ref_stack &ref_stack::operator= (const ref_stack& rf) { clear(); cout << "IMPLICITLY DUPLICATED REF STACK" << endl; copy(rf); return *this; }
+  ref_stack &ref_stack::operator= (const ref_stack& rf) { clear(); cout << "IMPLICITLY DUPLICATED REF STACK (ASSN)" << endl; copy(rf); return *this; }
   
   ref_stack &ref_stack::operator= (ref_stack& rf) { swap(rf); return *this; }
   
@@ -92,6 +93,16 @@ namespace jdi {
     if (bo) bo->previous = nbottom;
     else ntop = nbottom;
     ++sz;
+  }
+  
+  void ref_stack::pop() {
+    node *dme = ntop;
+    if (dme) {
+      ntop = dme->previous;
+      if (!ntop)
+        nbottom = NULL;
+      delete dme;
+    }
   }
   
   void ref_stack::copy(const ref_stack& rf) {
@@ -149,8 +160,8 @@ namespace jdi {
     sz = 0;
   }
   
-  bool ref_stack::empty() { return !nbottom; }
-  size_t ref_stack::size() { return sz; }
+  bool ref_stack::empty() const { return !nbottom; }
+  size_t ref_stack::size() const { return sz; }
   
   ref_stack::node& ref_stack::top() { return *ntop; }
   ref_stack::node& ref_stack::bottom() { return *nbottom; }
@@ -179,4 +190,229 @@ namespace jdi {
   void ref_stack::parameter::swap_in(full_type &param) {
     full_type::swap(param);
   }
+  
+  // ============================================================================================
+  // =====: String depiction :===================================================================
+  // ============================================================================================
+  
+  string ref_stack::toStringLHS() {
+    string res;
+    iterator it = begin();
+    while (it)
+    {
+      while (it and (it->type == RT_ARRAYBOUND || it->type == RT_FUNCTION)) ++it;
+      while (it and (it->type == RT_POINTERTO  || it->type == RT_REFERENCE))
+        res = (it->type == ref_stack::RT_POINTERTO? '*' : '&') + res, ++it;
+      if (it) res = '(' + res;
+    }
+    return res;
+  }
+
+  static inline string arraybound_string(size_t b) {
+    if (b == ref_stack::node_array::nbound)
+      return "[]";
+    char buf[32]; sprintf(buf,"[%lu]",(long unsigned)b);
+    return buf;
+  }
+
+  string ref_stack::toStringRHS() {
+    string res;
+    iterator it = begin();
+    while (it)
+    {
+      while (it and (it->type == RT_ARRAYBOUND || it->type == RT_FUNCTION)) {
+        if (it->type == RT_ARRAYBOUND) res += arraybound_string(it->arraysize());
+        else {
+          res += '(';
+          node_func* nf = (node_func*)*it;
+          for (size_t i = 0; i < nf->params.size(); i++) {
+            res += nf->params[i].variadic? "..." : nf->params[i].toString();
+            if (i + 1 < nf->params.size()) res += ", ";
+          }
+          res += ')';
+        }
+        ++it;
+      }
+      while (it and (it->type == RT_POINTERTO || it->type == RT_REFERENCE)) ++it;
+      if (it) res += ')';
+    }
+    return res;
+  }
+
+  string ref_stack::toString() {
+    return toStringLHS() + name + toStringRHS();
+  }
+  
+  //================================================================================
+  //====: Comparison operators :====================================================
+  //================================================================================
+  
+  
+  bool ref_stack::operator==(const ref_stack& other) const {
+    if (size() != other.size()) return false;
+    for (node *i = ntop, *j = other.ntop; i or j; i = i->previous, j = j->previous) {
+      #ifdef DEBUG_MODE
+      if (not(j and i)) {
+        cerr << "ref_stack::size() lied" << endl;
+        return false;
+      }
+      #endif
+      if (i->type != j->type) return false;
+      if (i->type == RT_ARRAYBOUND and i->arraysize() != j->arraysize()) return false;
+      if (i->type == RT_FUNCTION and ((node_func*)i)->params != ((node_func*)j)->params) return false;
+    }
+    return true;
+  }
+  bool ref_stack::operator!=(const ref_stack& other) const {
+    if (size() != other.size()) return true;
+    for (node *i = ntop, *j = other.ntop; i or j; i = i->previous, j = j->previous) {
+      #ifdef DEBUG_MODE
+      if (not(j and i)) {
+        cerr << "ref_stack::size() lied" << endl;
+        return true;
+      }
+      #endif
+      if (i->type != j->type) return true;
+      if (i->type == RT_ARRAYBOUND and i->arraysize() != j->arraysize()) return true;
+      if (i->type == RT_FUNCTION and ((node_func*)i)->params != ((node_func*)j)->params) return true;
+    }
+    return false;
+  }
+  bool ref_stack::operator< (const ref_stack& other) const {
+    if (size() < other.size()) return true;
+    if (size() > other.size()) return false;
+    for (node *i = ntop, *j = other.ntop; i or j; i = i->previous, j = j->previous) {
+      #ifdef DEBUG_MODE
+      if (not(j and i)) {
+        cerr << "ref_stack::size() lied" << endl;
+        return true;
+      }
+      #endif
+      if (i->type != j->type) return i->type < j->type;
+      if (i->type == RT_ARRAYBOUND and i->arraysize() != j->arraysize()) return i->arraysize() < j->arraysize();
+      if (i->type == RT_FUNCTION and ((node_func*)i)->params != ((node_func*)j)->params) return ((node_func*)i)->params < ((node_func*)j)->params;
+    }
+    return false;
+  }
+  bool ref_stack::operator> (const ref_stack& other) const {
+    if (size() > other.size()) return true;
+    if (size() < other.size()) return false;
+    for (node *i = ntop, *j = other.ntop; i or j; i = i->previous, j = j->previous) {
+      #ifdef DEBUG_MODE
+      if (not(j and i)) {
+        cerr << "ref_stack::size() lied" << endl;
+        return false;
+      }
+      #endif
+      if (i->type != j->type) return i->type < j->type;
+      if (i->type == RT_ARRAYBOUND and i->arraysize() != j->arraysize()) return i->arraysize() > j->arraysize();
+      if (i->type == RT_FUNCTION and ((node_func*)i)->params != ((node_func*)j)->params) return ((node_func*)i)->params > ((node_func*)j)->params;
+    }
+    return false;
+  }
+  bool ref_stack::operator<= (const ref_stack& other) const {
+    if (size() < other.size()) return true;
+    if (size() > other.size()) return false;
+    for (node *i = ntop, *j = other.ntop; i or j; i = i->previous, j = j->previous) {
+      #ifdef DEBUG_MODE
+      if (not(j and i)) {
+        cerr << "ref_stack::size() lied" << endl;
+        return true;
+      }
+      #endif
+      if (i->type != j->type) return i->type < j->type;
+      if (i->type == RT_ARRAYBOUND and i->arraysize() != j->arraysize()) return i->arraysize() < j->arraysize();
+      if (i->type == RT_FUNCTION and ((node_func*)i)->params != ((node_func*)j)->params) return ((node_func*)i)->params < ((node_func*)j)->params;
+    }
+    return false;
+  }
+  bool ref_stack::operator>= (const ref_stack& other) const {
+    if (size() > other.size()) return true;
+    if (size() < other.size()) return false;
+    for (node *i = ntop, *j = other.ntop; i or j; i = i->previous, j = j->previous) {
+      #ifdef DEBUG_MODE
+      if (not(j and i)) {
+        cerr << "ref_stack::size() lied" << endl;
+        return false;
+      }
+      #endif
+      if (i->type != j->type) return i->type >= j->type;
+      if (i->type == RT_ARRAYBOUND and i->arraysize() != j->arraysize()) return i->arraysize() > j->arraysize();
+      if (i->type == RT_FUNCTION and ((node_func*)i)->params != ((node_func*)j)->params) return ((node_func*)i)->params > ((node_func*)j)->params;
+    }
+    return true;
+  }
+  
+  bool ref_stack::parameter_ct::operator==(const ref_stack::parameter_ct& other) const {
+    if (size() != other.size()) return false;
+    for (size_t i = 0; i < size(); ++i)
+      if ((*this)[i] != other[i]) return false;
+    return true;
+  }
+  bool ref_stack::parameter_ct::operator!=(const ref_stack::parameter_ct& other) const {
+    if (size() != other.size()) return true;
+    for (size_t i = 0; i < size(); ++i)
+      if ((*this)[i] != other[i]) return true;
+    return false;
+  }
+  bool ref_stack::parameter_ct::operator>(const ref_stack::parameter_ct& other) const {
+    if (size() > other.size()) return true;
+    if (size() < other.size()) return false;
+    for (size_t i = 0; i < size(); ++i)
+      if ((*this)[i] != other[i]) return (*this)[i] > other[i];
+    return false;
+  }
+  bool ref_stack::parameter_ct::operator<(const ref_stack::parameter_ct& other) const {
+    if (size() < other.size()) return true;
+    if (size() > other.size()) return false;
+    for (size_t i = 0; i < size(); ++i)
+      if ((*this)[i] != other[i]) return (*this)[i] < other[i];
+    return false;
+  }
+  bool ref_stack::parameter_ct::operator>=(const ref_stack::parameter_ct& other) const {
+    if (size() > other.size()) return true;
+    if (size() < other.size()) return false;
+    for (size_t i = 0; i < size(); ++i)
+      if ((*this)[i] < other[i]) return (*this)[i] > other[i];
+    return true;
+  }
+  bool ref_stack::parameter_ct::operator<=(const ref_stack::parameter_ct& other) const {
+    if (size() < other.size()) return true;
+    if (size() > other.size()) return false;
+    for (size_t i = 0; i < size(); ++i)
+      if ((*this)[i] != other[i]) return (*this)[i] < other[i];
+    return true;
+  }
+  
+  bool ref_stack::parameter::operator==(const ref_stack::parameter& other) const {
+    return defaulted == other.defaulted and variadic == other.variadic and (!variadic or default_value == other.default_value);
+  }
+  bool ref_stack::parameter::operator!=(const ref_stack::parameter& other) const {
+    return defaulted != other.defaulted or variadic != other.variadic or (variadic and default_value != other.default_value);
+  }
+  bool ref_stack::parameter::operator<(const ref_stack::parameter& other) const {
+    if (default_value != other.default_value) return default_value < other.default_value;
+    if (defaulted != other.defaulted) return defaulted < other.defaulted;
+    if (variadic != other.variadic) return variadic < other.variadic;
+    return false;
+  }
+  bool ref_stack::parameter::operator>(const ref_stack::parameter& other) const {
+    if (default_value != other.default_value) return default_value > other.default_value;
+    if (defaulted != other.defaulted) return defaulted > other.defaulted;
+    if (variadic != other.variadic) return variadic > other.variadic;
+    return false;
+  }
+  bool ref_stack::parameter::operator<=(const ref_stack::parameter& other) const {
+    if (default_value != other.default_value) return default_value < other.default_value;
+    if (defaulted != other.defaulted) return defaulted < other.defaulted;
+    if (variadic != other.variadic) return variadic < other.variadic;
+    return true;
+  }
+  bool ref_stack::parameter::operator>=(const ref_stack::parameter& other) const {
+    if (default_value != other.default_value) return default_value > other.default_value;
+    if (defaulted != other.defaulted) return defaulted > other.defaulted;
+    if (variadic != other.variadic) return variadic > other.variadic;
+    return true;
+  }
+  
 }

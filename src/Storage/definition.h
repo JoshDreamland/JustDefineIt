@@ -26,6 +26,7 @@
 #define _DEFINITION__H
 
 namespace jdi {
+  /** Flags given to a definition to describe its type simply and quickly. **/
   enum DEF_FLAGS
   {
     DEF_TEMPLATE =     1 <<  0, ///< This definition has template parameters attached.
@@ -34,16 +35,18 @@ namespace jdi {
     DEF_CLASS =        1 <<  3, ///< This definition is a class or structure. 
     DEF_ENUM =         1 <<  4, ///< This definition is an enumeration of valued constants.
     DEF_UNION =        1 <<  5, ///< This definition is an enumeration of valued constants.
-    DEF_TYPED =        1 <<  6, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
-    DEF_FUNCTION =     1 <<  7, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_VALUED =       1 <<  8, ///< This definition has a constant integer value attached.
-    DEF_DEFAULTED =    1 <<  9, ///< This definition has a default expression attached.
-    DEF_TEMPPARAM =    1 << 10, ///< This definition is a parameter of a template.
-    DEF_EXTERN =       1 << 11, ///< This definition was declared with the "extern" flag.
-    DEF_HYPOTHETICAL = 1 << 12, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_PRIVATE =      1 << 13, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 14, ///< This definition was declared as a protected member.
-    DEF_INCOMPLETE =   1 << 15  ///< This definition was declared but not implemented.
+    DEF_SCOPE =        1 <<  6, ///< This definition is a scope of some sort.
+    DEF_TYPED =        1 <<  7, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
+    DEF_FUNCTION =     1 <<  8, ///< This definition is a function containing a list of zero or more overloads.
+    DEF_VALUED =       1 <<  9, ///< This definition has a constant integer value attached.
+    DEF_DEFAULTED =    1 << 10, ///< This definition has a default expression attached.
+    DEF_TEMPPARAM =    1 << 11, ///< This definition is a parameter of a template.
+    DEF_EXTERN =       1 << 12, ///< This definition was declared with the "extern" flag.
+    DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
+    DEF_PRIVATE =      1 << 14, ///< This definition was declared as a private member.
+    DEF_PROTECTED =    1 << 15, ///< This definition was declared as a protected member.
+    DEF_INCOMPLETE =   1 << 16, ///< This definition was declared but not implemented.
+    DEF_ATOMIC =       1 << 17  ///< This is a global definition for objects of a fixed size, such as primitives.
   };
   
   struct definition;
@@ -55,6 +58,7 @@ namespace jdi {
   struct definition_class;
   struct definition_enum;
   struct definition_template;
+  struct definition_atomic;
 }
 
 
@@ -78,16 +82,43 @@ namespace jdi {
     definition_scope* parent; ///< The definition of the scope in which this definition is declared.
                         ///< Except for the global scope of the context, this must be non-NULL.
     
+    /// Map type to contain definitions to remap along with the definition with which it will be replaced
+    typedef map<definition*, definition*> remap_set;
+    
     /** Duplicate this definition, whatever it may contain.
         The duplicated version must be freed separately.
-        @return A pointer to a newly-allocated copy of this definition.
+        @return A pointer to a newly-allocated copy of this definition. **/
+    virtual definition* duplicate(remap_set &n);
+    
+    /** Re-map all uses of each definition used as a key in the remap_set to the
+        corresponding definition used as the value. For example, if the given map
+        contains { <builtin_type__float, builtin_type__double> }, then any float
+        contained in this definition or its descendents will be replaced with a
+        double. This can be used to eliminate references to a particular definition
+        before free, or to instantiate templates without hassle. **/
+    virtual void remap(const remap_set& n);
+    
+    /** Return the size of this definition. **/
+    virtual size_t size_of();
+    
+    /** Compare two definitions, returning a comparison sign.
+        @param d1  The first definition to compare.
+        @param d2  The second definition to compare.
+        @return  An integer sharing the sign of the comparison; positive if d1 > d2,
+                 negative if d1 < d2, 0 if d1 == d2. */
+    static ptrdiff_t defcmp(definition *d1, definition *d2);
+    
+    /** Print the contents of this scope to a string, returning it.
+        @param levels  How many levels of children to print beneath this
+                       scope, assuming this is a scope.
+        @param indent  The indent, in spaces, to place before each line printed.
+        @return Returns a string representation of everything in this definition.
     **/
-    virtual definition* duplicate();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     /** Construct a definition with a name, parent scope, and flags.
-        Makes necessary allocations based on the given flags.
-    **/
-    definition(string n,definition* p,unsigned int f); 
+        Makes necessary allocations based on the given flags. **/
+    definition(string n,definition* p,unsigned int f);
     /// Default constructor. Only valid for the global scope.
     definition();
     /// Default destructor.
@@ -114,6 +145,12 @@ namespace jdi {
     definition* type; ///< The definition of the type of this definition. This is not guaranteed to be non-NULL.
     ref_stack referencers; ///< Any referencers modifying the type, such as *, &, [], or (*)().
     unsigned int modifiers; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
+    
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     /// Construct with all information. Consumes the given \c ref_stack.
     definition_typed(string name, definition* p, definition* tp, unsigned int typeflags, int flags = DEF_TYPED);
     definition_typed(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_TYPED);
@@ -125,6 +162,7 @@ namespace jdi {
   struct function_overload {
     full_type type; ///< The non-null return type of this overload.
     string declaration; ///< The full prototype for the function.
+    function_overload *duplicate(); ///< Make a copy
   };
   /**
     @struct jdi::definition_function
@@ -132,7 +170,12 @@ namespace jdi {
     The class is based on implements a method of storing overload information.
   **/
   struct definition_function: definition_typed {
-    function_overload *overloads; ///< Array of reference stacks for each overload of this function.
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
+    vector<function_overload*> overloads; ///< Array of reference stacks for each overload of this function.
     string declaration; ///< The full prototype for the function.
     void *implementation; ///< The implementation of this function as harvested by an external system.
     definition_function(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION);
@@ -146,6 +189,9 @@ namespace jdi {
   struct definition_valued: definition_typed {
     value value_of; ///< The constant value of this definition.
     definition_valued(); ///< Default constructor; invalidates value.
+    
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     //definition_valued(string vname, definition *parnt, definition* type, unsigned int flags, value &val); ///< Construct with a value and type.
     definition_valued(string vname, definition *parnt, definition* type, unsigned int typeflags, unsigned int flags, value &val); ///< Construct with a value and type.
   };
@@ -199,8 +245,10 @@ namespace jdi {
     **/
     definition* find_local(string name);
     
-    /** @return Returns a duplicate of this scope, duplicating its children. */
-    definition* duplicate();
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     /** Default constructor. Only to be used for global! **/
     definition_scope();
@@ -230,6 +278,11 @@ namespace jdi {
     An extension of \c jdi::definition_scope for classes and structures, which can have ancestors.
   **/
   struct definition_class: definition_scope {
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     /// Simple structure for storing an inheritance type and the \c definition* of an ancestor.
     struct ancestor {
       unsigned protection; ///< The protection level of this inheritance, as one of the DEF_ constants, or 0 for public.
@@ -246,6 +299,11 @@ namespace jdi {
     An extension of \c jdi::definition_scope for unions, which have a unified tyoe and unique sizeof() operator.
   **/
   struct definition_union: definition_scope {
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     definition_union(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_UNION | DEF_TYPENAME);
   };
   
@@ -254,6 +312,11 @@ namespace jdi {
     An extension of \c jdi::definition for enums, which contain mirrors of members in the parent scope.
   **/
   struct definition_enum: definition_typed {
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     definition_scope::defmap constants;
     definition_enum(string classname, definition_scope* parent, unsigned flags = DEF_ENUM | DEF_TYPENAME);
   };
@@ -278,6 +341,11 @@ namespace jdi {
     **/
     vector<definition*> params;
     
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     /** Structure containing template arguments; can be used as the key in an std::map. **/
     class arg_key {
       definition** values;
@@ -294,6 +362,12 @@ namespace jdi {
         inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) delete *i; delete[] values; } }
     };
     
+    typedef map<arg_key,definition_template*> specmap;
+    typedef specmap::iterator speciter;
+    
+    typedef map<arg_key,definition*> instmap;
+    typedef instmap::iterator institer;
+    
     /** A list of all specializations **/
     map<arg_key, definition_template*> specializations;
     /** A list of all existing instantiations **/
@@ -308,6 +382,15 @@ namespace jdi {
     definition_template(string name, definition *parent, unsigned flags);
     /** Destructor to free template parameters, instantiations, etc. **/
     ~definition_template();
+  };
+  
+  struct definition_atomic: definition_scope {
+    definition* duplicate(remap_set &n);
+    void remap(const remap_set &n);
+    size_t size_of();
+    string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    size_t sz;
+    definition_atomic(string n,definition* p,unsigned int f, size_t size);
   };
 }
 

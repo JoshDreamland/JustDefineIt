@@ -190,7 +190,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           }
           definition_scope hijack("<template>",scope, DEF_NAMESPACE | DEF_TEMPLATE);
           definition_template *temp = new definition_template("", scope, inherited_flags);
-          token = read_next_token(scope);
+          token = read_next_token(&hijack);
           for (;;) {
             string pname; // The name given to this parameter
             full_type ft(NULL); // The type of this parameter; default type or integer type
@@ -199,22 +199,23 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               token = lex->get_token(herr);
               if (token.type == TT_IDENTIFIER) {
                 pname = token.content.toString();
-                token = read_next_token(scope);
+                token = read_next_token(&hijack);
               }
               if (token.type == TT_OPERATOR) {
                 if (token.content.len != 1 or *token.content.str != '=')
                   token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-                token = read_next_token(scope);
-                if (not(token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE)) {
-                  token.report_error(herr, "Expected type name for default type to template parameter");
+                token = read_next_token(&hijack);
+                full_type fts = read_type(lex, token, &hijack, this, herr);
+                ft.swap(fts);
+                if (!ft.def) {
+                  token.report_error(herr,"Expected type name for default type to template parameter");
                   return (delete temp, 1); // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
                 }
-                ft = read_type(lex, token, scope, this, herr);
                 
               }
             }
             else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
-              ft = read_type(lex, token, scope, this, herr);
+              ft = read_type(lex, token, &hijack, this, herr);
               pname = ft.refs.name;
               if (token.type == TT_OPERATOR) {
                 if (token.content.len != 1 or *token.content.str != '=')
@@ -268,6 +269,8 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           pair<definition_scope::defiter,bool> i = scope->members.insert(pair<string,definition*>(temp->name,temp));
           if (!i.second) {
             token.report_error(herr, "Redeclaration of `" + temp->name + "' as template (TODO: Function overloading)");
+            cout << temp->toString() << endl;
+            cout << i.first->second->toString() << endl;
             delete temp;
           }
         } break;
