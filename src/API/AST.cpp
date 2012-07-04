@@ -5,7 +5,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -87,17 +87,19 @@ namespace jdi
         token.report_error(herr, "Unimplemented.");
         return NULL;
       
-      case TT_OPERATOR: case TT_TILDE:
+      case TT_OPERATOR: case TT_TILDE: {
         ct = string(token.content.toString());
-        if (not(symbols[ct].type & ST_UNARY_PRE)) {
+        symbol& op = symbols[ct];
+        if (not(op.type & ST_UNARY_PRE)) {
           token.report_error(herr,"Operator cannot be used as unary prefix");
           return NULL;
         }
         track(ct);
         token = get_next_token();
-        myroot = new AST_Node_Unary(parse_expression(token, PRECEDENCE_MAX), ct);
+        myroot = new AST_Node_Unary(parse_expression(token, op.prec_unary_pre), ct, true);
+        if (!myroot) return NULL;
         read_next = true;
-        break;
+      } break;
       
       case TT_GREATERTHAN: case TT_LESSTHAN: case TT_COLON:
         token.report_error(herr, "Expected expression here before operator");
@@ -172,8 +174,10 @@ namespace jdi
         token.report_errorf(herr, "Expected expression before %s");
         return NULL;
       
-      case TTM_CONCAT: case TTM_TOSTRING: token.report_error(herr, "Illogical token type returned!"); break;
+      case TTM_CONCAT: case TTM_TOSTRING: token.report_error(herr, "Illogical token type returned!");
+        return NULL;
       case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
+        return NULL;
     }
     if (!handled_basics)
       token_basics(
@@ -204,20 +208,25 @@ namespace jdi
       case TT_COLON:
         return left_node;
       
-      case TT_SCOPE: token.report_error(herr, "Unimplemented."); return NULL;
-      
       case TT_GREATERTHAN:
         if (!tt_greater_is_op)
           return left_node; 
       case TT_LESSTHAN:
+      case TT_SCOPE:
       case TT_OPERATOR: {
           string op(token.content.toString());
-          symbol &s = symbols[op];
+          map<string,symbol>::iterator b = symbols.find(op);
+          if (b == symbols.end()) {
+            token.report_error(herr, "Operator `" + token.content.toString() + "' not defined");
+            return NULL;
+          }
+          symbol &s = b->second;
           if (s.type & ST_BINARY) {
-            if (s.prec < prec_min) return left_node;
+            if (s.prec_binary < prec_min)
+              return left_node;
             token = get_next_token();
             track(op);
-            AST_Node *right = parse_expression(token, s.prec + !(s.type & ST_RTL_PARSED));
+            AST_Node *right = parse_expression(token, s.prec_binary + !(s.type & ST_RTL_PARSED));
             if (!right) {
               token.report_error(herr, "Expected secondary expression after binary operator");
               return left_node;
@@ -226,7 +235,7 @@ namespace jdi
             break;
           }
           if (s.type & ST_TERNARY) {
-            if (s.prec < prec_min) return left_node;
+            if (s.prec_binary < prec_min) return left_node;
             string ct(token.content.toString());
             track(ct);
             
@@ -241,6 +250,11 @@ namespace jdi
             if (!exptrue) return NULL;
             
             left_node = new AST_Node_Ternary(left_node,exptrue,expfalse,ct);
+            break;
+          }
+          if (s.type & ST_UNARY_POST) {
+            left_node = new AST_Node_Unary(left_node, op, false); 
+            token = get_next_token();
           }
         }
         break;
@@ -340,14 +354,15 @@ namespace jdi
       dec_literal:
       bool is_float = false;
       while (is_letter(content[content.length()-1])) {
-        if (content[content.length()-1] == 'f' or content[content.length()-1] == 'd')
+        if (content[content.length()-1] == 'f' or content[content.length()-1] == 'd'
+        or  content[content.length()-1] == 'F' or content[content.length()-1] == 'D')
           is_float = true;
         content.erase(content.length()-1);
       }
       if (!is_float)
-      for (size_t i = 0; i < content.length(); i++)
-        if (content[i] == '.')
-          is_float = true;
+        for (size_t i = 0; i < content.length(); i++)
+          if (content[i] == '.' or  content[i] == 'E' or content[i] == 'e')
+            is_float = true;
       if (is_float)
         return value(atof(content.c_str()));
       return value(atol(content.c_str()));
@@ -386,11 +401,17 @@ namespace jdi
     return res;
   }
   value AST::AST_Node_Unary::eval() {
-    if (!right) { cout << "No operand to unary (operator" << content << ")!" << endl; return value(); }
-    if (!symbols[content].operate_unary) { cout << "No method to unary (operator" << content << ")!" << endl; return value(); }
-    value b4 = right->eval(), after = symbols[content].operate_unary(b4);
-    //cout << content << "(" << b4.val.i << ") = " << after.val.i << endl;
-    return after;
+    if (!operand) { cout << "No operand to unary (operator" << content << ")!" << endl; return value(); }
+    if (prefix) {
+      if (!symbols[content].operate_unary_pre) { cout << "No method to unary (operator" << content << ")!" << endl; return value(); }
+      value b4 = operand->eval(), after = symbols[content].operate_unary_pre(b4);
+      return after;
+    }
+    else {
+      if (!symbols[content].operate_unary_post) { cout << "No method to unary (operator" << content << ")!" << endl; return value(); }
+      value b4 = operand->eval(), after = symbols[content].operate_unary_post(b4);
+      return after;
+    }
   }
   /*value AST::AST_Node_Group::eval() {
     return root?root->eval():value();
@@ -402,29 +423,29 @@ namespace jdi
     return 0L;
   }
   value AST::AST_Node_sizeof::eval() {
-    return 0L; // TODO: right->coerce()->calculate_size();
+    return (long)operand->coerce().def->size_of();
   }
   value AST::AST_Node_Cast::eval() {
     if (cast_type.def == builtin_type__int)
       if (cast_type.flags & builtin_flag__long)
         if (cast_type.flags & builtin_flag__unsigned)
-          return value((long)right->eval());
+          return value((long)operand->eval());
         else
-          return value((long)(int)right->eval());
+          return value((long)(int)operand->eval());
       else if (cast_type.flags & builtin_flag__short)
         if (cast_type.flags & builtin_flag__unsigned)
-          return value((long)right->eval());
+          return value((long)operand->eval());
         else
-          return value((long)(short)(long)right->eval());
+          return value((long)(short)(long)operand->eval());
       else
         if (cast_type.flags & builtin_flag__unsigned)
-          return value((long)(unsigned int)(long)right->eval());
+          return value((long)(unsigned int)(long)operand->eval());
         else
-          return value((long)(int)(long)right->eval());
+          return value((long)(int)(long)operand->eval());
     else if (cast_type.def == builtin_type__float)
-      return value((double)(float)(double)right->eval());
+      return value((double)(float)(double)operand->eval());
     else if (cast_type.def == builtin_type__double)
-      return value((double)right->eval());
+      return value((double)operand->eval());
     else return value();
   }
   
@@ -440,13 +461,18 @@ namespace jdi
   full_type AST::AST_Node::coerce() {
     full_type res;
     res.def = builtin_type__int;
-    bool islong = false, isunsigned = false;
-    for (size_t i = content.length(); i and is_letter(content[i]); --i)
-      if (content[i] == 'l' or content[i] == 'L') islong = true;
-      else if (content[i] == 'u' or content[i] == 'U') isunsigned = true;
     res.flags = 0;
-    if (islong) res.flags |= builtin_flag__long;
-    if (isunsigned) res.flags |= builtin_flag__unsigned;
+    for (size_t i = content.length(); i and is_letter(content[i]); --i)
+      if (content[i] == 'l' or content[i] == 'L') res.flags |= builtin_flag__long;
+      else if (content[i] == 'u' or content[i] == 'U') res.flags |= builtin_flag__unsigned;
+    if (type == AT_DECLITERAL)
+      for (size_t i = 0; i < content.length(); ++i)
+        if (content[i] == '.' or content[i] == 'e' or content[i] == 'E') {
+          res.def = builtin_type__double;
+          while (++i < content.length()) if (content[i] == 'f' or content[i] == 'F')
+            res.def = builtin_type__float;
+          break;
+        }
     return res;
   }
   
@@ -500,28 +526,29 @@ namespace jdi
   full_type AST::AST_Node_Ternary::coerce() {
     full_type t1 = left->coerce();
     #ifdef DEBUG_MODE
-      if (t1 != right->coerce()) cerr << "ERROR: Operands to ternary operator differ in type.";
+      if (t1 != right->coerce()) cerr << "ERROR: Operands to ternary operator differ in type." << endl;
     #endif
     return t1;
   }
   
   full_type AST::AST_Node_Type::coerce() {
-    return dec_type;
+    full_type ret; ret.copy(dec_type);
+    return ret;
   }
   
   full_type AST::AST_Node_Unary::coerce() {
     switch (content[0]) {
       case '+':
       case '-':
-      case '~': return right->coerce();
-      case '*': { full_type res = right->coerce(); res.refs.pop(); return res; }
-      case '&': { full_type res = right->coerce(); res.refs.push(ref_stack::RT_POINTERTO); return res; }
+      case '~': return operand->coerce();
+      case '*': { full_type res = operand->coerce(); res.refs.pop(); return res; }
+      case '&': { full_type res = operand->coerce(); res.refs.push(ref_stack::RT_POINTERTO); return res; }
       case '!': return builtin_type__bool;
       default:
         #ifdef DEBUG_MODE
           cerr << "ERROR: Unknown coercion pattern for ternary operator `" << content << "'" << endl;
         #endif
-        return right->coerce();
+        return operand->coerce();
     }
   }
   
@@ -536,10 +563,10 @@ namespace jdi
   AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
   AST::AST_Node_Definition::AST_Node_Definition(definition* d): def(d) {}
   AST::AST_Node_Type::AST_Node_Type(full_type &ft) { dec_type.swap(ft); }
-  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): right(r) {}
-  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct): AST_Node(ct), right(r) {}
-  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param,str_sizeof) {}
-  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param,str_cast) {}
+  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): operand(r) {}
+  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct), operand(r), prefix(pre) {}
+  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param,str_sizeof, true) {}
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, true) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) { type = AT_BINARYOP; }
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) { type = AT_BINARYOP; }
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
@@ -553,7 +580,7 @@ namespace jdi
   
   AST::AST_Node::~AST_Node() { }
   AST::AST_Node_Binary::~AST_Node_Binary() { delete left; delete right; }
-  AST::AST_Node_Unary::~AST_Node_Unary() { delete right; }
+  AST::AST_Node_Unary::~AST_Node_Unary() { delete operand; }
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
   

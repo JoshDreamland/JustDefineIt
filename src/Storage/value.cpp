@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -40,9 +40,9 @@ namespace jdi {
   value::~value() { if (type == VT_STRING) delete[] val.s; }
   
   std::string value::toString() {
-    char buf[32];
+    char buf[128];
     switch (type) {
-      case VT_DOUBLE:  sprintf(buf, "%f", val.d); return buf;
+      case VT_DOUBLE:  sprintf(buf, "%.32g", val.d); return buf;
       case VT_INTEGER: sprintf(buf, "%ld", val.i); return buf;
       case VT_STRING:  return val.s;
       case VT_NONE:    return "<nothing>";

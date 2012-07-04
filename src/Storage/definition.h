@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -59,6 +59,8 @@ namespace jdi {
   struct definition_enum;
   struct definition_template;
   struct definition_atomic;
+  struct definition_tempscope;
+  struct definition_hypothetical;
 }
 
 
@@ -154,6 +156,8 @@ namespace jdi {
     /// Construct with all information. Consumes the given \c ref_stack.
     definition_typed(string name, definition* p, definition* tp, unsigned int typeflags, int flags = DEF_TYPED);
     definition_typed(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_TYPED);
+    
+    virtual ~definition_typed();
   };
   /**
     @struct jdi::function_overload
@@ -193,7 +197,7 @@ namespace jdi {
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     //definition_valued(string vname, definition *parnt, definition* type, unsigned int flags, value &val); ///< Construct with a value and type.
-    definition_valued(string vname, definition *parnt, definition* type, unsigned int typeflags, unsigned int flags, value &val); ///< Construct with a value and type.
+    definition_valued(string vname, definition *parnt, definition* type, unsigned int modifiers, unsigned int flags, value &val); ///< Construct with a value and type.
   };
   
   /**
@@ -264,7 +268,7 @@ namespace jdi {
         @warning If you reference objects that are local to a destroyed scope,
                  these references will be invalidated after that scope is destroyed.
     **/
-    ~definition_scope();
+    virtual ~definition_scope();
     
     private:
       /// First linked list entry
@@ -351,22 +355,37 @@ namespace jdi {
       definition** values;
       // const unsigned sz;
       public:
+        static definition *const abstract; ///< A sentinel pointer marking that this parameter is still abstract.
+        /// A comparator to allow storage in a map.
         bool operator<(const arg_key& other) const;
+        /// A method to prepare this instance for storage of parameter values for the given template.
         void mirror(definition_template* temp);
+        /// A fast function to assign to our list at a given index.
         inline void put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
-        inline void put_type(size_t argnum, definition* type) { if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; } values[argnum] = type; }
+        /// A slower function to put the most basic type representation down
+        inline void put_type(size_t argnum, definition* type) {
+          if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; }
+          values[argnum] = type;
+        }
+        /// A quick function to grab the type at a position
         inline definition* operator[](int i) const { return values[i]; }
-        inline arg_key() {}
-        inline arg_key(size_t n): values(new definition*[n+1]) { values[n] = 0; }
+        /// A quick function to return an immutable pointer to the first parameter
+        definition** begin() { return values; } 
+        /// Default constructor; mark values NULL.
+        inline arg_key(): values(NULL) {}
+        /// Construct with a size, reserving sufficient memory.
+        inline arg_key(size_t n): values(new definition*[n+1]) { *values = values[n] = 0; }
+        /// Construct a copy.
         inline arg_key(const arg_key& other): values(other.values) { ((arg_key*)&other)->values = NULL; }
-        inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) delete *i; delete[] values; } }
+        /// Destruct, freeing items.
+        inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != abstract) delete *i; delete[] values; } }
     };
     
-    typedef map<arg_key,definition_template*> specmap;
-    typedef specmap::iterator speciter;
+    typedef map<arg_key,definition_template*> specmap; ///< Map type for specializations
+    typedef specmap::iterator speciter; ///< Map iterator type for specializations
     
-    typedef map<arg_key,definition*> instmap;
-    typedef instmap::iterator institer;
+    typedef map<arg_key,definition*> instmap; ///< Map type for instantiations
+    typedef instmap::iterator institer; ///< Map iterator type for instantiations
     
     /** A list of all specializations **/
     map<arg_key, definition_template*> specializations;
@@ -377,6 +396,12 @@ namespace jdi {
         If this template has been instantiated previously, that instantiation is given.
         @param key  The \c arg_key structure containing the template parameter values to use. **/
     definition *instantiate(arg_key& key);
+    /** Specialize this template with the values given in the passed key.
+        If the specialization exists, it is returned. Otherwise, a new specialization
+        is created with the flag DEF_INCOMPLETE to signify that it contains no unique definition.
+        @param key  The \c arg_key structure containing the template parameter values to use.
+        @param ts   The temporary scope allocated to store the template. **/
+    definition_template *specialize(arg_key& key, definition_tempscope* ts);
     
     /** Construct with name, parent, and flags **/
     definition_template(string name, definition *parent, unsigned flags);
@@ -384,6 +409,10 @@ namespace jdi {
     ~definition_template();
   };
   
+  /**
+    @struct jdi::definition_atomic
+    A definition for atomic types.
+  */
   struct definition_atomic: definition_scope {
     definition* duplicate(remap_set &n);
     void remap(const remap_set &n);
@@ -391,6 +420,28 @@ namespace jdi {
     string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     size_t sz;
     definition_atomic(string n,definition* p,unsigned int f, size_t size);
+  };
+  
+  /**
+    @struct jdi::definition_tempscope
+    A class which can be used as a temporary scope with a definition attached.
+  */
+  struct definition_tempscope: definition_scope {
+    definition *source; ///< The definition for which this subscope was created.
+    bool referenced; ///< Whether this s
+    /** Construct with default information.
+      @param name   Some unique key name for this scope.
+      @param parent The scope above this one.
+      @param flags  The additional flag data about this scope.
+      @param source The definition with which this scope is affiliated, however loosely. */
+    definition_tempscope(string name, definition* parent, unsigned flags, definition *source);
+  };
+  
+  struct definition_hypothetical: definition {
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    virtual size_t size_of();
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
   };
 }
 

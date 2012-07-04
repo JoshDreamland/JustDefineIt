@@ -6,7 +6,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -19,13 +19,12 @@
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
- * 
 **/
 
 #include <Parser/bodies.h>
 #include <API/AST.h>
 #include <API/compile_settings.h>
-#include <Parser/handlers/handle_function_implementation.h>
+#include <Parser/handlers/handle_function_impl.h>
 #include <cstdio>
 
 int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags)
@@ -182,98 +181,10 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           token.report_error(herr, "Unexpected identifier in this scope; `" + string(token.content.toString()) + "' does not name a type");
         break;
       
-      case TT_TEMPLATE: {
-          token = read_next_token(scope);
-          if (token.type != TT_LESSTHAN) {
-            token.report_error(herr, "Expected opening triangle bracket following `template' token");
-            FATAL_RETURN(1); break;
-          }
-          definition_scope hijack("<template>",scope, DEF_NAMESPACE | DEF_TEMPLATE);
-          definition_template *temp = new definition_template("", scope, inherited_flags);
-          token = read_next_token(&hijack);
-          for (;;) {
-            string pname; // The name given to this parameter
-            full_type ft(NULL); // The type of this parameter; default type or integer type
-            
-            if (token.type == TT_TYPENAME || token.type == TT_CLASS || token.type == TT_STRUCT) {
-              token = lex->get_token(herr);
-              if (token.type == TT_IDENTIFIER) {
-                pname = token.content.toString();
-                token = read_next_token(&hijack);
-              }
-              if (token.type == TT_OPERATOR) {
-                if (token.content.len != 1 or *token.content.str != '=')
-                  token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-                token = read_next_token(&hijack);
-                full_type fts = read_type(lex, token, &hijack, this, herr);
-                ft.swap(fts);
-                if (!ft.def) {
-                  token.report_error(herr,"Expected type name for default type to template parameter");
-                  return (delete temp, 1); // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
-                }
-                
-              }
-            }
-            else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
-              ft = read_type(lex, token, &hijack, this, herr);
-              pname = ft.refs.name;
-              if (token.type == TT_OPERATOR) {
-                if (token.content.len != 1 or *token.content.str != '=')
-                  token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-                AST a; a.parse_expression(lex, token, herr);
-              }
-            };
-            definition_typed* const dtn = new definition_typed(pname, NULL, ft.def, ft.refs, ft.flags, DEF_TYPENAME | DEF_TYPED);
-            temp->params.push_back(dtn);
-            if (pname.empty()) {
-              char nname[32];
-              sprintf(nname, "<templateParam%u>", (unsigned)hijack.using_general.size());
-              hijack.use_general(string(nname), dtn);
-            }
-            else
-              hijack.use_general(pname, dtn);
-            if (token.type == TT_GREATERTHAN)
-              break;
-            if (token.type != TT_COMMA)
-              token.report_errorf(herr, "Expected '>' or ',' before %s");
-            token = read_next_token(scope);
-          }
-          definition* nd = NULL;
-          token = read_next_token(scope);
-          if (token.type == TT_CLASS || token.type == TT_STRUCT) {
-            if (!(nd = handle_class(&hijack, token, DEF_TEMPLATE)))
-              return (delete temp, 1);
-          } else if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE) {
-            if (!handle_declarators(&hijack,token,inherited_flags | DEF_TEMPLATE, nd) or !nd)
-              return (delete temp, 1);
-          } else {
-            token.report_error(herr, "Expected class or function declaration following template clause");
-            delete temp; break;
-          }
-          
-          if (!hijack.members.size()) {
-            token.report_error(herr, "Template declaration doesn't declare anything");
-            delete temp; break;
-          }
-          
-          if (hijack.members.size() != 1) {
-            char buf[96]; sprintf(buf, "Too many declarations for template; expected one, given %d", (int)hijack.members.size());
-            token.report_error(herr, buf);
-          }
-          
-          definition_scope::defiter a = hijack.members.begin();
-          temp->name = a->second->name;
-          temp->def = a->second;
-          hijack.members.erase(a);
-          
-          pair<definition_scope::defiter,bool> i = scope->members.insert(pair<string,definition*>(temp->name,temp));
-          if (!i.second) {
-            token.report_error(herr, "Redeclaration of `" + temp->name + "' as template (TODO: Function overloading)");
-            cout << temp->toString() << endl;
-            cout << i.first->second->toString() << endl;
-            delete temp;
-          }
-        } break;
+      case TT_TEMPLATE:
+        if (handle_template(scope, token, inherited_flags))
+          return 1;
+        break;
       
       case TT_OPERATORKW:
         //break;

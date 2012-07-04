@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -82,8 +82,14 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
   // Non-NULL  True               False           Complete class in this scope. MUST be used as a type, not implemented.
   // Non-NULL  True               True            Complete class in another scope; can be redeclared (reallocated and reimplemented) in this scope.
   
-  if (token.type == TT_IDENTIFIER || token.type == TT_DEFINITION) {
+  definition *dulldef = NULL;
+  if (token.type == TT_IDENTIFIER) {
     classname = string(token.content.toString());
+    token = read_next_token(scope);
+  }
+  else if (token.type == TT_DEFINITION) {
+    classname = string(token.content.toString());
+    dulldef = token.def;
     token = read_next_token(scope);
   }
   else if (token.type == TT_DECLARATOR) {
@@ -115,13 +121,53 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
   else {
     char buf[32];
     sprintf(buf, "<anonymousClass%08d>", anon_count++);
-    classname = buf;
+    classname = buf; // I love std::string. Even if I'm lazy for it.
+  }
+  
+  // Handle template access and specialization **before** we go allocating classes.
+  if (token.type == TT_LESSTHAN)
+  {
+    // We'd better have read a definition earlier, and it'd better have been a template.
+    if (not(dulldef and (dulldef->flags & DEF_TEMPLATE))) {
+      token.report_error(herr, "Unexpected '<' token; `" + classname + "' is not a template type");
+      cout << dulldef << ": " << (dulldef? dulldef->name : "no definition by that name") << endl;
+      return NULL;
+    }
+    // Now, we might be specializing the template, or we might just be instantiating it.
+    // If we are in a template<> statement, we have to be specializing. Otherwise, we're not.
+    if (scope->flags & DEF_TEMPLATE) {
+      definition_template *temp = (definition_template*)dulldef;
+      // definition_tempscope *ts = (definition_tempscope*)scope;
+      definition_template::arg_key k(temp->params.size());
+      if (read_template_parameters(k, temp, lex, token, scope, this, herr))
+        return NULL;
+      if (token.type != TT_GREATERTHAN) {
+        token.report_errorf(herr, "Expected closing triangle bracket here before %s");
+        FATAL_RETURN(NULL);
+      }
+      definition_template *spec = temp->specialize(k, (definition_tempscope*)scope);
+      if (spec->def) {
+        if (not(spec->def->flags & DEF_CLASS)) {
+          token.report_error(herr, "Template `" + temp->name + "' does not name a class");
+          return NULL;
+        }
+        nclass = (definition_class*)spec->def;
+        already_complete = not(nclass->flags & DEF_INCOMPLETE);
+      }
+      else {
+        spec->def = nclass = new definition_class(temp->name, temp->parent, temp->flags);
+        already_complete = false;
+      }
+      will_redeclare = false;
+      token = read_next_token(scope);
+    }
   }
   
   if (!nclass)
     if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
       return NULL;
   
+  // Handle inheritance
   if (token.type == TT_COLON) {
     if (will_redeclare) {
       will_redeclare = false;
@@ -156,6 +202,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     while (token.type == TT_COMMA);
   }
   
+  // Handle implementation
   if (token.type == TT_LEFTBRACE)
   {
     incomplete = 0;
@@ -174,7 +221,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     }
     token = read_next_token(scope);
   }
-  else
+  else // Sometimes, it isn't okay to not specify a structure body.
     if (!incomplete) { // The only way incomplete is zero in this instance is if it was set in : handler.
       token.report_error(herr, "Expected class body here after parents named");
       FATAL_RETURN(NULL);

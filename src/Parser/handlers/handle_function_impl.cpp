@@ -1,7 +1,7 @@
 /**
- * @file  handle_function_implementation.h
- * @brief Header to allow external APIs to parse C++ or assembly code for
- *        a function definition.
+ * @file  handle_function_impl.cpp
+ * @brief Source implementing a function that skips function bodies in code,
+ *        returning NULL.
  * 
  * JustDefineIt implements a function that skips function bodies in code, returning
  * NULL. Other applications can implement their own handler, replacing the existing
@@ -25,23 +25,23 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef _HANDLE_FUNCTION_IMPLEMENTATIONS__H
-#define _HANDLE_FUNCTION_IMPLEMENTATIONS__H
+#include "handle_function_impl.h"
+using namespace jdip;
 
-#include <API/lexer_interface.h>
+static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_handler *herr) {
+  if (token.type == TT_LEFTBRACE) {
+    for (size_t bc = 0;;) {
+      if (token.type == TT_LEFTBRACE) ++bc;
+      else if (token.type == TT_RIGHTBRACE and !--bc) return NULL;
+      token = lex->get_token(herr);
+    }
+  }
+  else if (token.type == TT_ASM) {
+    do token = lex->get_token(herr);
+    while (token.type != TT_RIGHTPARENTH);
+    token = lex->get_token(herr);
+  }
+  return NULL;
+}
 
-/**
-  Function pointer to handle parsing function code content, either a C++ function
-  body between matching braces, or an assembly block given by an __asm__ token.
-  
-  In the former case, this function will be invoked with token.type = TT_LEFTBRACE;
-  in the latter case, the function will be invoked with token.type = TT_ASM.
-  
-  @param lex    The lexer to use to poll for further tokens.
-  @param token  The initial token which invoked this function call.
-  @param scope  The scope from which definitions can be read.
-  @param herr   The error handler to which errors can be reported.
-*/
-extern void* (*handle_function_implementation)(jdi::lexer *lex, jdip::token_t &token, jdi::definition_scope *scope, jdi::error_handler *herr);
-
-#endif
+void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = code_ignorer;

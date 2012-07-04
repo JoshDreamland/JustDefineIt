@@ -106,11 +106,35 @@ namespace jdip {
                    type, it will be part of the return \c full_type, otherwise it will
                    just be overwritten. [in-out]
     @param  scope  The scope used to resolve identifiers. [in]
+    @param  cp     The context parser to be polled for any additional information. [in]
     @param  herr   The error handler which will be used to report errors. [in]
     @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
              error state, as the error will have already been reported to the given error handler.
   **/
   int read_referencers(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  /**
+    Read a list of template parameters from the given input stream.
+    
+    This function is a reader. Many inputs are liable to be modified in some form or another.
+    See \section Readers for details.
+    
+    This method will read from the opening '<' token (which must be the active token passed)
+    to the corresponding '>' token, populating the given arg_key structure.
+    
+    @param  argk   The definition_template::arg_key into which the parameters will be copied. The
+                   key must be initialized with the parameter count of the given template. [in-out]
+    @param  temp   The template definition for which argument data will be read.
+    @param  lex    The lexer to be polled for tokens. [in-out]
+    @param  token  The token for which this function was invoked. If the given token is a
+                   type, it will be part of the return \c full_type, otherwise it will
+                   just be overwritten. [in-out]
+    @param  scope  The scope used to resolve identifiers. [in]
+    @param  cp     The context parser to be polled for any additional information. [in]
+    @param  herr   The error handler which will be used to report errors. [in]
+    @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
+             error state, as the error will have already been reported to the given error handler.
+  **/
+  int read_template_parameters(definition_template::arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
   
   extern definition* dangling_pointer;
   /**
@@ -259,6 +283,20 @@ namespace jdip {
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
     int handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
+    
+    /**
+      Handle parsing a template declaration.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  token  The \c token structure into which the next unhandled token will be placed. [out]
+      @param  inherited_flags  Any flags which must be given to all members of this scope. [in]
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_template(definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
     
     /**
       Read an expression from the given input stream, evaluating it for a value.

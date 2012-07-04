@@ -1,6 +1,9 @@
 /**
- * @file handle_class.cpp
- * @brief Source implementing a function to handle class and structure declarations.
+ * @file handle_union.cpp
+ * @brief Source implementing a function to handle union declarations.
+ *
+ * This file is nearly identical to handle_class.cpp; there are only a few
+ * differences in how unions are parsed (the lack of heredity being a key one).
  * 
  * @section License
  * 

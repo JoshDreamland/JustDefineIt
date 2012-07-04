@@ -48,6 +48,7 @@ namespace jdi {
     int flags; ///< Any flags, such as unsigned, signed, or const, associated with us, as a bitmask.
     
     void swap(full_type& ft); ///< Trade contents with another full_type.
+    void copy(const full_type& ft); ///< Copy a full_type without warning; this is for when copy is inevitable.
     
     std::string toString(); ///< Represent as a string.
     

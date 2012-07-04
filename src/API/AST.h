@@ -9,7 +9,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -104,7 +104,8 @@ namespace jdi {
     };
     /// Child of AST_Node for unary operators.
     struct AST_Node_Unary: AST_Node {
-      AST_Node *right; ///< The stuff we're operating on.
+      AST_Node *operand; ///< The stuff we're operating on.
+      bool prefix; ///< True if we are a unary prefix, false otherwise.
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();
@@ -112,7 +113,7 @@ namespace jdi {
       full_type coerce();
       
       AST_Node_Unary(AST_Node* r = NULL); ///< Default constructor. Sets children to NULL.
-      AST_Node_Unary(AST_Node* r, string ct); ///< Complete constructor, with child node and operator string.
+      AST_Node_Unary(AST_Node* r, string ct, bool pre); ///< Complete constructor, with child node and operator string.
       ~AST_Node_Unary(); ///< Default destructor. Frees children recursively.
       bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       

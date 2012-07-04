@@ -69,37 +69,37 @@ namespace jdi {
   {
     const int nid = svg->nodes_written++;
     int r = own_width()/2;
-    int xx = x, yy = y+r+16+(right?right->own_width()/2:0);
+    int xx = x, yy = y+r+16+(operand?operand->own_width()/2:0);
     
     svg->draw_line(nid,'m',x,y,xx,yy);
     svg->draw_circle(nid,x,y,r,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
-    if (right)
-      right->toSVG(xx,yy,svg);
+    if (operand)
+      operand->toSVG(xx,yy,svg);
   }
   void AST::AST_Node_sizeof::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
     int r = own_width()/2;
-    int xx = x, yy = y+r+16+(right?right->own_width()/2:0);
+    int xx = x, yy = y+r+16+(operand?operand->own_width()/2:0);
     
     svg->draw_line(nid,'m',x,y,xx,yy);
     svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
-    if (right)
-      right->toSVG(xx,yy,svg);
+    if (operand)
+      operand->toSVG(xx,yy,svg);
   }
   void AST::AST_Node_Cast::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
     int r = own_width()/2;
-    int xx = x, yy = y+r+16+(right?right->own_width()/2:0);
+    int xx = x, yy = y+r+16+(operand?operand->own_width()/2:0);
     
     svg->draw_line(nid,'m',x,y,xx,yy);
     svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
-    if (right)
-      right->toSVG(xx,yy,svg);
+    if (operand)
+      operand->toSVG(xx,yy,svg);
   }
   void AST::AST_Node_Binary::toSVG(int x, int y, SVGrenderInfo *svg)
   {
@@ -184,12 +184,12 @@ namespace jdi {
   
   int AST::AST_Node::width() { return own_width(); }
   int AST::AST_Node_Binary::width() { return 24 + (left?left->width():0) + (right?right->width():0); }
-  int AST::AST_Node_Unary::width() { return right?max(right->width(),own_width()):own_width(); }
+  int AST::AST_Node_Unary::width() { return operand?max(operand->width(),own_width()):own_width(); }
   int AST::AST_Node_Ternary::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }
   int AST::AST_Node_Parameters::width() { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width(), res); }
   int AST::AST_Node::height() { return own_width(); }
   int AST::AST_Node_Binary::height() { return max((left?left->height():0), (right?right->height():0)) + 16 + own_width(); }
-  int AST::AST_Node_Unary::height() { return own_width() + (right?16 + right->height():0); }
+  int AST::AST_Node_Unary::height() { return own_width() + (operand? 16 + operand->height():0); }
   int AST::AST_Node_Ternary::height() { return own_width() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
   int AST::AST_Node_Parameters::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
   

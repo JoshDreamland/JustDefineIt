@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -56,7 +56,6 @@ namespace jdi {
   ref_stack::node* ref_stack::node::duplicate() {
     if (type == RT_ARRAYBOUND) return new node_array(NULL,((node_array*)this)->bound);
     if (type == RT_FUNCTION) return new node_func(NULL,((node_func*)this)->params);
-    cout << "DUPLICATE CALLED" << endl;
     return new node(NULL,type);
   }
   

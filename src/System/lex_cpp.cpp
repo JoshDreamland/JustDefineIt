@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -675,8 +675,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
       handle_decimal:
       const size_t sp = pos;
       while (++pos < length and is_digit(cfile[pos]));
-      if (cfile[pos-1] == 'e' or cfile[pos-1] == 'E') { // Accept exponents
-        if (cfile[pos] == '-') ++pos;
+      if (cfile[pos] == '.')
+        while (++pos < length and is_digit(cfile[pos]));
+      if (cfile[pos] == 'e' or cfile[pos] == 'E') { // Accept exponents
+        if (cfile[++pos] == '-') ++pos;
         while (pos < length and is_digit(cfile[pos])) ++pos;
       }
       while (pos < length and is_letter(cfile[pos])) ++pos; // Include the flags, like ull
@@ -760,7 +762,8 @@ token_t lexer_cpp::get_token(error_handler *herr)
     }
   }
   
-  return token_t();
+  cout << "UNREACHABLE BLOCK REACHED" << endl;
+  return token_t(TT_INVALID,filename,line,pos-lpos++);
   
   POP_FILE: // This block was created instead of a helper function to piss Rusky off.
   if (pop_file())
@@ -999,21 +1002,19 @@ token_t lexer_macro::get_token(error_handler *herr)
       case ')': return token_t(token_basics(TT_RIGHTPARENTH,lcpp->filename,lcpp->line,spos-lcpp->lpos));
       
       case '#':
-          if (cfile[pos] == '#') return token_t(token_basics(TTM_CONCAT,lcpp->filename,lcpp->line,spos-lcpp->lpos));
-          return token_t(token_basics(TTM_TOSTRING,lcpp->filename,lcpp->line,spos-lcpp->lpos));
-        break;
+          if (cfile[pos] == '#')
+            return token_t(token_basics(TTM_CONCAT,lcpp->filename,lcpp->line,spos-lcpp->lpos));
+        return token_t(token_basics(TTM_TOSTRING,lcpp->filename,lcpp->line,spos-lcpp->lpos));
       
       case '\\':
-          if (cfile[pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or pos--))) lcpp->lpos = pos++, ++lcpp->line;
-          return get_token(herr);
-        break;
+          if (cfile[pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or pos--)))
+            lcpp->lpos = pos++, ++lcpp->line;
+        return get_token(herr);
       
       default:
         return token_t(token_basics(TT_INVALID,lcpp->filename,lcpp->line,pos-lcpp->lpos++));
     }
   }
-  
-  return token_t();
 }
 
 lexer_cpp::condition::condition() {}

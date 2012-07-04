@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 Josh Ventura
+/* Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -61,9 +61,13 @@ int main() {
   builtin.output_macros();
   
   putcap("Metrics");
-  cout << "sizeof(jdip::macro_type):       " << sizeof(jdip::macro_type) << endl
-       << "sizeof(jdip::macro_function):   " << sizeof(jdip::macro_function) << endl
-       << "sizeof(jdip::macro_scalar):     " << sizeof(jdip::macro_scalar) << endl;
+  cout << "sizeof(jdip::macro_type):        " << sizeof(jdip::macro_type) << endl
+       << "sizeof(jdip::macro_function):    " << sizeof(jdip::macro_function) << endl
+       << "sizeof(jdip::macro_scalar):      " << sizeof(jdip::macro_scalar) << endl
+       << "sizeof(jdi::definition):         " << sizeof(jdi::definition) << endl
+       << "sizeof(jdi::ref_stack):          " << sizeof(jdi::ref_stack) << endl
+       << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl
+       << "sizeof(jdi::template::arg_key):  " << sizeof(jdi::definition_template::arg_key) << endl;
   
   test_expression_evaluator();
   
@@ -120,7 +124,8 @@ int main() {
 static char getch() {
   int c = fgetc(stdin);
   int ignore = c;
-  while (ignore != '\n') ignore = fgetc(stdin);
+  while (ignore != '\n')
+    ignore = fgetc(stdin);
   return c;
 }
 #endif
@@ -167,28 +172,41 @@ void do_cli(context &ct) {
       } break;
     
     case 'e': {
-        bool eval;
-        if (1)
-          eval = true;
-        else {
-          case 'c':
-          eval = false;
-        }
+        bool eval, coerce, render, show;
+        eval = true,
+        coerce = false;
+        render = false;
+        show = false;
+        if (false) { case 'c': eval = false; coerce = true;  render = false; show = false;
+        if (false) { case 'r': eval = false; coerce = false; render = true;  show = false;
+        if (false) { case 's': eval = false; coerce = false; render = false; show = true;
+        } } }
         cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr(buf, strlen(buf));
         AST a;
         lexer_cpp c_lex(llr, undamageable, "User expression");
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
-        a.parse_expression(dummy, &c_lex, ct.get_global(), def_error_handler);
-        if (eval) {
-          value v = a.eval();
-          cout << "Value returned: " << v.toString() << endl;
-        }
-        else {
-          full_type t = a.coerce();
-          cout << "Type of expression: " << t.toString() << endl;
-        }
+        if (!a.parse_expression(dummy, &c_lex, ct.get_global(), def_error_handler)) {
+          if (render) {
+            cout << "Filename to render to:" << endl;
+            cin.getline(buf, 4096);
+            a.writeSVG(buf);
+          }
+          if (eval) {
+            value v = a.eval();
+            cout << "Value returned: " << v.toString() << endl;
+          }
+          if (coerce) {
+            full_type t = a.coerce();
+            cout << "Type of expression: " << t.toString() << endl;
+          }
+          if (show) {
+            a.writeSVG("/tmp/anus.svg");
+            if (system("xdg-open /tmp/anus.svg"))
+              cout << "Failed to open." << endl;
+          }
+        } else cout << "Bailing." << endl;
       } break;
     
     case 'h':
@@ -198,6 +216,8 @@ void do_cli(context &ct) {
       "'e' Evaluate an expression, printing its result\n"
       "'h' Print this help information\n"
       "'m' Define a macro, printing a breakdown of its definition\n"
+      "'r' Render an AST representing an expression\n"
+      "'s' Render an AST representing an expression and show it\n"
       "'q' Quit this interface\n";
     break;
       

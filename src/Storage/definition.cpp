@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -39,6 +39,7 @@ namespace jdi {
   
   definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {}
   definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
+  definition_typed::~definition_typed() {}
   
   definition_function::definition_function(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): 
     definition_typed(n, p, tp, rf, typeflags, flgs | DEF_FUNCTION) {}
@@ -120,12 +121,24 @@ namespace jdi {
   definition_template::~definition_template() {
     for (size_t i = 0; i < params.size(); ++i)
       delete params[i];
+    for (speciter i = specializations.begin(); i != specializations.end(); ++i)
+      delete i->second;
     delete def;
   }
   definition* definition_template::instantiate(arg_key& key) {
     pair<arg_key&,definition*> insme(key,NULL);
     /*pair<map<arg_key,definition*>::iterator, bool> ins =*/ instantiations.insert(insme);
     return def;//ins.first->second;
+  }
+  definition *const definition_template::arg_key::abstract = new definition("<unspecified>", NULL, 0);
+  definition_template* definition_template::specialize(arg_key& key, definition_tempscope *ts) {
+    for (definition** i = key.begin(); *i; ++i)
+      if ((*i)->flags & DEF_TEMPLATE) *i = arg_key::abstract;
+    pair<arg_key&,definition_template*> insme(key,(definition_template*)ts->source);
+    pair<definition_template::speciter, bool> ins = specializations.insert(insme);
+    if (ins.second)
+      ts->referenced = true;
+    return ins.first->second;
   }
   bool definition_template::arg_key::operator<(const arg_key& other) const {
     for (definition **i = values, **j = other.values; *j; ++i) {
@@ -148,6 +161,8 @@ namespace jdi {
   }
 
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
+  
+  definition_tempscope::definition_tempscope(string n, definition* p, unsigned f, definition* s): definition_scope(n,p,f), source(s), referenced(false) {}
 
   //========================================================================================================
   //======: Re-map Functions :==============================================================================
