@@ -697,7 +697,8 @@ token_t lexer_cpp::get_token(error_handler *herr)
       case ',':
         return token_t(token_basics(TT_COMMA,filename,line,spos-lpos));
       case '+': case '-':
-        pos += cfile[pos] == cfile[spos] or cfile[pos] == '=';
+        pos += cfile[pos] == cfile[spos] or cfile[pos] == '=' or (cfile[pos] == '>' and cfile[spos] == '-');
+        pos += (cfile[pos-1] == '>' and cfile[pos] == '*');
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       case '=': pos += cfile[pos] == cfile[spos]; case '*': case '/': case '^':
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
@@ -726,6 +727,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
             else
               pos -= 2;
           }
+          pos += cfile[pos] == '*';
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       
       case '(': return token_t(token_basics(TT_LEFTPARENTH,filename,line,spos-lpos));

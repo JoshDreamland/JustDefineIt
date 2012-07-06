@@ -43,10 +43,10 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   bool dtor = token.type == TT_TILDE;
   if (dtor) token = read_next_token(scope);
   
-  // Outsource to read_type, which will take care of the hard work for us.
+  // Outsource to read_fulltype, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
   // This means an identifier if the syntax is correct.
-  full_type tp = read_type(lex, token, scope, this, herr);
+  full_type tp = read_fulltype(lex, token, scope, this, herr);
   if (dtor) {
     if (tp.refs.name.empty() and tp.def == scope and !tp.flags and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION)
       tp.refs.name = "<destruct>";
@@ -160,7 +160,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             FATAL_RETURN(1);
           }
           AST bitcountexp;
-          bitcountexp.parse_expression(token = read_next_token(scope), lex, scope, herr);
+          bitcountexp.parse_expression(token = read_next_token(scope), lex, scope, precedence::comma+1, herr);
           value bc = bitcountexp.eval();
           if (bc.type != VT_INTEGER) {
             token.report_error(herr,"Bit count is not an integer");

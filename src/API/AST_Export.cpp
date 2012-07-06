@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -53,7 +53,8 @@ namespace jdi {
   //===========================================================================================================================
   
   int AST::AST_Node::own_width() { return content.length()*8 + 16; }
-  
+  int AST::AST_Node::own_height() { return own_width(); }
+  int AST::AST_Node_Cast::own_height() { return 24; }
   
   //===========================================================================================================================
   //=: SVG Renderers :=========================================================================================================
@@ -68,11 +69,10 @@ namespace jdi {
   void AST::AST_Node_Unary::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
-    int r = own_width()/2;
-    int xx = x, yy = y+r+16+(operand?operand->own_width()/2:0);
+    int xx = x, yy = y+own_height()/2+16+(operand?operand->own_height()/2:0);
     
     svg->draw_line(nid,'m',x,y,xx,yy);
-    svg->draw_circle(nid,x,y,r,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
+    svg->draw_circle(nid,x,y,own_width()/2,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
     if (operand)
       operand->toSVG(xx,yy,svg);
@@ -80,9 +80,9 @@ namespace jdi {
   void AST::AST_Node_sizeof::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
-    int r = own_width()/2;
-    int xx = x, yy = y+r+16+(operand?operand->own_width()/2:0);
+    int xx = x, yy = y+own_height()/2+16+(operand?operand->own_height()/2:0);
     
+    int r = own_width()/2;
     svg->draw_line(nid,'m',x,y,xx,yy);
     svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
@@ -92,9 +92,9 @@ namespace jdi {
   void AST::AST_Node_Cast::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
-    int r = own_width()/2;
-    int xx = x, yy = y+r+16+(operand?operand->own_width()/2:0);
+    int xx = x, yy = y+own_height()/2+16+(operand?operand->own_width()/2:0);
     
+    int r = own_width()/2;
     svg->draw_line(nid,'m',x,y,xx,yy);
     svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
@@ -104,18 +104,18 @@ namespace jdi {
   void AST::AST_Node_Binary::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
-    int r = own_width()/2;
     int lw = (left?left->width():0), rw = (right?right->width():0), shift = (lw - rw) / 2;
     int lx = x - lw/2 + shift - 12, rx = x + rw/2 + shift + 12,
-         y2 = y+r+16+max(left?left->own_width()/2:0,right?right->own_width()/2:0);
-    svg->draw_line(nid,'l',x,y,lx,y2);
-    svg->draw_line(nid,'r',x,y,rx,y2);
-    svg->draw_circle(nid,x,y,r,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
+         y2l = y+own_height()/2 + 16 + (left?left->own_height()/2:0),
+         y2r = y+own_height()/2 + 16 + (right?right->own_height()/2:0);
+    svg->draw_line(nid,'l',x,y,lx,y2l);
+    svg->draw_line(nid,'r',x,y,rx,y2r);
+    svg->draw_circle(nid,x,y,own_width()/2,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
     if (left)
-      left->toSVG(lx,y2,svg);
+      left->toSVG(lx,y2l,svg);
     if (right)
-      right->toSVG(rx,y2,svg);
+      right->toSVG(rx,y2r,svg);
   }
   void AST::AST_Node_Ternary::toSVG(int x, int y, SVGrenderInfo *svg)
   {
@@ -164,13 +164,23 @@ namespace jdi {
     svg.cur = current;
     if (!svg.svg->is_open()) return;
     
-    int w = root->width()+8, h = root->height()+8;
+    int w, h;
+    
     #ifdef DEBUG_MODE 
-      h += 16;
+      if (root)
+        w = max(root->width(), (int)expression.length()*8)+8, h = root->height()+8 + 16;
+      else
+        w = (int)expression.length()*8, h = 8 + 16;
+    #else
+      if (root)
+        w = root->width()+8, h = root->height()+8;
+      else
+        w = 8, h = 8;
     #endif
     
     svg.svg->write_header(w,h);
-    root->toSVG(w/2, root->own_width()/2+4, &svg);
+    if (root)
+      root->toSVG(w/2, root->own_height()/2+4, &svg);
     #ifdef DEBUG_MODE 
     svg.svg->draw_text("Expression",w/2,h-8,expression);
     #endif
@@ -187,10 +197,11 @@ namespace jdi {
   int AST::AST_Node_Unary::width() { return operand?max(operand->width(),own_width()):own_width(); }
   int AST::AST_Node_Ternary::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }
   int AST::AST_Node_Parameters::width() { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width(), res); }
-  int AST::AST_Node::height() { return own_width(); }
-  int AST::AST_Node_Binary::height() { return max((left?left->height():0), (right?right->height():0)) + 16 + own_width(); }
-  int AST::AST_Node_Unary::height() { return own_width() + (operand? 16 + operand->height():0); }
-  int AST::AST_Node_Ternary::height() { return own_width() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
+  int AST::AST_Node::height() { return own_height(); }
+  int AST::AST_Node_Binary::height() { return max((left?left->height():0), (right?right->height():0)) + 16 + own_height(); }
+  int AST::AST_Node_Unary::height() { return own_height() + (operand? 16 + operand->height():0); }
+  int AST::AST_Node_Cast::height() { return 24 + (operand? 16 + operand->height():0); }
+  int AST::AST_Node_Ternary::height() { return own_height() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
   int AST::AST_Node_Parameters::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
   
   

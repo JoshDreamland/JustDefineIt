@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -19,16 +19,45 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#ifndef _SYMBOLS__H
+#define _SYMBOLS__H
+
 #include <map>
 #include <string>
 #include <Storage/value.h>
 
+namespace jdi {
+  namespace precedence {
+    enum {
+      all = 0, ///< A precedence so low that all operators beat it.
+      comma = 1, ///< The comma operator; has the lowest precedence of any operator.
+      thro = 2, ///< The throw operator.
+      assign = 3, ///< Assignment operators =, +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=.
+      ternary = 4, ///< Ternary operator ?:.
+      logical_or = 5, ///< Logical OR operator, ||.
+      logical_and = 6, ///< Logical AND operator, &&.
+      bit_or = 7, ///< Bitwise OR operator, |.
+      bit_xor = 8, ///< Bitwise XOR operator, ^.
+      bit_and = 9, ///< Bitwise AND operator, &.
+      equivalence = 10, ///< Equivalence test operators, == and !=.
+      comparison = 11, ///< Comparison operators <, <=, >, >=.
+      shift = 12, ///< Shift operators << and >>.
+      addition = 13, ///< Addition, subtraction.
+        subtraction = 13, ///< Addition, subtraction.
+      multiplication = 14, ///< Multiplication, division, modulo.
+        division = 14, ///< Multiplication, division, modulo.
+        modulo = 14, ///< Multiplication, division, modulo.
+      ptr_member = 15, ///< Pointer-to member operators ->* and .*.
+      unary_pre = 16, ///< Prefix unary operators, type casts, sizeof, new, delete...
+      unary_post = 17, ///< Postfix unary operators; ++, --, (), [], ., −> 
+      scope = 18, ///< The highest precedence operator, scope resolution (::).
+      max = 19 ///< A precedence so high that no operator has it.
+    };
+  }
+}
+
 namespace jdip {
   using namespace jdi;
-  
-  enum {
-    PRECEDENCE_MAX = 19 ///< A precedence so high that no operator has it.
-  };
   
   /**
     Enumeration of usage types of symbols used in this AST.
@@ -67,3 +96,5 @@ namespace jdip {
   extern symbol_table symbols; ///< The symbol table which will be searched while building ASTs.
   typedef symbol_table::iterator symbol_iter; ///< Convenience typedef to the iterator type of the symbol table.
 }
+
+#endif

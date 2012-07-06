@@ -355,7 +355,7 @@ namespace jdi {
       definition** values;
       // const unsigned sz;
       public:
-        static definition *const abstract; ///< A sentinel pointer marking that this parameter is still abstract.
+        static definition abstract; ///< A sentinel pointer marking that this parameter is still abstract.
         /// A comparator to allow storage in a map.
         bool operator<(const arg_key& other) const;
         /// A method to prepare this instance for storage of parameter values for the given template.
@@ -378,7 +378,7 @@ namespace jdi {
         /// Construct a copy.
         inline arg_key(const arg_key& other): values(other.values) { ((arg_key*)&other)->values = NULL; }
         /// Destruct, freeing items.
-        inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != abstract) delete *i; delete[] values; } }
+        inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != &abstract) delete *i; delete[] values; } }
     };
     
     typedef map<arg_key,definition_template*> specmap; ///< Map type for specializations

@@ -40,7 +40,7 @@ int jdip::read_template_parameters(definition_template::arg_key &argk, definitio
     if (token.type == TT_COMMA) continue;
     
     if (args_given < temp->params.size() and temp->params[args_given]->flags & DEF_TYPENAME) {
-      full_type ft = read_type(lex, token, scope, cp, herr);
+      full_type ft = read_fulltype(lex, token, scope, cp, herr);
       if (ft.def) {
         definition_typed* const t = (definition_typed*)argk[args_given];
         t->type = ft.def;
@@ -50,7 +50,7 @@ int jdip::read_template_parameters(definition_template::arg_key &argk, definitio
     } else {
       AST a;
       a.set_use_for_templates(true);
-      a.parse_expression(token, lex, scope, herr);
+      a.parse_expression(token, lex, scope, precedence::comma+1, herr);
       if (args_given < temp->params.size())
         ((definition_valued*)argk[args_given])->value_of = a.eval();
     }

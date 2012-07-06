@@ -130,10 +130,10 @@ namespace jdi {
     /*pair<map<arg_key,definition*>::iterator, bool> ins =*/ instantiations.insert(insme);
     return def;//ins.first->second;
   }
-  definition *const definition_template::arg_key::abstract = new definition("<unspecified>", NULL, 0);
+  definition definition_template::arg_key::abstract("<unspecified>", NULL, 0);
   definition_template* definition_template::specialize(arg_key& key, definition_tempscope *ts) {
     for (definition** i = key.begin(); *i; ++i)
-      if ((*i)->flags & DEF_TEMPLATE) *i = arg_key::abstract;
+      if ((*i)->flags & DEF_TEMPLATE) *i = &arg_key::abstract;
     pair<arg_key&,definition_template*> insme(key,(definition_template*)ts->source);
     pair<definition_template::speciter, bool> ins = specializations.insert(insme);
     if (ins.second)

@@ -25,6 +25,7 @@
 #include <Storage/value_funcs.h>
 #include <System/builtins.h>
 #include <System/symbols.h>
+#include <System/lex_buffer.h>
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 #include <cstdio>
@@ -51,14 +52,64 @@ namespace jdi
     switch (token.type)
     {
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
-          full_type ft = read_type(lex,token,search_scope,NULL,herr); // Read complete type
-          myroot = new AST_Node_Type(ft);
-          token_basics(
-            myroot->type = AT_TYPE,
-            myroot->filename = (const char*)token.file,
-            myroot->linenum = token.linenum,
-            myroot->pos = token.pos
-          );
+          full_type ft = read_type(lex, token, search_scope, NULL, herr); // Read the full set of declarators
+          track(ft.toString());
+          if (token.type == TT_LEFTPARENTH) {
+            lex_buffer lb(lex);
+            bool is_cast = true;
+            
+            lb.push(token);
+            for (int depth = 1;; ) {
+              token_t &tk = lb.push(get_next_token());
+              if (tk.type == TT_RIGHTPARENTH) {
+                  if (!--depth) { token = tk; break; }
+              } else if (tk.type == TT_LEFTPARENTH) ++depth;
+              else if (tk.type == TT_ENDOFCODE) break;
+              else if (tk.type != TT_OPERATOR or tk.content.len != 1
+                   or (*tk.content.str != '*' and *tk.content.str != '&'))
+                is_cast = false;
+            }
+            if (token.type != TT_RIGHTPARENTH) {
+              token.report_errorf(herr, "Expected closing parenthesis to cast here before %s");
+              return NULL;
+            }
+            
+            lb.reset(); lex = &lb;
+            token = get_next_token();
+            if (is_cast) {
+              read_referencers(ft.refs, lex, token, search_scope, NULL, herr); // Read all referencers
+              track(ft.refs.toString());
+              myroot = new AST_Node_Type(ft);
+              token_basics(
+                myroot->type = AT_TYPE,
+                myroot->filename = (const char*)token.file,
+                myroot->linenum = token.linenum,
+                myroot->pos = token.pos
+              );
+            }
+            else {
+              AST_Node_Cast* nr = new AST_Node_Cast(parse_expression(token, 0), ft);
+              nr->content = nr->cast_type.toString();
+              myroot = nr;
+              token_basics(
+                myroot->type = AT_UNARY_PREFIX,
+                myroot->filename = (const char*)token.file,
+                myroot->linenum = token.linenum,
+                myroot->pos = token.pos
+              );
+            }
+            lex = lb.fallback_lexer;
+          }
+          else {
+            read_referencers(ft.refs, lex, token, search_scope, NULL, herr); // Read all referencers
+            myroot = new AST_Node_Type(ft);
+            token_basics(
+              myroot->type = AT_TYPE,
+              myroot->filename = (const char*)token.file,
+              myroot->linenum = token.linenum,
+              myroot->pos = token.pos
+            );
+          }
           if (token.type == TT_RIGHTPARENTH) // Facilitate casts
             return myroot;
           handled_basics = read_next = true;
@@ -84,7 +135,7 @@ namespace jdi
         break;
       
       case TT_TYPENAME:
-        token.report_error(herr, "Unimplemented.");
+        token.report_error(herr, "Unimplemented: typename.");
         return NULL;
       
       case TT_OPERATOR: case TT_TILDE: {
@@ -120,8 +171,8 @@ namespace jdi
         if (myroot->type == AT_TYPE) {
           AST_Node_Type *ad = (AST_Node_Type*)myroot;
           token = get_next_token(); read_next = true;
-          AST_Node_Cast *nr = new AST_Node_Cast(parse_expression(token, PRECEDENCE_MAX));
-          nr->cast_type.swap(ad->dec_type); nr->content = nr->cast_type.def->name;
+          AST_Node_Cast *nr = new AST_Node_Cast(parse_expression(token, symbols["(cast)"].prec_unary_pre));
+          nr->cast_type.swap(ad->dec_type); nr->content = nr->cast_type.toString();
           delete myroot; myroot = nr;
         }
         handled_basics = true;
@@ -154,14 +205,14 @@ namespace jdi
           token = get_next_token(); track(string("sizeof")); 
           if (token.type == TT_LEFTPARENTH) {
               token = get_next_token(); track(string("(")); 
-              myroot = new AST_Node_sizeof(parse_expression(token,PRECEDENCE_MAX));
+              myroot = new AST_Node_sizeof(parse_expression(token,precedence::max));
               if (token.type != TT_RIGHTPARENTH)
                 token.report_errorf(herr, "Expected closing parenthesis to sizeof before %s");
-              else { track(string("(")); }
+              else { track(string(")")); }
               token = get_next_token();
           }
           else
-            myroot = new AST_Node_sizeof(parse_expression(token,PRECEDENCE_MAX));
+            myroot = new AST_Node_sizeof(parse_expression(token,precedence::unary_pre));
           at = AT_UNARY_PREFIX;
           read_next = true;
         break;
@@ -200,9 +251,11 @@ namespace jdi
         return left_node;
       
       case TT_IDENTIFIER: case TT_DEFINITION:
+        token.report_errorf(herr, "Expected operator before %s");
+        return NULL;
       
       case TT_TYPENAME:
-        token.report_error(herr, "Unimplemented.");
+        token.report_error(herr, "Unimplemented: typename.");
         return NULL;
       
       case TT_COLON:
@@ -235,7 +288,8 @@ namespace jdi
             break;
           }
           if (s.type & ST_TERNARY) {
-            if (s.prec_binary < prec_min) return left_node;
+            if (s.prec_binary < prec_min)
+              return left_node;
             string ct(token.content.toString());
             track(ct);
             
@@ -253,6 +307,8 @@ namespace jdi
             break;
           }
           if (s.type & ST_UNARY_POST) {
+            if (s.prec_unary_post < prec_min)
+              return left_node;
             left_node = new AST_Node_Unary(left_node, op, false); 
             token = get_next_token();
           }
@@ -262,7 +318,8 @@ namespace jdi
       
       case TT_LEFTPARENTH:
           if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE) {
-            AST_Node *params = parse_expression(token, 0);
+            token = get_next_token();
+            AST_Node *params = parse_expression(token, precedence::all);
             if (!params) {
               token.report_error(herr, "Expected secondary expression after binary operator");
               return left_node;
@@ -276,9 +333,21 @@ namespace jdi
           }
         break;
       
+      case TT_COMMA: {
+          if (precedence::comma < prec_min)
+            return left_node;
+          token = get_next_token();
+          string op(","); track(op);
+          AST_Node *right = parse_expression(token, precedence::comma);
+          if (!right) {
+            token.report_error(herr, "Expected secondary expression after binary operator");
+            return left_node;
+          }
+          left_node = new AST_Node_Binary(left_node,right,op);
+        } break;
+      
       case TT_LEFTBRACKET:
       case TT_LEFTBRACE:
-      case TT_COMMA:
       case TT_SEMICOLON:
       case TT_STRINGLITERAL:
       case TT_CHARLITERAL:
@@ -318,25 +387,25 @@ namespace jdi
     return 1;
   }
   
-  int AST::parse_expression(lexer *ulex, token_t &token, error_handler *uherr) {
+  int AST::parse_expression(lexer *ulex, token_t &token, int precedence, error_handler *uherr) {
     lex = ulex, herr = uherr;
     token = lex->get_token();
-    if ((root = parse_expression(token, 0)))
+    if ((root = parse_expression(token, precedence)))
       return 0;
     return 1;
   }
   
-  int AST::parse_expression(token_t &token, lexer *ulex, error_handler *uherr) {
+  int AST::parse_expression(token_t &token, lexer *ulex, int precedence, error_handler *uherr) {
     lex = ulex, herr = uherr;
-    if ((root = parse_expression(token, 0)))
+    if ((root = parse_expression(token, precedence)))
       return 0;
     return 1;
   }
   
-  int AST::parse_expression(token_t &token, lexer *ulex, definition_scope *scope, error_handler *uherr) {
+  int AST::parse_expression(token_t &token, lexer *ulex, definition_scope *scope, int precedence, error_handler *uherr) {
     search_scope = scope;
     lex = ulex, herr = uherr;
-    root = parse_expression(token, 0);
+    root = parse_expression(token, precedence);
     return 0;
   }
   
@@ -557,7 +626,7 @@ namespace jdi
   //===========================================================================================================================
   
   static string str_sizeof("sizeof",6);
-  static string str_cast("cast",4);
+  static string str_cast("cast",6);
   
   AST::AST_Node::AST_Node(): parent(NULL) {}
   AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
@@ -566,6 +635,8 @@ namespace jdi
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): operand(r) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct), operand(r), prefix(pre) {}
   AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param,str_sizeof, true) {}
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft): AST_Node_Unary(param, str_cast, true) { cast_type.copy(ft); }
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft): AST_Node_Unary(param, str_cast, true) { cast_type.swap(ft); }
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, true) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) { type = AT_BINARYOP; }
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) { type = AT_BINARYOP; }

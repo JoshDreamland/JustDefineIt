@@ -1,5 +1,5 @@
 /**
- * @file read_type.cpp
+ * @file read_fulltype.cpp
  * @brief Source implementing a utility funciton to read in a type.
  * 
  * @section License
@@ -31,6 +31,13 @@
 #include <cstdio>
 using namespace jdip;
 using namespace jdi;
+
+full_type jdip::read_fulltype(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr) {
+  full_type ft = read_type(lex, token, scope, cp, herr);
+  if (ft.def)
+    jdip::read_referencers(ft.refs, lex, token, scope, cp, herr);
+  return ft;
+}
 
 full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
@@ -158,8 +165,6 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
     rdef = overridable_type;
   if (rdef == NULL)
     rdef = inferred_type;
-  if (rdef)
-    jdip::read_referencers(rrefs, lex, token, scope, cp, herr);
   return full_type(rdef, rrefs, rflags);
 }
 
@@ -178,7 +183,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         rhs = true;
         token = lex->get_token_in_scope(scope, herr);
         if (token.type != TT_RIGHTBRACKET) {
-          if (ast.parse_expression(token,lex,herr))
+          if (ast.parse_expression(token,lex,precedence::comma+1,herr))
             return 1; // This error has already been reported, just return empty.
           if (token.type != TT_RIGHTBRACKET) {
             token.report_errorf(herr,"Expected closing square bracket here before %s");
@@ -214,7 +219,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
           // Navigate to the end of the function parametr list
           while (token.type != TT_RIGHTPARENTH)
           {
-            full_type a = read_type(lex,token,scope,cp,herr);
+            full_type a = read_fulltype(lex,token,scope,cp,herr);
             ref_stack::parameter param; param.swap_in(a);
             param.variadic = cp? cp->variadics.find(param.def) != cp->variadics.end() : false;
             params.throw_on(param);
@@ -226,7 +231,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
               else {
                 AST dv;
                 token = lex->get_token_in_scope(scope, herr);
-                dv.parse_expression(token, lex, scope, herr);
+                dv.parse_expression(token, lex, scope, precedence::comma+1, herr);
               }
             }
             if (token.type != TT_COMMA) {

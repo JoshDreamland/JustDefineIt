@@ -187,7 +187,7 @@ void do_cli(context &ct) {
         AST a;
         lexer_cpp c_lex(llr, undamageable, "User expression");
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
-        if (!a.parse_expression(dummy, &c_lex, ct.get_global(), def_error_handler)) {
+        if (!a.parse_expression(dummy, &c_lex, ct.get_global(), precedence::all, def_error_handler)) {
           if (render) {
             cout << "Filename to render to:" << endl;
             cin.getline(buf, 4096);

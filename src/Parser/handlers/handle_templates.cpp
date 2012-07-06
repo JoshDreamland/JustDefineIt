@@ -57,7 +57,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
         token = read_next_token(&hijack);
-        full_type fts = read_type(lex, token, &hijack, this, herr);
+        full_type fts = read_fulltype(lex, token, &hijack, this, herr);
         ft.swap(fts);
         if (!ft.def) {
           token.report_error(herr,"Expected type name for default type to template parameter");
@@ -67,14 +67,14 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       dtn = new definition_typed(pname, NULL, ft.def, ft.refs, ft.flags, DEF_TYPENAME | DEF_TYPED | DEF_TEMPLATE);
     }
     else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
-      full_type fts = read_type(lex, token, &hijack, this, herr);
+      full_type fts = read_fulltype(lex, token, &hijack, this, herr);
       ft.swap(fts);
       pname = ft.refs.name;
       value val;
       if (token.type == TT_OPERATOR) {
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-        AST a; a.parse_expression(lex, token, herr);
+        AST a; a.parse_expression(lex, token, precedence::comma+1, herr);
         val = a.eval();
       }
       dtn = new definition_valued(pname, NULL, ft.def, ft.flags, DEF_VALUED | DEF_TYPED | DEF_TEMPLATE, val);

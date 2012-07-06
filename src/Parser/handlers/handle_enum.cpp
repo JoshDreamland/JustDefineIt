@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -111,7 +111,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     incomplete = 0;
      
     token = read_next_token(scope);
-    full_type ft = read_type(lex, token, scope, this, herr); // TODO: Check type for errors.
+    full_type ft = read_fulltype(lex, token, scope, this, herr); // TODO: Check type for errors.
     nenum->type = ft.def;
     nenum->modifiers = ft.flags;
   }
@@ -139,14 +139,18 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
       }
       token = read_next_token(scope);
       AST ast;
-      if (ast.parse_expression(token,lex,scope,herr)) {
+      if (ast.parse_expression(token,lex,scope,precedence::comma+1,herr)) {
         token.report_error(herr, "Expected const expression here");
         continue;
       }
       render_ast(ast, "enum_values");
       value v = ast.eval();
       if (v.type != VT_INTEGER)
+      #ifdef DEBUG_MODE
+        token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast.expression + ")"),
+      #else
         token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given"),
+      #endif
         this_value = value(++this_value.val.i);
       else this_value = v;
     }

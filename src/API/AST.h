@@ -43,10 +43,6 @@ namespace jdi {
   **/
   class AST
   {
-    #ifdef DEBUG_MODE
-    string expression; ///< The string representation of the expression fed in, for debug purposes.
-    #endif
-    
     /** Enum declaring basic node types for this AST. These include the three types of
         operators and the four types of data.
     **/
@@ -99,6 +95,7 @@ namespace jdi {
       virtual void print(); ///< Prints the contents of this node to stdout, recursively.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       virtual int own_width(); ///< Returns the width in pixels of this node as it will render. This does not include its children.
+      virtual int own_height(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
     };
@@ -119,8 +116,8 @@ namespace jdi {
       
       void print(); ///< Prints the contents of this node to stdout, recursively.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
-      int width(); ///< Returns the width which will be used to render this node and all its children.
-      int height(); ///< Returns the height which will be used to render this node and all its children.
+      virtual int width(); ///< Returns the width which will be used to render this node and all its children.
+      virtual int height(); ///< Returns the height which will be used to render this node and all its children.
     };
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_sizeof: AST_Node_Unary {
@@ -135,6 +132,10 @@ namespace jdi {
       value eval(); ///< Performs a cast, as it is able.
       full_type coerce(); ///< Returns \c cast_type.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      virtual int height(); ///< Returns the height which will be used to render this node and all its children.
+      virtual int own_height(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
+      AST_Node_Cast(AST_Node* param, const full_type &ft);
+      AST_Node_Cast(AST_Node* param, full_type &ft);
       AST_Node_Cast(AST_Node* param);
     };
     /// Child of AST_Node for tokens with an attached \c definition.
@@ -287,6 +288,10 @@ namespace jdi {
     
     public:
     
+    #ifdef DEBUG_MODE
+    string expression; ///< The string representation of the expression fed in, for debug purposes.
+    #endif
+    
     /** Parse in an expression, building an AST.
         @param lex    The lexer which will be polled for tokens.
         @param herr   The error handler which will receive any warning or error messages.
@@ -299,27 +304,30 @@ namespace jdi {
         
         @param token  The first token to handle. Will be overwritten with the first unhandled token. [in-out]
         @param lex    The lexer which will be polled for tokens.
+        @param prec   The lower-bound precedence.
         @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(jdip::token_t& token, lexer *lex, error_handler *herr = def_error_handler);
+    int parse_expression(jdip::token_t& token, lexer *lex, int prec, error_handler *herr = def_error_handler);
     
     /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
         the sister overload which utilizes the passed token.
         @param lex    The lexer which will be polled for tokens.
         @param token  A buffer for the first unhandled token. [out]
+        @param prec   The lower-bound precedence.
         @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(lexer *lex, jdip::token_t& token, error_handler *herr = def_error_handler);
+    int parse_expression(lexer *lex, jdip::token_t& token, int prec, error_handler *herr = def_error_handler);
     /** Parse in an expression, building an AST, with scope information, starting with the given token.
         @param lex    The lexer which will be polled for tokens.
         @param token  A buffer for the first unhandled token. [out]
         @param scope  The scope from which values of definitions will be read. [in]
+        @param prec   The lower-bound precedence.
         @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(jdip::token_t &token, lexer *lex, definition_scope *scope, error_handler *uherr);
+    int parse_expression(jdip::token_t &token, lexer *lex, definition_scope *scope, int prec, error_handler *uherr);
     
     /// Evaluate the current AST, returning its \c value.
     value eval();
@@ -346,5 +354,7 @@ namespace jdi {
     ~AST();
   };
 }
+
+#include <System/symbols.h>
 
 #endif

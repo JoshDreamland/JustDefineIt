@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -28,7 +28,7 @@
  * additional delegation required to accomplish a task, while "readers" are meant
  * to work with simple token patterns. For instance, handle_declarators() would
  * take care of parsing lines such as int a = 10, and might delegate to functions
- * such as read_type(), which would read type info from a string of tokens. While
+ * such as read_fulltype(), which would read type info from a string of tokens. While
  * Readers still do a fair amount of delegation, they are responsible for more of
  * the grunt work involved in parsing a file.
  * 
@@ -69,15 +69,39 @@ namespace jdip {
     This function is a reader. Many inputs are liable to be modified in some form or another.
     See \section Readers for details.
     
-    When the read_type function is invoked, the passed token must be a declarator of some sort.
+    When the read_fulltype function is invoked, the passed token must be a declarator of some sort.
     It is up to the calling method to ensure this.
     
-    When the read_type function terminates, the passed token will have been set to the first
+    When the read_fulltype function terminates, the passed token will have been set to the first
     unhandled token, meaning it will NOT have the types \c TT_DECLARATOR, \c TT_DECFLAG, \c
     TT_LEFTBRACKET, \c TT_LEFTPARENTH, or \c TT_IDENTIFIER. Each of those is handled before
     the termination of this function, either in the function itself or in a call to
     \c read_referencers. If a name is specified along with the type, it will be copied into
     the `referencers` member of the resulting \c full_type.
+    
+    @param  lex    The lexer to be polled for tokens. [in-out]
+    @param  token  The token for which this function was invoked.
+                   The type of this token must be either \c TT_DECLARATOR or \c TT_DECFLAG. [in-out]
+    @param  scope  The scope used to resolve identifiers. [in]
+    @param  herr   The error handler which will be used to report errors. [in]
+    
+    @return Returns the \c full_type read from the stream. Leaves \p token indicating the
+            first unhandled token.
+  **/
+  full_type read_fulltype(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  /**
+    Read a complete type from the given input stream.
+    
+    This function is a reader. Many inputs are liable to be modified in some form or another.
+    See \section Readers for details.
+    
+    When the read_fulltype function is invoked, the passed token must be a declarator of some sort.
+    It is up to the calling method to ensure this.
+    
+    When the read_fulltype function terminates, the passed token will have been set to the first
+    unhandled token, meaning it will NOT have the types \c TT_DECLARATOR or \c TT_DECFLAG. 
+    Each of those is handled before the termination of this function. No referencers are read,
+    no name is read. Only flags and type specifiers.
     
     @param  lex    The lexer to be polled for tokens. [in-out]
     @param  token  The token for which this function was invoked.
