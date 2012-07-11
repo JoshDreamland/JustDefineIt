@@ -137,7 +137,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     // If we are in a template<> statement, we have to be specializing. Otherwise, we're not.
     if (scope->flags & DEF_TEMPLATE) {
       definition_template *temp = (definition_template*)dulldef;
-      // definition_tempscope *ts = (definition_tempscope*)scope;
+      definition_tempscope *ts = (definition_tempscope*)scope;
       definition_template::arg_key k(temp->params.size());
       if (read_template_parameters(k, temp, lex, token, scope, this, herr))
         return NULL;
@@ -145,19 +145,21 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
         token.report_errorf(herr, "Expected closing triangle bracket here before %s");
         FATAL_RETURN(NULL);
       }
-      definition_template *spec = temp->specialize(k, (definition_tempscope*)scope);
+      definition_template *spec = temp->specialize(k, ts);
       if (spec->def) {
         if (not(spec->def->flags & DEF_CLASS)) {
           token.report_error(herr, "Template `" + temp->name + "' does not name a class");
           return NULL;
         }
         nclass = (definition_class*)spec->def;
+        nclass->parent = ts;
         already_complete = not(nclass->flags & DEF_INCOMPLETE);
       }
       else {
-        spec->def = nclass = new definition_class(temp->name, temp->parent, temp->flags);
+        spec->def = nclass = new definition_class(temp->name, ts, temp->flags);
         already_complete = false;
       }
+      ts->use_general("<dependent>", nclass);
       will_redeclare = false;
       token = read_next_token(scope);
     }
@@ -190,14 +192,21 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
       else if (token.type == TT_PROTECTED)
         iprotection = DEF_PRIVATE,
         token = read_next_token(scope);
-      if (token.type != TT_DECLARATOR or not(token.def->flags & DEF_CLASS)) {
+      if (token.type != TT_DECLARATOR and token.type != TT_DEFINITION) {
         string err = "Ancestor class name expected";
         if (token.type == TT_DECLARATOR) err += "; `" + token.def->name + "' does not name a class";
         if (token.type == TT_IDENTIFIER) err += "; `" + string(token.content.toString()) + "' does not name a type";
         token.report_error(herr, err);
+        return NULL;
       }
-      nclass->ancestors.push_back(definition_class::ancestor(iprotection, (definition_class*)token.def));
-      token = read_next_token(scope);
+      full_type ft = read_type(lex, token, scope, this, herr);
+      if (!ft.def or not(ft.def->flags & DEF_CLASS)) {
+        token.report_errorf(herr, "Expected class name before %s");
+        return NULL;
+      }
+      if (ft.flags or ft.refs.size())
+        token.report_error(herr, "Extra qualifiers to inherited class ignored");
+      nclass->ancestors.push_back(definition_class::ancestor(iprotection, (definition_class*)ft.def));
     }
     while (token.type == TT_COMMA);
   }
@@ -223,7 +232,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
   }
   else // Sometimes, it isn't okay to not specify a structure body.
     if (!incomplete) { // The only way incomplete is zero in this instance is if it was set in : handler.
-      token.report_error(herr, "Expected class body here after parents named");
+      token.report_errorf(herr, "Expected class body here (before %s) after parents named");
       FATAL_RETURN(NULL);
     }
   

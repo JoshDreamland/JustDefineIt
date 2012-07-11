@@ -158,9 +158,9 @@ namespace jdi {
                *right; ///< The right-hand side of the expression.
       
       /// Evaluates this node recursively, returning a value containing its result.
-      value eval();
+      virtual value eval();
       /// Coerces this node recursively for type, returning a full_type representing it.
-      full_type coerce();
+      virtual full_type coerce();
       
       AST_Node_Binary(AST_Node* left=NULL, AST_Node* right=NULL); ///< Default constructor. Sets children to NULL.
       AST_Node_Binary(AST_Node* left, AST_Node* right, string op); ///< Default constructor. Sets children to NULL.
@@ -171,11 +171,17 @@ namespace jdi {
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+    /// Child of AST_Node for the scope resolution operator, ::.
+    struct AST_Node_Scope: AST_Node_Binary {
+      virtual value eval(); ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(); ///< Coerces this node recursively for type, returning a full_type representing it.
+      AST_Node_Scope(AST_Node* left, AST_Node* right, string op); ///< The one and only know-what-you're-doing constructor.
+    };
     /// Child of AST_Node for the ternary operator.
     struct AST_Node_Ternary: AST_Node {
-      AST_Node *exp, ///< The expression before the question marks.
-               *left, ///< The left-hand (true) result.
-               *right; ///< The right-hand (false) result.
+      AST_Node *exp; ///< The expression before the question marks.
+      AST_Node *left; ///< The left-hand (true) result.
+      AST_Node *right; ///< The right-hand (false) result.
       
       /// Evaluates this node recursively, returning a value containing its result.
       value eval();

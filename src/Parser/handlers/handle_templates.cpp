@@ -114,10 +114,15 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   } else if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE) {
     if (handle_declarators(&hijack,token,inherited_flags | DEF_TEMPLATE, nd) or !nd)
       return (delete temp, 1);
+    if (nd->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE)
+      ((definition_function*)nd)->implementation = handle_function_implementation(lex, token, scope, herr);
   } else {
-    token.report_error(herr, "Expected class or function declaration following template clause");
+    token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
     delete temp; return ERROR_CODE;
   }
+  
+  for (definition_scope::defiter it = hijack.using_general.begin(); it != hijack.using_general.end(); ++it)
+    if (it->second->parent == &hijack) it->second->parent = scope; // TODO: Find a better spot for this; it iterates too much shit
   
   if (hijack.members.empty()) {
     if (hijack.referenced)
@@ -134,6 +139,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   definition_scope::defiter a = hijack.members.begin();
   temp->name = a->second->name;
   temp->def = a->second;
+  temp->def->parent = scope;
   hijack.members.erase(a);
   
   pair<definition_scope::defiter,bool> i = scope->members.insert(pair<string,definition*>(temp->name,temp));

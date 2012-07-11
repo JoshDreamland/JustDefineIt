@@ -119,8 +119,14 @@ namespace jdi
           if (search_scope) {
             string n(token.content.toString());
             definition *def = search_scope->look_up(n);
-            myroot = new AST_Node_Definition(def);
-            at = AT_DEFINITION;
+            if (def) {
+              myroot = new AST_Node_Definition(def);
+              at = AT_DEFINITION;
+            }
+            else {
+              myroot = new AST_Node();
+              at = AT_IDENTIFIER;
+            }
           }
           else {
             myroot = new AST_Node();
@@ -261,12 +267,43 @@ namespace jdi
       case TT_COLON:
         return left_node;
       
+      case TT_LESSTHAN: {
+        if (precedence::scope <= prec_min)
+          return left_node;
+        full_type lt = left_node->coerce();
+        if (lt.def and lt.def->flags & DEF_TEMPLATE) {
+          definition_template::arg_key k(((definition_template*)lt.def)->params.size());
+          if (read_template_parameters(k, (definition_template*)lt.def, lex, token, search_scope, NULL, herr))
+            return NULL;
+          delete left_node;
+          definition *d = ((definition_template*)lt.def)->instantiate(k);
+          if (d->flags & DEF_TYPENAME) {
+            lt.def = d;
+            left_node = new AST_Node_Type(lt);
+          }
+          else
+            left_node = new AST_Node_Definition(d);
+          token = get_next_token();
+          break;
+        }
+      } goto case_TT_OPERATOR;
+      
       case TT_GREATERTHAN:
         if (!tt_greater_is_op)
           return left_node; 
-      case TT_LESSTHAN:
-      case TT_SCOPE:
-      case TT_OPERATOR: {
+        goto case_TT_OPERATOR;
+        
+      case TT_SCOPE: {
+        token = get_next_token();
+        AST_Node *right = parse_expression(token, precedence::scope + 1);
+        if (!right) {
+          token.report_error(herr, "Expected secondary expression after binary operator");
+          return left_node;
+        }
+        left_node = new AST_Node_Scope(left_node,right,"::");
+        break;
+      }
+      case TT_OPERATOR: case_TT_OPERATOR: {
           string op(token.content.toString());
           map<string,symbol>::iterator b = symbols.find(op);
           if (b == symbols.end()) {
@@ -469,6 +506,15 @@ namespace jdi
     //cout << l.val.i << " " << content << " " << r.val.i << " = " << res.val.i << endl;
     return res;
   }
+  value AST::AST_Node_Scope::eval() {
+    full_type res = left->coerce();
+    if (!res.def or !(res.def->flags & DEF_SCOPE))
+      return value();
+    definition* d = ((definition_scope*)res.def)->look_up(right->content);
+    if (!d or not(d->flags & DEF_VALUED))
+      return value();
+    return ((definition_valued*)d)->value_of;
+  }
   value AST::AST_Node_Unary::eval() {
     if (!operand) { cout << "No operand to unary (operator" << content << ")!" << endl; return value(); }
     if (prefix) {
@@ -550,17 +596,27 @@ namespace jdi
     return left->coerce();
   }
   
+  full_type AST::AST_Node_Scope::coerce() {
+    full_type res = left->coerce();
+    if (!res.def or !(res.def->flags & DEF_SCOPE))
+      return full_type();
+    res.def = ((definition_scope*)res.def)->look_up(right->content);
+    return res;
+  }
+  
   full_type AST::AST_Node_Cast::coerce() {
     return cast_type.def; // FIXME: Replace with cast_type (fulltype)
   }
   
   full_type AST::AST_Node_Definition::coerce() {
     full_type res;
-    if (def && (def->flags & DEF_TYPED)) {
+    if (def->flags & DEF_TYPED) {
       res.def = ((definition_typed*)def)->type;
       res.refs.copy(((definition_typed*)def)->referencers);
       res.flags = ((definition_typed*)def)->modifiers;
     }
+    else
+      res.def = def;
     return res;
   }
   
@@ -631,6 +687,7 @@ namespace jdi
   AST::AST_Node::AST_Node(): parent(NULL) {}
   AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
   AST::AST_Node_Definition::AST_Node_Definition(definition* d): def(d) {}
+  AST::AST_Node_Scope::AST_Node_Scope(AST_Node* l, AST_Node* r, string op): AST_Node_Binary(l,r,op) {}
   AST::AST_Node_Type::AST_Node_Type(full_type &ft) { dec_type.swap(ft); }
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): operand(r) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct), operand(r), prefix(pre) {}

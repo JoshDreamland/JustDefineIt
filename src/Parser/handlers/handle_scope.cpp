@@ -35,7 +35,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
   {
     switch (token.type)
     {
-      case TT_DECFLAG: case TT_DECLTYPE: case TT_DECLARATOR:
+      case TT_DECFLAG: case TT_DECLTYPE: case TT_DECLARATOR: case_TT_DECLARATOR:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_TILDE:
           decl = NULL;
           handle_declarator_block:
@@ -127,17 +127,17 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         if (handle_declarators(scope,token,inherited_flags | DEF_TYPENAME)) FATAL_RETURN(1); break;
       
       case TT_PUBLIC:
-        if (scope->flags & TT_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); }
+        if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); }
         else token.report_error(herr, "Unexpected `public' token outside class scope.");
         if ((token = read_next_token(scope)).type != TT_COLON)
           token.report_error(herr, "Colon expected following `public' token"); break;
       case TT_PRIVATE:
-        if (scope->flags & TT_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); inherited_flags |= DEF_PRIVATE; }
-        else token.report_error(herr, "Unexpected `private' token outside class scope."); break;
+        if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); inherited_flags |= DEF_PRIVATE; }
+        else token.report_error(herr, "Unexpected `private' token outside class scope.");
         if ((token = read_next_token(scope)).type != TT_COLON)
           token.report_error(herr, "Colon expected following `private' token"); break;
       case TT_PROTECTED:
-        if (scope->flags & TT_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); inherited_flags |= DEF_PROTECTED; }
+        if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); inherited_flags |= DEF_PROTECTED; }
         else token.report_error(herr, "Unexpected `protected' token outside class scope.");
         if ((token = read_next_token(scope)).type != TT_COLON)
           token.report_error(herr, "Colon expected following `protected' token"); break;
@@ -176,6 +176,8 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           token.report_errorf(herr, "Expected `::' here to access namespace members");
           FATAL_RETURN(1); break;
         }
+        if (token.def->flags & DEF_TEMPLATE)
+          goto case_TT_DECLARATOR;
       }
       case TT_IDENTIFIER:
           token.report_error(herr, "Unexpected identifier in this scope; `" + string(token.content.toString()) + "' does not name a type");

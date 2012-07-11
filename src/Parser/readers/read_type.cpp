@@ -62,31 +62,78 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       }
       else if (token.type == TT_DEFINITION)
       {
-        if (token.def->flags & DEF_TEMPLATE)
+        do
         {
-          definition_template* dt = (definition_template*)token.def;
-          if (dt->def->flags & DEF_CLASS)
+          if (token.def->flags & DEF_TEMPLATE)
           {
-            token = lex->get_token_in_scope(scope, herr);
-            definition_template::arg_key k(dt->params.size());
-            if (token.type == TT_LESSTHAN)
+            definition_template* dt = (definition_template*)token.def;
+            if (dt->def->flags & DEF_CLASS)
             {
-              if (read_template_parameters(k, dt, lex, token, scope, cp, herr))
-                return full_type();
-              rdef = dt->instantiate(k);
               token = lex->get_token_in_scope(scope, herr);
+              definition_template::arg_key k(dt->params.size());
+              if (token.type == TT_LESSTHAN)
+              {
+                if (read_template_parameters(k, dt, lex, token, scope, cp, herr))
+                  return full_type();
+                rdef = dt->instantiate(k);
+                token = lex->get_token_in_scope(scope, herr);
+              }
+            }
+            else {
+              token.report_error(herr, "Template `" + token.def->name + "' cannot be used as a type");
+              return full_type();
             }
           }
-          else {
-            token.report_error(herr, "Template `" + token.def->name + "' cannot be used as a type");
-            return full_type();
+          else if (token.def->flags & DEF_SCOPE) {
+            definition_scope* as = scope;
+            as = (definition_scope*)token.def;
+            token_t la = lex->get_token_in_scope(as, herr);
+            if (la.type != TT_SCOPE) {
+              token.report_error(herr, "Expected type or qualified-id here; scope `" + token.def->name + "' does not name a type");
+              return full_type();
+            }
+            token = lex->get_token_in_scope(as);
+            if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
+              token.report_errorf(herr, "Expected type or qualified-id before %s");
+              return full_type();
+            }
+            rdef = token.def;
+          }
+          else goto some_error;
+          
+          if (token.type == TT_SCOPE) {
+            #ifdef DEBUG_MODE
+              if (!rdef) { token.report_error(herr, "Accessing NULL scope..."); return NULL; }
+              if (!(rdef->flags & DEF_SCOPE)) { token.report_error(herr, "Accessing non-scope object " + rdef->name + "..."); return NULL; }
+            #endif
+            token = lex->get_token_in_scope((definition_scope*)rdef, herr);
+            if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
+              token.report_errorf(herr, "Expected qualified-id following `::' before %s");
+              FATAL_RETURN(NULL);
+            }
+            else
+              rdef = token.def;
           }
         }
-        else goto some_error;
+        while (token.type == TT_DEFINITION);
+        if (!rdef) {
+          token.report_errorf(herr, "Expected class name here before %s");
+          return NULL;
+        }
+        if (!(rdef->flags & DEF_TYPENAME)) {
+          token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type");
+          return NULL;
+        }
       }
       else if (token.type == TT_ELLIPSIS) {
         rdef = builtin_type__va_list;
-        token = lex->get_token_in_scope(scope,herr);
+        token = lex->get_token_in_scope(scope, herr);
+      }
+      else if (token.type == TT_TYPENAME) {
+        if (!cp) token.report_error(herr, "Cannot use anonymous type in this context");
+        token = lex->get_token_in_scope(scope, herr);
+        if (not(rdef = cp->handle_hypothetical(scope, token, DEF_TYPENAME)))
+          return full_type();
       }
       else {
         some_error:

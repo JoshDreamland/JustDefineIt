@@ -3,7 +3,12 @@
 #define true 1
 #define false 0
 
+/*
+template<typename b> int
+#pragma DEBUG_ENTRY_POINT
+a(b c) { this should be ignored }*/
 
+/* /
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <ncurses.h>
@@ -69,9 +74,20 @@
 
 #include <fenv.h>
 #include <tgmath.h>
-#include <complex.h>*/
+#include <complex.h>
+/* */
 
-/*
+/*// Broken in 9565e24
+namespace bbq {
+  template<typename p> class q { typedef int c; };
+}
+template<typename a, typename b> class b {};
+typedef b<bbq::q<int>::c, int> c;
+*/
+
+
+/* */
+
 
 #ifndef _GLIBCXX_STRING
 #define _GLIBCXX_STRING	1
@@ -87,6 +103,7 @@
 
 #pragma GCC system_header
 
+
 #ifndef _STL_ALGOBASE_H
 #define _STL_ALGOBASE_H 1
 
@@ -94,405 +111,198 @@
 #include <bits/functexcept.h>
 
 
-#ifndef _CPP_TYPE_TRAITS_H
-#define _CPP_TYPE_TRAITS_H 1
+#include <bits/cpp_type_traits.h>
+
+
+#ifndef _EXT_TYPE_TRAITS
+#define _EXT_TYPE_TRAITS 1
 
 #pragma GCC system_header
 
 #include <bits/c++config.h>
+#include <bits/cpp_type_traits.h>
 
-//
-// This file provides some compile-time information about various types.
-// These representations were designed, on purpose, to be constant-expressions
-// and not types as found in <bits/type_traits.h>.  In particular, they
-// can be used in control structures and the optimizer hopefully will do
-// the obvious thing.
-//
-// Why integral expressions, and not functions nor types?
-// Firstly, these compile-time entities are used as template-arguments
-// so function return values won't work:  We need compile-time entities.
-// We're left with types and constant  integral expressions.
-// Secondly, from the point of view of ease of use, type-based compile-time
-// information is -not- *that* convenient.  On has to write lots of
-// overloaded functions and to hope that the compiler will select the right
-// one. As a net effect, the overall structure isn't very clear at first
-// glance.
-// Thirdly, partial ordering and overload resolution (of function templates)
-// is highly costly in terms of compiler-resource.  It is a Good Thing to
-// keep these resource consumption as least as possible.
-//
-// See valarray_array.h for a case use.
-//
-// -- Gaby (dosreis@cmla.ens-cachan.fr) 2000-03-06.
-//
-// Update 2005: types are also provided and <bits/type_traits.h> has been
-// removed.
-//
-
-// Forward declaration hack, should really include this from somewhere.
 namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
-  template<typename _Iterator, typename _Container>
-    class __normal_iterator;
+  // Define a nested type if some predicate holds.
+  template<bool, typename>
+    struct __enable_if 
+    { };
+
+  template<typename _Tp>
+    struct __enable_if<true, _Tp>
+    { typedef _Tp __type; };
+
+
+  // Conditional expression for types. If true, first, if false, second.
+  template<bool _Cond, typename _Iftrue, typename _Iffalse>
+    struct __conditional_type
+    { typedef _Iftrue __type; };
+
+  template<typename _Iftrue, typename _Iffalse>
+    struct __conditional_type<false, _Iftrue, _Iffalse>
+    { typedef _Iffalse __type; };
+
+
+  // Given an integral builtin type, return the corresponding unsigned type.
+  template<typename _Tp>
+    struct __add_unsigned
+    { 
+    private:
+      #pragma DEBUG_ENTRY_POINT
+      typedef __enable_if<std::__is_integer<_Tp>::__value, _Tp> __if_type;
+      
+    public:
+      typedef typename __if_type::__type __type; 
+    };
+
+  template<>
+    struct __add_unsigned<char>
+    { typedef unsigned char __type; };
+
+  template<>
+    struct __add_unsigned<signed char>
+    { typedef unsigned char __type; };
+
+  template<>
+    struct __add_unsigned<short>
+    { typedef unsigned short __type; };
+
+  template<>
+    struct __add_unsigned<int>
+    { typedef unsigned int __type; };
+
+  template<>
+    struct __add_unsigned<long>
+    { typedef unsigned long __type; };
+
+  template<>
+    struct __add_unsigned<long long>
+    { typedef unsigned long long __type; };
+
+  // Declare but don't define.
+  template<>
+    struct __add_unsigned<bool>;
+
+  template<>
+    struct __add_unsigned<wchar_t>;
+
+
+  // Given an integral builtin type, return the corresponding signed type.
+  template<typename _Tp>
+    struct __remove_unsigned
+    { 
+    private:
+      typedef __enable_if<std::__is_integer<_Tp>::__value, _Tp> __if_type;
+      
+    public:
+      typedef typename __if_type::__type __type; 
+    };
+
+  template<>
+    struct __remove_unsigned<char>
+    { typedef signed char __type; };
+
+  template<>
+    struct __remove_unsigned<unsigned char>
+    { typedef signed char __type; };
+
+  template<>
+    struct __remove_unsigned<unsigned short>
+    { typedef short __type; };
+
+  template<>
+    struct __remove_unsigned<unsigned int>
+    { typedef int __type; };
+
+  template<>
+    struct __remove_unsigned<unsigned long>
+    { typedef long __type; };
+
+  template<>
+    struct __remove_unsigned<unsigned long long>
+    { typedef long long __type; };
+
+  // Declare but don't define.
+  template<>
+    struct __remove_unsigned<bool>;
+
+  template<>
+    struct __remove_unsigned<wchar_t>;
+
+
+  // For use in string and vstring.
+  template<typename _Type>
+    inline bool
+    __is_null_pointer(_Type* __ptr)
+    { return __ptr == 0; }
+
+  template<typename _Type>
+    inline bool
+    __is_null_pointer(_Type)
+    { return false; }
+
+
+  // For complex and cmath
+  template<typename _Tp, bool = std::__is_integer<_Tp>::__value>
+    struct __promote
+    { typedef double __type; };
+
+  // No nested __type member for non-integer non-floating point types,
+  // allows this type to be used for SFINAE to constrain overloads in
+  // <cmath> and <complex> to only the intended types.
+  template<typename _Tp>
+    struct __promote<_Tp, false>
+    { };
+
+  template<>
+    struct __promote<long double>
+    { typedef long double __type; };
+
+  template<>
+    struct __promote<double>
+    { typedef double __type; };
+
+  template<>
+    struct __promote<float>
+    { typedef float __type; };
+
+  template<typename _Tp, typename _Up,
+           typename _Tp2 = typename __promote<_Tp>::__type,
+           typename _Up2 = typename __promote<_Up>::__type>
+    struct __promote_2
+    {
+      typedef __typeof__(_Tp2() + _Up2()) __type;
+    };
+
+  template<typename _Tp, typename _Up, typename _Vp,
+           typename _Tp2 = typename __promote<_Tp>::__type,
+           typename _Up2 = typename __promote<_Up>::__type,
+           typename _Vp2 = typename __promote<_Vp>::__type>
+    struct __promote_3
+    {
+      typedef __typeof__(_Tp2() + _Up2() + _Vp2()) __type;
+    };
+
+  template<typename _Tp, typename _Up, typename _Vp, typename _Wp,
+           typename _Tp2 = typename __promote<_Tp>::__type,
+           typename _Up2 = typename __promote<_Up>::__type,
+           typename _Vp2 = typename __promote<_Vp>::__type,
+           typename _Wp2 = typename __promote<_Wp>::__type>
+    struct __promote_4
+    {
+      typedef __typeof__(_Tp2() + _Up2() + _Vp2() + _Wp2()) __type;
+    };
 
 _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace
 
-namespace std _GLIBCXX_VISIBILITY(default)
-{
-_GLIBCXX_BEGIN_NAMESPACE_VERSION
+#endif 
 
-  struct __true_type { };
-  struct __false_type { };
-
-  template<bool>
-    struct __truth_type
-    { typedef __false_type __type; };
-
-  template<>
-    struct __truth_type<true>
-    { typedef __true_type __type; };
-/*
-  // N.B. The conversions to bool are needed due to the issue
-  // explained in c++/19404.
-  template<class _Sp, class _Tp>
-    struct __traitor
-    {
-      enum { __value = bool(_Sp::__value) || bool(_Tp::__value) };
-      typedef typename __truth_type<__value>::__type __type;
-    };
-
-  // Compare for equality of types.
-  template<typename, typename>
-    struct __are_same
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  template<typename _Tp>
-    struct __are_same<_Tp, _Tp>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  // Holds if the template-argument is a void type.
-  template<typename _Tp>
-    struct __is_void
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  template<>
-    struct __is_void<void>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  //
-  // Integer types
-  //
-  template<typename _Tp>
-    struct __is_integer
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  // Thirteen specializations (yes there are eleven standard integer
-  // types; <em>long long</em> and <em>unsigned long long</em> are
-  // supported as extensions)
-  template<>
-    struct __is_integer<bool>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<signed char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<unsigned char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-# ifdef _GLIBCXX_USE_WCHAR_T
-  template<>
-    struct __is_integer<wchar_t>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-# endif
-
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-  template<>
-    struct __is_integer<char16_t>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<char32_t>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-#endif
-
-  template<>
-    struct __is_integer<short>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<unsigned short>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<int>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<unsigned int>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<long>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<unsigned long>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<long long>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_integer<unsigned long long>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  //
-  // Floating point types
-  //
-  template<typename _Tp>
-    struct __is_floating
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  // three specializations (float, double and 'long double')
-  template<>
-    struct __is_floating<float>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_floating<double>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_floating<long double>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  //
-  // Pointer types
-  //
-  template<typename _Tp>
-    struct __is_pointer
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  template<typename _Tp>
-    struct __is_pointer<_Tp*>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  //
-  // Normal iterator type
-  //
-  template<typename _Tp>
-    struct __is_normal_iterator
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  template<typename _Iterator, typename _Container>
-    struct __is_normal_iterator< __gnu_cxx::__normal_iterator<_Iterator,
-							      _Container> >
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  //
-  // An arithmetic type is an integer type or a floating point type
-  //
-  template<typename _Tp>
-    struct __is_arithmetic
-    : public __traitor<__is_integer<_Tp>, __is_floating<_Tp> >
-    { };
-
-  //
-  // A fundamental type is `void' or and arithmetic type
-  //
-  template<typename _Tp>
-    struct __is_fundamental
-    : public __traitor<__is_void<_Tp>, __is_arithmetic<_Tp> >
-    { };
-
-  //
-  // A scalar type is an arithmetic type or a pointer type
-  // 
-  template<typename _Tp>
-    struct __is_scalar
-    : public __traitor<__is_arithmetic<_Tp>, __is_pointer<_Tp> >
-    { };
-
-  //
-  // For use in std::copy and std::find overloads for streambuf iterators.
-  //
-  template<typename _Tp>
-    struct __is_char
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  template<>
-    struct __is_char<char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-#ifdef _GLIBCXX_USE_WCHAR_T
-  template<>
-    struct __is_char<wchar_t>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-#endif
-
-  template<typename _Tp>
-    struct __is_byte
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-  template<>
-    struct __is_byte<char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_byte<signed char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  template<>
-    struct __is_byte<unsigned char>
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-
-  //
-  // Move iterator type
-  //
-  template<typename _Tp>
-    struct __is_move_iterator
-    {
-      enum { __value = 0 };
-      typedef __false_type __type;
-    };
-
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-  template<typename _Iterator>
-    class move_iterator;
-
-  template<typename _Iterator>
-    struct __is_move_iterator< move_iterator<_Iterator> >
-    {
-      enum { __value = 1 };
-      typedef __true_type __type;
-    };
-#endif
-
-_GLIBCXX_END_NAMESPACE_VERSION
-} // namespace
-
-#endif //_CPP_TYPE_TRAITS_H
-
-
-/*
-#include <bits/cpp_type_traits.h>
-#include <ext/type_traits.h>
-#include <ext/numeric_traits.h>
+//#include <ext/type_traits.h>
+/*#include <ext/numeric_traits.h>
 #include <bits/stl_pair.h>
 #include <bits/stl_iterator_base_types.h>
 #include <bits/stl_iterator_base_funcs.h>
@@ -533,7 +343,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
           swap(*__a, *__b);
         }
     };
-    
+
+  
   template<typename _ForwardIterator1, typename _ForwardIterator2>
     inline void
     iter_swap(_ForwardIterator1 __a, _ForwardIterator2 __b)
@@ -562,7 +373,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	&& __are_same<_ValueType2&, _ReferenceType2>::__value>::
 	iter_swap(__a, __b);
     }
-    
+
   template<typename _ForwardIterator1, typename _ForwardIterator2>
     _ForwardIterator2
     swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
@@ -579,7 +390,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	std::iter_swap(__first1, __first2);
       return __first2;
     }
-    
+
   template<typename _Tp>
     inline const _Tp&
     min(const _Tp& __a, const _Tp& __b)
@@ -591,7 +402,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	return __b;
       return __a;
     }
-    
+
   template<typename _Tp>
     inline const _Tp&
     max(const _Tp& __a, const _Tp& __b)
@@ -603,7 +414,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	return __b;
       return __a;
     }
-    
+
   template<typename _Tp, typename _Compare>
     inline const _Tp&
     min(const _Tp& __a, const _Tp& __b, _Compare __comp)
@@ -613,7 +424,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	return __b;
       return __a;
     }
-
 
   template<typename _Tp, typename _Compare>
     inline const _Tp&
@@ -804,7 +614,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-  
   template<typename _II, typename _OI>
     inline _OI
     move(_II __first, _II __last, _OI __result)
@@ -1387,10 +1196,10 @@ _GLIBCXX_END_NAMESPACE_ALGO
 
 
 //#include <bits/stl_algobase.h>  // std::copy, std::fill_n
-// #include <bits/postypes.h>      // For streampos
-// #include <cwchar>               // For WEOF, wmemmove, wmemset, etc.
 
-/*
+/*#include <bits/postypes.h>      // For streampos
+#include <cwchar>               // For WEOF, wmemmove, wmemset, etc.
+
 namespace __gnu_cxx _GLIBCXX_VISIBILITY(default)
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
@@ -1404,6 +1213,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       typedef std::mbstate_t  state_type;
     };
 
+
+  
   template<typename _CharT>
     struct char_traits
     {
@@ -1535,6 +1346,8 @@ namespace std _GLIBCXX_VISIBILITY(default)
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
+  // 21.1
+  
   template<class _CharT>
     struct char_traits : public __gnu_cxx::char_traits<_CharT>
     { };
@@ -1885,8 +1698,8 @@ _GLIBCXX_END_NAMESPACE_VERSION
 #endif // _CHAR_TRAITS_H
 
 
-/*
-#include <bits/char_traits.h>  // NB: In turn includes stl_algobase.h
+//#include <bits/char_traits.h>
+/* // NB: In turn includes stl_algobase.h
 #include <bits/allocator.h>
 #include <bits/cpp_type_traits.h>
 #include <bits/localefwd.h>    // For operators >>, <<, and getline.
@@ -1901,5 +1714,5 @@ _GLIBCXX_END_NAMESPACE_VERSION
 #include <bits/basic_string.h>
 #include <bits/basic_string.tcc> 
 
-#endif
-*/
+#endif /* _GLIBCXX_STRING */
+

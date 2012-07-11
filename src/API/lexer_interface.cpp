@@ -27,7 +27,7 @@ token_t lexer::get_token_in_scope(jdi::definition_scope *scope, error_handler *h
   token_t res = get_token(herr);
   
   if (res.type == TT_IDENTIFIER) {
-    const string name(res.content.toString());
+    const string name = res.content.toString();
     definition *def = scope->look_up(name);
     if (!def) {
       #ifdef DEBUG_MODE

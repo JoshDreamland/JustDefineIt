@@ -40,6 +40,20 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="Profile">
+				<Option output="bin/Release/JustDefineIt" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Profile" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O3" />
+					<Add option="-pg" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add option="-pg" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wshadow" />
@@ -92,7 +106,7 @@
 		<Unit filename="src/Parser/handlers/handle_enum.cpp" />
 		<Unit filename="src/Parser/handlers/handle_function_impl.cpp" />
 		<Unit filename="src/Parser/handlers/handle_function_impl.h" />
-		<Unit filename="src/Parser/handlers/handle_function_implementation.h" />
+		<Unit filename="src/Parser/handlers/handle_hypothetical.cpp" />
 		<Unit filename="src/Parser/handlers/handle_namespace.cpp" />
 		<Unit filename="src/Parser/handlers/handle_scope.cpp" />
 		<Unit filename="src/Parser/handlers/handle_templates.cpp" />

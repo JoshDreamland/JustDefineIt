@@ -28,6 +28,13 @@
 #include <System/builtins.h>
 using namespace std;
 
+template<typename a, typename b> void print_map(const map<a,b>& c) {
+  cout << "{" << endl;
+  for (typename map<a,b>::const_iterator i = c.begin(); i != c.end(); ++i)
+    cout << "  " << i->first<< endl; 
+  cout << "}" << endl;
+}
+
 namespace jdi {
   definition::definition(string n,definition* p,unsigned int f): flags(f), name(n), parent((definition_scope*)p) {}
   definition::definition(): flags(0), name(), parent(NULL) {}
@@ -159,11 +166,24 @@ namespace jdi {
         values[i] = new definition_valued(dv->name, dv->parent, dv->type, dv->modifiers, dv->flags, dv->value_of);
       }
   }
-
+  
+  bool definition_template::dependent_qualification::operator<(const definition_template::dependent_qualification &other) const {
+    register ptrdiff_t d = definition::defcmp(depends, other.depends);
+    if (d) return d < 0;
+    d = path.size() - other.path.size();
+    if (d) return d < 0;
+    for (unsigned i = 0; i < path.size(); ++i)
+      if ((d = path[i].compare(other.path[i])))
+        return d < 0;
+    return false;
+  }
+  
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   
   definition_tempscope::definition_tempscope(string n, definition* p, unsigned f, definition* s): definition_scope(n,p,f), source(s), referenced(false) {}
-
+  
+  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f): definition(n,p,f|DEF_HYPOTHETICAL) {}
+  
   //========================================================================================================
   //======: Re-map Functions :==============================================================================
   //========================================================================================================
@@ -228,6 +248,8 @@ namespace jdi {
   
   void definition_atomic::remap(const remap_set &) {}
   
+  void definition_hypothetical::remap(const remap_set &) { cout << "ERROR: Remap called on hypothetical type" << endl; }
+  
   //========================================================================================================
   //======: Sizeof functions :==============================================================================
   //========================================================================================================
@@ -281,6 +303,11 @@ namespace jdi {
   
   size_t definition_atomic::size_of() {
     return sz;
+  }
+  
+  size_t definition_hypothetical::size_of() {
+    cout << "ERROR: sizeof() performed on dependent (hypothetical) type" << endl;
+    return 0;
   }
   
   //========================================================================================================
@@ -371,6 +398,11 @@ namespace jdi {
   
   definition* definition_atomic::duplicate(remap_set &) {
     return this;
+  }
+  
+  definition* definition_hypothetical::duplicate(remap_set &n) {
+    definition_hypothetical* res = new definition_hypothetical(name, parent, flags);
+    n[this] = res; return res;
   }
   
   //========================================================================================================
@@ -468,5 +500,8 @@ namespace jdi {
   }
   string definition_valued::toString(unsigned, unsigned indent) {
     return string(indent, ' ') + referencers.toStringLHS() + name + referencers.toStringRHS() + " = " + value_of.toString();
+  }
+  string definition_hypothetical::toString(unsigned, unsigned indent) {
+    return string(indent, ' ') + "template<typename " + parent->name + "> " + parent->name + "::" + name;
   }
 }

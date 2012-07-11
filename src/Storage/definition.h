@@ -29,19 +29,19 @@ namespace jdi {
   /** Flags given to a definition to describe its type simply and quickly. **/
   enum DEF_FLAGS
   {
-    DEF_TEMPLATE =     1 <<  0, ///< This definition has template parameters attached.
-    DEF_TYPENAME =     1 <<  1, ///< This definition can be used as a typename. This does not imply that it has a valid type; see DEF_TYPED.
-    DEF_NAMESPACE =    1 <<  2, ///< This definition is a namespace.
-    DEF_CLASS =        1 <<  3, ///< This definition is a class or structure. 
-    DEF_ENUM =         1 <<  4, ///< This definition is an enumeration of valued constants.
-    DEF_UNION =        1 <<  5, ///< This definition is an enumeration of valued constants.
-    DEF_SCOPE =        1 <<  6, ///< This definition is a scope of some sort.
-    DEF_TYPED =        1 <<  7, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
-    DEF_FUNCTION =     1 <<  8, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_VALUED =       1 <<  9, ///< This definition has a constant integer value attached.
-    DEF_DEFAULTED =    1 << 10, ///< This definition has a default expression attached.
-    DEF_TEMPPARAM =    1 << 11, ///< This definition is a parameter of a template.
-    DEF_EXTERN =       1 << 12, ///< This definition was declared with the "extern" flag.
+    DEF_TYPENAME =     1 <<  0, ///< This definition has template parameters attached.
+    DEF_NAMESPACE =    1 <<  1, ///< This definition can be used as a typename. This does not imply that it has a valid type; see DEF_TYPED.
+    DEF_CLASS =        1 <<  2, ///< This definition is a namespace.
+    DEF_ENUM =         1 <<  3, ///< This definition is a class or structure. 
+    DEF_UNION =        1 <<  4, ///< This definition is an enumeration of valued constants.
+    DEF_SCOPE =        1 <<  5, ///< This definition is an enumeration of valued constants.
+    DEF_TYPED =        1 <<  6, ///< This definition is a scope of some sort.
+    DEF_FUNCTION =     1 <<  7, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
+    DEF_VALUED =       1 <<  8, ///< This definition is a function containing a list of zero or more overloads.
+    DEF_DEFAULTED =    1 <<  9, ///< This definition has a constant integer value attached.
+    DEF_TEMPPARAM =    1 << 10, ///< This definition has a default expression attached.
+    DEF_EXTERN =       1 << 11, ///< This definition is a parameter of a template.
+    DEF_TEMPLATE =     1 << 12, ///< This definition was declared with the "extern" flag.
     DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
     DEF_PRIVATE =      1 << 14, ///< This definition was declared as a private member.
     DEF_PROTECTED =    1 << 15, ///< This definition was declared as a protected member.
@@ -381,16 +381,27 @@ namespace jdi {
         inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != &abstract) delete *i; delete[] values; } }
     };
     
+    struct dependent_qualification {
+      definition *depends; ///< The template parameter on which we depend
+      vector<string> path; ///< The path and identifier of the dependent variable from there
+      bool operator< (const dependent_qualification&) const; ///< Test less-than
+    };
+    
     typedef map<arg_key,definition_template*> specmap; ///< Map type for specializations
     typedef specmap::iterator speciter; ///< Map iterator type for specializations
     
     typedef map<arg_key,definition*> instmap; ///< Map type for instantiations
     typedef instmap::iterator institer; ///< Map iterator type for instantiations
     
-    /** A list of all specializations **/
-    map<arg_key, definition_template*> specializations;
-    /** A list of all existing instantiations **/
-    map<arg_key, definition*> instantiations;
+    typedef map<dependent_qualification, definition*> depmap; ///< Dependent member map
+    typedef depmap::iterator depiter; ///< Dependent member iterator
+    
+    /** A map of all specializations **/
+    specmap specializations;
+    /** A map of all existing instantiations **/
+    instmap instantiations;
+    /** A map of all dependent members of our template parameters */
+    depmap dependents;
     
     /** Instantiate this template with the values given in the passed key.
         If this template has been instantiated previously, that instantiation is given.
@@ -437,11 +448,18 @@ namespace jdi {
     definition_tempscope(string name, definition* parent, unsigned flags, definition *source);
   };
   
+  /**
+    @struct jdi::definition_hypothetical
+    A class representing a dependent (here called "hypothetical") type--a type which
+    depends on an abstract parent or scope.
+  */
   struct definition_hypothetical: definition {
     virtual definition* duplicate(remap_set &n);
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    /// Construct with basic definition info.
+    definition_hypothetical(string name, definition_scope *parent, unsigned flags = DEF_HYPOTHETICAL);
   };
 }
 

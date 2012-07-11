@@ -72,7 +72,7 @@ int jdip::read_template_parameters(definition_template::arg_key &argk, definitio
     or  ((argk[i]->flags & DEF_VALUED) and ((definition_valued*)argk[i])->value_of.type == VT_NONE))
       ++bad_params;
   if (bad_params) {
-    token.report_error(herr, "Insufficient parameters to template `" + temp->name + "'");
+    token.report_error(herr, "Insufficient parameters to template `" + temp->name + "'; " + value((long)bad_params).toString() + " more required" );
     FATAL_RETURN(1);
   }
   return 0;

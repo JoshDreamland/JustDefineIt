@@ -301,7 +301,7 @@ namespace jdip {
       See \section Handlers for details.
       
       @param  scope  The scope into which declarations will be stored. [in-out]
-      @param  token  The \c token structure into which the next unhandled token will be placed. [out]
+      @param  token  The token structure into which the next unhandled token will be placed. [out]
       @param  inherited_flags  Any flags which must be given to all members of this scope. [in]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
@@ -315,12 +315,27 @@ namespace jdip {
       See \section Handlers for details.
       
       @param  scope  The scope into which declarations will be stored. [in-out]
-      @param  token  The \c token structure into which the next unhandled token will be placed. [out]
+      @param  token  The token structure into which the next unhandled token will be placed. [out]
       @param  inherited_flags  Any flags which must be given to all members of this scope. [in]
       
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
     int handle_template(definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
+    
+    /**
+      Handle accessing dependent types and members. Shoves the definitions into the
+      template for fix later.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope from which the member is being accessed. [in-out]
+      @param  token  The token structure into which the next unhandled token will be placed. [out]
+      @param  flags  Flags known about this hypothetical type. [in]
+      
+      @return A representation of the dependent member, or NULL if an error occurred.
+    **/
+    definition* handle_hypothetical(definition_scope *scope, token_t& token, unsigned flags);
     
     /**
       Read an expression from the given input stream, evaluating it for a value.

@@ -60,7 +60,7 @@ void lexer_cpp::skip_comment()
   #endif
 }
 
-void lexer_cpp::skip_multiline_comment()
+inline void lexer_cpp::skip_multiline_comment()
 {
   if (cfile[pos++] == '/')
     ++pos; // Skip one more char so we don't break on /*/
@@ -535,7 +535,15 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     case_line:
       break;
     case_pragma:
-        read_preprocessor_args(herr);
+        #ifdef DEBUG_MODE
+        {
+          string n = read_preprocessor_args(herr);
+          if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.top().is_true))
+            cout << "* Debug entry point" << endl;
+        }
+        #else
+          read_preprocessor_args(herr);
+        #endif
       break;
     case_undef:
         if (!conditionals.empty() and !conditionals.top().is_true)
