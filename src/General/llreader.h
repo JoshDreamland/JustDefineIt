@@ -62,7 +62,7 @@ class llreader {
       
       @param contents  A string containing contents to be pointed to.
       @warning As this function only encapsulates the string,
-               without copying it, its contents will become
+               without copying it; its contents will become
                invalid once the encapsulated string leaves scope.
     **/
     void encapsulate(std::string &contents);

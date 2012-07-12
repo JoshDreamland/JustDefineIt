@@ -116,12 +116,31 @@ namespace jdip {
     /// Enter a scalar macro, if it has any content.
     /// @param ms   The macro scalar to enter.
     void enter_macro(macro_scalar *ms);
-    /// Parse for parameters to a given macro function, if there are any.
+    /// Parse for parameters to a given macro function, if there are any, then evaluate
+    /// the macro function and set the open file to reflect the change.
     /// This call should be made while the position is just after the macro name.
     /// @param mf   The macro function to parse
     /// @param herr An error handler in case of parameter mismatch or non-terminated literals
     /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_function(macro_function* mf, error_handler *herr);
+    bool parse_macro_function(const macro_function* mf, error_handler *herr);
+    /// Parse for parameters to a given macro function, if there are any.
+    /// This call should be made while the position is just after the macro name.
+    /// @param mf    The macro function to parse.
+    /// @param dest  The vector to receive the individual parameters [out].
+    /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
+    /// @return Returns whether parameters were encountered and parsed.
+    bool parse_macro_params(const macro_function* mf, vector<string>& dest, error_handler *herr);
+    /// Parse for parameters to a given macro function, if there are any.
+    /// This call should be made while the position is just after the macro name.
+    /// @param mf    The macro function to parse.
+    /// @param cfile The buffer to read from.
+    /// @param pos   The position in the buffer to read; modified as used [in-out].
+    /// @param len   The length of the given buffer.
+    /// @param dest  The vector to receive the individual parameters [out].
+    /// @param errep A token to use to report errors [in].
+    /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
+    /// @return Returns whether parameters were encountered and parsed.
+    static bool parse_macro_params(const macro_function* mf, const macro_map &macros, const char* cfile, size_t &pos, size_t length, vector<string>& dest, const token_t &errep, error_handler *herr);
     
     /// Pop the currently open file or active macro.
     /// @return Returns whether the end of all input has been reached.
@@ -136,6 +155,8 @@ namespace jdip {
       condition(bool,bool); ///< Convenience constructor.
       condition(); ///< Default constructor.
     };
+    /// FLatten a macro parameter, evaluating nested macro functions.
+    static string _flatten(string param, const macro_map& macros, const token_t &errep, error_handler *herr);
     quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested #if*)
     lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
   };

@@ -28,6 +28,10 @@
 #ifndef _JDI_BUILTINS__H
 #define _JDI_BUILTINS__H
 
+namespace jdip {
+  class typeflag;
+}
+
 #include <API/context.h>
 
 namespace jdi {
@@ -48,9 +52,10 @@ namespace jdi {
   void read_declarators(const char* filename, USAGE_FLAG usage_flags);
   /// Structure for getting info about newly-added declarator
   struct add_decl_info {
-    definition* def;
-    unsigned long flag;
-    add_decl_info(definition *d, unsigned long f);
+    definition* def; ///< The typeflag struct, as stored in the token.
+    unsigned long flag; ///< The typeflag struct, as stored in the token.
+    jdip::typeflag *tf_struct; ///< The typeflag struct, as stored in the token.
+    add_decl_info(definition *d, unsigned long f, jdip::typeflag *tf);
   };
   /**
     Add a single declarator, toggling on its usage for the given flag.
@@ -74,6 +79,7 @@ namespace jdi {
   extern unsigned long builtin_flag__const;    ///< Builtin const flag
   extern unsigned long builtin_flag__register; ///< Builtin register flag
   extern unsigned long builtin_flag__inline;   ///< Builtin inline flag
+  extern unsigned long builtin_flag__Complex;  ///< Builtin complex flag
   
   extern unsigned long builtin_flag__unsigned; ///< Builtin unsigned flag
   extern unsigned long builtin_flag__signed;  ///< Builtin signed flag
@@ -122,6 +128,9 @@ namespace jdip {
     unsigned int flagbit; ///< If this is a flag, this is its bitmask index.
     definition *def; ///< If this is a primitive, this is the definition affiliated with it.
   };
+  
+  extern typeflag* builtin_typeflag__throw; ///< Builtin __throw typeflag, as stored in the token.
+  extern typeflag* builtin_typeflag__restrict; ///< Builtin __restrict typeflag, as stored in the token.
   
   typedef map<string,typeflag*> tf_map; ///< A map of declarators by name.
   typedef map<unsigned int,typeflag*> tf_flag_map; ///< A map of declarator flags by flag bit, as a power of two.

@@ -137,6 +137,45 @@ namespace jdip {
   **/
   int read_referencers(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
   /**
+    Read function parameters into a \c ref_stack from an input stream. This function should be invoked with the first
+    token following the opening parentheses, and will terminate with the first token after the closing parentheses.
+     
+    This function is a reader. Many inputs are liable to be modified in some form or another.
+    See \section Readers for details.
+    
+    This method will read a complete rf_stack from the given input stream. This includes pointer-to asterisks (*),
+    reference ampersands (&), array bounds in square brackets [], and function parameters in parentheses (). Parentheses
+    used for the purpose of putting precedence on a given referencer will be handled, but will not be literally denoted
+    in the returned stack.
+    
+    @param  refs   The ref_stack onto which referencers should be pushed. [out]
+    @param  lex    The lexer to be polled for tokens. [in-out]
+    @param  token  The token for which this function was invoked. If the given token is a
+                   type, it will be part of the return \c full_type, otherwise it will
+                   just be overwritten. [in-out]
+    @param  scope  The scope used to resolve identifiers. [in]
+    @param  cp     The context parser to be polled for any additional information. [in]
+    @param  herr   The error handler which will be used to report errors. [in]
+    @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
+             error state, as the error will have already been reported to the given error handler.
+  **/
+  int read_function_params(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  /**
+    Read the latter half of referencers, as handled in read_referencers.
+    
+    @param  refs   The ref_stack onto which referencers should be pushed. [out]
+    @param  lex    The lexer to be polled for tokens. [in-out]
+    @param  token  The token for which this function was invoked. If the given token is a
+                   type, it will be part of the return \c full_type, otherwise it will
+                   just be overwritten. [in-out]
+    @param  scope  The scope used to resolve identifiers. [in]
+    @param  cp     The context parser to be polled for any additional information. [in]
+    @param  herr   The error handler which will be used to report errors. [in]
+    @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
+             error state, as the error will have already been reported to the given error handler.
+  **/
+  int read_referencers_post(ref_stack& refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  /**
     Read a list of template parameters from the given input stream.
     
     This function is a reader. Many inputs are liable to be modified in some form or another.

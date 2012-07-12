@@ -74,7 +74,8 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       if (token.type == TT_OPERATOR) {
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-        AST a; a.parse_expression(lex, token, precedence::comma+1, herr);
+        token = read_next_token(scope);
+        AST a; a.parse_expression(token, lex, &hijack, precedence::comma+1, herr);
         val = a.eval();
       }
       dtn = new definition_valued(pname, NULL, ft.def, ft.flags, DEF_VALUED | DEF_TYPED | DEF_TEMPLATE, val);

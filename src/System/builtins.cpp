@@ -40,6 +40,9 @@ namespace jdip {
   typeflag::typeflag(): usage(), flagbit(0), def(NULL) {}
   typeflag::typeflag(string n, USAGE_FLAG u): name(n), usage(u), flagbit(0), def(NULL) {}
   typeflag::~typeflag() { }
+  
+  typeflag* builtin_typeflag__throw;
+  typeflag* builtin_typeflag__restrict;
 }
 
 using namespace jdip;
@@ -51,6 +54,7 @@ namespace jdi {
   unsigned long builtin_flag__const;
   unsigned long builtin_flag__register;
   unsigned long builtin_flag__inline;
+  unsigned long builtin_flag__Complex;
   
   unsigned long builtin_flag__unsigned;
   unsigned long builtin_flag__signed;
@@ -114,10 +118,10 @@ namespace jdi {
     }
     else
       insit.first->second->usage = USAGE_FLAG(insit.first->second->usage | usage_flags), flag = 0;
-    return add_decl_info(insit.first->second->def, flag);
+    return add_decl_info(insit.first->second->def, flag, insit.first->second);
   }
   
-  add_decl_info::add_decl_info(definition *d, unsigned long f): def(d), flag(f) {}
+  add_decl_info::add_decl_info(definition *d, unsigned long f, typeflag *tf): def(d), flag(f), tf_struct(tf) {}
   
   void add_gnu_declarators() {
     builtin_flag__volatile = add_declarator("volatile", UF_FLAG).flag;
@@ -125,7 +129,10 @@ namespace jdi {
     builtin_flag__const    = add_declarator("const",    UF_FLAG).flag;
     builtin_flag__register = add_declarator("register", UF_FLAG).flag;
     builtin_flag__inline   = add_declarator("inline",   UF_FLAG).flag;
-    add_declarator("throw", UF_FLAG);
+    builtin_flag__Complex  = add_declarator("_Complex",   UF_FLAG).flag;
+    
+    builtin_typeflag__throw = add_declarator("throw", UF_FLAG).tf_struct;
+    builtin_typeflag__restrict = add_declarator("__restrict", UF_FLAG).tf_struct;
     
     jdi::add_decl_info
     c = add_declarator("unsigned", UF_STANDALONE_FLAG, 4, "int");

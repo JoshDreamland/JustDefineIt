@@ -56,10 +56,11 @@ namespace jdi
           track(ft.toString());
           if (token.type == TT_LEFTPARENTH) {
             lex_buffer lb(lex);
-            bool is_cast = true;
+            bool is_cast = true; // True if the contents of these parentheses are part of the cast;
+            // For example, in bool(*)(), the (*) is part of the cast. In bool(10), (10) is not part of the cast.
             
             lb.push(token);
-            for (int depth = 1;; ) {
+            for (int depth = 1;;) {
               token_t &tk = lb.push(get_next_token());
               if (tk.type == TT_RIGHTPARENTH) {
                   if (!--depth) { token = tk; break; }
@@ -426,7 +427,7 @@ namespace jdi
   
   int AST::parse_expression(lexer *ulex, token_t &token, int precedence, error_handler *uherr) {
     lex = ulex, herr = uherr;
-    token = lex->get_token();
+    token = get_next_token();
     if ((root = parse_expression(token, precedence)))
       return 0;
     return 1;
@@ -561,7 +562,10 @@ namespace jdi
       return value((double)(float)(double)operand->eval());
     else if (cast_type.def == builtin_type__double)
       return value((double)operand->eval());
-    else return value();
+    else if (cast_type.def == builtin_type__bool)
+      return value((long)(bool)operand->eval());
+    cout << "WELL, FUCK." << endl;
+    return value();
   }
   
   

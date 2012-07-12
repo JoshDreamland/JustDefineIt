@@ -92,6 +92,24 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       else
         token.report_warning(herr, "Declaration without name is meaningless outside of a class");
     }
+    else if (token.type == TT_DEFINITION or token.type == TT_DECLARATOR) {
+      definition *d = token.def;
+      token = read_next_token(scope);
+      while (token.type == TT_SCOPE) {
+        if (!(d->flags & DEF_SCOPE)) {
+          token.report_error(herr, "Cannot access `" + d->name + "' as scope");
+          FATAL_RETURN(1); break;
+        }
+        token = read_next_token((definition_scope*)d);
+        if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
+          token.report_errorf(herr, "Expected qualified-id before %s");
+          FATAL_RETURN(1); break;
+        }
+        token = read_next_token(scope);
+      }
+      // TODO: there can also be a set of template parameters here.
+      read_referencers_post(tp.refs, lex, token, scope, this, herr);
+    }
     else
       return 0;
   }
@@ -133,7 +151,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_OPERATOR:
           if (*token.content.str != '=' or token.content.len != 1) { // If this operator isn't =, this is a fatal error. No idea where we are.
             case TT_GREATERTHAN: case TT_LESSTHAN:
-            token.report_error(herr, "Unexpected operator " + string(token.content.toString()) + " at this point");
+            token.report_error(herr, "Unexpected operator '" + string(token.content.toString()) + "' at this point");
             return 5;
           }
           else {

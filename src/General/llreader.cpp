@@ -56,7 +56,7 @@ void llreader::copy(string contents) {
   length = contents.length();
   char* buf = new char[length + 1];
   memcpy(buf, contents.c_str(), length);
-  buf[length] = 0;
+  pos = buf[length] = 0;
   mode = FT_BUFFER;
   data = buf;
 }

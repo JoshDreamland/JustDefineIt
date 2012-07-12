@@ -62,9 +62,9 @@ namespace jdi
   using std::ostream;
   using std::cout;
   
-  typedef map<string,const jdip::macro_type*> macro_map;
-  typedef macro_map::iterator macro_iter;
-  typedef macro_map::const_iterator macro_iter_c;
+  typedef map<string,const jdip::macro_type*> macro_map; ///< Map type used for storing macros
+  typedef macro_map::iterator macro_iter; ///< Iterator type for macro maps.
+  typedef macro_map::const_iterator macro_iter_c; ///< Const iterator type for macro maps.
   
   /**
     @class context
