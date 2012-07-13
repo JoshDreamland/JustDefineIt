@@ -30,11 +30,20 @@
 #define FATAL_RETURN(ret_value) { return ret_value; }
 /// Conditional return: Return if ( FATAL_ERRORS and ( expression ) ).
 #define FATAL_RETURN_IF(expression,ret_value) { if (expression) return ret_value; }
+/// Conditional: first param #if FATAL_ERRORS, second otherwise.
+#define  FATAL_TERNARY(fatal,nonfatal) fatal
+/// Conditional: Make gone if !FATAL_ERRORS.
+#define  IF_FATAL(fatal) fatal
+
 #if !FATAL_ERRORS
   #undef  FATAL_ERRORS_T
   #undef  FATAL_RETURN
   #undef  FATAL_RETURN_IF
+  #undef  FATAL_TERNARY
+  #undef  IF_FATAL
   #define FATAL_ERRORS_T(x,y) (y)
   #define FATAL_RETURN(ret_value) {}
   #define FATAL_RETURN_IF(expression,ret_value) expression
+  #define FATAL_TERNARY(fatal,nonfatal) nonfatal
+  #define IF_FATAL(fatal) fatal
 #endif

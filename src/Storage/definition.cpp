@@ -321,7 +321,7 @@ namespace jdi {
   }
 
   size_t definition_typed::size_of() {
-    return type->size_of();
+    return type? type->size_of() : 0;
   }
 
   size_t definition_union::size_of() {
@@ -523,7 +523,10 @@ namespace jdi {
     return res;
   }
   string definition_typed::toString(unsigned, unsigned indent) {
-    return string(indent, ' ') + typeflags_string(type, modifiers) + " " + referencers.toStringLHS() + name + referencers.toStringRHS();
+    string res(indent, ' ');
+    if (flags & DEF_TYPENAME) res += "typedef ";
+    res += typeflags_string(type, modifiers) + " " + referencers.toStringLHS() + name + referencers.toStringRHS() + ";";
+    return res;
   }
   string definition_union::toString(unsigned levels, unsigned indent) {
     string res = "union " + name + definition_scope::toString(levels,indent);

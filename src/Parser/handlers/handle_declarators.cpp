@@ -69,8 +69,9 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
 {
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (tp.refs.name.empty()) {
+    const bool potentialc = tp.def == scope or (scope->flags & DEF_TEMPSCOPE and tp.def == scope->parent);
     // Handle constructors; this might need moved to a handle_constructors method.
-    if (tp.def == scope and !tp.flags and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION) {
+    if (potentialc and !tp.flags and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION) {
       tp.refs.name = "<construct>";
       if (token.type == TT_COLON) {
         // TODO: When you have a place to store constructor data, 
@@ -95,23 +96,34 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
     else if (token.type == TT_DEFINITION or token.type == TT_DECLARATOR) {
       definition *d = token.def;
       token = read_next_token(scope);
-      while (token.type == TT_SCOPE) {
-        if (!(d->flags & DEF_SCOPE)) {
-          token.report_error(herr, "Cannot access `" + d->name + "' as scope");
-          FATAL_RETURN(1); break;
+      rescope: {
+        while (token.type == TT_SCOPE) {
+          if (!(d->flags & DEF_SCOPE)) {
+            token.report_error(herr, "Cannot access `" + d->name + "' as scope");
+            FATAL_RETURN(1); break;
+          }
+          token = read_next_token((definition_scope*)d);
+          if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
+            if (token.type == TT_IDENTIFIER)
+              token.report_errorf(herr, "Expected qualified-id before %s; `" + token.content.toString() + "' is not a member of `" + d->name + "'");
+            else
+              token.report_errorf(herr, "Expected qualified-id before %s");
+            FATAL_RETURN(1); break;
+          }
+          d = token.def;
+          token = read_next_token(scope);
         }
-        token = read_next_token((definition_scope*)d);
-        if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
-          if (token.type == TT_IDENTIFIER)
-            token.report_errorf(herr, "Expected qualified-id before %s; `" + token.content.toString() + "' is not a member of `" + d->name + "'");
-          else
-            token.report_errorf(herr, "Expected qualified-id before %s");
-          FATAL_RETURN(1); break;
+        if (token.type == TT_LESSTHAN and d->flags & DEF_TEMPLATE) {
+          definition_template* temp = (definition_template*)d;
+          definition_template::arg_key k(temp->params.size());
+          if (read_template_parameters(k, temp, lex, token, scope, this, herr))
+            return 1;
+          d = temp->instantiate(k);
+          if (!d) return 1;
+          token = read_next_token(scope);
+          goto rescope;
         }
-        d = token.def;
-        token = read_next_token(scope);
       }
-      // TODO: there can also be a set of template parameters here.
       read_referencers_post(tp.refs, lex, token, scope, this, herr);
       res = d; goto extra_loop;
     }
@@ -204,7 +216,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_EXTERN: case TT_IDENTIFIER:
       case TT_DEFINITION: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET: case TT_LEFTBRACE: case TT_RIGHTBRACE:
-      case TT_ASM: case TT_TILDE: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_SIZEOF: case TT_OPERATORKW: case TT_DECLTYPE: case TT_INVALID: default:
+      case TT_ASM: case TT_TILDE: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_SIZEOF: case TT_ISEMPTY: case TT_OPERATORKW: case TT_DECLTYPE: case TT_INVALID: default:
         return 0;
     }
   }

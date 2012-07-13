@@ -28,7 +28,6 @@ namespace jdi {
       cout << expression << endl;
     #endif
     if (root) root->print();
-    cout << "   Current={" << (current?current->content:"NULL") << "}" << endl;
   }
   
   /// A wrapper to \c SVG which generates IDs based on an internally-stored node count.
@@ -161,7 +160,7 @@ namespace jdi {
   
   void AST::writeSVG(const char* filename) {
     SVGrenderInfo svg(filename);
-    svg.cur = current;
+    svg.cur = NULL;
     if (!svg.svg->is_open()) return;
     
     int w, h;

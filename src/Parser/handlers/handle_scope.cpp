@@ -61,6 +61,14 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               #else
                 while (token.type != TT_SEMICOLON && token.type != TT_LEFTBRACE && token.type != TT_RIGHTBRACE && token.type != TT_ENDOFCODE)
                   token = read_next_token(scope);
+                if (token.type == TT_LEFTBRACE) {
+                  size_t depth = 1;
+                  while (token.type != TT_ENDOFCODE) {
+                    token = read_next_token(scope);
+                    if (token.type == TT_LEFTBRACE) ++depth;
+                    else if (token.type == TT_RIGHTBRACE) if (!--depth) break;
+                  }
+                }
               #endif
             }
           }
@@ -191,7 +199,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_OPERATORKW:
         //break;
       
-      case TT_TYPENAME: case TT_ASM: case TT_SIZEOF:
+      case TT_TYPENAME: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY:
       case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
       case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_STRINGLITERAL: case TT_CHARLITERAL:
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:

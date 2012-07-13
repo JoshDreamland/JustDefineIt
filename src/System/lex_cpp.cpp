@@ -944,6 +944,7 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
   keywords["protected"] = TT_PROTECTED;
   keywords["public"] = TT_PUBLIC;
   keywords["sizeof"] = TT_SIZEOF;
+  keywords["__is_empty"] = TT_ISEMPTY;
   keywords["struct"] = TT_STRUCT;
   keywords["template"] = TT_TEMPLATE;
   keywords["typedef"] = TT_TYPEDEF;

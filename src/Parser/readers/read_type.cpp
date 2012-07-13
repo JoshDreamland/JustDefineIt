@@ -130,10 +130,16 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         token = lex->get_token_in_scope(scope, herr);
       }
       else if (token.type == TT_TYPENAME) {
-        if (!cp) token.report_error(herr, "Cannot use anonymous type in this context");
-        token = lex->get_token_in_scope(scope, herr);
-        if (not(rdef = cp->handle_hypothetical(scope, token, DEF_TYPENAME)))
-          return full_type();
+        if (!cp) {
+          token.report_error(herr, "Cannot use dependent type in this context");
+          FATAL_RETURN(NULL);
+          token = lex->get_token_in_scope(scope, herr);
+        }
+        else {
+          token = lex->get_token_in_scope(scope, herr);
+          if (not(rdef = cp->handle_hypothetical(scope, token, DEF_TYPENAME)))
+            return full_type();
+        }
       }
       else {
         some_error:
@@ -341,7 +347,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_DECLTYPE:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
         return 0;
@@ -410,7 +416,7 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_DEFINITION: 
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE: case TT_OPERATORKW:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_DECLTYPE:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
       case TT_OCTLITERAL: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
         return 0;
@@ -426,6 +432,8 @@ int jdip::read_function_params(ref_stack &refs, lexer *lex, token_t &token, defi
   // Navigate to the end of the function parametr list
   while (token.type != TT_RIGHTPARENTH)
   {
+    if (token.type == TT_ENDOFCODE)
+      return 1;
     full_type a = read_fulltype(lex,token,scope,cp,herr);
     ref_stack::parameter param; param.swap_in(a);
     param.variadic = cp? cp->variadics.find(param.def) != cp->variadics.end() : false;

@@ -172,6 +172,7 @@ namespace jdi
         if (myroot == NULL) return NULL;
         if (token.type != TT_RIGHTPARENTH) {
           token.report_errorf(herr, "Expected closing parenthesis here before %s");
+          delete myroot;
           return NULL;
         }
         track(string(")"));
@@ -208,21 +209,29 @@ namespace jdi
         
         break;
       
-      case TT_SIZEOF:
+      {
+          bool not_result;
+          if (true) {
+            case TT_SIZEOF: not_result = false;
+          }
+          else {
+            case TT_ISEMPTY: not_result = true;
+          }
+          if (true)
           token = get_next_token(); track(string("sizeof")); 
           if (token.type == TT_LEFTPARENTH) {
               token = get_next_token(); track(string("(")); 
-              myroot = new AST_Node_sizeof(parse_expression(token,precedence::max));
+              myroot = new AST_Node_sizeof(parse_expression(token,precedence::max), not_result);
               if (token.type != TT_RIGHTPARENTH)
                 token.report_errorf(herr, "Expected closing parenthesis to sizeof before %s");
               else { track(string(")")); }
               token = get_next_token();
           }
           else
-            myroot = new AST_Node_sizeof(parse_expression(token,precedence::unary_pre));
+            myroot = new AST_Node_sizeof(parse_expression(token,precedence::unary_pre), not_result);
           at = AT_UNARY_PREFIX;
           read_next = true;
-        break;
+      } break;
       
       case TT_ELLIPSIS:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
@@ -259,10 +268,11 @@ namespace jdi
       
       case TT_IDENTIFIER: case TT_DEFINITION:
         token.report_errorf(herr, "Expected operator before %s");
-        return NULL;
+        return left_node;
       
       case TT_TYPENAME:
         token.report_error(herr, "Unimplemented: typename.");
+        delete left_node;
         return NULL;
       
       case TT_COLON:
@@ -274,9 +284,9 @@ namespace jdi
         full_type lt = left_node->coerce();
         if (lt.def and (lt.def->flags & DEF_TEMPLATE)) {
           definition_template::arg_key k(((definition_template*)lt.def)->params.size());
+          delete left_node;
           if (read_template_parameters(k, (definition_template*)lt.def, lex, token, search_scope, NULL, herr))
             return NULL;
-          delete left_node;
           definition *d = ((definition_template*)lt.def)->instantiate(k);
           if (d->flags & DEF_TYPENAME) {
             lt.def = d;
@@ -309,7 +319,7 @@ namespace jdi
           map<string,symbol>::iterator b = symbols.find(op);
           if (b == symbols.end()) {
             token.report_error(herr, "Operator `" + token.content.toString() + "' not defined");
-            return NULL;
+            delete left_node; return NULL;
           }
           symbol &s = b->second;
           if (s.type & ST_BINARY) {
@@ -333,13 +343,25 @@ namespace jdi
             
             token = get_next_token();
             AST_Node* exptrue = parse_expression(token, 0);
-            if (!exptrue) return NULL;
-            if (token.type != TT_COLON) { token.report_error(herr, "Colon expected"); return NULL; }
+            if (!exptrue) {
+              delete left_node;
+              return NULL;
+            }
+            if (token.type != TT_COLON) {
+              token.report_error(herr, "Colon expected to separate ternary operands");
+              delete left_node;
+              delete exptrue;
+              return NULL;
+            }
             track(string(":"));
             
             token = get_next_token();
             AST_Node* expfalse = parse_expression(token, 0);
-            if (!exptrue) return NULL;
+            if (!expfalse) {
+              delete left_node;
+              delete exptrue;
+              return NULL;
+            }
             
             left_node = new AST_Node_Ternary(left_node,exptrue,expfalse,ct);
             break;
@@ -357,7 +379,9 @@ namespace jdi
       case TT_LEFTPARENTH:
           if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE) {
             token = get_next_token();
+            bool gtio = tt_greater_is_op; tt_greater_is_op = true;
             AST_Node *params = parse_expression(token, precedence::all);
+            tt_greater_is_op = gtio;
             if (!params) {
               token.report_error(herr, "Expected secondary expression after binary operator");
               return left_node;
@@ -369,7 +393,7 @@ namespace jdi
             left_node = new AST_Node_Binary(left_node,params,"(");
             break;
           }
-        break;
+        return left_node;
       
       case TT_COMMA: {
           if (precedence::comma < prec_min)
@@ -400,7 +424,7 @@ namespace jdi
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
       
-      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_DECLTYPE:
+      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
       return left_node;
       
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: return left_node;
@@ -695,7 +719,7 @@ namespace jdi
   AST::AST_Node_Type::AST_Node_Type(full_type &ft) { dec_type.swap(ft); }
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): operand(r) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct), operand(r), prefix(pre) {}
-  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param): AST_Node_Unary(param,str_sizeof, true) {}
+  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param, bool n): AST_Node_Unary(param,str_sizeof, true), negate(n) {}
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft): AST_Node_Unary(param, str_cast, true) { cast_type.copy(ft); }
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft): AST_Node_Unary(param, str_cast, true) { cast_type.swap(ft); }
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, true) {}
@@ -726,11 +750,11 @@ namespace jdi
     #ifdef DEBUG_MODE
       expression.clear();
     #endif
-    root = current = NULL;
+    root = NULL;
   }
 
   
-  AST::AST(): root(NULL), current(NULL), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(): root(NULL), search_scope(NULL), tt_greater_is_op(true) {}
     
   AST::~AST() {
     delete root;

@@ -40,6 +40,7 @@ namespace jdip {
     TT_ASM,        ///< The `asm' keyword.
     TT_OPERATORKW, ///< The `operator' keyword; TT_OPERATOR is a generic operator.
     TT_SIZEOF,     ///< The `sizeof' keyword.
+    TT_ISEMPTY,    ///< The `is_empty' keyword.
     TT_DECLTYPE,   ///< The `decltype' keyword.
     
     TT_IDENTIFIER, ///< A standard identifier.

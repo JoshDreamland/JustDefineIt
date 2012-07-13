@@ -121,10 +121,11 @@ namespace jdi {
     };
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_sizeof: AST_Node_Unary {
+      bool negate;
       value eval(); ///< Behaves funny for sizeof; coerces instead, then takes size of result type.
       full_type coerce(); ///< Behaves funny for sizeof; returns unsigned long every time.
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
-      AST_Node_sizeof(AST_Node* param);
+      AST_Node_sizeof(AST_Node* param, bool negate);
     };
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_Cast: AST_Node_Unary {
@@ -241,7 +242,6 @@ namespace jdi {
     };
     
     AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
-    AST_Node *current; ///< A buffer containing the tokens to be lexed.
     error_handler *herr; ///< The error handler which will receive any error messages.
     lexer *lex; ///< The lexer from which tokens will be read.
     definition_scope *search_scope; ///< The scope from which token values will be harvested.

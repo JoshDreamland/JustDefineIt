@@ -158,7 +158,6 @@ void do_cli(context &ct) {
               break;
             }
             def = it->second;
-            cout << "::" << def->name << flush;
           }
           else {
             cout << "Definition `" << def->name << "' is not a scope" << endl;
@@ -168,7 +167,7 @@ void do_cli(context &ct) {
           while (is_useless(buf[e]) or buf[e] == ':') ++e;
         }
         if (def and e)
-          cout << endl << def->toString() << endl;
+          cout << def->toString() << endl;
       } break;
     
     case 'e': {

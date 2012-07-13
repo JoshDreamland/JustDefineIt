@@ -73,6 +73,7 @@ static struct token_info_c {
       case TT_ASM: name[TT_ASM] = "`asm' token";
       case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token";
       case TT_SIZEOF: name[TT_SIZEOF] = "`sizeof' token";
+      case TT_ISEMPTY: name[TT_ISEMPTY] = "`is_empty' token";
       case TT_DECLTYPE: name[TT_DECLTYPE] = "`decltype' token";
       case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier";
       case TT_DEFINITION: name[TT_DEFINITION] = "identifier";

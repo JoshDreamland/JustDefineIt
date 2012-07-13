@@ -75,7 +75,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
         token = read_next_token(scope);
-        AST a; a.parse_expression(token, lex, &hijack, precedence::comma+1, herr);
+        AST a;
+        a.set_use_for_templates(true);
+        a.parse_expression(token, lex, &hijack, precedence::comma+1, herr);
         val = a.eval();
       }
       dtn = new definition_valued(pname, NULL, ft.def, ft.flags, DEF_VALUED | DEF_TYPED | DEF_TEMPPARAM, val);
@@ -106,20 +108,23 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   
   if (token.type == TT_CLASS || token.type == TT_STRUCT) {
     if (handle_declarators(&hijack,token,inherited_flags, nd)) {
-      return (delete temp, 1);
+      if (!hijack.referenced) delete temp;
+      return 1;
     }
     if (nd) {
       token.report_error(herr, "Cannot declare `" + nd->name + "' as abstract template type");
-      FATAL_RETURN((delete temp, 1));
+      IF_FATAL(if (!hijack.referenced) delete temp; return 1);
     }
   } else if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE) {
-    if (handle_declarators(&hijack,token,inherited_flags, nd) or !nd)
-      return (delete temp, 1);
+    if (handle_declarators(&hijack,token,inherited_flags, nd) or !nd) {
+      if (!hijack.referenced) delete temp;
+      return 1;
+    }
     if (nd->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE)
       ((definition_function*)nd)->implementation = handle_function_implementation(lex, token, scope, herr);
   } else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
-    delete temp; return ERROR_CODE;
+    if (!hijack.referenced) delete temp; return ERROR_CODE;
   }
   
   for (definition_scope::defiter it = hijack.using_general.begin(); it != hijack.using_general.end(); ++it)

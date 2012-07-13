@@ -4,7 +4,14 @@
 #define true 1
 #define false 0
 
-/* */
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <cstring>
+
+/* /
 namespace std
 {
   typedef long unsigned int size_t;
@@ -485,9 +492,7 @@ namespace __gnu_cxx __attribute__ ((__visibility__ ("default")))
     __is_null_pointer(_Type)
     { return false; }
 
-  template<typename _Tp, bool = std::__is_integer<_Tp>::
-#pragma DEBUG_ENTRY_POINT
-__value>
+  template<typename _Tp, bool = std::__is_integer<_Tp>::__value>
     struct __promote
     { typedef double __type; };
 
@@ -773,7 +778,7 @@ namespace std __attribute__ ((__visibility__ ("default")))
     };
 
 }
-/*
+
 namespace std __attribute__ ((__visibility__ ("default")))
 {
 
@@ -6624,6 +6629,7 @@ namespace std __attribute__ ((__visibility__ ("default")))
 
       size_type
       _M_limit(size_type __pos, size_type __off) const
+ #pragma DEBUG_ENTRY_POINT
       {
  const bool __testoff = __off < this->size() - __pos;
  return __testoff ? __off : this->size() - __pos;
@@ -8020,11 +8026,11 @@ namespace std __attribute__ ((__visibility__ ("default")))
     }
 
   template<typename _CharT, typename _Traits, typename _Alloc>
-    typename basic_string<_CharT, _Traits, _Alloc>::_Rep*
-    basic_string<_CharT, _Traits, _Alloc>::_Rep::
+    typename basic_string<_CharT, _Traits, _Alloc>::_Rep* basic_string<_CharT, _Traits, _Alloc>::_Rep::
     _S_create(size_type __capacity, size_type __old_capacity,
        const _Alloc& __alloc)
-    {
+#pragma DEBUG_ENTRY_POINT
+{
 
       if (__capacity > _S_max_size)
  __throw_length_error(("basic_string::_S_create"));
@@ -8591,6 +8597,16 @@ namespace std __attribute__ ((__visibility__ ("default")))
 
 /* */
 
+
+/*
+struct a {template <int x> struct b {  struct c { struct d { struct e { struct f { struct g { int func(); }; }; }; }; }; }; }; 
+template<> int a::b
+#pragma DEBUG_ENTRY_POINT
+<int>::c::d::e::f::g::func() {
+  this should be ignored
+}
+*/
+
 /* struct a {
   struct b {
     struct c {
@@ -8626,7 +8642,9 @@ a::b;
 
 /* */
 
-/* /
+/* */
+#warning Starting C parse
+
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <ncurses.h>
@@ -8693,6 +8711,9 @@ a::b;
 #include <fenv.h>
 #include <tgmath.h>
 #include <complex.h>
+
+#warning SUCCESS!
+
 /* */
 
 /*// Broken in 9565e24
