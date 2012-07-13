@@ -38,15 +38,16 @@ namespace jdi {
     DEF_TYPED =        1 <<  6, ///< This definition is a scope of some sort.
     DEF_FUNCTION =     1 <<  7, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
     DEF_VALUED =       1 <<  8, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_DEFAULTED =    1 <<  9, ///< This definition has a constant integer value attached.
-    DEF_TEMPPARAM =    1 << 10, ///< This definition has a default expression attached.
-    DEF_EXTERN =       1 << 11, ///< This definition is a parameter of a template.
-    DEF_TEMPLATE =     1 << 12, ///< This definition was declared with the "extern" flag.
+    DEF_DEFAULTED =    1 <<  9, ///< This definition has a default expression attached.
+    DEF_EXTERN =       1 << 10, ///< This definition is a parameter of a template.
+    DEF_TEMPLATE =     1 << 11, ///< This definition was declared with the "extern" flag.
+    DEF_TEMPPARAM =    1 << 12, ///< This definition belongs to a list of template parameters, and is therefore abstract.
     DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_PRIVATE =      1 << 14, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 15, ///< This definition was declared as a protected member.
-    DEF_INCOMPLETE =   1 << 16, ///< This definition was declared but not implemented.
-    DEF_ATOMIC =       1 << 17  ///< This is a global definition for objects of a fixed size, such as primitives.
+    DEF_TEMPSCOPE =    1 << 14, ///< This definition is filling in for a scope; it contains a source definition which is not really a scope.
+    DEF_PRIVATE =      1 << 15, ///< This definition was declared as a private member.
+    DEF_PROTECTED =    1 << 16, ///< This definition was declared as a protected member.
+    DEF_INCOMPLETE =   1 << 17, ///< This definition was declared but not implemented.
+    DEF_ATOMIC =       1 << 18  ///< This is a global definition for objects of a fixed size, such as primitives.
   };
   
   struct definition;
@@ -67,6 +68,7 @@ namespace jdi {
 #include <map>
 #include <string>
 #include <vector>
+#include <iostream>
 using namespace std;
 typedef size_t pt;
 
@@ -353,6 +355,10 @@ namespace jdi {
     /** Structure containing template arguments; can be used as the key in an std::map. **/
     class arg_key {
       definition** values;
+      size_t size;
+      #ifdef DEBUG_MODE
+      size_t allocd;
+      #endif
       // const unsigned sz;
       public:
         static definition abstract; ///< A sentinel pointer marking that this parameter is still abstract.
@@ -361,24 +367,21 @@ namespace jdi {
         /// A method to prepare this instance for storage of parameter values for the given template.
         void mirror(definition_template* temp);
         /// A fast function to assign to our list at a given index.
-        inline void put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
+        void put_final_type(size_t argnum, definition* type);
         /// A slower function to put the most basic type representation down
-        inline void put_type(size_t argnum, definition* type) {
-          if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; }
-          values[argnum] = type;
-        }
+        void put_type(size_t argnum, definition* type);
         /// A quick function to grab the type at a position
-        inline definition* operator[](int i) const { return values[i]; }
+        definition* operator[](int i) const;
         /// A quick function to return an immutable pointer to the first parameter
-        definition** begin() { return values; } 
+        definition** begin();
         /// Default constructor; mark values NULL.
-        inline arg_key(): values(NULL) {}
+        arg_key();
         /// Construct with a size, reserving sufficient memory.
-        inline arg_key(size_t n): values(new definition*[n+1]) { *values = values[n] = 0; }
+         arg_key(size_t n);
         /// Construct a copy.
-        inline arg_key(const arg_key& other): values(other.values) { ((arg_key*)&other)->values = NULL; }
+        arg_key(const arg_key& other);
         /// Destruct, freeing items.
-        inline ~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != &abstract) delete *i; delete[] values; } }
+        ~arg_key();
     };
     
     struct dependent_qualification {

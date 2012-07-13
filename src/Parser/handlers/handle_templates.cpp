@@ -40,7 +40,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     return ERROR_CODE;
   }
   definition_template *temp = new definition_template("", scope, inherited_flags);
-  definition_tempscope hijack("<template>", scope, DEF_TEMPLATE, temp);
+  definition_tempscope hijack("template<>", scope, 0, temp);
   token = read_next_token(&hijack);
   for (;;) {
     string pname; // The name given to this parameter
@@ -64,7 +64,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           return (delete temp, 1); // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
         }
       }
-      dtn = new definition_typed(pname, NULL, ft.def, ft.refs, ft.flags, DEF_TYPENAME | DEF_TYPED | DEF_TEMPLATE);
+      dtn = new definition_typed(pname, NULL, ft.def, ft.refs, ft.flags, DEF_TYPENAME | DEF_TYPED | DEF_TEMPPARAM);
     }
     else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
       full_type fts = read_fulltype(lex, token, &hijack, this, herr);
@@ -78,7 +78,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         AST a; a.parse_expression(token, lex, &hijack, precedence::comma+1, herr);
         val = a.eval();
       }
-      dtn = new definition_valued(pname, NULL, ft.def, ft.flags, DEF_VALUED | DEF_TYPED | DEF_TEMPLATE, val);
+      dtn = new definition_valued(pname, NULL, ft.def, ft.flags, DEF_VALUED | DEF_TYPED | DEF_TEMPPARAM, val);
     }
     else {
       if (token.type == TT_GREATERTHAN) break;
@@ -105,7 +105,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   token = read_next_token(scope);
   
   if (token.type == TT_CLASS || token.type == TT_STRUCT) {
-    if (handle_declarators(&hijack,token,inherited_flags | DEF_TEMPLATE, nd)) {
+    if (handle_declarators(&hijack,token,inherited_flags, nd)) {
       return (delete temp, 1);
     }
     if (nd) {
@@ -113,7 +113,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       FATAL_RETURN((delete temp, 1));
     }
   } else if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE) {
-    if (handle_declarators(&hijack,token,inherited_flags | DEF_TEMPLATE, nd) or !nd)
+    if (handle_declarators(&hijack,token,inherited_flags, nd) or !nd)
       return (delete temp, 1);
     if (nd->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE)
       ((definition_function*)nd)->implementation = handle_function_implementation(lex, token, scope, herr);
@@ -128,8 +128,8 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   if (hijack.members.empty()) {
     if (hijack.referenced)
       return 0;
-    token.report_error(herr, "Template declaration doesn't declare anything");
-    delete temp; return ERROR_CODE;
+    delete temp;
+    return 0;
   }
   
   if (hijack.members.size() != 1) {

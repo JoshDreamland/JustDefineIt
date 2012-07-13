@@ -130,6 +130,8 @@ namespace jdi {
       delete params[i];
     for (speciter i = specializations.begin(); i != specializations.end(); ++i)
       delete i->second;
+    for (depiter i = dependents.begin(); i != dependents.end(); ++i)
+      delete i->second;
     delete def;
   }
   definition* definition_template::instantiate(arg_key& key) {
@@ -140,7 +142,7 @@ namespace jdi {
   definition definition_template::arg_key::abstract("<unspecified>", NULL, 0);
   definition_template* definition_template::specialize(arg_key& key, definition_tempscope *ts) {
     for (definition** i = key.begin(); *i; ++i)
-      if ((*i)->flags & DEF_TEMPLATE) *i = &arg_key::abstract;
+      if ((*i)->flags & DEF_TEMPPARAM) { delete *i; *i = &arg_key::abstract; }
     pair<arg_key&,definition_template*> insme(key,(definition_template*)ts->source);
     pair<definition_template::speciter, bool> ins = specializations.insert(insme);
     if (ins.second)
@@ -167,6 +169,35 @@ namespace jdi {
       }
   }
   
+  void definition_template::arg_key::put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
+  /// A slower function to put the most basic type representation down
+  void definition_template::arg_key::put_type(size_t argnum, definition* type) {
+    #ifdef DEBUG_MODE
+      if (values[argnum] or !type)
+        cout << "LOSS RECORD++" << endl;
+    #endif
+    if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; }
+    values[argnum] = type;
+  }
+  /// A quick function to grab the type at a position
+  definition* definition_template::arg_key::operator[](int i) const { return values[i]; }
+  /// A quick function to return an immutable pointer to the first parameter
+  definition** definition_template::arg_key::begin() { return values; } 
+  /// Default constructor; mark values NULL.
+  definition_template::arg_key::arg_key(): values(NULL) {}
+  /// Construct with a size, reserving sufficient memory.
+  definition_template::arg_key::arg_key(size_t n): values(new definition*[n+1]) {
+    #ifdef DEBUG_MODE
+      for (size_t i = 0; i <= n; ++i) values[i] = 0;
+    #else
+    *values = values[n] = 0;
+    #endif
+  }
+  /// Construct a copy.
+  definition_template::arg_key::arg_key(const arg_key& other): values(other.values) { ((arg_key*)&other)->values = NULL; }
+  /// Destruct, freeing items.
+  definition_template::arg_key::~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != &abstract) delete *i; delete[] values; } }
+  
   bool definition_template::dependent_qualification::operator<(const definition_template::dependent_qualification &other) const {
     register ptrdiff_t d = definition::defcmp(depends, other.depends);
     if (d) return d < 0;
@@ -180,7 +211,7 @@ namespace jdi {
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   
-  definition_tempscope::definition_tempscope(string n, definition* p, unsigned f, definition* s): definition_scope(n,p,f), source(s), referenced(false) {}
+  definition_tempscope::definition_tempscope(string n, definition* p, unsigned f, definition* s): definition_scope(n,p,f|DEF_TEMPSCOPE), source(s), referenced(false) {}
   
   definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f): definition(n,p,f|DEF_HYPOTHETICAL) {}
   
@@ -488,7 +519,7 @@ namespace jdi {
       first = false;
     }
     res += "> ";
-    res += def->toString(levels, indent);
+    res += def? def->toString(levels, indent): "<null>";
     return res;
   }
   string definition_typed::toString(unsigned, unsigned indent) {

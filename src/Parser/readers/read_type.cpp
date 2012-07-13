@@ -263,11 +263,20 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
             token.report_errorf(herr, "Expected qualified-id before %s");
             return 1;
           }
-          refs.name.clear();
           return 0;
         }
-        else if (token.type == TT_LESSTHAN) {
-          
+        else if (token.type == TT_LESSTHAN and d->flags & DEF_TEMPLATE) {
+          definition_template* temp = (definition_template*)d;
+          definition_template::arg_key k(temp->params.size());
+          if (read_template_parameters(k, temp, lex, token, scope, cp, herr))
+            return 1;
+          if (token.type != TT_GREATERTHAN) {
+            token.report_error(herr, "Expected closing triangle brackets to template parameters before %s");
+            return 1;
+          }
+          token.type = TT_DEFINITION;
+          token.def = temp->instantiate(k);
+          return 0;
         }
         refs.name = d->name;
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);

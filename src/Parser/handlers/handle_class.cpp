@@ -135,7 +135,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     }
     // Now, we might be specializing the template, or we might just be instantiating it.
     // If we are in a template<> statement, we have to be specializing. Otherwise, we're not.
-    if (scope->flags & DEF_TEMPLATE) {
+    if (scope->flags & DEF_TEMPSCOPE) {
       definition_template *temp = (definition_template*)dulldef;
       definition_tempscope *ts = (definition_tempscope*)scope;
       definition_template::arg_key k(temp->params.size());
@@ -156,7 +156,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
         already_complete = not(nclass->flags & DEF_INCOMPLETE);
       }
       else {
-        spec->def = nclass = new definition_class(temp->name, ts, temp->flags);
+        spec->def = nclass = new definition_class(temp->name, ts, temp->def->flags);
         already_complete = false;
       }
       ts->use_general("<dependent>", nclass);

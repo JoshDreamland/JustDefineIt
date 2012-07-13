@@ -26,14 +26,17 @@ namespace jdip {
   definition* context_parser::handle_hypothetical(definition_scope *scope, token_t& token, unsigned flags) {
     // Verify that we're in a template<> statement.
     definition_scope* temps;
-    for (temps = scope; temps and not (temps->flags & DEF_TEMPLATE); temps = temps->parent);
+    for (temps = scope; temps and not (temps->flags & (DEF_TEMPLATE | DEF_TEMPSCOPE)); temps = temps->parent);
     if (!temps) {
       token.report_errorf(herr, "Invalid use of `typename' keyword: must be in a template");
       return NULL;
     }
     
     // We are in a template<> declaration. Insert our hypothetical 
-    definition_template* temp = (definition_template*)((definition_tempscope*)temps)->source;
+    definition_template* temp = temps->flags & DEF_TEMPLATE? (definition_template*)temps : (definition_template*)((definition_tempscope*)temps)->source;
+    if (!temp->flags & DEF_TEMPLATE) {
+      token.report_error(herr, "`" + temp->name + "' is not a template");
+    }
     
     full_type ft = read_type(lex, token, scope, this, herr);
     if (!ft.def) { token.report_errorf(herr, "Type expected here before %s"); return NULL; }

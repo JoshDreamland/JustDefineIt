@@ -272,7 +272,7 @@ namespace jdi
         if (precedence::scope <= prec_min)
           return left_node;
         full_type lt = left_node->coerce();
-        if (lt.def and lt.def->flags & DEF_TEMPLATE) {
+        if (lt.def and (lt.def->flags & DEF_TEMPLATE)) {
           definition_template::arg_key k(((definition_template*)lt.def)->params.size());
           if (read_template_parameters(k, (definition_template*)lt.def, lex, token, search_scope, NULL, herr))
             return NULL;
@@ -730,7 +730,7 @@ namespace jdi
   }
 
   
-  AST::AST(): root(NULL), current(NULL), search_scope(NULL) {}
+  AST::AST(): root(NULL), current(NULL), search_scope(NULL), tt_greater_is_op(true) {}
     
   AST::~AST() {
     delete root;

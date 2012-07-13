@@ -4,17 +4,7 @@
 #define true 1
 #define false 0
 
-/*
-struct a {
-  static int b;
-};
-int 
-#pragma DEBUG_ENTRY_POINT
-a::b;
-*/
-
-/*
-
+/* */
 namespace std
 {
   typedef long unsigned int size_t;
@@ -495,7 +485,9 @@ namespace __gnu_cxx __attribute__ ((__visibility__ ("default")))
     __is_null_pointer(_Type)
     { return false; }
 
-  template<typename _Tp, bool = std::__is_integer<_Tp>::__value>
+  template<typename _Tp, bool = std::__is_integer<_Tp>::
+#pragma DEBUG_ENTRY_POINT
+__value>
     struct __promote
     { typedef double __type; };
 
@@ -559,9 +551,7 @@ namespace __gnu_cxx __attribute__ ((__visibility__ ("default")))
     };
 
   template<typename _Value>
-    const _Value 
-      #pragma DEBUG_ENTRY_POINT
-__numeric_traits_integer<_Value>::__min;
+    const _Value __numeric_traits_integer<_Value>::__min;
 
   template<typename _Value>
     const _Value __numeric_traits_integer<_Value>::__max;
@@ -595,12 +585,12 @@ __numeric_traits_integer<_Value>::__min;
   template<typename _Value>
     const int __numeric_traits_floating<_Value>::__max_exponent10;
 
-  template<typename _Value>
-    struct __numeric_traits
-    : public __conditional_type<std::__is_integer<_Value>::__value,
-    __numeric_traits_integer<_Value>,
-    __numeric_traits_floating<_Value> >::__type
-    { };
+  //template<typename _Value>
+  //  struct __numeric_traits
+  //  : public __conditional_type<std::__is_integer<_Value>::__value,
+  //  __numeric_traits_integer<_Value>,
+  //  __numeric_traits_floating<_Value> >::__type
+  //  { };
 
 }
 
@@ -783,7 +773,7 @@ namespace std __attribute__ ((__visibility__ ("default")))
     };
 
 }
-
+/*
 namespace std __attribute__ ((__visibility__ ("default")))
 {
 
@@ -8599,12 +8589,25 @@ namespace std __attribute__ ((__visibility__ ("default")))
 
 }
 
+/* */
+
+/* struct a {
+  struct b {
+    struct c {
+      struct d {
+        static int e;
+      };
+    };
+  };
+};
+int a::b::c::d::e; */
+
+/* */
+
 /*
 template<typename b> int
 #pragma DEBUG_ENTRY_POINT
 a(b c) { this should be ignored }*/
-
-/* */
 
 /*
 extern "C++" int *what (int *huh, int who) 
@@ -8612,7 +8615,18 @@ extern "C++" int *what (int *huh, int who)
 throw (int) { return 0; }
 */
 
+/*
+struct a {
+  static int b;
+};
+int 
+#pragma DEBUG_ENTRY_POINT
+a::b;
+*/
+
 /* */
+
+/* /
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <ncurses.h>

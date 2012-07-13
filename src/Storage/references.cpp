@@ -106,6 +106,7 @@ namespace jdi {
   
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;
+    sz = rf.sz;
     if (!rf.nbottom) {
       ntop = nbottom = NULL;
       return;
@@ -115,7 +116,6 @@ namespace jdi {
       nbottom->previous = c->duplicate();
       nbottom = nbottom->previous;
     }
-    sz = rf.sz;
   }
   void ref_stack::swap(ref_stack& rf) {
     name.swap(rf.name);

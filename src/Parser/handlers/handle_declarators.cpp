@@ -102,64 +102,71 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
         }
         token = read_next_token((definition_scope*)d);
         if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
-          token.report_errorf(herr, "Expected qualified-id before %s");
+          if (token.type == TT_IDENTIFIER)
+            token.report_errorf(herr, "Expected qualified-id before %s; `" + token.content.toString() + "' is not a member of `" + d->name + "'");
+          else
+            token.report_errorf(herr, "Expected qualified-id before %s");
           FATAL_RETURN(1); break;
         }
+        d = token.def;
         token = read_next_token(scope);
       }
       // TODO: there can also be a set of template parameters here.
       read_referencers_post(tp.refs, lex, token, scope, this, herr);
+      res = d; goto extra_loop;
     }
     else
       return 0;
   }
   
-  // Add it to our definitions map, without overwriting the existing member.
-  definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
-  if (ins.second) { // If we successfully inserted,
-    insert_anyway:
-    res = ins.first->second = (!tp.refs.empty() && tp.refs.top().type == ref_stack::RT_FUNCTION)?
-      new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags):
-      new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
-  }
-  else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
   {
-    if (ins.first->second->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM)) {
-      pair<map<string,definition*>::iterator,bool> cins
-        = c_structs.insert(pair<string,definition*>(ins.first->first,ins.first->second));
-      if (!cins.second and cins.first->second != ins.first->second) {
-        token.report_error(herr, "Attempt to redeclare `" + tp.refs.name + "' failed due to conflicts");
-        FATAL_RETURN(1);
+    // Add it to our definitions map, without overwriting the existing member.
+    definition_scope::inspair ins = ((definition_scope*)scope)->members.insert(definition_scope::entry(tp.refs.name,NULL));
+    if (ins.second) { // If we successfully inserted,
+      insert_anyway:
+      res = ins.first->second = (!tp.refs.empty() && tp.refs.top().type == ref_stack::RT_FUNCTION)?
+        new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags):
+        new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
+    }
+    else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
+    {
+      if (ins.first->second->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM)) {
+        pair<map<string,definition*>::iterator,bool> cins
+          = c_structs.insert(pair<string,definition*>(ins.first->first,ins.first->second));
+        if (!cins.second and cins.first->second != ins.first->second) {
+          token.report_error(herr, "Attempt to redeclare `" + tp.refs.name + "' failed due to conflicts");
+          FATAL_RETURN(1);
+        }
+        else goto insert_anyway;
       }
-      else goto insert_anyway;
+      if (not(ins.first->second->flags & DEF_TYPED)) {
+        token.report_error(herr, "Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
+        return 3;
+      }
+      if (not(ins.first->second->flags & DEF_TYPED) & DEF_EXTERN) { //TODO: Implement
+        token.report_error(herr, "Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
+        return 4;
+      }
+      res = ins.first->second;
+      // TODO: This is where to handle function overloading.
     }
-    if (not(ins.first->second->flags & DEF_TYPED)) {
-      token.report_error(herr, "Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
-      return 3;
-    }
-    if (not(ins.first->second->flags & DEF_TYPED) & DEF_EXTERN) { //TODO: Implement
-      token.report_error(herr, "Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
-      return 4;
-    }
-    res = ins.first->second;
-    // TODO: This is where to handle function overloading.
   }
   
+  extra_loop:
   for (;;)
   {
     switch (token.type) {
       case TT_OPERATOR:
-          if (*token.content.str != '=' or token.content.len != 1) { // If this operator isn't =, this is a fatal error. No idea where we are.
+          if (token.content.len != 1 or *token.content.str != '=') { // If this operator isn't =, this is a fatal error. No idea where we are.
             case TT_GREATERTHAN: case TT_LESSTHAN:
-            token.report_error(herr, "Unexpected operator '" + string(token.content.toString()) + "' at this point");
+            token.report_error(herr, "Unexpected operator `" + string(token.content.toString()) + "' at this point");
             return 5;
           }
           else {
-            // If this thing's const, we need to make note of the value.
-            value a = read_expression(token, TT_SEMICOLON, scope);
-            if (a.type != VT_NONE) {
-              // TODO: Store value
-            }
+            AST ast;
+            token = read_next_token(scope);
+            ast.parse_expression(token, lex, scope, precedence::comma, herr);
+            // TODO: Store AST
           }
         break;
       case TT_COMMA:
