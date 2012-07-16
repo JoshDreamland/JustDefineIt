@@ -38,29 +38,12 @@ namespace jdip {
       token.report_error(herr, "`" + temp->name + "' is not a template");
     }
     
-    full_type ft = read_type(lex, token, scope, this, herr);
-    if (!ft.def) { token.report_errorf(herr, "Type expected here before %s"); return NULL; }
+    AST *a = new AST();
+    if (a->parse_expression(token, lex, scope, precedence::scope, herr))
+      { FATAL_RETURN(1); }
     
-    definition_template::dependent_qualification dq;
-    dq.depends = ft.def;
-    
-    while (token.type  == TT_SCOPE) {
-      token = read_next_token(scope);
-      if (token.type != TT_IDENTIFIER and token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
-        token.report_errorf(herr, "Expected identifier to qualify before %s");
-        FATAL_RETURN(NULL);
-        break;
-      }
-      dq.path.push_back(token.content.toString());
-      token = read_next_token(scope);
-    }
-    
-    if (!dq.path.size())
-      return dq.depends;
-    
-    pair<definition_template::depiter, bool> ins = temp->dependents.insert(pair<definition_template::dependent_qualification, definition*>(dq, NULL));
-    if (ins.second)
-      return ins.first->second = new definition_hypothetical(dq.path[dq.path.size()-1], (definition_scope*)dq.depends, flags);
-    return ins.first->second;
+    definition_hypothetical* h = new definition_hypothetical("<dependent member>", scope, flags, a);
+    temp->dependents.push_back(h);
+    return h;
   }
 }

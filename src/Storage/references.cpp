@@ -126,7 +126,7 @@ namespace jdi {
     rf.sz = sz; sz = ss;
   }
   
-  void ref_stack::append(ref_stack &rf) {
+  void ref_stack::append_c(ref_stack &rf) {
     if (!rf.nbottom) return; // Appending an empty stack is meaningless
     if (!nbottom) nbottom = rf.nbottom; // If we didn't have anything on our stack, our nbottom is now its nbottom.
     rf.nbottom->previous = ntop; // If we had anything on our stack, then our ntop item comes before its nbottom item.
@@ -134,7 +134,8 @@ namespace jdi {
     rf.ntop = rf.nbottom = NULL; // Make sure it doesn't free what we just stole
     sz += rf.sz; rf.sz = 0; // Steal its size, too.
   }
-  void ref_stack::append_nest(ref_stack &rf) {
+  
+  void ref_stack::append_nest_c(ref_stack &rf) {
     if (!rf.nbottom) {
       if (!rf.name.empty()) name = rf.name; // Grab the name, if it's meaningful
       return; // Appending an empty stack is meaningless
@@ -145,6 +146,20 @@ namespace jdi {
     rf.ntop = rf.nbottom = NULL; // Make sure it doesn't free what we just stole
     sz += rf.sz; rf.sz = 0; // Steal its size, too.
     name = rf.name; // Steal the name from the nested expression.
+  }
+  
+  void ref_stack::prepend_c(ref_stack& rf) {
+    if (!rf.nbottom) return; //Prepending an empty stack is meaningless
+    if (!ntop) ntop = rf.ntop; // If we didn't have anything on our stack, our ntop is now its ntop.
+    else nbottom->previous = rf.ntop;
+    nbottom = rf.nbottom; // Since we threw that stack on ntop of ours, its ntop is now our ntop.
+    rf.ntop = rf.nbottom = NULL; // Make sure it doesn't free what we just stole
+    sz += rf.sz; rf.sz = 0; // Steal its size, too.
+  }
+  
+  void ref_stack::prepend(const ref_stack& rf) {
+    ref_stack n(rf);
+    prepend_c(n);
   }
   
   void ref_stack::clear() {
@@ -164,6 +179,8 @@ namespace jdi {
   
   ref_stack::node& ref_stack::top() { return *ntop; }
   ref_stack::node& ref_stack::bottom() { return *nbottom; }
+  const ref_stack::node& ref_stack::top() const { return *ntop; }
+  const ref_stack::node& ref_stack::bottom() const { return *nbottom; }
   
   void ref_stack::parameter_ct::throw_on(parameter &ft) {
     enswap(ft);

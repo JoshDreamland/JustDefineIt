@@ -137,6 +137,8 @@ namespace jdi {
 #include <Storage/value.h>
 #include <Storage/full_type.h>
 #include <Storage/references.h>
+#include <API/error_reporting.h>
+#include <API/AST.h>
 
 namespace jdi {
   /**
@@ -161,6 +163,69 @@ namespace jdi {
     
     virtual ~definition_typed();
   };
+  
+  /** Structure containing template arguments; can be used as the key in an std::map. **/
+  class arg_key {
+  public:
+    enum ak_type { AKT_NONE, AKT_FULLTYPE, AKT_VALUE };
+    /** Improvised C++ Union of full_type and value. */
+    struct node {
+      char data[
+        (((sizeof(full_type) > sizeof(value))? sizeof(full_type) : sizeof(value)) + sizeof(char) - 1)
+        /sizeof(char)
+      ];
+      ak_type type;
+      
+      inline const full_type& ft() const { return *(full_type*)data; }
+      inline const value& val() const { return *(value*)data; }
+      inline full_type& ft() { return *(full_type*)data; }
+      inline value& val() { return *(value*)data; }
+      node &operator= (const node& other);
+      
+      inline node(): type(AKT_NONE) {}
+      ~node();
+    };
+    
+    private:
+      /// An array of all our values
+      node *values;
+      /// A pointer past our value array
+      node *endv;
+      
+    public:
+      static definition abstract; ///< A sentinel pointer marking that this parameter is still abstract.
+      /// A comparator to allow storage in a map.
+      bool operator<(const arg_key& other) const;
+      /// A method to prepare this instance for storage of parameter values for the given template.
+      void mirror(definition_template* temp);
+      /// A fast function to assign to our list at a given index, consuming the given type.
+      void swap_final_type(size_t argnum, full_type &type);
+      /// A less fast function to assign to our list at a given index, copying the given type.
+      void put_final_type(size_t argnum, const full_type &type);
+      /// A slower function to put the most basic type representation down, consuming the given type
+      void swap_type(size_t argnum, full_type &type);
+      /// An even slower function to put the most basic type representation down, copying the given starting type
+      void put_type(size_t argnum, const full_type &type);
+      /// A quick function to put a value at a given index
+      void put_value(size_t argnum, const value& val);
+      /// A quick function to grab the type at a position
+      node &operator[](int i) const { return values[i]; }
+      /// A quick function to return an immutable pointer to the first parameter
+      inline node* begin() { return values; }
+      /// A quick function to return a pointer past the end of our list
+      inline node* end() { return endv; }
+      /// Default constructor; mark values NULL.
+      arg_key();
+      /// Construct with a size, reserving sufficient memory.
+       arg_key(size_t n);
+      /// Construct a copy.
+      arg_key(const arg_key& other);
+      /// Construct from a ref_stack.
+      arg_key(const ref_stack& refs);
+      /// Destruct, freeing items.
+      ~arg_key();
+  };
+  
   /**
     @struct jdi::function_overload
     A structure detailing an alternate overload of a function without using too much memory.
@@ -170,6 +235,7 @@ namespace jdi {
     string declaration; ///< The full prototype for the function.
     function_overload *duplicate(); ///< Make a copy
   };
+  
   /**
     @struct jdi::definition_function
     A piece of a definition specifically for functions.
@@ -181,10 +247,33 @@ namespace jdi {
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
-    vector<function_overload*> overloads; ///< Array of reference stacks for each overload of this function.
-    string declaration; ///< The full prototype for the function.
+    typedef map<arg_key, definition_function*> overload_map;
+    typedef overload_map::iterator overload_iter;
+    
+    overload_map overloads; ///< Standard overloads, checked before template overloads.
+    vector<definition_template*> template_overloads; ///< Array of reference stacks for each overload of this function.
     void *implementation; ///< The implementation of this function as harvested by an external system.
+    
+    /** Function to add the given definition as an overload if no such overload
+        exists, or to merge it in (handling any errors) otherwise.
+        @param key    The arg_key structure to consume, representing the parameter combination.
+        @param ovrl   The definition representing the new overload; this definition will
+                      belong to the system after you pass it.
+        @param errtok Token to facilitate error reporting.
+        @param herr   Error handler to report problems to.
+        @return Returns the final definition for the requested overload.
+    */
+    definition *overload(arg_key &key, definition_function* ovrl, error_handler *herr);
+    
+    /** Function to add the given definition as a template overload
+        exists, or to merge it in (handling any errors) otherwise.
+        @param ovrl  The template definition representing the new overload; this definition
+                     will belong to the system after you pass it.
+    */
+    void overload(definition_template* ovrl);
+    
     definition_function(string name, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION);
+    virtual ~definition_function();
   };
   
   
@@ -352,59 +441,21 @@ namespace jdi {
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
-    /** Structure containing template arguments; can be used as the key in an std::map. **/
-    class arg_key {
-      definition** values;
-      size_t size;
-      #ifdef DEBUG_MODE
-      size_t allocd;
-      #endif
-      // const unsigned sz;
-      public:
-        static definition abstract; ///< A sentinel pointer marking that this parameter is still abstract.
-        /// A comparator to allow storage in a map.
-        bool operator<(const arg_key& other) const;
-        /// A method to prepare this instance for storage of parameter values for the given template.
-        void mirror(definition_template* temp);
-        /// A fast function to assign to our list at a given index.
-        void put_final_type(size_t argnum, definition* type);
-        /// A slower function to put the most basic type representation down
-        void put_type(size_t argnum, definition* type);
-        /// A quick function to grab the type at a position
-        definition* operator[](int i) const;
-        /// A quick function to return an immutable pointer to the first parameter
-        definition** begin();
-        /// Default constructor; mark values NULL.
-        arg_key();
-        /// Construct with a size, reserving sufficient memory.
-         arg_key(size_t n);
-        /// Construct a copy.
-        arg_key(const arg_key& other);
-        /// Destruct, freeing items.
-        ~arg_key();
-    };
-    
-    struct dependent_qualification {
-      definition *depends; ///< The template parameter on which we depend
-      vector<string> path; ///< The path and identifier of the dependent variable from there
-      bool operator< (const dependent_qualification&) const; ///< Test less-than
-    };
-    
     typedef map<arg_key,definition_template*> specmap; ///< Map type for specializations
     typedef specmap::iterator speciter; ///< Map iterator type for specializations
     
     typedef map<arg_key,definition*> instmap; ///< Map type for instantiations
     typedef instmap::iterator institer; ///< Map iterator type for instantiations
     
-    typedef map<dependent_qualification, definition*> depmap; ///< Dependent member map
-    typedef depmap::iterator depiter; ///< Dependent member iterator
+    typedef vector<definition_hypothetical*> deplist; ///< Dependent member liat
+    typedef deplist::iterator depiter; ///< Dependent member iterator
     
     /** A map of all specializations **/
     specmap specializations;
     /** A map of all existing instantiations **/
     instmap instantiations;
     /** A map of all dependent members of our template parameters */
-    depmap dependents;
+    deplist dependents;
     
     /** Instantiate this template with the values given in the passed key.
         If this template has been instantiated previously, that instantiation is given.
@@ -457,12 +508,15 @@ namespace jdi {
     depends on an abstract parent or scope.
   */
   struct definition_hypothetical: definition {
+    AST *def;
     virtual definition* duplicate(remap_set &n);
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     /// Construct with basic definition info.
-    definition_hypothetical(string name, definition_scope *parent, unsigned flags = DEF_HYPOTHETICAL);
+    definition_hypothetical(string name, definition_scope *parent, unsigned flags, AST* def);
+    definition_hypothetical(string name, definition_scope *parent, AST* def);
+    ~definition_hypothetical();
   };
 }
 

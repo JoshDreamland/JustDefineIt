@@ -35,6 +35,7 @@ namespace jdi { class AST; }
 #include <System/token.h>
 #include <Storage/value.h>
 #include <API/lexer_interface.h>
+#include <API/error_reporting.h>
 
 namespace jdi {
   /** @class jdi::AST

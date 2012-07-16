@@ -4,12 +4,34 @@
 #define true 1
 #define false 0
 
+/*
+struct a {
+  int operator++ (int) {}
+  operator int() { return 2; }
+  operator float() { return 2; }
+  int operator++(int) { return 2; }
+};
+
+int a(int x) {}
+float a(float x) {}
+double a(double x) {}
+*/
+
+// No errors
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+
+// Some errors
+#include <cmath>
+
+// A bafuckingzillion errors
 #include <iostream>
 #include <string>
 #include <vector>
 #include <map>
-#include <cmath>
-#include <cstring>
+
+
 
 /* /
 namespace std

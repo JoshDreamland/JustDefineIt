@@ -70,9 +70,9 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
             if (dt->def->flags & DEF_CLASS)
             {
               token = lex->get_token_in_scope(scope, herr);
-              definition_template::arg_key k(dt->params.size());
               if (token.type == TT_LESSTHAN)
               {
+                arg_key k(dt->params.size());
                 if (read_template_parameters(k, dt, lex, token, scope, cp, herr))
                   return full_type();
                 rdef = dt->instantiate(k);
@@ -81,6 +81,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
             }
             else {
               token.report_error(herr, "Template `" + token.def->name + "' cannot be used as a type");
+              cout << token.def->toString();
               return full_type();
             }
           }
@@ -144,7 +145,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       else {
         some_error:
         if (token.type == TT_IDENTIFIER or token.type == TT_DEFINITION)
-          token.report_error(herr,"Type name expected here; `" + string(token.content.toString()) + "' does not name a type");
+          token.report_error(herr,"Type name expected here; `" + token.content.toString() + "' does not name a type");
         else
           token.report_errorf(herr,"Type name expected here before %s");
         return full_type();
@@ -202,15 +203,21 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
     }
     token = lex->get_token_in_scope(scope, herr);
   }
-  if (rdef == NULL and (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM))
-  {
-    if (cp)
-      // FIXME: I don't have any inherited flags to pass here. Is that OK?
-      rdef = (token.type == TT_UNION? (definition*)cp->handle_union(scope,token,0) :
-              token.type == TT_ENUM?  (definition*)cp->handle_enum(scope,token,0)  :  (definition*)cp->handle_class(scope,token,0));
-    else {
-      token = lex->get_token_in_scope(scope, herr);
-      goto typeloop;
+  if (rdef == NULL) {
+    if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM)
+    {
+      if (cp) // FIXME: I don't have any inherited flags to pass here. Is that OK?
+        rdef = (token.type == TT_UNION? (definition*)cp->handle_union(scope,token,0) :
+                token.type == TT_ENUM?  (definition*)cp->handle_enum(scope,token,0)  :  (definition*)cp->handle_class(scope,token,0));
+      else {
+        token = lex->get_token_in_scope(scope, herr);
+        goto typeloop;
+      }
+    }
+    else if (token.type == TT_TYPENAME) {
+      if (!cp) { token.report_error(herr, "Cannot use dependent type in this context"); return full_type(); }
+      token = lex->get_token_in_scope(scope);
+      rdef = cp->handle_hypothetical(scope, token, DEF_TYPENAME);
     }
   }
   
@@ -241,7 +248,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_RIGHTPARENTH || token.type == TT_DECLTYPE) {
           if (read_function_params(refs, lex, token, scope, cp, herr)) return 1;
           ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
-          refs.append(appme); return res;
+          refs.append_c(appme); return res;
         }
         ref_stack nestedrefs;
         read_referencers(nestedrefs, lex, token, scope, cp, herr);
@@ -251,7 +258,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         }
         token = lex->get_token_in_scope(scope, herr);
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
-        refs.append(appme); refs.append_nest(nestedrefs);
+        refs.append_c(appme); refs.append_nest_c(nestedrefs);
         return res;
       }
       
@@ -273,7 +280,7 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         }
         else if (token.type == TT_LESSTHAN and d->flags & DEF_TEMPLATE) {
           definition_template* temp = (definition_template*)d;
-          definition_template::arg_key k(temp->params.size());
+          arg_key k(temp->params.size());
           if (read_template_parameters(k, temp, lex, token, scope, cp, herr))
             return 1;
           if (token.type != TT_GREATERTHAN) {
@@ -286,19 +293,19 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
         }
         refs.name = d->name;
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
-        refs.append(appme); return res;
+        refs.append_c(appme); return res;
       }
       case TT_IDENTIFIER: {// The name associated with this type
-        refs.name = string(token.content.toString());
+        refs.name = token.content.toString();
         token = lex->get_token_in_scope(scope);
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
-        refs.append(appme); return res;
+        refs.append_c(appme); return res;
       }
       
       case TT_OPERATORKW: {
           token = lex->get_token_in_scope(scope, herr);
           if (token.type == TT_OPERATOR) {
-            refs.name = "operator" + string(token.content.toString());
+            refs.name = "operator" + token.content.toString();
           }
           else if (token.type == TT_LEFTBRACKET) {
             refs.name = "operator[]";
@@ -320,8 +327,9 @@ int jdip::read_referencers(ref_stack &refs, lexer *lex, token_t &token, definiti
             token.report_errorf(herr, "Unexpected %s following `operator' keyword; does not form a valid operator");
             FATAL_RETURN(1);
           }
+          token = lex->get_token_in_scope(scope, herr);
           ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
-          refs.append(appme); return res;
+          refs.append_c(appme); return res;
       } break;
       
       

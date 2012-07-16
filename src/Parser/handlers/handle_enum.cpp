@@ -72,7 +72,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
   unsigned incomplete = DEF_INCOMPLETE; // DEF_INCOMPLETE if this enum has a body, zero otherwise.
   
   if (token.type == TT_IDENTIFIER || token.type == TT_DEFINITION) {
-    classname = string(token.content.toString());
+    classname = token.content.toString();
     token = read_next_token(scope);
   }
   else if (token.type == TT_DECLARATOR) {

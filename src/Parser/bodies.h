@@ -184,7 +184,7 @@ namespace jdip {
     This method will read from the opening '<' token (which must be the active token passed)
     to the corresponding '>' token, populating the given arg_key structure.
     
-    @param  argk   The definition_template::arg_key into which the parameters will be copied. The
+    @param  argk   The arg_key into which the parameters will be copied. The
                    key must be initialized with the parameter count of the given template. [in-out]
     @param  temp   The template definition for which argument data will be read.
     @param  lex    The lexer to be polled for tokens. [in-out]
@@ -197,7 +197,7 @@ namespace jdip {
     @return  Returns 0 on success, or a non-zero error state otherwise. You do not need to act on this
              error state, as the error will have already been reported to the given error handler.
   **/
-  int read_template_parameters(definition_template::arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  int read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
   
   extern definition* dangling_pointer;
   /**

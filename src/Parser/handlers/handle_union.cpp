@@ -82,7 +82,7 @@ jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scop
   // Non-NULL  True               True            Complete class in another scope; can be redeclared (reallocated and reimplemented) in this scope.
   
   if (token.type == TT_IDENTIFIER || token.type == TT_DEFINITION) {
-    classname = string(token.content.toString());
+    classname = token.content.toString();
     token = read_next_token(scope);
   }
   else if (token.type == TT_DECLARATOR) {

@@ -84,11 +84,11 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
   
   definition *dulldef = NULL;
   if (token.type == TT_IDENTIFIER) {
-    classname = string(token.content.toString());
+    classname = token.content.toString();
     token = read_next_token(scope);
   }
   else if (token.type == TT_DEFINITION) {
-    classname = string(token.content.toString());
+    classname = token.content.toString();
     dulldef = token.def;
     token = read_next_token(scope);
   }
@@ -138,7 +138,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     if (scope->flags & DEF_TEMPSCOPE) {
       definition_template *temp = (definition_template*)dulldef;
       definition_tempscope *ts = (definition_tempscope*)scope;
-      definition_template::arg_key k(temp->params.size());
+      arg_key k(temp->params.size());
       if (read_template_parameters(k, temp, lex, token, scope, this, herr))
         return NULL;
       if (token.type != TT_GREATERTHAN) {
@@ -195,7 +195,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
       if (token.type != TT_DECLARATOR and token.type != TT_DEFINITION) {
         string err = "Ancestor class name expected";
         if (token.type == TT_DECLARATOR) err += "; `" + token.def->name + "' does not name a class";
-        if (token.type == TT_IDENTIFIER) err += "; `" + string(token.content.toString()) + "' does not name a type";
+        if (token.type == TT_IDENTIFIER) err += "; `" + token.content.toString() + "' does not name a type";
         token.report_error(herr, err);
         return NULL;
       }

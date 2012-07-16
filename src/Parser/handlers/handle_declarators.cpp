@@ -115,7 +115,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
         }
         if (token.type == TT_LESSTHAN and d->flags & DEF_TEMPLATE) {
           definition_template* temp = (definition_template*)d;
-          definition_template::arg_key k(temp->params.size());
+          arg_key k(temp->params.size());
           if (read_template_parameters(k, temp, lex, token, scope, this, herr))
             return 1;
           d = temp->instantiate(k);
@@ -155,12 +155,13 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
         token.report_error(herr, "Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
         return 3;
       }
-      if (not(ins.first->second->flags & DEF_TYPED) & DEF_EXTERN) { //TODO: Implement
-        token.report_error(herr, "Redeclaration of non-extern `" + tp.refs.name + "' as non-extern");
-        return 4;
+      if (ins.first->second->flags & DEF_FUNCTION) { // Handle function overloading
+        definition_function* func = (definition_function*)ins.first->second;
+        arg_key k(func->referencers);
+        res = func->overload(k, new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags), herr);
       }
-      res = ins.first->second;
-      // TODO: This is where to handle function overloading.
+      else
+        res = ins.first->second;
     }
   }
   
@@ -171,7 +172,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       case TT_OPERATOR:
           if (token.content.len != 1 or *token.content.str != '=') { // If this operator isn't =, this is a fatal error. No idea where we are.
             case TT_GREATERTHAN: case TT_LESSTHAN:
-            token.report_error(herr, "Unexpected operator `" + string(token.content.toString()) + "' at this point");
+            token.report_error(herr, "Unexpected operator `" + token.content.toString() + "' at this point");
             return 5;
           }
           else {

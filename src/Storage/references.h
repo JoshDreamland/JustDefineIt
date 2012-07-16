@@ -95,9 +95,13 @@ namespace jdi {
     /// @param parameters  A \c parameter_ct to consume containing details about the parameters of this function.
     void push_func(parameter_ct &parameters);
     /// Append a stack to the top of this stack, consuming it.
-    void append(ref_stack &rf);
-    /// Similar to append, but for reference stacks composed in a nest. Copies the name member as well.
-    void append_nest(ref_stack &rf);
+    void append_c(ref_stack &rf);
+    /// Similar to append_c, but for reference stacks composed in a nest. This method copies the name member as well.
+    void append_nest_c(ref_stack &rf);
+    /// Prepend a stack to the bottom of this stack, copying each element.
+    void prepend(const ref_stack &rf);
+    /// Prepend a stack to the bottom of this stack, consuming the stack.
+    void prepend_c(ref_stack &rf);
     /// Pop a reference from this stack, or dereference it once.
     void pop();
     /// Clear the stack, undoing all referencers.
@@ -139,6 +143,10 @@ namespace jdi {
     node &top();
     /// Get the bottom node.
     node &bottom();
+    /// Get the top node without allowing modification.
+    const node &top() const;
+    /// Get the bottom node without allowing modification.
+    const node &bottom() const;
     
     /// Return the number of nodes contained.
     size_t size() const;

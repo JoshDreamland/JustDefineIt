@@ -26,6 +26,7 @@
 #include <iostream>
 #include <cstdio>
 #include <System/builtins.h>
+#include <Parser/handlers/handle_function_impl.h>
 using namespace std;
 
 template<typename a, typename b> void print_map(const map<a,b>& c) {
@@ -49,12 +50,42 @@ namespace jdi {
   definition_typed::~definition_typed() {}
   
   definition_function::definition_function(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): 
-    definition_typed(n, p, tp, rf, typeflags, flgs | DEF_FUNCTION) {}
+    definition_typed(n, p, tp, rf, typeflags, flgs | DEF_FUNCTION), implementation(NULL) {}
+  
+  definition *definition_function::overload(arg_key &key, definition_function* ovrl, error_handler *herr) {
+    pair<overload_iter, bool> ins = overloads.insert(pair<arg_key,definition_function*>(key, ovrl));
+    if (!ins.second) {
+      if (ins.first->second->implementation) {
+        if (ovrl->implementation) {
+          herr->error("Reimplementation of function; old implementation discarded");
+          delete_function_implementation(ovrl->implementation);
+          ovrl->implementation = ins.first->second->implementation;
+        }
+      }
+      else
+        ins.first->second->implementation = ovrl->implementation;
+      delete ovrl;
+    }
+    return ins.first->second;
+  }
+  void definition_function::overload(definition_template* ovrl) {
+    template_overloads.push_back(ovrl);
+  }
+  
+  definition_function::~definition_function() {
+    for (overload_iter it = overloads.begin(); it != overloads.end(); ++it)
+      delete it->second;
+    for (vector<definition_template*>::iterator it = template_overloads.begin(); it != template_overloads.end(); ++it)
+      delete *it;
+  }
   
   definition *definition_scope::look_up(string sname) {
     defiter it = members.find(sname);
     if (it != members.end())
       return it->second;
+    volatile bool pm = false;
+    if (pm)
+      print_map(members);
     if ((it = using_general.find(sname)) != using_general.end())
       return it->second;
     definition *res;
@@ -131,7 +162,7 @@ namespace jdi {
     for (speciter i = specializations.begin(); i != specializations.end(); ++i)
       delete i->second;
     for (depiter i = dependents.begin(); i != dependents.end(); ++i)
-      delete i->second;
+      delete *i;
     delete def;
   }
   definition* definition_template::instantiate(arg_key& key) {
@@ -139,81 +170,126 @@ namespace jdi {
     /*pair<map<arg_key,definition*>::iterator, bool> ins =*/ instantiations.insert(insme);
     return def;//ins.first->second;
   }
-  definition definition_template::arg_key::abstract("<unspecified>", NULL, 0);
+  definition arg_key::abstract("<unspecified>", NULL, 0);
   definition_template* definition_template::specialize(arg_key& key, definition_tempscope *ts) {
-    for (definition** i = key.begin(); *i; ++i)
-      if ((*i)->flags & DEF_TEMPPARAM) { delete *i; *i = &arg_key::abstract; }
+    for (arg_key::node* i = key.begin(); i < key.end(); ++i)
+      if (i->type == arg_key::AKT_FULLTYPE and (!i->ft().def or (i->ft().def->flags & DEF_TEMPPARAM)))
+        i->ft().def = &arg_key::abstract;
     pair<arg_key&,definition_template*> insme(key,(definition_template*)ts->source);
     pair<definition_template::speciter, bool> ins = specializations.insert(insme);
     if (ins.second)
       ts->referenced = true;
     return ins.first->second;
   }
-  bool definition_template::arg_key::operator<(const arg_key& other) const {
-    for (definition **i = values, **j = other.values; *j; ++i) {
-      if (!*i) return true;
-      const ptrdiff_t comp = definition::defcmp(*i, *j);
-      if (comp) return comp < 0;
+  bool arg_key::operator<(const arg_key& other) const {
+    for (arg_key::node *i = values, *j = other.values; j != other.endv; ++i) {
+      if (i == endv) return true;
+      if (i->type == AKT_VALUE) {
+        if (j->type != AKT_VALUE) return false;
+        if (i->val() < j->val()) return true;
+        if (j->val() < i->val()) return false;
+      }
+      else if (i->type == AKT_FULLTYPE) { // I is not a value; ie, it is a full_type
+        if (j->type != AKT_FULLTYPE) return true; 
+        if (i->ft() < j->ft()) return true;
+        if (j->ft() < i->ft()) return false;
+      }
     } return false;
   }
-  void definition_template::arg_key::mirror(definition_template *temp) {
+  void arg_key::mirror(definition_template *temp) {
     for (size_t i = 0; i < temp->params.size(); ++i)
       if (temp->params[i]->flags & DEF_TYPENAME) {
         definition_typed* dt = (definition_typed*)temp->params[i];
         ref_stack dup; dup.copy(dt->referencers);
-        values[i] = new definition_typed(dt->name, dt->parent, dt->type, dup, dt->modifiers, dt->flags);
+        new(values[i].data) full_type(dt->type, dup, dt->modifiers);
+        values[i].type = AKT_FULLTYPE;
       }
       else {
         definition_valued* dv = (definition_valued*)temp->params[i];
-        values[i] = new definition_valued(dv->name, dv->parent, dv->type, dv->modifiers, dv->flags, dv->value_of);
+        new(values[i].data) value(dv->value_of);
+        values[i].type = AKT_VALUE;
       }
   }
   
-  void definition_template::arg_key::put_final_type(size_t argnum, definition* type) { values[argnum] = type; }
-  /// A slower function to put the most basic type representation down
-  void definition_template::arg_key::put_type(size_t argnum, definition* type) {
-    #ifdef DEBUG_MODE
-      if (values[argnum] or !type)
-        cout << "LOSS RECORD++" << endl;
-    #endif
-    if (type->flags & DEF_TYPED) { put_type(argnum, ((definition_typed*)type)->type); return; }
-    values[argnum] = type;
+  void arg_key::put_final_type(size_t argnum, const full_type &type) { new (values[argnum].data) full_type(); values[argnum].ft().copy(type); values[argnum].type = AKT_FULLTYPE; }
+  void arg_key::swap_final_type(size_t argnum, full_type &type)      { new (values[argnum].data) full_type(); values[argnum].ft().swap(type); values[argnum].type = AKT_FULLTYPE; }
+  void arg_key::put_type(size_t argnum, const full_type &type) {
+    if (type.def and type.def->flags & DEF_TYPED and ((definition_typed*)type.def)->type) {
+      // Copy the type we were given
+      full_type ft; ft.refs.copy(type.refs);
+      // Copy the referencers that our type has of its own; not ref_stack::referencers, but ref_stack::def->referencers.
+      ft.refs.prepend(((definition_typed*)type.def)->referencers);
+      // Tack on the modifiers
+      ft.flags |= ((definition_typed*)type.def)->modifiers;
+      // Change out the type
+      ft.def = ((definition_typed*)type.def)->type;
+      return swap_type(argnum, ft);
+    }
+    return put_final_type(argnum, type);
   }
-  /// A quick function to grab the type at a position
-  definition* definition_template::arg_key::operator[](int i) const { return values[i]; }
-  /// A quick function to return an immutable pointer to the first parameter
-  definition** definition_template::arg_key::begin() { return values; } 
+  void arg_key::swap_type(size_t argnum, full_type &type) {
+    if (type.def and type.def->flags & DEF_TYPED and ((definition_typed*)type.def)->type) {
+      // Copy the referencers that our type has of its own; not ref_stack::referencers, but ref_stack::def->referencers.
+      type.refs.prepend(((definition_typed*)type.def)->referencers);
+      // Tack on the modifiers
+      type.flags |= ((definition_typed*)type.def)->modifiers;
+      // Change out the type
+      type.def = ((definition_typed*)type.def)->type;
+      return swap_type(argnum, type);
+    }
+    return swap_final_type(argnum, type);
+  }
+  void arg_key::put_value(size_t argnum, const value &val) {
+    new(values[argnum].data) value(val);
+    values[argnum].type = AKT_VALUE;
+  }
+  
   /// Default constructor; mark values NULL.
-  definition_template::arg_key::arg_key(): values(NULL) {}
+  arg_key::arg_key(): values(NULL), endv(NULL) {}
   /// Construct with a size, reserving sufficient memory.
-  definition_template::arg_key::arg_key(size_t n): values(new definition*[n+1]) {
+  arg_key::arg_key(size_t n): values(new node[n]), endv(values+n) {} // Word to the wise: Do not switch the order of this initialization.
+  /// Construct from a ref_stack.
+  arg_key::arg_key(const ref_stack& rf) {
+    const ref_stack::node &n = rf.top();
     #ifdef DEBUG_MODE
-      for (size_t i = 0; i <= n; ++i) values[i] = 0;
-    #else
-    *values = values[n] = 0;
+      if (n.type != ref_stack::RT_FUNCTION) {
+        cout << "Critical error." << endl;
+        return;
+      }
     #endif
+    
+    const ref_stack::parameter_ct &p = ((ref_stack::node_func*)&n)->params;
+    values = new node[p.size()]; endv = values + p.size();
+    for (size_t i = 0; i < p.size(); ++i)
+      this->put_type(i, p[i]);
   }
   /// Construct a copy.
-  definition_template::arg_key::arg_key(const arg_key& other): values(other.values) { ((arg_key*)&other)->values = NULL; }
-  /// Destruct, freeing items.
-  definition_template::arg_key::~arg_key() { if (values) { for (definition** i = values; *i; ++i) if (*i != &abstract) delete *i; delete[] values; } }
-  
-  bool definition_template::dependent_qualification::operator<(const definition_template::dependent_qualification &other) const {
-    register ptrdiff_t d = definition::defcmp(depends, other.depends);
-    if (d) return d < 0;
-    d = path.size() - other.path.size();
-    if (d) return d < 0;
-    for (unsigned i = 0; i < path.size(); ++i)
-      if ((d = path[i].compare(other.path[i])))
-        return d < 0;
-    return false;
+  arg_key::arg_key(const arg_key& other): values(new node[other.endv-other.values]) {
+    node *i = values;
+    for (node *j = other.values; j != other.endv; ++i, ++j)
+      *i = *j;
+    endv = i;
   }
+  /// Destruct, freeing items.
+  arg_key::~arg_key() { delete[] values; }
+  
+  arg_key::node &arg_key::node::operator=(const node& other) {
+    type = other.type;
+    if (type == AKT_FULLTYPE)
+      new(data) full_type(other.ft());
+    else
+      new(data) value(other.val());
+    return *this;
+  }
+  arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)data)->~full_type(); else if (type == AKT_VALUE) ((value*)data)->~value(); }
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   
   definition_tempscope::definition_tempscope(string n, definition* p, unsigned f, definition* s): definition_scope(n,p,f|DEF_TEMPSCOPE), source(s), referenced(false) {}
   
-  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f): definition(n,p,f|DEF_HYPOTHETICAL) {}
+  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f, AST* d): definition(n,p,f|DEF_HYPOTHETICAL), def(d) {}
+  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, AST* d): definition(n,p,DEF_HYPOTHETICAL), def(d) {}
+  definition_hypothetical::~definition_hypothetical() { delete def; }
   
   //========================================================================================================
   //======: Re-map Functions :==============================================================================
@@ -379,9 +455,7 @@ namespace jdi {
   definition *definition_function::duplicate(remap_set &n) {
     ref_stack dup; dup.copy(referencers);
     definition_function* res = new definition_function(name, parent, type, dup, modifiers, flags);
-    res->overloads.reserve(overloads.size());
-    for (vector<function_overload*>::iterator it = overloads.begin(); it != overloads.end(); ++it)
-      res->overloads.push_back((*it)->duplicate());
+    res->overloads = overloads;
     n[this] = res;
     return res;
   }
@@ -432,7 +506,7 @@ namespace jdi {
   }
   
   definition* definition_hypothetical::duplicate(remap_set &n) {
-    definition_hypothetical* res = new definition_hypothetical(name, parent, flags);
+    definition_hypothetical* res = new definition_hypothetical(name, parent, flags, new AST(*def));
     n[this] = res; return res;
   }
   
@@ -457,9 +531,7 @@ namespace jdi {
         res += ((it->protection == DEF_PRIVATE)? "private " : (it->protection == DEF_PROTECTED)? "protected " : "public ");
         res += it->def->name + " ";
       }
-    if (flags & DEF_INCOMPLETE)
-      res += ";";
-    else
+    if (levels and not(flags & DEF_INCOMPLETE))
       res += "\n", res += definition_scope::toString(dl(levels), indent);
     return res;
   }

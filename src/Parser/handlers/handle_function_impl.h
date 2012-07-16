@@ -44,4 +44,12 @@
 */
 extern void* (*handle_function_implementation)(jdi::lexer *lex, jdip::token_t &token, jdi::definition_scope *scope, jdi::error_handler *herr);
 
+/**
+  Function pointer to handle freeing function code content as allocated by a corresponding
+  call to handle_function_implementation. Invoked on destruct of the owning function definition.
+  
+  @param impl  The implementation data, as returned by handle_function_implementation.
+*/
+extern void (*delete_function_implementation)(void *impl);
+
 #endif

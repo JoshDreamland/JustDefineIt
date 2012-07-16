@@ -43,5 +43,7 @@ static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_
   }
   return NULL;
 }
+static void do_nothing(void*) {}
 
 void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = code_ignorer;
+void  (*delete_function_implementation)(void* impl) = do_nothing;

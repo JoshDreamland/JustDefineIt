@@ -67,7 +67,7 @@ int main() {
        << "sizeof(jdi::definition):         " << sizeof(jdi::definition) << endl
        << "sizeof(jdi::ref_stack):          " << sizeof(jdi::ref_stack) << endl
        << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl
-       << "sizeof(jdi::template::arg_key):  " << sizeof(jdi::definition_template::arg_key) << endl;
+       << "sizeof(jdi::template::arg_key):  " << sizeof(jdi::arg_key) << endl;
   
   test_expression_evaluator();
   

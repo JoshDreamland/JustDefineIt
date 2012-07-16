@@ -133,7 +133,7 @@ namespace jdi
             myroot = new AST_Node();
             at = AT_IDENTIFIER;
           }
-          myroot->content = string(token.content.toString());
+          myroot->content = token.content.toString();
           track(myroot->content);
         } break;
       
@@ -146,7 +146,7 @@ namespace jdi
         return NULL;
       
       case TT_OPERATOR: case TT_TILDE: {
-        ct = string(token.content.toString());
+        ct = token.content.toString();
         symbol& op = symbols[ct];
         if (not(op.type & ST_UNARY_PRE)) {
           token.report_error(herr,"Operator cannot be used as unary prefix");
@@ -195,14 +195,14 @@ namespace jdi
         return NULL;
       
       case TT_STRINGLITERAL:
-      case TT_CHARLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
+      case TT_CHARLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
                            track(myroot->content); at = AT_CHRLITERAL; break;
       
-      case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
+      case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
                           track(myroot->content); at = AT_DECLITERAL; break;
-      case TT_HEXLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
+      case TT_HEXLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
                           track(myroot->content); at = AT_HEXLITERAL; break;
-      case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = string(token.content.toString());
+      case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
                           track(myroot->content); at = AT_OCTLITERAL; break;
       
       case TT_DECLTYPE:
@@ -267,7 +267,6 @@ namespace jdi
         return left_node;
       
       case TT_IDENTIFIER: case TT_DEFINITION:
-        token.report_errorf(herr, "Expected operator before %s");
         return left_node;
       
       case TT_TYPENAME:
@@ -279,11 +278,11 @@ namespace jdi
         return left_node;
       
       case TT_LESSTHAN: {
-        if (precedence::scope <= prec_min)
+        if (precedence::scope < prec_min)
           return left_node;
         full_type lt = left_node->coerce();
         if (lt.def and (lt.def->flags & DEF_TEMPLATE)) {
-          definition_template::arg_key k(((definition_template*)lt.def)->params.size());
+          arg_key k(((definition_template*)lt.def)->params.size());
           delete left_node;
           if (read_template_parameters(k, (definition_template*)lt.def, lex, token, search_scope, NULL, herr))
             return NULL;

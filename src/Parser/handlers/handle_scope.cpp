@@ -24,6 +24,8 @@
 #include <Parser/bodies.h>
 #include <API/AST.h>
 #include <API/compile_settings.h>
+#include <System/builtins.h>
+#include <System/lex_buffer.h>
 #include <Parser/handlers/handle_function_impl.h>
 #include <cstdio>
 
@@ -41,6 +43,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           handle_declarator_block:
           if (handle_declarators(scope, token, inherited_flags, decl))
             return 1;
+          handled_declarator_block:
           if (token.type != TT_SEMICOLON) {
             if (token.type == TT_LEFTBRACE || token.type == TT_ASM) {
               if (!(decl and decl->flags & DEF_FUNCTION)) {
@@ -87,8 +90,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               break;
             }
           }
-          goto handle_declarator_block;
-        break;
+        goto handle_declarator_block;
       
       case TT_COMMA:
           token.report_error(herr, "Unexpected comma at this point.");
@@ -166,7 +168,41 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               token.report_error(herr, "Expected namespace name following `namespace' token");
           }
           else {
-              // TODO: Implement me
+            definition_scope* siq = scope;
+            definition *usedef = NULL;
+            if (token.type == TT_SCOPE) {
+              siq = global;
+              token = read_next_token(siq);
+            }
+            while (token.type != TT_ENDOFCODE) {
+              if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
+                token.report_errorf(herr, "Expected qualified-id before %s");
+                FATAL_RETURN(1); break;
+              }
+              usedef = token.def;
+              token = read_next_token(scope);
+              if (token.type == TT_SCOPE) {
+                if (!(usedef->flags & DEF_SCOPE)) {
+                  token.report_error(herr, "Cannot access `" + usedef->name + "' as a scope");
+                  FATAL_RETURN(1);
+                }
+                else {
+                  siq = (definition_scope*)usedef;
+                  token = read_next_token(siq);
+                }
+              }
+              else break;
+            }
+            if (usedef)
+              scope->use_general(usedef->name, usedef);
+            else {
+              token.report_errorf(herr, "Using directive does not specify an object");
+              FATAL_RETURN(1);
+            }
+            if (token.type != TT_SEMICOLON) {
+              token.report_errorf(herr, "Expected semicolon before %s to terminate using directive");
+              FATAL_RETURN(1);
+            }
           }
         break;
       
@@ -188,7 +224,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           goto case_TT_DECLARATOR;
       }
       case TT_IDENTIFIER:
-          token.report_error(herr, "Unexpected identifier in this scope; `" + string(token.content.toString()) + "' does not name a type");
+          token.report_error(herr, "Unexpected identifier in this scope; `" + token.content.toString() + "' does not name a type");
         break;
       
       case TT_TEMPLATE:
@@ -197,7 +233,43 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         break;
       
       case TT_OPERATORKW:
-        //break;
+          token = read_next_token(scope);
+          if (token.type != TT_DECLARATOR and token.type != TT_DECFLAG and token.type != TT_DECLTYPE) {
+            token.report_errorf(herr, "Expected cast type to overload before %s");
+            FATAL_RETURN(1);
+          }
+          else {
+            lex_buffer lb(lex);
+            while (token.type != TT_LEFTPARENTH and token.type != TT_LEFTBRACE and token.type != TT_SEMICOLON and token.type != TT_ENDOFCODE)
+              lb.push(token), token = read_next_token(scope);
+            if (token.type != TT_LEFTPARENTH) {
+              token.report_error(herr, "Expected empty function parmeters before %s");
+              FATAL_RETURN(1); break;
+            }
+            
+            token.type = TT_ENDOFCODE; lb.push(token);
+            lb.reset(); token_t kick = lb.get_token(herr);
+            full_type ft = read_fulltype(&lb, kick, scope, this, herr);
+            
+            token = read_next_token(scope);
+            if (token.type != TT_RIGHTPARENTH) {
+              if (token.type == TT_DECLARATOR and token.def == builtin_type__void)
+                token = read_next_token(scope);
+              if (token.type != TT_RIGHTPARENTH) {
+                token.report_errorf(herr, "Expected closing parenthesis to function parameters before %s; cast operators may not have parameters");
+                FATAL_RETURN(1);
+              }
+            }
+            
+            definition_function *const df = new definition_function("operator " + ft.toString(), scope, ft.def, ft.refs, ft.flags, inherited_flags);
+            decl = df;
+            
+            pair<definition_scope::defiter, bool> ins = scope->members.insert(pair<string,definition*>(decl->name, decl));
+            if (!ins.second) { arg_key k(df->referencers); decl = ((definition_function*)ins.first->second)->overload(k, df, herr); }
+            token = read_next_token(scope);
+            goto handled_declarator_block;
+          }
+        break;
       
       case TT_TYPENAME: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY:
       case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:

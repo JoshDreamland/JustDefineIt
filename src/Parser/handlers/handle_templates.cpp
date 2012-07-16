@@ -26,7 +26,7 @@
 #include <cstdio>
 
 using namespace jdip;
-#ifdef FATAL_ERRORS
+#if FATAL_ERRORS
 #define ERROR_CODE 1
 #else
 #define ERROR_CODE 0
@@ -120,8 +120,13 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       if (!hijack.referenced) delete temp;
       return 1;
     }
-    if (nd->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE)
+    if (nd->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE) {
       ((definition_function*)nd)->implementation = handle_function_implementation(lex, token, scope, herr);
+      if (token.type != TT_RIGHTBRACE) {
+        token.report_errorf(herr, "Expected closing brace to function body before %s");
+        FATAL_RETURN(1);
+      }
+    }
   } else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
     if (!hijack.referenced) delete temp; return ERROR_CODE;
@@ -161,8 +166,10 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         token.report_error(herr, "Unimplemented: template function specialization");
         delete temp;
       }
+      else if (redec->flags & DEF_FUNCTION)
+        ((definition_function*)redec)->overload(temp);
       else {
-        token.report_error(herr, "Cannot redeclare `" + temp->name + "' as template");
+        token.report_error(herr, "Attempt to redeclare `" + temp->name + "' as template");
         delete temp; return ERROR_CODE;
       }
     }

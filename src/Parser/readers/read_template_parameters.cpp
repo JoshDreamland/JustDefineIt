@@ -23,7 +23,7 @@
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 
-int jdip::read_template_parameters(definition_template::arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
   argk.mirror(temp);
   size_t args_given = 0;
@@ -41,18 +41,19 @@ int jdip::read_template_parameters(definition_template::arg_key &argk, definitio
     
     if (args_given < temp->params.size() and temp->params[args_given]->flags & DEF_TYPENAME) {
       full_type ft = read_fulltype(lex, token, scope, cp, herr);
-      if (ft.def) {
-        definition_typed* const t = (definition_typed*)argk[args_given];
-        t->type = ft.def;
-        t->referencers.swap(ft.refs);
-        t->modifiers = ft.flags;
-      }
+      if (ft.def)
+        argk[args_given].ft().swap(ft);
     } else {
       AST a;
       a.set_use_for_templates(true);
       a.parse_expression(token, lex, scope, precedence::comma+1, herr);
-      if (args_given < temp->params.size())
-        ((definition_valued*)argk[args_given])->value_of = a.eval();
+      if (args_given < temp->params.size()) {
+        argk.put_value(args_given, a.eval());
+        if (argk[args_given].val().type != VT_INTEGER) {
+          token.report_error(herr, "Expression must give integer result");
+          FATAL_RETURN(1); argk[args_given].val() = long(0);
+        }
+      }
     }
     
     if (token.type == TT_GREATERTHAN)
@@ -63,16 +64,20 @@ int jdip::read_template_parameters(definition_template::arg_key &argk, definitio
     }
   }
   if (args_given > temp->params.size()) {
-      token.report_error(herr, "Too many template parameters provided to template `" + temp->name + "'");
+      token.report_error(herr, "Too many template parameters provided to `" + temp->toString(0,0) + "'");
       FATAL_RETURN(1);
   }
   int bad_params = 0;
   for (size_t i = 0; i < temp->params.size(); ++i)
-    if (((argk[i]->flags & DEF_TYPENAME) and !((definition_typed*)argk[i])->type)
-    or  ((argk[i]->flags & DEF_VALUED) and ((definition_valued*)argk[i])->value_of.type == VT_NONE))
+    if ((argk[i].type == arg_key::AKT_FULLTYPE and !argk[i].ft().def)
+    or  ((argk[i].type == arg_key::AKT_VALUE and (argk[i].val().type == VT_NONE))))
       ++bad_params;
   if (bad_params) {
-    token.report_error(herr, "Insufficient parameters to template `" + temp->name + "'; " + value((long)bad_params).toString() + " more required" );
+    token.report_error(herr, "Insufficient parameters to `" + temp->toString(0,0) + "'; " + value((long)bad_params).toString() + " more required" );
+    for (size_t i = 0; i < temp->params.size(); ++i)
+      if ((argk[i].type == arg_key::AKT_FULLTYPE and !argk[i].ft().def)
+      or  ((argk[i].type == arg_key::AKT_VALUE and (argk[i].val().type == VT_NONE))))
+        token.report_error(herr, "Missing parameter " + value((long)i).toString() + ": parameter is not defaulted");
     FATAL_RETURN(1);
   }
   return 0;
