@@ -170,16 +170,18 @@ namespace jdi {
     enum ak_type { AKT_NONE, AKT_FULLTYPE, AKT_VALUE };
     /** Improvised C++ Union of full_type and value. */
     struct node {
-      char data[
-        (((sizeof(full_type) > sizeof(value))? sizeof(full_type) : sizeof(value)) + sizeof(char) - 1)
-        /sizeof(char)
-      ];
+      struct antialias {
+        char data[
+          (((sizeof(full_type) > sizeof(value))? sizeof(full_type) : sizeof(value)) + sizeof(char) - 1)
+          /sizeof(char)
+        ];
+      } data;
       ak_type type;
       
-      inline const full_type& ft() const { return *(full_type*)data; }
-      inline const value& val() const { return *(value*)data; }
-      inline full_type& ft() { return *(full_type*)data; }
-      inline value& val() { return *(value*)data; }
+      inline const full_type& ft() const { return *(full_type*)&data; }
+      inline const value& val() const { return *(value*)&data; }
+      inline full_type& ft() { return *(full_type*)&data; }
+      inline value& val() { return *(value*)&data; }
       node &operator= (const node& other);
       
       inline node(): type(AKT_NONE) {}

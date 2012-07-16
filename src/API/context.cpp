@@ -130,6 +130,7 @@ void context::reset_all()
 }
 void context::copy(const context &ct)
 {
+  cout << "ERROR! Don't call this; it's not really coded properly" << endl;
   ct.global->copy(global);
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
@@ -145,9 +146,14 @@ void context::copy(const context &ct)
       variadics.insert(*it);
   }
 }
-
-string context::get_last_error() {
-  return error;
+void context::swap(context &ct) {
+  if (!parse_open and !ct.parse_open) {
+    { register definition_scope* gs = ct.global;
+      ct.global = global; global = gs; }
+    macros.swap(ct.macros);
+    variadics.swap(ct.variadics);
+  }
+  else cout << "ERROR! Cannot swap context while parse is active" << endl;
 }
 
 void context::load_standard_builtins()

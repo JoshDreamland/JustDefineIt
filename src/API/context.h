@@ -88,11 +88,7 @@ namespace jdi
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.
     
-    public:
-    string error; ///< Any error text from parse calls in this context
-    string err_file; ///< The file in which an error occurred
-    int err_line; ///< The line number on which the error occurred
-    int err_pos; ///< The position at which the error occurred
+  public:
     set<definition*> variadics; ///< Set of variadic types.
     
     /// This is a map of structures which conflict with other declarations,
@@ -145,6 +141,7 @@ namespace jdi
     void reset(); ///< Reset back to the built-ins; delete all parsed definitions
     void reset_all(); ///< Reset everything, dumping all built-ins as well as all parsed definitions
     void copy(const context &ct); ///< Copy the contents of another context.
+    void swap(context &ct); ///< Swap contents with another context.
     
     /** Load standard built-in types, such as int. 
         This function is really only for use with the built-in context.
@@ -180,11 +177,6 @@ namespace jdi
                           If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
     int parse_stream(lexer *lang_lexer = NULL, error_handler *errhandl = NULL);
-    
-    /** Retrieve the last error message, if any error was thrown during parse.
-        @return The last error message, or an empty string if no error occurred.
-    **/
-    string get_last_error();
     
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.

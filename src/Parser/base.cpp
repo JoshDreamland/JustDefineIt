@@ -55,20 +55,18 @@ int jdi::context::parse_stream(lexer *lang_lexer, error_handler *errhandl)
   if (parse_open) { // Make sure we're not still parsing anything
     herr->error("Attempted to invoke parser while parse is in progress in another thread");
     delete lang_lexer;
-    return (error = "STILL PARSING", -1);
+    errhandl->error("STILL PARSING");
+    return -1;
   }
   
   if (lang_lexer) { delete lex; lex = lang_lexer; }
   else if (!lex) { // Make sure we're not still parsing anything
     herr->error("Attempted to invoke parser without a lexer");
-    return (error = "NO LEXER", -1);
+    errhandl->error("NO LEXER");
+    return -1;
   }
   
   parse_open = true;
-  error = "";
-  err_file = "";
-  err_line = -1;
-  err_pos = -1;
   
   token_t eoc; // An invalid token to appease the parameter chain.
   int res = ((context_parser*)this)->handle_scope(global, eoc);

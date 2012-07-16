@@ -95,8 +95,7 @@ int main() {
     int res = enigma.parse_C_stream(f, "test.cc");
     end_time(te,tel);
     cout << "Parse finished in " << tel << " microseconds." << endl;
-    if (res)
-      cout << "ERROR: " << enigma.get_last_error() << endl;
+    
     //enigma.output_definitions();
     if (res)
       cout << endl << "====[------------------------------ FAILURE. ------------------------------]====" << endl << endl;

@@ -201,18 +201,18 @@ namespace jdi {
       if (temp->params[i]->flags & DEF_TYPENAME) {
         definition_typed* dt = (definition_typed*)temp->params[i];
         ref_stack dup; dup.copy(dt->referencers);
-        new(values[i].data) full_type(dt->type, dup, dt->modifiers);
+        new(&values[i].data) full_type(dt->type, dup, dt->modifiers);
         values[i].type = AKT_FULLTYPE;
       }
       else {
         definition_valued* dv = (definition_valued*)temp->params[i];
-        new(values[i].data) value(dv->value_of);
+        new(&values[i].data) value(dv->value_of);
         values[i].type = AKT_VALUE;
       }
   }
   
-  void arg_key::put_final_type(size_t argnum, const full_type &type) { new (values[argnum].data) full_type(); values[argnum].ft().copy(type); values[argnum].type = AKT_FULLTYPE; }
-  void arg_key::swap_final_type(size_t argnum, full_type &type)      { new (values[argnum].data) full_type(); values[argnum].ft().swap(type); values[argnum].type = AKT_FULLTYPE; }
+  void arg_key::put_final_type(size_t argnum, const full_type &type) { new (&values[argnum].data) full_type(); values[argnum].ft().copy(type); values[argnum].type = AKT_FULLTYPE; }
+  void arg_key::swap_final_type(size_t argnum, full_type &type)      { new (&values[argnum].data) full_type(); values[argnum].ft().swap(type); values[argnum].type = AKT_FULLTYPE; }
   void arg_key::put_type(size_t argnum, const full_type &type) {
     if (type.def and type.def->flags & DEF_TYPED and ((definition_typed*)type.def)->type) {
       // Copy the type we were given
@@ -240,7 +240,7 @@ namespace jdi {
     return swap_final_type(argnum, type);
   }
   void arg_key::put_value(size_t argnum, const value &val) {
-    new(values[argnum].data) value(val);
+    new(&values[argnum].data) value(val);
     values[argnum].type = AKT_VALUE;
   }
   
@@ -276,12 +276,12 @@ namespace jdi {
   arg_key::node &arg_key::node::operator=(const node& other) {
     type = other.type;
     if (type == AKT_FULLTYPE)
-      new(data) full_type(other.ft());
+      new(&data) full_type(other.ft());
     else
-      new(data) value(other.val());
+      new(&data) value(other.val());
     return *this;
   }
-  arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)data)->~full_type(); else if (type == AKT_VALUE) ((value*)data)->~value(); }
+  arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)&data)->~full_type(); else if (type == AKT_VALUE) ((value*)&data)->~value(); }
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   
