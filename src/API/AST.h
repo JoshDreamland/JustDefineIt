@@ -59,6 +59,7 @@ namespace jdi {
       AT_IDENTIFIER, ///< This node is an identifier that could not be looked up.
       AT_DEFINITION, ///< This node is a definition; an identifier that has been looked up.
       AT_TYPE,       ///< This node is a full type.
+      AT_ARRAY,      ///< This node is an array of nodes.
       AT_FUNCCALL    ///< This node is a function call. FIXME: This value is probably never used.
     };
     
@@ -219,6 +220,16 @@ namespace jdi {
       void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       int width(); ///< Returns the width which will be used to render this node and all its children.
       int height(); ///< Returns the height which will be used to render this node and all its children.
+    };
+    struct AST_Node_Array: AST_Node {
+      vector<AST_Node*> elements; ///< Vector of our array elements.
+      
+      /// Evaluates this node recursively, returning a value containing its result.
+      value eval();
+      /// Coerces this node recursively for type, returning a full_type representing it.
+      full_type coerce();
+      
+      virtual ~AST_Node_Array();
     };
     /// Child of AST_Node for function call parameters.
     struct AST_Node_Parameters: AST_Node {

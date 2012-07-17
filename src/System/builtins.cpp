@@ -154,6 +154,9 @@ namespace jdi {
     builtin_type__wchar_t = add_declarator("wchar_t",   UF_PRIMITIVE, 2).def;
     builtin_type__va_list = add_declarator("__builtin_va_list",   UF_PRIMITIVE, 8).def;
     
+    add_declarator("virtual", UF_FLAG);
+    add_declarator("explicit", UF_FLAG);
+    
     builtin.variadics.insert(builtin_type__va_list);
   }
   

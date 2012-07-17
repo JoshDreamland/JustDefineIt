@@ -185,8 +185,27 @@ namespace jdi
         }
         handled_basics = true;
         break;
+      
       case TT_LEFTBRACKET:
-      case TT_LEFTBRACE:
+      case TT_LEFTBRACE: {
+        AST_Node_Array* array = new AST_Node_Array();
+        token = get_next_token();
+        while (token.type != TT_RIGHTBRACE and token.type != TT_SEMICOLON and token.type != TT_ENDOFCODE) {
+          AST_Node* n = parse_expression(token, precedence::comma + 1);
+          if (!n) {
+            token.report_error(herr, "Expected expression for array element");
+            FATAL_RETURN(array);
+          }
+          array->elements.push_back(n);
+          if (token.type != TT_COMMA) {
+            token.report_errorf(herr, "Expected comma to separate array elements before %s");
+            FATAL_RETURN(array);
+          }
+          else token = get_next_token();
+        }
+        at = AT_ARRAY;
+        myroot = array;
+      }
       break;
       
       case TT_COMMA:
@@ -590,7 +609,9 @@ namespace jdi
     cout << "WELL, FUCK." << endl;
     return value();
   }
-  
+  value AST::AST_Node_Array::eval() {
+    return elements.size()? elements.front()->eval() : value(0l);
+  }
   
   //===========================================================================================================================
   //=: Coercers :==============================================================================================================
@@ -704,6 +725,17 @@ namespace jdi
     }
   }
   
+  full_type AST::AST_Node_Array::coerce() {
+    if (elements.size()) {
+      full_type res = elements[0]->coerce();
+      res.refs.push_array(elements.size());
+      return res;
+    }
+    full_type res(builtin_type__int);
+    res.refs.push_array(0);
+    return res;
+  }
+  
   //===========================================================================================================================
   //=: Constructors :==========================================================================================================
   //===========================================================================================================================
@@ -738,6 +770,7 @@ namespace jdi
   AST::AST_Node_Unary::~AST_Node_Unary() { delete operand; }
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
+  AST::AST_Node_Array::~AST_Node_Array() { for (vector<AST_Node*>::iterator it = elements.begin(); it != elements.end(); ++it) delete *it; }
   
   
   //===========================================================================================================================
