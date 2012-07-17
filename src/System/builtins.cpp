@@ -165,6 +165,8 @@ namespace jdi {
     builtin.add_macro("__extension__", string());
     builtin.add_macro("false", string(1,'0'));
     builtin.add_macro("true", string(1,'1'));
+    
+    builtin.add_macro_func("JUST_DEFINE_IT_RUN", x, string(), false);
   }
   
   void cleanup_declarators() {

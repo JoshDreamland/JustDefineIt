@@ -155,31 +155,6 @@ static inline void skip_whitespace(const char* cfile, size_t &pos, size_t length
   else if (cfile[pos] == '"' or cfile[pos] == '\'') { ::skip_string(cfile, pos, length), ++pos; cond; } }
 
 
-/**
-  @section implementation
-  Outsources to two other skip functions in a loop.
-**/
-void lexer_cpp::skip_to_macro(error_handler *herr)
-{
-  while (pos < length) {
-    while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
-      skip_noncode(continue);
-      ++pos;
-    }
-    if (pos >= length)
-      break;
-    while (is_useless(cfile[pos])) {
-      if (cfile[pos] == '\n') lpos = pos, ++line;
-      else if (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)) lpos = pos++, ++line;
-      ++pos;
-    }
-    if (cfile[pos] == '#')
-      return ++pos, handle_preprocessor(herr);
-  }
-  herr->error("Expected closing preprocessors before end of code",filename,line,pos-lpos);
-}
-
-
 void lexer_cpp::enter_macro(macro_scalar* ms)
 {
   if (ms->value.empty()) return;
@@ -369,6 +344,7 @@ string lexer_cpp::read_preprocessor_args(error_handler *herr)
 **/
 void lexer_cpp::handle_preprocessor(error_handler *herr)
 {
+  top:
   bool variadic = false; // Whether this function is variadic
   while (cfile[pos] == ' ' or cfile[pos] == '\t') ++pos;
   const size_t pspos = pos;
@@ -650,6 +626,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           break;
         }
         
+        cout << "Including " << filename << endl;
         openfile of(filename, line, lpos, *this);
         files.enswap(of);
         pair<set<string>::iterator, bool> fi = visited_files.insert(incfn);
@@ -697,7 +674,25 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
   }
   if (conditionals.empty() or conditionals.top().is_true)
     return;
-  return skip_to_macro(herr);
+  
+  // skip_to_macro:
+  while (pos < length) {
+    while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
+      skip_noncode(continue);
+      ++pos;
+    }
+    if (pos >= length)
+      break;
+    while (is_useless(cfile[pos])) {
+      if (cfile[pos] == '\n') lpos = pos, ++line;
+      else if (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)) lpos = pos++, ++line;
+      ++pos;
+    }
+    if (cfile[pos] == '#')
+      { ++pos; goto top; }
+  }
+  herr->error("Expected closing preprocessors before end of code",filename,line,pos-lpos);
+  return;
   
   failout:
     while (is_letterd(cfile[pos])) ++pos;
@@ -903,6 +898,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
   POP_FILE: // This block was created instead of a helper function to piss Rusky off.
   if (pop_file())
     return token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos));
+  
+  size_t sz = 0;
+  for (quick::stack<openfile>::iterator it = files.begin(); it != files.end(); ++it) ++sz;
+  cout << "Popped back to " << filename << " (size = " << sz << ")" << endl;
   return get_token(herr);
 }
 
