@@ -61,12 +61,26 @@ void llreader::copy(string contents) {
   data = buf;
 }
 
-llreader::llreader(): mode(FT_CLOSED), pos(0), length(0), data(NULL) {}
-llreader::llreader(const char* filename): mode(FT_CLOSED), pos(0), length(0), data(NULL) { open(filename); }
-llreader::llreader(std::string contents, bool cp): mode(FT_CLOSED), pos(0), length(0), data(NULL) { cp? copy(contents) : encapsulate(contents); }
+static const string dot(1, '.');
+inline string fn_path(const char *fn) {
+  #if defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
+  #  define or_is_any_other_separator(c) or (c == '\\')
+  #else
+  #  define or_is_any_other_separator(c)
+  #endif
+  const char* last = fn;
+  for (const char* i = fn; *i; ++i)
+    if (*i == '/' or_is_any_other_separator(*i))
+      last = i;
+  return last == fn? dot : string(fn, last);
+}
+
+llreader::llreader(): pos(0), length(0), data(NULL), mode(FT_CLOSED), path(dot) {}
+llreader::llreader(const char* filename): pos(0), length(0), data(NULL), mode(FT_CLOSED), path(fn_path(filename)) { open(filename); }
+llreader::llreader(std::string contents, bool cp): pos(0), length(0), data(NULL), mode(FT_CLOSED), path(dot) { cp? copy(contents) : encapsulate(contents); }
 
 #include <iostream>
-llreader::llreader(const llreader& x): mode(FT_BUFFER), pos(x.pos), length(FT_BUFFER), data(NULL) {
+llreader::llreader(const llreader& x): pos(x.pos), length(FT_BUFFER), data(NULL), mode(FT_BUFFER), path(x.path) {
   cout << "COPY CALLED ON LLREADER" << endl;
   if (x.mode == FT_CLOSED) mode = FT_CLOSED;
   else {
@@ -106,6 +120,7 @@ void llreader::open(const char* filename) {
   data = (const char*)mmap(NULL, length, PROT_READ, MAP_SHARED, fd, 0);
   mode = FT_MMAP;
 #endif
+  path = fn_path(filename);
 }
 
 void llreader::alias(const char* buffer, size_t len) {
@@ -118,6 +133,7 @@ void llreader::alias(const llreader &llread) {
   mode = FT_ALIAS;
   pos = llread.pos, length = llread.length;
   data = llread.data;
+  path = llread.path;
 }
 
 void llreader::consume(char* buffer, size_t len) {
@@ -134,6 +150,7 @@ void llreader::consume(llreader& whom) {
   whom.mode = FT_CLOSED;
   whom.length = 0;
   whom.data = NULL;
+  path = whom.path;
 }
 
 void llreader::close() {

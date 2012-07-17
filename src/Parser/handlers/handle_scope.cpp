@@ -261,6 +261,8 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               }
             }
             
+            ref_stack::parameter_ct empty;
+            ft.refs.push_func(empty);
             definition_function *const df = new definition_function("operator " + ft.toString(), scope, ft.def, ft.refs, ft.flags, inherited_flags);
             decl = df;
             

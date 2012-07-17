@@ -58,7 +58,7 @@ namespace jdip {
     /// @param line_pos  The position of the last newline, to store
     /// @param consume   The llreader to consume for storage
     openfile(const char* fname, size_t line_num, size_t line_pos, llreader &consume);
-    void swap(openfile&); ///< Copy constructor.
+    void swap(openfile&); ///< Swap with another openfile.
   };
   
   /**

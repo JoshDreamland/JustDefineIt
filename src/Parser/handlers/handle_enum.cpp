@@ -115,7 +115,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     nenum->type = ft.def;
     nenum->modifiers = ft.flags;
   }
-  else nenum->type = builtin_declarators["int"]->def;
+  else nenum->type = builtin_type__int;
   
   if (token.type != TT_LEFTBRACE) {
     return nenum;
