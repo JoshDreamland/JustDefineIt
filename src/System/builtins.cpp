@@ -158,6 +158,13 @@ namespace jdi {
     add_declarator("explicit", UF_FLAG);
     
     builtin.variadics.insert(builtin_type__va_list);
+    
+    string x(1,'x');
+    builtin.add_macro_func("__attribute__", x, string(), false);
+    builtin.add_macro_func("__typeof__", x, string("int"), false);
+    builtin.add_macro("__extension__", string());
+    builtin.add_macro("false", string(1,'0'));
+    builtin.add_macro("true", string(1,'1'));
   }
   
   void cleanup_declarators() {
