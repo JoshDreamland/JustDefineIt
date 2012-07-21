@@ -544,11 +544,13 @@ namespace jdi {
   string definition_class::toString(unsigned levels, unsigned indent) {
     const string inds(indent, ' ');
     string res = inds + "class " + name;
-    if (!ancestors.empty())
+    if (!ancestors.empty()) {
+      res += ": ";
       for (vector<ancestor>::iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
         res += ((it->protection == DEF_PRIVATE)? "private " : (it->protection == DEF_PROTECTED)? "protected " : "public ");
         res += it->def->name + " ";
       }
+    }
     if (levels and not(flags & DEF_INCOMPLETE))
       res += "\n", res += definition_scope::toString(dl(levels), indent);
     return res;
