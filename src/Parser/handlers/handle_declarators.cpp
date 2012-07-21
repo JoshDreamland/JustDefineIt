@@ -153,6 +153,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       }
       if (not(ins.first->second->flags & DEF_TYPED)) {
         token.report_error(herr, "Redeclaration of `" + tp.refs.name + "' as a different kind of symbol");
+        cout << ins.first->second->toString() << endl;
         return 3;
       }
       if (ins.first->second->flags & DEF_FUNCTION) { // Handle function overloading
