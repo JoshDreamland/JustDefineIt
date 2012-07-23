@@ -49,5 +49,9 @@
   of most material in this namespace is not official and not guaranteed.
 **/
 
+namespace jdi {
+  /** Initialize JustDefineIt */
+  void initialize();
+}
 
 #endif

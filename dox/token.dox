@@ -1,0 +1,98 @@
+/*!
+@page tokeninfo Tokens
+
+Tokens in JDI are constructed with a set amount of information regarding their
+origin. This information is determined by a set of preprocessors at compile time.
+At its most basic, the \c token_t class contains a type member, a content member,
+and a definition member. The <b>type</b> tells, in general, what the token is, 
+such as a brace, a type-id, an operator, etc. The <b>content</b> member contains a
+const pointer into the file contents in memory indicating where the token was read.
+The <b>def</b> member is used when a lookup is done on the token content from
+outside the basic lexer, and a definition is found to match.
+
+In general, this extra information is provided for when the type of a token does
+not thoroughly describe the data in a file. 
+
+<table>
+  <tr><th>Token Type</th>       <th>Content?</th> <th>Definition?</th></tr>
+  <tr><td>TT_DECLARATOR</td>    <td></td> <td>The definition by the name of this token</td> </tr>
+  <tr><td>TT_DECFLAG</td>       <td></td> <td>The typeflag by the name of this token, cast to definition*</td> </tr>
+  <tr><td>TT_CLASS</td>         <td></td> <td></td> </tr>
+  <tr><td>TT_STRUCT</td>        <td></td> <td></td> </tr>
+  <tr><td>TT_ENUM</td>          <td></td> <td></td> </tr>
+  <tr><td>TT_UNION</td>         <td></td> <td></td> </tr>
+  <tr><td>TT_NAMESPACE</td>     <td></td> <td></td> </tr>
+  <tr><td>TT_EXTERN</td>        <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_ASM</td>           <td></td> <td></td> </tr>
+  <tr><td>TT_OPERATORKW</td>    <td></td> <td></td> </tr>
+  <tr><td>TT_SIZEOF</td>        <td></td> <td></td> </tr>
+  <tr><td>TT_ISEMPTY</td>       <td></td> <td></td> </tr>
+  <tr><td>TT_DECLTYPE</td>      <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_IDENTIFIER</td>    <td>The name that was read.</td> <td></td> </tr>
+  <tr><td>TT_DEFINITION</td>    <td>The name that was read.</td> <td>The definition by that name.</td> </tr>
+                                          
+  <tr><td>TT_TEMPLATE</td>      <td></td> <td></td> </tr>
+  <tr><td>TT_TYPENAME</td>      <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_TYPEDEF</td>       <td></td> <td></td> </tr>
+  <tr><td>TT_USING</td>         <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_PUBLIC</td>        <td></td> <td></td> </tr>
+  <tr><td>TT_PRIVATE</td>       <td></td> <td></td> </tr>
+  <tr><td>TT_PROTECTED</td>     <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_COLON</td>         <td>":"</td> <td></td> </tr>
+  <tr><td>TT_SCOPE</td>         <td>"::"</td> <td></td> </tr>
+                                          
+  <tr><td>TT_LEFTPARENTH</td>   <td></td> <td></td> </tr>
+  <tr><td>TT_RIGHTPARENTH</td>  <td></td> <td></td> </tr>
+  <tr><td>TT_LEFTBRACKET</td>   <td></td> <td></td> </tr>
+  <tr><td>TT_RIGHTBRACKET</td>  <td></td> <td></td> </tr>
+  <tr><td>TT_LEFTBRACE</td>     <td></td> <td></td> </tr>
+  <tr><td>TT_RIGHTBRACE</td>    <td></td> <td></td> </tr>
+  <tr><td>TT_LESSTHAN</td>      <td>"<"</td> <td></td> </tr>
+  <tr><td>TT_GREATERTHAN</td>   <td>">"</td> <td></td> </tr>
+                                          
+  <tr><td>TT_TILDE</td>         <td>"~"</td> <td></td> </tr>
+  <tr><td>TT_ELLIPSIS</td>      <td>"..."</td> <td></td> </tr>
+  <tr><td>TT_OPERATOR</td>      <td>The exact operator.</td> <td></td> </tr>
+                                          
+  <tr><td>TT_COMMA</td>         <td>","</td> <td></td> </tr>
+  <tr><td>TT_SEMICOLON</td>     <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_STRINGLITERAL</td> <td>The string, in quotes.</td> <td></td> </tr>
+  <tr><td>TT_CHARLITERAL</td>   <td>The character, in single quotes.</td> <td></td> </tr>
+  <tr><td>TT_DECLITERAL</td>    <td>The number, with all flags.</td> <td></td> </tr>
+  <tr><td>TT_HEXLITERAL</td>    <td>The number, with all flags.</td> <td></td> </tr>
+  <tr><td>TT_OCTLITERAL</td>    <td>The number, with all flags.</td> <td></td> </tr>
+                                          
+  <tr><td>TTM_CONCAT</td>       <td></td> <td></td> </tr>
+  <tr><td>TTM_TOSTRING</td>     <td></td> <td></td> </tr>
+                                          
+  <tr><td>TT_ENDOFCODE</td>     <td></td> <td></td> </tr>
+  <tr><td>TT_INVALID</td>       <td></td> <td></td> </tr>
+</table>
+
+By default, tokens also construct with information about the file from where they were read.
+Depending on compile flags, a token may contain any of the following fields, in addition to
+the type, content, and definition:
+
+<table>
+<tr><th>Member</th>  <th>Description</th> <th>Inclusion Condition</th></tr>
+<tr><td>file</td>    <td>The name of the file from which the token was read.</td>           <td>ifndef NO_ERROR_REPORTING</td></tr>
+<tr><td>linenum</td> <td>The line number in the file from which this token was read.</td>   <td>ifndef NO_ERROR_REPORTING</td></tr>
+<tr><td>pos</td>     <td>The column position in the line on which this token was read.</td> <td>ifndef NO_ERROR_POSITION</td></tr>
+<tr><td>docs</td>    <td>String containing raw formal comment read before this token.</td>  <td>Planned</td></tr>
+</table>
+
+Members appear in token.h inside preprocessor conditionals. They are initialized through
+the constructor. To facilitate this, a macro is generated by the name of TOKEN_BASICS.
+This macro takes a parameter for each of the maximum set of members, and ignores the
+parameters corresponding to members which are pre-processed out, comma-separating the
+rest. As such, you will often see calls to token_t(TOKEN_BASICS(...)), and, more generally,
+TOKEN_BASICS(statement, statement, statement...). This is so removing those members does not
+cause compilation error.
+
+*/
