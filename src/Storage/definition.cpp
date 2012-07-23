@@ -120,7 +120,7 @@ namespace jdi {
     return res;
   }
   void definition_scope::unuse_namespace(definition_scope::using_node *n) {
-    if (using_back == n) using_back = n->next;
+    if (using_back == n) using_back = n->prev;
     if (using_front == n) using_front = n->next;
     if (n->next) n->next->prev = n->prev;
     if (n->prev) n->prev->next = n->next;
