@@ -52,6 +52,8 @@
 namespace jdi {
   /** Initialize JustDefineIt */
   void initialize();
+  /** Clean up (uninitialize) JustDefineIt */
+  void clean_up();
 }
 
 #endif

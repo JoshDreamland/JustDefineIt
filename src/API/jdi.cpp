@@ -30,4 +30,10 @@ namespace jdi {
     builtin->load_standard_builtins();
     builtin->output_types();
   }
+  
+  void clean_up() {
+    cleanup_declarators();
+    delete builtin;
+    builtin = NULL;
+  }
 }

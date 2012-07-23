@@ -104,7 +104,7 @@ int main() {
     else
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
     
-    do_cli(enigma);
+    // do_cli(enigma);
     /*/
     macro_map m;
     lexer_cpp lex(f, m, "test.cc");
@@ -118,7 +118,7 @@ int main() {
   else
     cout << "Failed to open file for parsing!" << endl;
   
-  cleanup_declarators();
+  clean_up();
   return 0;
 }
 
