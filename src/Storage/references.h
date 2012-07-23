@@ -197,6 +197,9 @@ namespace jdi {
   struct ref_stack::parameter: full_type {
     bool variadic; ///< True if this parameter can be passed several values; in C/C++, this is mandated to be the last parameter.
     AST *default_value; ///< An AST if a default value was given. NULL otherwise.
+    
+    parameter(); ///< Default constructor.
+    ~parameter(); ///< Destructor; frees the default value AST.
     void swap_in(full_type& param); ///< Swap contents with another parameter class.
     void swap(parameter& param); ///< Swap contents with another parameter class.
     
