@@ -71,8 +71,8 @@ namespace jdi {
   ref_stack::iterator::operator bool() { return n; }
   ref_stack::iterator::iterator(ref_stack::node *nconstruct): n(nconstruct) { }
   
-  ref_stack::iterator ref_stack::begin() { return ref_stack::iterator(ntop); }
-  ref_stack::iterator ref_stack::end() { return ref_stack::iterator(NULL); }
+  ref_stack::iterator ref_stack::begin() const { return ref_stack::iterator(ntop); }
+  ref_stack::iterator ref_stack::end() const { return ref_stack::iterator(NULL); }
   
   void ref_stack::push(ref_stack::ref_type reference_type) {
     ntop = new node(ntop, reference_type);
@@ -194,13 +194,9 @@ namespace jdi {
     param.variadic = variadic;
     variadic = swb;
     
-    swb = param.defaulted;
-    param.defaulted = defaulted;
-    defaulted = swb;
-    
-    value v = param.default_value;
+    AST* swast = param.default_value;
     param.default_value = default_value;
-    default_value = v;
+    default_value = swast;
   }
   
   void ref_stack::parameter::swap_in(full_type &param) {
@@ -211,7 +207,7 @@ namespace jdi {
   // =====: String depiction :===================================================================
   // ============================================================================================
   
-  string ref_stack::toStringLHS() {
+  string ref_stack::toStringLHS() const {
     string res;
     iterator it = begin();
     while (it)
@@ -231,7 +227,7 @@ namespace jdi {
     return buf;
   }
 
-  string ref_stack::toStringRHS() {
+  string ref_stack::toStringRHS() const {
     string res;
     iterator it = begin();
     while (it)
@@ -243,6 +239,7 @@ namespace jdi {
           node_func* nf = (node_func*)*it;
           for (size_t i = 0; i < nf->params.size(); i++) {
             res += nf->params[i].variadic? "..." : nf->params[i].toString();
+            if (nf->params[i].default_value) res += " = " + nf->params[i].default_value->toString();
             if (i + 1 < nf->params.size()) res += ", ";
           }
           res += ')';
@@ -255,7 +252,7 @@ namespace jdi {
     return res;
   }
 
-  string ref_stack::toString() {
+  string ref_stack::toString() const {
     return toStringLHS() + name + toStringRHS();
   }
   
@@ -401,32 +398,32 @@ namespace jdi {
   }
   
   bool ref_stack::parameter::operator==(const ref_stack::parameter& other) const {
-    return defaulted == other.defaulted and variadic == other.variadic and (!variadic or default_value == other.default_value);
+    return !default_value == !other.default_value and variadic == other.variadic;
   }
   bool ref_stack::parameter::operator!=(const ref_stack::parameter& other) const {
-    return defaulted != other.defaulted or variadic != other.variadic or (variadic and default_value != other.default_value);
+    return !default_value != !other.default_value or variadic != other.variadic;
   }
   bool ref_stack::parameter::operator<(const ref_stack::parameter& other) const {
-    if (default_value != other.default_value) return default_value < other.default_value;
-    if (defaulted != other.defaulted) return defaulted < other.defaulted;
+    //if (default_value != other.default_value) return default_value < other.default_value;
+    if (!default_value != !other.default_value) return !default_value > !other.default_value;
     if (variadic != other.variadic) return variadic < other.variadic;
     return false;
   }
   bool ref_stack::parameter::operator>(const ref_stack::parameter& other) const {
-    if (default_value != other.default_value) return default_value > other.default_value;
-    if (defaulted != other.defaulted) return defaulted > other.defaulted;
+    //if (default_value != other.default_value) return default_value > other.default_value;
+    if (!default_value != !other.default_value) return !default_value < !other.default_value;
     if (variadic != other.variadic) return variadic > other.variadic;
     return false;
   }
   bool ref_stack::parameter::operator<=(const ref_stack::parameter& other) const {
-    if (default_value != other.default_value) return default_value < other.default_value;
-    if (defaulted != other.defaulted) return defaulted < other.defaulted;
+    //if (default_value != other.default_value) return default_value < other.default_value;
+    if (!default_value != !other.default_value) return !default_value > !other.default_value;
     if (variadic != other.variadic) return variadic < other.variadic;
     return true;
   }
   bool ref_stack::parameter::operator>=(const ref_stack::parameter& other) const {
-    if (default_value != other.default_value) return default_value > other.default_value;
-    if (defaulted != other.defaulted) return defaulted > other.defaulted;
+    //if (default_value != other.default_value) return default_value > other.default_value;
+    if (!default_value != !other.default_value) return !default_value < !other.default_value;
     if (variadic != other.variadic) return variadic > other.variadic;
     return true;
   }
