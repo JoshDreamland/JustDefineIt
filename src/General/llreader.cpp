@@ -104,12 +104,12 @@ void llreader::open(const char* filename) {
   #error unimplemented
 #else
   int fd = ::open(filename, O_RDONLY);
-  if (fd == -1)
-    return;
+  if (fd == -1) return;
   struct stat statbuf;
   fstat(fd, &statbuf), length = statbuf.st_size;
   data = (const char*)mmap(NULL, length, PROT_READ, MAP_SHARED, fd, 0);
   mode = FT_MMAP;
+  ::close(fd);
 #endif
   path = fn_path(filename);
 }
