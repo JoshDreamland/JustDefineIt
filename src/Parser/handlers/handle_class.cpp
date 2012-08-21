@@ -226,7 +226,11 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
         return NULL;
       }
       full_type ft = read_type(lex, token, scope, this, herr);
-      if (!ft.def or not(ft.def->flags & DEF_CLASS)) {
+      if (!ft.def) {
+        token.report_errorf(herr, "Expected class name before %s");
+        return NULL;
+      }
+      if (not(ft.def->flags & DEF_CLASS)) {
         if (ft.def->flags & DEF_TYPENAME) {
           definition* def = scope;
           while (def and ~def->flags & DEF_TEMPSCOPE) def = def->parent;
