@@ -47,7 +47,6 @@ b: syntax_error {};
 #include <utility>
 #include <vector>
 #include <cmath>
-#include <valarray>
 
 #include <cassert>
 #include <cctype>
@@ -67,3 +66,4 @@ b: syntax_error {};
 #include <cwchar>
 #include <cwctype>
 #include <GL/gl.h>
+

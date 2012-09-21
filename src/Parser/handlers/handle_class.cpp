@@ -177,11 +177,19 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
           nclass = (definition_class*)temp->def; // Set our class, nclass, to the existing class
           if (scope->flags & DEF_TEMPSCOPE) { // If that scope is a tempscope,
             ((definition_tempscope*)scope)->referenced = true; // Denote that we've referenced it,
-            if (temp->params.size() != scope->using_general.size())
+            
+            if (temp->params.size() != scope->using_general.size()) { // Make sure our parameter counts are the same
               token.report_error(herr, "Template parameter mismatch in class definition");
-            scope->using_general.clear(); // Drop anything we might still be referring to before we toast this bitch
-            for (size_t i = 0; i < temp->params.size(); ++i) // Replace what we've dropped with the old, likely-to-be-referenced stuff
-              scope->use_general(temp->params[i]->name, temp->params[i]);
+              scope->using_general.clear();
+            }
+            else {
+              scope->using_general.clear(); // Drop anything we might still be referring to before we toast this bitch
+              definition_template *const ntemp = (definition_template*)((definition_tempscope*)scope)->source;
+              for (size_t i = 0; i < temp->params.size(); ++i) // Replace what we've dropped with the old, likely-to-be-referenced stuff
+                scope->use_general(ntemp->params[i]->name, temp->params[i]);
+            }
+            
+            nclass->parent = scope; // Make sure it can actually use this scope's using scope
             delete ((definition_tempscope*)scope)->source; // But instead of actually referencing it, just delete it
             ((definition_tempscope*)scope)->source = temp; // Replace it with our existing one
             // Be advised that this entire process is to prevent leaks while avoiding the possibility
