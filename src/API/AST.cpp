@@ -459,6 +459,7 @@ namespace jdi
       
       case TT_LEFTPARENTH:
           if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE) {
+            track(string("("));
             token = get_next_token();
             bool gtio = tt_greater_is_op; tt_greater_is_op = true;
             AST_Node *params = parse_expression(token, precedence::all);
@@ -472,6 +473,8 @@ namespace jdi
               FATAL_RETURN(left_node);
             }
             left_node = new AST_Node_Binary(left_node,params,"(");
+            token = get_next_token(); // Skip that closing paren
+            track(string(")"));
             break;
           }
         return left_node;
