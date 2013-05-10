@@ -12,11 +12,37 @@ template<int x> class
 b: syntax_error {};
 */
 
+#include <cassert>
+#include <cctype>
+#include <cerrno>
+#include <cfloat>
+#include <ciso646>
+#include <climits>
+#include <clocale>
+#include <cmath>
+#include <csetjmp>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cwchar>
+#include <cwctype>
+#include <csignal>
+
+#include <iso646.h>
+
+#include <exception>
+#include <utility>
+#include <new>
+#include <numeric>
+
+/*
 #include <algorithm>
 #include <bitset>
 #include <complex>
 #include <deque>
-#include <exception>
 #include <fstream>
 #include <functional>
 #include <hash_map>
@@ -25,7 +51,6 @@ b: syntax_error {};
 #include <ios>
 #include <iosfwd>
 #include <iostream>
-#include <iso646.h>
 #include <istream>
 #include <iterator>
 #include <limits>
@@ -33,8 +58,6 @@ b: syntax_error {};
 #include <locale>
 #include <map>
 #include <memory>
-#include <new>
-#include <numeric>
 #include <ostream>
 #include <queue>
 #include <set>
@@ -44,26 +67,7 @@ b: syntax_error {};
 #include <streambuf>
 #include <string>
 #include <strstream>
-#include <utility>
 #include <vector>
-#include <cmath>
+*/
 
-#include <cassert>
-#include <cctype>
-#include <cerrno>
-#include <cfloat>
-#include <ciso646>
-#include <climits>
-#include <clocale>
-#include <csetjmp>
-#include <csignal>
-#include <cstdarg>
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <cwchar>
-#include <cwctype>
-#include <GL/gl.h>
 

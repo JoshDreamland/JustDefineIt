@@ -273,6 +273,7 @@ namespace jdi {
       
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
+      
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
@@ -283,9 +284,13 @@ namespace jdi {
       
       virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
       virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
-      virtual string toString() const; ///< Renders this node and its children as a string, recursively.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
+      
+      virtual string toString() const; ///< Renders this node and its children as a string, recursively.
+      virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      virtual int width(); ///< Returns the width which will be used to render this node and all its children.
+      virtual int height(); ///< Returns the height which will be used to render this node and all its children.
       
       virtual ~AST_Node_Array();
     };

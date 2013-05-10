@@ -31,6 +31,7 @@
 #include <System/builtins.h>
 #include <API/context.h>
 #include <API/AST.h>
+#include <cstring>
 
 #include <API/compile_settings.h>
 
@@ -160,7 +161,7 @@ static inline void skip_whitespace(const char* cfile, size_t &pos, size_t length
 void lexer_cpp::enter_macro(macro_scalar* ms)
 {
   if (ms->value.empty()) return;
-  openfile of(filename, line, lpos, *this);
+  openfile of(filename, sdir, line, lpos, *this);
   files.enswap(of);
   filename = ms->name.c_str();
   this->encapsulate(ms->value);
@@ -276,7 +277,7 @@ bool lexer_cpp::parse_macro_function(const macro_function* mf, error_handler *he
   parse_macro_params(mf, params, herr);
   
   // Enter the macro
-  openfile of(filename, line, lpos, *this);
+  openfile of(filename, sdir, line, lpos, *this);
   files.enswap(of);
   alias(files.top().file);
   char *buf, *bufe;
@@ -617,18 +618,21 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         for (size_t i = 0; i < fnfind.length(); ++i)
           if (fnfind[i] == match) { fnfind.erase(i); break; }
         
-        string incfn;
+        if (files.size() > 9000) {
+          herr->error("Nested include count is OVER NINE THOUSAAAAAAAAND. Not including another.");
+          break;
+        }
+        
+        string incfn, fdir = sdir;
         llreader incfile;
         if (chklocal)
           incfile.open((incfn = path + fnfind).c_str());
         for (size_t i = 0; i < builtin->search_dir_count(); ++i) {
-          if (incfile.is_open()) {
-            if (incnext) {
-              incnext = incfn != filename;
-              incfile.close();
-            } else break;
-          }
-          incfile.open((incfn = builtin->search_dir(i) + fnfind).c_str());
+          if (incfile.is_open()) break;
+          if (!incnext)
+            incfile.open((incfn = (fdir = builtin->search_dir(i)) + fnfind).c_str());
+          else
+            incnext = sdir != builtin->search_dir(i);
         }
         if (!incfile.is_open()) {
           herr->error("Could not find " + fnfind.substr(1), filename, line, pos-lpos);
@@ -638,7 +642,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           break;
         }
         
-        openfile of(filename, line, lpos, *this);
+        openfile of(filename, sdir = fdir, line, lpos, *this);
         files.enswap(of);
         pair<set<string>::iterator, bool> fi = visited_files.insert(incfn);
         filename = fi.first->c_str();
@@ -1026,10 +1030,11 @@ void lexer_cpp::cleanup() {
 
 openfile::openfile() {}
 openfile::openfile(const char* fname): filename(fname), line(0), lpos(0) {}
-openfile::openfile(const char* fname, size_t line_num, size_t line_pos, llreader &consume): filename(fname), line(line_num), lpos(line_pos) { file.consume(consume); }
+openfile::openfile(const char* fname, string sdir, size_t line_num, size_t line_pos, llreader &consume): filename(fname), searchdir(sdir), line(line_num), lpos(line_pos) { file.consume(consume); }
 void openfile::swap(openfile &f) {
   { register const char* tmpl = filename;
   filename = f.filename, f.filename = tmpl; }
+  searchdir.swap(f.searchdir);
   register size_t tmpl = line;
   line = f.line, f.line = tmpl;
   tmpl = lpos, lpos = f.lpos, f.lpos = tmpl;

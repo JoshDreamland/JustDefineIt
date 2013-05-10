@@ -208,6 +208,7 @@ namespace jdi
           }
           array->elements.push_back(n);
           if (token.type != TT_COMMA) {
+            if (token.type == TT_RIGHTBRACE) break;
             token.report_errorf(herr, "Expected comma to separate array elements before %s");
             FATAL_RETURN(array); break;
           }
@@ -508,7 +509,7 @@ namespace jdi
           if (token.type != TT_RIGHTBRACKET) {
             token.report_errorf(herr, "Expected closing bracket to array subscript before %s");
             return left_node;
-          }
+          } track(string("]"));
           token = get_next_token();
         } break;
       
