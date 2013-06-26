@@ -211,12 +211,10 @@ void do_cli(context &ct) {
               case DEF_TYPED: flagnames[DEF_TYPED] = "DEF_TYPED";
               case DEF_FUNCTION: flagnames[DEF_FUNCTION] = "DEF_FUNCTION";
               case DEF_VALUED: flagnames[DEF_VALUED] = "DEF_VALUED";
-              case DEF_DEFAULTED: flagnames[DEF_DEFAULTED] = "DEF_DEFAULTED";
               case DEF_EXTERN: flagnames[DEF_EXTERN] = "DEF_EXTERN";
               case DEF_TEMPLATE: flagnames[DEF_TEMPLATE] = "DEF_TEMPLATE";
               case DEF_TEMPPARAM: flagnames[DEF_TEMPPARAM] = "DEF_TEMPPARAM";
               case DEF_HYPOTHETICAL: flagnames[DEF_HYPOTHETICAL] = "DEF_HYPOTHETICAL";
-              case DEF_TEMPSCOPE: flagnames[DEF_TEMPSCOPE] = "DEF_TEMPSCOPE";
               case DEF_PRIVATE: flagnames[DEF_PRIVATE] = "DEF_PRIVATE";
               case DEF_PROTECTED: flagnames[DEF_PROTECTED] = "DEF_PROTECTED";
               case DEF_INCOMPLETE: flagnames[DEF_INCOMPLETE] = "DEF_INCOMPLETE";

@@ -106,19 +106,6 @@ namespace jdi {
       return NULL;
     return parent->look_up(sname);
   }
-  definition *definition_tempscope::look_up(string sname) {
-    defiter it;
-    if (source->name == sname)
-      return source;
-    if ((it = using_general.find(sname)) != using_general.end())
-      return it->second;
-    definition *res;
-    for (using_node* n = using_front; n; n = n->next)
-      if ((res = n->use->find_local(sname)))
-        return res;
-    return parent->look_up(sname);
-  }
-  
   definition *definition_scope::find_local(string sname) {
     defiter it = members.find(sname);
     if (it != members.end())
@@ -131,6 +118,24 @@ namespace jdi {
         return res;
     return NULL;
   }
+  
+  definition *definition_tempparam::look_up(string sname) {
+    must_be_class = true;
+    return definition_class::look_up(sname);
+  }
+  decpair definition_tempparam::declare(string sname, definition *def) {
+    must_be_class = true;
+    return definition_class::declare(sname, def);
+  }
+  definition *definition_tempparam::find_local(string sname) {
+    must_be_class = true;
+    pair<defmap::iterator, bool> insp = members.insert(defmap::value_type(sname, NULL));
+    if (insp.second) {
+      insp.first->second = new definition_tempparam(sname, this);  
+    }
+    return insp.first->second;
+  }
+  
   definition_scope::using_node *definition_scope::use_namespace(definition_scope *ns) {
     using_node *res;
     if (using_back)
@@ -187,7 +192,7 @@ namespace jdi {
   
   definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_typed(classname, parnt, NULL, 0, flgs) {}
   
-  definition_template::definition_template(string n, definition *p, unsigned f): definition(n, p, f | DEF_TEMPLATE), def(NULL)  {}
+  definition_template::definition_template(string n, definition *p, unsigned f): definition_scope(n, p, f | DEF_TEMPLATE), def(NULL)  {}
   definition_template::~definition_template() {
     for (size_t i = 0; i < params.size(); ++i)
       delete params[i];
@@ -197,22 +202,21 @@ namespace jdi {
       delete *i;
     delete def;
   }
+  
   definition* definition_template::instantiate(arg_key& key) {
     pair<arg_key,definition*> insme(key,NULL);
     /*pair<map<arg_key,definition*>::iterator, bool> ins =*/ instantiations.insert(insme);
     return def;//ins.first->second;
   }
-  definition arg_key::abstract("<unspecified>", NULL, 0);
-  definition_template* definition_template::specialize(arg_key& key, definition_tempscope *ts) {
-    for (arg_key::node* i = key.begin(); i < key.end(); ++i)
-      if (i->type == arg_key::AKT_FULLTYPE and (!i->ft().def or (i->ft().def->flags & DEF_TEMPPARAM)))
-        i->ft().def = &arg_key::abstract;
-    pair<arg_key,definition_template*> insme(key,(definition_template*)ts->source);
-    pair<definition_template::speciter, bool> ins = specializations.insert(insme);
-    if (ins.second)
-      ts->referenced = true;
+  
+  definition_template *definition_template::specialize(arg_key& key, definition_template *spec) {
+    pair<speciter, bool> ins = specializations.insert(specmap::value_type(key, spec));
+    if (ins.second) return spec;
     return ins.first->second;
   }
+  
+  definition arg_key::abstract("<unspecified>", NULL, 0);
+  
   bool arg_key::operator<(const arg_key& other) const {
     for (arg_key::node *i = values, *j = other.values; j != other.endv; ++i) {
       if (i == endv) return true;
@@ -228,17 +232,20 @@ namespace jdi {
       }
     } return false;
   }
+  
   void arg_key::mirror(definition_template *temp) {
     for (size_t i = 0; i < temp->params.size(); ++i)
       if (temp->params[i]->flags & DEF_TYPENAME) {
-        definition_typed* dt = (definition_typed*)temp->params[i];
-        ref_stack dup; dup.copy(dt->referencers);
-        new(&values[i].data) full_type(dt->type, dup, dt->modifiers);
+        new(&values[i].data) full_type(temp->params[i]->default_type);
         values[i].type = AKT_FULLTYPE;
       }
       else {
-        definition_valued* dv = (definition_valued*)temp->params[i];
-        new(&values[i].data) value(dv->value_of);
+        if (temp->params[i]->default_value) {
+          new(&values[i].data) value(temp->params[i]->default_value->eval());
+          if ((*(value*)&values[i].data).type == VT_NONE)
+            fprintf(stderr, "Expression in template parameter could not be evaluated.");
+        }
+        else new(&values[i].data) value();
         values[i].type = AKT_VALUE;
       }
   }
@@ -323,8 +330,6 @@ namespace jdi {
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   
-  definition_tempscope::definition_tempscope(string n, definition* p, unsigned f, definition* s): definition_scope(n,p,f|DEF_TEMPSCOPE), source(s), referenced(false) {}
-  
   definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f, AST* d): definition_class(n,p,f|DEF_HYPOTHETICAL), def(d) {}
   definition_hypothetical::definition_hypothetical(string n, definition_scope *p, AST* d): definition_class(n,p,DEF_HYPOTHETICAL), def(d) {}
   definition_hypothetical::~definition_hypothetical() { delete def; }
@@ -343,26 +348,6 @@ namespace jdi {
     return decpair(&insp.first->second, insp.second);
   }
   decpair definition_class::declare(string n, definition* def) {
-    inspair insp = members.insert(entry(n,def));
-    return decpair(&insp.first->second, insp.second);
-  }
-  decpair definition_tempscope::declare(string n, definition* def) {
-    if (source->flags & DEF_TEMPLATE) {
-      definition_template* const temp = (definition_template*)source;
-      temp->name = n;
-      if (!temp->def) {
-        temp->def = def;
-        return decpair(&temp->def, true);
-      }
-      if (def) {
-        cerr << "Double declaration in a template scope" << endl;
-        cerr << "First definition:" << endl;
-        cerr << temp->def->toString(-1,2);
-        cerr << endl << "New definition:" << endl;
-        cerr << def->toString(-1,2) << endl;
-      }
-      return decpair(&temp->def, false);
-    }
     inspair insp = members.insert(entry(n,def));
     return decpair(&insp.first->second, insp.second);
   }
@@ -430,14 +415,14 @@ namespace jdi {
     }
   }
   
-  void definition_tempscope::remap(const remap_set &n) {
-    definition_scope::remap(n);
-    if (source) source->remap(n);
-  }
-  
   void definition_template::remap(const remap_set &n) {
     if (def)
       def->remap(n);
+  }
+  
+  void definition_tempparam::remap(const remap_set &n) {
+    // TODO: Implement
+    (void)n;
   }
   
   void definition_typed::remap(const remap_set &n) {
@@ -518,6 +503,8 @@ namespace jdi {
   //======: Duplicators :===================================================================================
   //========================================================================================================
   
+  // FIXME: The parent definition isn't looked up in the remap set!!
+  
   definition *definition::duplicate(remap_set &n) {
     definition* res = new definition(name, parent, flags);
     n[this] = res;
@@ -564,21 +551,14 @@ namespace jdi {
     return res;
   }
   
-  definition* definition_tempscope::duplicate(remap_set &n) {
-    definition_tempscope* res = new definition_tempscope(name, parent, flags, source->duplicate(n));
-    res->copy(this);
-    n[this] = res;
-    return res;
-  }
-  
   definition* definition_template::duplicate(remap_set &n) {
     definition_template* res = new definition_template(name, parent, flags);
     res->def = def->duplicate(n);
     res->specializations = specializations;
     res->instantiations = instantiations;
     res->params.reserve(params.size());
-    for (vector<definition*>::iterator it = params.begin(); it != params.end(); ++it)
-      res->params.push_back((*it)->duplicate(n));
+    for (piterator it = params.begin(); it != params.end(); ++it)
+      res->params.push_back((definition_tempparam*)(*it)->duplicate(n));
     for (speciter it = res->specializations.begin(); it != res->specializations.end(); ++it) {
       definition *nd = it->second->duplicate(n);
       n[it->second] = nd; it->second = (definition_template*)nd;
@@ -587,6 +567,19 @@ namespace jdi {
       definition *nd = it->second->duplicate(n);
       n[it->second] = nd; it->second = nd;
     }
+    n[this] = res;
+    return res;
+  }
+  
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_type(tp) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
+  
+  definition* definition_tempparam::duplicate(remap_set &n) {
+    definition_tempparam* res = new definition_tempparam(name, parent, flags);
+    res->default_type = default_type;
+    res->default_value = new AST(/*default_value*/); // FIXME: This drops information! Need an AST::duplicate.
+    res->definition_class::copy(this);
     n[this] = res;
     return res;
   }
@@ -643,7 +636,7 @@ namespace jdi {
   }
   string definition_enum::toString(unsigned levels, unsigned indent) {
     const string inds(indent, ' ');
-    string res = inds + "enum " + name + ": " + type->name;
+    string res = inds + "enum " + name + ": " + (type? type->name + " " : "");
     if (levels) {
       res += "{\n";
       string sinds(indent+2, ' ');
@@ -681,16 +674,16 @@ namespace jdi {
     string res(indent, ' ');
     res += "template<";
     bool first = true;
-    for (vector<definition*>::iterator it = params.begin(); it != params.end(); ++it) {
-      definition_typed *d = (definition_typed*)*it;
+    for (piterator it = params.begin(); it != params.end(); ++it) {
+      definition_tempparam *d = *it;
       if (!first) res += ", ";
       if (d->flags & DEF_TYPENAME) {
         res += d->name.empty()? "typename" : "typename " + d->name;
-        if (d->type)
-          res += " = " + d->type->name;
+        if (d->default_type.def)
+          res += " = " + d->default_type.toString();
       }
       else {
-        res += d->type->name + d->name;
+        res += (d->default_type.def? d->default_type.toString() : "<ERROR>");
         if (d->flags & DEF_VALUED)
           res += " = " + ((definition_valued*)d)->value_of;
       }

@@ -31,21 +31,19 @@ namespace jdi {
   /** Flags given to a definition to describe its type simply and quickly. **/
   enum DEF_FLAGS
   {
-    DEF_TYPENAME =     1 <<  0, ///< This definition has template parameters attached.
-    DEF_NAMESPACE =    1 <<  1, ///< This definition can be used as a typename. This does not imply that it has a valid type; see DEF_TYPED.
-    DEF_CLASS =        1 <<  2, ///< This definition is a namespace.
-    DEF_ENUM =         1 <<  3, ///< This definition is a class or structure. 
+    DEF_TYPENAME =     1 <<  0, ///< This definition can be used as a typename. This does not imply that it has a valid type; see DEF_TYPED.
+    DEF_NAMESPACE =    1 <<  1, ///< This definition is a namespace.
+    DEF_CLASS =        1 <<  2, ///< This definition is a class or structure. 
+    DEF_ENUM =         1 <<  3, ///< This definition is an enumeration of valued constants.
     DEF_UNION =        1 <<  4, ///< This definition is an enumeration of valued constants.
-    DEF_SCOPE =        1 <<  5, ///< This definition is an enumeration of valued constants.
-    DEF_TYPED =        1 <<  6, ///< This definition is a scope of some sort.
-    DEF_FUNCTION =     1 <<  7, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
-    DEF_VALUED =       1 <<  8, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_DEFAULTED =    1 <<  9, ///< This definition has a default expression attached.
-    DEF_EXTERN =       1 << 10, ///< This definition is a parameter of a template.
-    DEF_TEMPLATE =     1 << 11, ///< This definition was declared with the "extern" flag.
+    DEF_SCOPE =        1 <<  5, ///< This definition is a scope of some sort.
+    DEF_TYPED =        1 <<  6, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
+    DEF_FUNCTION =     1 <<  7, ///< This definition is a function containing a list of zero or more overloads.
+    DEF_VALUED =       1 <<  8, ///< This definition has a default expression attached.
+    DEF_EXTERN =       1 << 10, ///< This definition was declared with the "extern" flag.
+    DEF_TEMPLATE =     1 << 11, ///< This definition has template parameters attached.
     DEF_TEMPPARAM =    1 << 12, ///< This definition belongs to a list of template parameters, and is therefore abstract.
     DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_TEMPSCOPE =    1 << 14, ///< This definition is filling in for a scope; it contains a source definition which is not really a scope.
     DEF_PRIVATE =      1 << 15, ///< This definition was declared as a private member.
     DEF_PROTECTED =    1 << 16, ///< This definition was declared as a protected member.
     DEF_INCOMPLETE =   1 << 17, ///< This definition was declared but not implemented.
@@ -61,8 +59,8 @@ namespace jdi {
   struct definition_class;
   struct definition_enum;
   struct definition_template;
+  struct definition_tempparam;
   struct definition_atomic;
-  struct definition_tempscope;
   struct definition_hypothetical;
   
   /// Structure for inserting declarations into a scope.
@@ -456,20 +454,13 @@ namespace jdi {
     A piece of a definition for anything with template parameters.
     This class can be used alongside structs, classes, and functions.
   **/
-  struct definition_template: definition {
+  struct definition_template: definition_scope {
     /** The definition to which template parameters here contained are applied. **/
     definition* def;
-    /** A list of template parameters or arguments, as typedefs.
-        The definition pointed to by this vector must be a typedef.
-        
-        If the typedef is to NULL, the type is completely abstract. Otherwise,
-        if the \c DEF_DEFAULTED flag is set, the type being pointed to is the
-        default for this template parameter. If the type is non-null and this
-        flag is not set, then this parameter has been specified in a (partial)
-        instantiation of the parent function/class (the definition containing
-        the vector).
-    **/
-    vector<definition*> params;
+    
+    typedef vector<definition_tempparam*> pvector;
+    typedef pvector::iterator piterator;
+    pvector params;
     
     virtual definition* duplicate(remap_set &n);
     virtual void remap(const remap_set &n);
@@ -497,16 +488,52 @@ namespace jdi {
         @param key  The \c arg_key structure containing the template parameter values to use. **/
     definition *instantiate(arg_key& key);
     /** Specialize this template with the values given in the passed key.
-        If the specialization exists, it is returned. Otherwise, a new specialization
-        is created with the flag DEF_INCOMPLETE to signify that it contains no unique definition.
-        @param key  The \c arg_key structure containing the template parameter values to use.
-        @param ts   The temporary scope allocated to store the template. **/
-    definition_template *specialize(arg_key& key, definition_tempscope* ts);
+        If the specialization exists, it is returned. Otherwise, the given pointer is inserted and returned.
+        @param key   The \c arg_key structure containing the template parameter values to use.
+        @param spec  The template specialization to insert. **/
+    definition_template *specialize(arg_key& key, definition_template *spec);
     
     /** Construct with name, parent, and flags **/
     definition_template(string name, definition *parent, unsigned flags);
     /** Destructor to free template parameters, instantiations, etc. **/
     ~definition_template();
+  };
+  
+  /**
+    @struct jdi::definition_tempparam
+    A definition inheriting from definition_class, which is meant to represent a template parameter. Definitions in this
+    class are considered hypothetical; they must exist in the type 
+  */
+  struct definition_tempparam: definition_class {
+    AST *default_value;
+    full_type default_type;
+    bool must_be_class; ///< Denotes to the compiler that this template parameter was used in a way only a class can be used (such as inheritance or member access).
+    
+    /** Construct with default information.
+      @param name   Some unique key name for this scope.
+      @param parent The scope above this one.
+      @param flags  The additional flag data about this scope. */
+    definition_tempparam(string name, definition_scope* parent, unsigned flags = DEF_TEMPPARAM);
+    /** Construct with a type and some flags. The DEF_TYPENAME flag is automatically given to the type, and the
+        DEF_DEFAULTED flag is given to it if \p tp.def is non-null.
+      @param name   Some unique key name for this scope.
+      @param parent The scope above this one.
+      @param tp     The default type given to this parameter.
+      @param flags  The additional flag data about this scope. */
+    definition_tempparam(string name, definition_scope* parent, full_type &tp, unsigned flags = DEF_TEMPPARAM | DEF_TYPENAME);
+    /** Construct with default information.
+      @param name   Some unique key name for this scope.
+      @param parent The scope above this one.
+      @param defval The default value given to this parameter, read in as an AST to enable it to depend on other parameters.
+      @param flags  The additional flag data about this scope. */
+    definition_tempparam(string name, definition_scope* parent, full_type &tp, AST* defval, unsigned flags = DEF_TEMPPARAM);
+    
+    virtual definition* duplicate(remap_set &n);
+    virtual void remap(const remap_set &n);
+    
+    virtual definition* look_up(string name); ///< Look up a definition in the parent of this scope (skip this scope). This function will never be used by the system.
+    virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope. The definition will be marked HYPOTHETICAL, and the \c must_be_class flag will be set.
+    definition* find_local(string name); ///< Behaves identically to declare if the given name does not exist, or else returns it. In either case, the returned definition will be HYPOTHETICAL.
   };
   
   /**
@@ -523,37 +550,18 @@ namespace jdi {
   };
   
   /**
-    @struct jdi::definition_tempscope
-    A class which can be used as a temporary scope with a definition attached.
-  */
-  struct definition_tempscope: definition_scope {
-    definition *source; ///< The definition for which this subscope was created.
-    bool referenced; ///< Whether this->source has been consumed by another object.
-    /** Construct with default information.
-      @param name   Some unique key name for this scope.
-      @param parent The scope above this one.
-      @param flags  The additional flag data about this scope.
-      @param source The definition with which this scope is affiliated, however loosely. */
-    definition_tempscope(string name, definition* parent, unsigned flags, definition *source);
-    
-    virtual definition* duplicate(remap_set &n);
-    virtual void remap(const remap_set &n);
-    
-    virtual definition* look_up(string name); ///< Look up a definition in the parent of this scope (skip this temp scope).
-    virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope.
-  };
-  
-  /**
     @struct jdi::definition_hypothetical
     A class representing a dependent (here called "hypothetical") type--a type which
     depends on an abstract parent or scope.
   */
   struct definition_hypothetical: definition_class {
     AST *def;
+    unsigned int required_flags; ///< Set of flags required of any type provided to this template parameter
     virtual definition* duplicate(remap_set &n);
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
     /// Construct with basic definition info.
     definition_hypothetical(string name, definition_scope *parent, unsigned flags, AST* def);
     definition_hypothetical(string name, definition_scope *parent, AST* def);

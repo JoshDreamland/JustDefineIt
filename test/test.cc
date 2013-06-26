@@ -12,6 +12,38 @@ template<int x> class
 b: syntax_error {};
 */
 
+/* Simple C test case * /
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+#include <malloc.h>
+*/
+template<typename t1, typename t2> class my_template {
+  t1 my_member;
+  typename t2::whatever my_other_member;
+};
+
+template<typename t2> class my_template<int, t2> {
+  int fantastic;
+  typename t2::hahahahahaha hahahaha;
+};
+
+my_template<int, long> qool;
+
+template<int x> class plusone {
+  enum val {
+    value = x + 1
+  };
+};
+
+class two: plusone<1> {
+  
+};
+
+/* */
+
+/*
 #include <cassert>
 #include <cctype>
 #include <cerrno>
@@ -37,7 +69,7 @@ b: syntax_error {};
 #include <utility>
 #include <new>
 #include <numeric>
-
+*/
 /*
 #include <algorithm>
 #include <bitset>

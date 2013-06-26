@@ -85,11 +85,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
 {
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (tp.refs.name.empty()) {
-    const bool potentialc = (
-      (tp.def == scope) or
-      (scope->flags & DEF_TEMPSCOPE and tp.def == scope->parent) or
-      ((tp.def->flags & DEF_TEMPLATE) and ((definition_template*)tp.def)->def == scope)
-    );
+    const bool potentialc = ((scope->flags & DEF_CLASS) and tp.def->name == scope->name);
     
     #define invalid_ctor_flags ~(builtin_flag__explicit | builtin_flag__virtual) // Virtual's a bit of a longshot, but we'll take it.
     
@@ -147,17 +143,22 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           goto rescope;
         }
       }
-      if (d and (d->flags & DEF_FUNCTION)) {
-        if (scope->flags & DEF_TEMPSCOPE) {
-          scope->use_namespace(d->parent);
-          read_referencers_post(tp.refs, lex, token, scope, this, herr);
-        }
-        else
-          read_referencers_post(tp.refs, lex, token, d->parent, this, herr);
-      }
+      if (d and (d->flags & DEF_FUNCTION))
+        read_referencers_post(tp.refs, lex, token, d->parent, this, herr);
       else
         read_referencers_post(tp.refs, lex, token, scope, this, herr);
       res = d; goto extra_loop;
+    }
+    else if (token.type == TT_COMMA) {
+      if (tp.refs.name.empty()) {
+        if (~scope->flags & DEF_CLASS)
+          token.report_warning(herr, "Declaration without name is meaningless outside of a class");
+        else
+          token.report_warning(herr, "Declaration in class scope doesn't have a name");
+        char buf[64];
+        sprintf(buf, "<unnamed%08d>", anon_count++);
+        tp.refs.name = buf;
+      }
     }
     else
       return 0;

@@ -69,10 +69,13 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         }
         if (!(rdef->flags & DEF_TYPENAME)) {
           if (rdef->flags & DEF_TEMPLATE) {
-            if (((definition_template*)rdef)->def == scope)
+            if ((scope->flags & DEF_CLASS) and scope->name == rdef->name)
               rdef = scope;
-            else if (scope->flags & DEF_TEMPSCOPE and ((definition_template*)rdef)->def == scope->parent)
-              rdef = scope->parent;
+            else if (rdef->flags & DEF_HYPOTHETICAL) {
+              token.report_warning(herr, "Template definition should be qualified using `typename'");
+              ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
+              rdef->flags |= DEF_TYPENAME;
+            }
             else {
               token.report_error(herr, "Invalid use of template `" + rdef->name + "'");
               return NULL;
@@ -202,14 +205,15 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         token = lex->get_token_in_scope(scope, herr);
         
         // Check if we're a constructor.
-        if (((ft.def == scope) // If the definition is this scope
-            or ((scope->flags & DEF_TEMPSCOPE) and ft.def == scope->parent) // Or we're in a template and the definition is the parent of this scope
-            or ((ft.def->flags & DEF_TEMPLATE) and ((definition_template*)ft.def)->def == scope) // Or our definition is the template whose scope we are in
-          ) and (token.type != TT_OPERATOR or token.content.len != 1 or *token.content.str != '*'))
+        bool potentialc = (scope->flags & DEF_CLASS) and ft.def->name == scope->name;
+        if (potentialc and (token.type != TT_OPERATOR or token.content.len != 1 or *token.content.str != '*'))
         {
-          if (read_function_params(refs, lex, token, scope, cp, herr)) return 1;
-          ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
-          refs.append_c(appme); return res;
+          if (read_function_params(refs, lex, token, scope, cp, herr))
+            return 1;
+          ref_stack appme;
+          int res = read_referencers_post(appme, lex, token, scope, cp, herr);
+          refs.append_c(appme);
+          return res;
         }
         
         ref_stack nestedrefs;

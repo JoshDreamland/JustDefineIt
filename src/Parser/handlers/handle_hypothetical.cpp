@@ -24,26 +24,13 @@
 
 namespace jdip {
   definition_hypothetical* handle_hypothetical(lexer *lex, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
-    // Verify that we're in a template<> statement.
-    definition_scope* temps;
-    for (temps = scope; temps and not (temps->flags & (DEF_TEMPLATE | DEF_TEMPSCOPE)); temps = temps->parent);
-    if (!temps) {
-      token.report_errorf(herr, "Invalid use of `typename' keyword: must be in a template");
-      return NULL;
-    }
-    
-    // We are in a template<> declaration. Insert our hypothetical 
-    definition_template* temp = temps->flags & DEF_TEMPLATE? (definition_template*)temps : (definition_template*)((definition_tempscope*)temps)->source;
-    if (!temp->flags & DEF_TEMPLATE) {
-      token.report_error(herr, "`" + temp->name + "' is not a template");
-    }
     
     AST *a = new AST();
     if (a->parse_expression(token, lex, scope, precedence::scope, herr))
       { FATAL_RETURN(1); }
     
-    definition_hypothetical* h = new definition_hypothetical("<dependent member>", scope, flags, a);
-    temp->dependents.push_back(h);
+    definition_hypothetical* h = new definition_hypothetical("<" + a->toString() + ">", scope, flags, a);
+    // temp->dependents.push_back(h);
     return h;
   }
 }

@@ -39,48 +39,48 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     token.report_error(herr, "Expected opening triangle bracket following `template' token");
     return ERROR_CODE;
   }
-  definition_tempscope hijack("template<>", scope, 0, new definition_template("", scope, inherited_flags));
-  #define temp ((definition_template*)hijack.source)
-  token = read_next_token(&hijack);
+  token = read_next_token(scope);
+  
+  definition_template* temp = new definition_template("", scope, DEF_TEMPLATE | inherited_flags);
+  
   for (;;) {
     string pname; // The name given to this parameter
     full_type ft(NULL); // The type of this parameter; default type or integer type
     
-    definition_typed* dtn;
+    definition_tempparam* dtn;
     if (token.type == TT_TYPENAME || token.type == TT_CLASS || token.type == TT_STRUCT) {
       token = lex->get_token(herr);
       if (token.type == TT_IDENTIFIER) {
         pname = token.content.toString();
-        token = read_next_token(&hijack);
+        token = read_next_token(scope);
       }
-      if (token.type == TT_OPERATOR) {
-        if (token.content.len != 1 or *token.content.str != '=')
-          token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-        token = read_next_token(&hijack);
-        full_type fts = read_fulltype(lex, token, &hijack, this, herr);
-        ft.swap(fts);
-        if (!ft.def) {
-          token.report_error(herr,"Expected type name for default type to template parameter");
-          return (delete temp, 1); // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
-        }
-      }
-      dtn = new definition_typed(pname, NULL, ft.def, ft.refs, ft.flags, DEF_TYPENAME | DEF_TYPED | DEF_TEMPPARAM);
-    }
-    else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
-      full_type fts = read_fulltype(lex, token, &hijack, this, herr);
-      ft.swap(fts);
-      pname = ft.refs.name;
-      value val;
       if (token.type == TT_OPERATOR) {
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
         token = read_next_token(scope);
-        AST a;
-        a.set_use_for_templates(true);
-        a.parse_expression(token, lex, &hijack, precedence::comma+1, herr);
-        val = a.eval();
+        full_type fts = read_fulltype(lex, token, scope, this, herr);
+        ft.swap(fts);
+        if (!ft.def) {
+          token.report_error(herr,"Expected type name for default type to template parameter");
+          return 1; // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
+        }
       }
-      dtn = new definition_valued(pname, NULL, ft.def, ft.flags, DEF_VALUED | DEF_TYPED | DEF_TEMPPARAM, val);
+      dtn = new definition_tempparam(pname, temp, ft, DEF_TYPENAME | DEF_TEMPPARAM);
+    }
+    else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
+      full_type fts = read_fulltype(lex, token, scope, this, herr);
+      ft.swap(fts);
+      pname = ft.refs.name;
+      AST *ast = NULL;
+      if (token.type == TT_OPERATOR) {
+        if (token.content.len != 1 or *token.content.str != '=')
+          token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
+        token = read_next_token(scope);
+        ast = new AST();
+        ast->set_use_for_templates(true);
+        ast->parse_expression(token, lex, scope, precedence::comma+1, herr);
+      }
+      dtn = new definition_tempparam(pname, temp, ft, ast, DEF_TEMPPARAM);
     }
     else {
       if (token.type == TT_GREATERTHAN) break;
@@ -92,34 +92,123 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     temp->params.push_back(dtn);
     if (pname.empty()) {
       char nname[32];
-      sprintf(nname, "<templateParam%u>", (unsigned)hijack.using_general.size());
-      hijack.use_general(string(nname), dtn);
+      sprintf(nname, "<templateParam%03u>", (unsigned)temp->params.size());
     }
     else
-      hijack.use_general(pname, dtn);
+      temp->use_general(pname, dtn);
     if (token.type == TT_GREATERTHAN)
       break;
     if (token.type != TT_COMMA)
       token.report_errorf(herr, "Expected '>' or ',' before %s");
     token = read_next_token(scope);
   }
-  definition* nd = NULL;
-  token = read_next_token(&hijack);
   
-  if (token.type == TT_CLASS || token.type == TT_STRUCT) {
-    if (handle_declarators(&hijack,token,inherited_flags, nd)) {
-      if (!hijack.referenced) delete temp;
-      return 1;
+  
+  definition* nd = NULL;
+  token = read_next_token(scope);
+  
+  
+  // ========================================================================================================================================
+  // =====: Handle template class definitions :==============================================================================================
+  // ========================================================================================================================================
+  
+  if (token.type == TT_CLASS || token.type == TT_STRUCT)
+  {
+    unsigned protection = token.type == TT_CLASS? DEF_PRIVATE : 0;
+    token = read_next_token(scope);
+    definition_class *tclass;
+    
+    if (token.type == TT_IDENTIFIER) {
+      temp->name = token.content.toString();
+      tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
+      temp->def = tclass;
+      
+      regular_template_class:
+      
+      token = read_next_token(scope);
+      if (token.type == TT_COLON) {
+        if (handle_class_inheritance(scope, token, tclass, protection)) {
+          delete temp;
+          return 1;
+        }
+      }
+      
+      if (token.type != TT_LEFTBRACE) {
+        token.report_errorf(herr, "Opening brace for class body expected before %s");
+        delete temp;
+        return 1;
+      }
+      
+      if (handle_scope(tclass, token, protection))
+        FATAL_RETURN((void(delete temp), 1));
+      
+      if (token.type != TT_RIGHTBRACE) {
+        token.report_errorf(herr, "Expected closing brace to class body before %s");
+        FATAL_RETURN((void(delete temp), 1));
+      }
+      
+      scope->declare(temp->name, temp);
+      return 0;
     }
-    if (nd) {
-      token.report_error(herr, "Cannot declare `" + nd->name + "' as abstract template type");
-      IF_FATAL(if (!hijack.referenced) delete temp; return 1);
+    else if (token.type == TT_DEFINITION) {
+      if (not((token.def->flags & DEF_TEMPLATE) && (((definition_template*)token.def)->def->flags & DEF_CLASS))) {
+        token.report_error(herr, "Expected class name for specialization; `" + token.def->name + "' does not name a template class");
+        delete temp;
+        return 1;
+      }
+      
+      definition_template *basetemp = (definition_template*)token.def;
+      
+      token = read_next_token(scope);
+      if (token.type != TT_LESSTHAN) {
+        token.report_errorf(herr, "Expected opening triangle bracket for template definition before %s");
+        delete temp;
+        return 1;
+      }
+      
+      arg_key argk(temp->params.size());
+      if (read_template_parameters(argk, temp, lex, token, scope, this, herr)) {
+        delete temp;
+        return 1;
+      }
+      
+      definition_template* spec = basetemp->specialize(argk, temp);
+      if (spec != temp) {
+        if (~spec->flags & DEF_INCOMPLETE) {
+          token.report_error(herr, "Cannot specialize template: specialization by this type already exists.");
+          delete temp;
+          return 1;
+        }
+        
+        spec->using_general.clear();
+        for (definition_template::piterator it = temp->params.begin(); it != temp->params.end(); ++it)
+          spec->use_general((*it)->name, *it);
+        
+        delete temp;
+        temp = spec;
+      }
+      
+      temp->name = basetemp->name;
+      tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
+      temp->def = tclass;
+      
+      goto regular_template_class;
     }
-  } else if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE || token.type == TT_DEFINITION || token.type == TT_TYPENAME) {
-    if (handle_declarators(&hijack,token,inherited_flags, nd) or !nd) {
-      if (!hijack.referenced) delete temp;
-      return 1;
-    }
+    
+    token.report_errorf(herr, "Expected class name here before %s");
+    return 1;
+  }
+  
+  
+  
+  // ========================================================================================================================================
+  // =====: Handle template function definitions :===========================================================================================
+  // ========================================================================================================================================
+  
+  if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE || token.type == TT_DEFINITION || token.type == TT_TYPENAME)
+  {
+    
+    
     definition *fdef = nd;
     while (fdef and fdef->flags & DEF_TEMPLATE) fdef = ((definition_template*)fdef)->def;
     if (fdef and fdef->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE) {
@@ -130,75 +219,15 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       }
     }
   }
-  else if (token.type == TT_TEMPLATE) {
-    if (handle_template(&hijack,token,inherited_flags)) {
-      if (!hijack.referenced) delete temp;
-      return 1;
-    }
-  } else {
+  else if (token.type == TT_TEMPLATE) // Specialization
+  {
+    
+  }
+  else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
-    if (!hijack.referenced) delete temp; return ERROR_CODE;
+    delete temp; return ERROR_CODE;
   }
   
-  if (hijack.members.size()) {
-    char buf[96]; sprintf(buf, "Too many declarations for template; expected one, given %d", (int)hijack.members.size());
-    token.report_error(herr, buf);
-  }
   
-  if (!temp->def) {
-    if (!hijack.referenced)
-      delete temp;
-    return 0;
-  }
-  
-  temp->def->parent = scope;
-  temp->name = temp->def->name;
-  
-  if (hijack.referenced)
-    return 0;
-  
-  decpair i = scope->declare(temp->name,temp);
-  
-  if (!i.inserted) {
-    definition * const redec = i.def;
-    // Specialization
-    if (temp->def->flags & DEF_FUNCTION) {
-      if (redec->flags & DEF_TEMPLATE) {
-        if (token.type == TT_LESSTHAN) {
-          
-        }
-        //token.report_error(herr, "Unimplemented: template function specialization");
-        delete temp;
-      }
-      else if (redec->flags & DEF_FUNCTION)
-        ((definition_function*)redec)->overload(temp);
-      else {
-        token.report_error(herr, "Attempt to redeclare `" + temp->name + "' as template");
-        delete temp; return ERROR_CODE;
-      }
-    }
-    else if (redec->flags & DEF_TEMPLATE) {
-      definition_template* retemp = (definition_template*)redec;
-      if (!retemp->def) {
-        retemp->def = temp->def;
-        temp->def = NULL;
-        delete temp;
-      }
-      else if (retemp->def == temp->def) {
-        temp->def->parent = retemp->parent;
-        retemp->def = NULL;
-        i.def = temp;
-        delete retemp;
-      }
-      else {
-        token.report_error(herr, "Cannot redeclare `" + temp->name + "' as template: invalid specialization");
-        delete temp; return ERROR_CODE;
-      }
-    }
-    else {
-      delete temp;
-      return ERROR_CODE;
-    }
-  }
   return 0;
 }

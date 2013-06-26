@@ -239,7 +239,9 @@ namespace jdip {
   */
   definition* read_qualified_definition(lexer *lex, definition_scope* scope, token_t &token, context_parser *cp, error_handler *herr);
   
+  /// Never use this pointer; it gets written to frequently and is never set to NULL.
   extern definition* dangling_pointer;
+  
   /**
     @class context_parser
     @brief A field-free utility class extending \c context, implementing the
@@ -332,6 +334,28 @@ namespace jdip {
       @return The enum created/referenced, or NULL if some unrecoverable error occurred.
     **/
     definition_class* handle_class(definition_scope *scope, token_t& token, int inherited_flags);
+    
+    /**
+      Parse a class or struct inheritance list, from the colon.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope   The scope in which declarations will be stored. [in-out]
+      
+      @param  token   The token that was read before this function was invoked.
+                      At the start of this call, the type of this token must be
+                      either TT_CLASS or TT_STRUCT. Upon termination, the type
+                      of this token will be TT_DECLARATOR with extra info set to
+                      the new definition unless an error occurs. [in-out]
+      
+      @param recipient  The default protection level for inherited classes; eg, DEF_PUBLIC or DEF_PRIVATE.
+      
+      @param default_protection  The default protection level for inherited classes; eg, DEF_PUBLIC or DEF_PRIVATE.
+      
+      @return  Zero if no error occurred.
+    **/
+    int handle_class_inheritance(definition_scope *scope, token_t& token, definition_class *recipient, unsigned default_protection);
     
     /**
       Parse a union definition.
