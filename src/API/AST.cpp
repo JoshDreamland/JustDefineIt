@@ -635,8 +635,12 @@ namespace jdi
     return value();
   }
   value AST::AST_Node_Definition::eval() const {
-    if (def and (def->flags & DEF_VALUED))
-      return ((definition_valued*)def)->value_of;
+    if (def) {
+      if (def->flags & DEF_VALUED)
+        return ((definition_valued*)def)->value_of;
+      if (def->flags & DEF_TEMPPARAM)
+        return value(VT_DEPENDENT);
+    }
     return value();
   }
   value AST::AST_Node_Ternary::eval() const {

@@ -32,6 +32,7 @@
 #include <API/context.h>
 #include <API/AST.h>
 #include <cstring>
+#include <csignal>
 
 #include <API/compile_settings.h>
 
@@ -331,6 +332,11 @@ string lexer_cpp::read_preprocessor_args(error_handler *herr)
   }
   return res;
 }
+
+#ifdef DEBUG_MODE
+/// This function will be passed signals
+static void donothing(int) {}
+#endif
 
 /// Optional AST rendering
 #include <General/debug_macros.h>
@@ -655,8 +661,11 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         #ifdef DEBUG_MODE
         {
           string n = read_preprocessor_args(herr);
-          if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.top().is_true))
+          if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.top().is_true)) {
+            signal(SIGTRAP, donothing); // Try not to die when we raise hell in the interrupt handler briefly
             cout << "* Debug entry point" << endl;
+            asm("INT3;"); // Raise hell in the interrupt handler; the debugger will grab us from here
+          }
         }
         #else
           read_preprocessor_args(herr);

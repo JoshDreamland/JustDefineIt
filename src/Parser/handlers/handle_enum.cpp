@@ -52,7 +52,8 @@ static inline definition_enum* insnew(definition_scope *const &scope, int inheri
         #endif
       }
     }
-  } else { my_else:
+  } else {
+    my_else:
     dins.def = nclass = new definition_enum(classname,scope, DEF_ENUM | DEF_TYPENAME | inherited_flags);
   }
   return nclass;
@@ -145,13 +146,14 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
       }
       render_ast(ast, "enum_values");
       value v = ast.eval();
-      if (v.type != VT_INTEGER)
-      #ifdef DEBUG_MODE
-        token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast.expression + ")"),
-      #else
-        token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given"),
-      #endif
+      if (v.type != VT_INTEGER && v.type != VT_DEPENDENT) {
+        #ifdef DEBUG_MODE
+          token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast.expression + ")");
+        #else
+          token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given");
+        #endif
         this_value = value(++this_value.val.i);
+      }
       else this_value = v;
     }
     

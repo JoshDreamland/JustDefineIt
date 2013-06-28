@@ -31,9 +31,12 @@ template<typename t2> class my_template<int, t2> {
 
 my_template<int, long> qool;
 
+enum tits { mcgavin = 10 };
+
 template<int x> class plusone {
   enum val {
-    value = x + 1
+    value = x + 1,
+    ass = mcgavin
   };
 };
 
