@@ -1,6 +1,6 @@
 /**
  * @file  definition.cpp
- * @brief System source implementing constructor.
+ * @brief System source implementing arbitrary components of the definition storage class.
  * 
  * This file is likely used by absolutely everything in the parse system, as
  * it is the medium through which output definitions are created and manipulated.
@@ -151,19 +151,11 @@ namespace jdi {
     if (n->prev) n->prev->next = n->next;
     delete n;
   }
+  
   void definition_scope::use_general(string n, definition *def) {
     using_general.insert(pair<string,definition*>(n,def));
   }
-  void definition_scope::copy(const definition_scope* from) {
-    remap_set n;
-    for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
-      inspair dest = members.insert(entry(it->first,NULL));
-      if (dest.second) {
-        dest.first->second = it->second->duplicate(n);
-      }
-    }
-    remap(n);
-  }
+  
   definition_scope::definition_scope(): definition("",NULL,DEF_SCOPE), using_front(NULL), using_back(NULL) { }
   definition_scope::definition_scope(const definition_scope&): definition() {
     // TODO: Implement
@@ -190,7 +182,7 @@ namespace jdi {
   //definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, 0, flgs | DEF_VALUED), value_of(val) {}
   definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned tflgs, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, tflgs, flgs | DEF_VALUED), value_of(val) {}
   
-  definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_typed(classname, parnt, NULL, 0, flgs) {}
+  definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_class(classname, parnt, flgs | DEF_ENUM) {}
   
   definition_template::definition_template(string n, definition *p, unsigned f): definition_scope(n, p, f | DEF_TEMPLATE), def(NULL)  {}
   definition_template::~definition_template() {
@@ -202,6 +194,10 @@ namespace jdi {
       delete *i;
     delete def;
   }
+  
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_type(tp) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
   
   definition* definition_template::instantiate(arg_key& key) {
     pair<arg_key,definition*> insme(key,NULL);
@@ -353,93 +349,6 @@ namespace jdi {
   }
   
   //========================================================================================================
-  //======: Re-map Functions :==============================================================================
-  //========================================================================================================
-  
-  #ifdef DEBUG_MODE
-    #define DEBUG_ONLY(x) x
-  #else
-    #define DEBUG_ONLY(x)
-  #endif
-  
-  void definition::remap(const remap_set &) {}
-  
-  void definition_class::remap(const remap_set &n) {
-    for (vector<ancestor>::iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
-      ancestor& an = *it;
-      remap_set::const_iterator ex = n.find(an.def);
-      if (ex != n.end()) {
-        #ifdef DEBUG_MODE
-          if (not(ex->second->flags & DEF_CLASS))
-            cerr << "ERROR! Replacing `" << an.def->name << "' at " << ((void*)an.def)
-                 << " with non-class `" << ex->second->name << "' at " << ((void*)ex->second) << endl;
-        #endif
-        an.def = (definition_class*)ex->second;
-      }
-    }
-    definition_scope::remap(n);
-  }
-  
-  void definition_enum::remap(const remap_set& DEBUG_ONLY(n)) {
-    #ifdef DEBUG_MODE
-    if (n.find(type) != n.end()) {
-      cerr << "Why are you replacing `" << type->name << "'?" << endl;
-    }
-    #endif
-  }
-  
-  void definition_function::remap(const remap_set& n) {
-    definition_typed::remap(n);
-    for (overload_iter it = overloads.begin(); it != overloads.end(); ++it)
-      if (it->second != this)
-        it->second->remap(n);
-  }
-  
-  void definition_scope::remap(const remap_set &n) {
-    for (defiter it = members.begin(); it != members.end(); ++it) {
-      remap_set::const_iterator ex = n.find(it->second);
-      if (ex == n.end())
-        it->second->remap(n);
-      else
-        it->second = ex->second;
-    }
-    for (using_node *un = using_front; un; un = un->next) {
-      remap_set::const_iterator ex = n.find(un->use);
-      if (ex == n.end())
-        un->use = (definition_scope*)ex->second;
-    }
-    for (defiter it = using_general.begin(); it != using_general.end(); ++it) {
-      remap_set::const_iterator ex = n.find(it->second);
-      if (ex != n.end())
-        it->second = ex->second;
-    }
-  }
-  
-  void definition_template::remap(const remap_set &n) {
-    if (def)
-      def->remap(n);
-  }
-  
-  void definition_tempparam::remap(const remap_set &n) {
-    // TODO: Implement
-    (void)n;
-  }
-  
-  void definition_typed::remap(const remap_set &n) {
-    remap_set::const_iterator ex = n.find(type);
-    if (ex != n.end())
-      type = ex->second;
-  }
-  
-  void definition_union::remap(const remap_set &) {
-    
-  }
-  
-  void definition_atomic::remap(const remap_set &) {}
-  
-  void definition_hypothetical::remap(const remap_set &) { cerr << "ERROR: Remap called on hypothetical type" << endl; }
-  
-  //========================================================================================================
   //======: Sizeof functions :==============================================================================
   //========================================================================================================
   
@@ -500,114 +409,6 @@ namespace jdi {
   }
   
   //========================================================================================================
-  //======: Duplicators :===================================================================================
-  //========================================================================================================
-  
-  // FIXME: The parent definition isn't looked up in the remap set!!
-  
-  definition *definition::duplicate(remap_set &n) {
-    definition* res = new definition(name, parent, flags);
-    n[this] = res;
-    return res;
-  }
-  
-  definition *definition_class::duplicate(remap_set &n) {
-    definition_class* res= new definition_class(name, parent, flags);
-    res->definition_scope::copy(this);
-    res->ancestors = ancestors;
-    n[this] = res;
-    return res;
-  }
-  
-  definition *definition_enum::duplicate(remap_set &n) {
-    definition_enum* res = new definition_enum(name, parent, flags);
-    res->type = type;
-    res->constants = constants;
-    n[this] = res;
-    return res;
-  }
-  
-  function_overload* function_overload::duplicate() {
-    function_overload *res = new function_overload();
-    res->type.def = type.def;
-    res->type.refs.copy(type.refs);
-    res->type.flags = type.flags;
-    res->declaration = declaration;
-    return res;
-  }
-  
-  definition *definition_function::duplicate(remap_set &n) {
-    ref_stack dup; dup.copy(referencers);
-    definition_function* res = new definition_function(name, parent, type, dup, modifiers, flags);
-    res->overloads = overloads;
-    n[this] = res;
-    return res;
-  }
-  
-  definition* definition_scope::duplicate(remap_set &n) {
-    definition_scope* res = new definition_scope(name, parent, flags);
-    res->copy(this);
-    n[this] = res;
-    return res;
-  }
-  
-  definition* definition_template::duplicate(remap_set &n) {
-    definition_template* res = new definition_template(name, parent, flags);
-    res->def = def->duplicate(n);
-    res->specializations = specializations;
-    res->instantiations = instantiations;
-    res->params.reserve(params.size());
-    for (piterator it = params.begin(); it != params.end(); ++it)
-      res->params.push_back((definition_tempparam*)(*it)->duplicate(n));
-    for (speciter it = res->specializations.begin(); it != res->specializations.end(); ++it) {
-      definition *nd = it->second->duplicate(n);
-      n[it->second] = nd; it->second = (definition_template*)nd;
-    }
-    for (institer it = res->instantiations.begin(); it != res->instantiations.end(); ++it) {
-      definition *nd = it->second->duplicate(n);
-      n[it->second] = nd; it->second = nd;
-    }
-    n[this] = res;
-    return res;
-  }
-  
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM) {}
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_type(tp) {}
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
-  
-  definition* definition_tempparam::duplicate(remap_set &n) {
-    definition_tempparam* res = new definition_tempparam(name, parent, flags);
-    res->default_type = default_type;
-    res->default_value = new AST(/*default_value*/); // FIXME: This drops information! Need an AST::duplicate.
-    res->definition_class::copy(this);
-    n[this] = res;
-    return res;
-  }
-  
-  definition* definition_typed::duplicate(remap_set &n) {
-    definition_typed* res = new definition_typed(name, parent, type, modifiers, flags);
-    res->referencers.copy(referencers);
-    n[this] = res;
-    return res;
-  }
-  
-  definition* definition_union::duplicate(remap_set &n) {
-    definition_union* res = new definition_union(name, parent, flags);
-    res->definition_scope::copy(this);
-    n[this] = res;
-    return res;
-  }
-  
-  definition* definition_atomic::duplicate(remap_set &) {
-    return this;
-  }
-  
-  definition* definition_hypothetical::duplicate(remap_set &n) {
-    definition_hypothetical* res = new definition_hypothetical(name, parent, flags, new AST(*def));
-    n[this] = res; return res;
-  }
-  
-  //========================================================================================================
   //======: String printers :===============================================================================
   //========================================================================================================
   
@@ -641,9 +442,9 @@ namespace jdi {
       res += "{\n";
       string sinds(indent+2, ' ');
       bool first = true;
-      for (map<string,definition*>::iterator it = constants.begin(); it != constants.end(); ++it) {
+      for (vector<const_pair>::iterator it = constants.begin(); it != constants.end(); ++it) {
         if (!first) res += ",\n";
-        res += sinds + it->first + " = " + ((definition_valued*)it->second)->value_of.toString();
+        res += sinds + it->def->name + " = " + it->def->value_of.toString();
         first = false;
       }
       res += "\n" + inds + "}";

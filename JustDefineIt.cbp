@@ -126,6 +126,7 @@
 		<Unit filename="src/Parser/readers/read_type.cpp" />
 		<Unit filename="src/Storage/definition.cpp" />
 		<Unit filename="src/Storage/definition.h" />
+		<Unit filename="src/Storage/definition_duplicate.cpp" />
 		<Unit filename="src/Storage/full_type.cpp" />
 		<Unit filename="src/Storage/full_type.h" />
 		<Unit filename="src/Storage/references.cpp" />

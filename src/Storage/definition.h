@@ -35,7 +35,7 @@ namespace jdi {
     DEF_NAMESPACE =    1 <<  1, ///< This definition is a namespace.
     DEF_CLASS =        1 <<  2, ///< This definition is a class or structure. 
     DEF_ENUM =         1 <<  3, ///< This definition is an enumeration of valued constants.
-    DEF_UNION =        1 <<  4, ///< This definition is an enumeration of valued constants.
+    DEF_UNION =        1 <<  4, ///< This definition is a union of multiple types.
     DEF_SCOPE =        1 <<  5, ///< This definition is a scope of some sort.
     DEF_TYPED =        1 <<  6, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
     DEF_FUNCTION =     1 <<  7, ///< This definition is a function containing a list of zero or more overloads.
@@ -84,6 +84,11 @@ using namespace std;
 typedef size_t pt;
 
 namespace jdi {
+  /// Map type to contain definitions to remap along with the definition with which it will be replaced
+  typedef map<definition*, definition*> remap_set;
+  typedef remap_set::const_iterator remap_citer;
+  typedef remap_set::iterator remap_iter;
+  
   /**
     @struct jdi::definition
     @brief  The class responsible for storing all parsed definitions.
@@ -97,11 +102,10 @@ namespace jdi {
     definition_scope* parent; ///< The definition of the scope in which this definition is declared.
                         ///< Except for the global scope of the context, this must be non-NULL.
     
-    /// Map type to contain definitions to remap along with the definition with which it will be replaced
-    typedef map<definition*, definition*> remap_set;
-    
     /** Duplicate this definition, whatever it may contain.
         The duplicated version must be freed separately.
+        @param n A remap_set containing any definitions to replace in this duplication.
+                 This map will grow as more definitions are spawned recursively.
         @return A pointer to a newly-allocated copy of this definition. **/
     virtual definition* duplicate(remap_set &n);
     
@@ -439,13 +443,22 @@ namespace jdi {
     @struct jdi::definition_enum
     An extension of \c jdi::definition for enums, which contain mirrors of members in the parent scope.
   **/
-  struct definition_enum: definition_typed {
+  struct definition_enum: definition_class {
     virtual definition* duplicate(remap_set &n);
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
-    definition_scope::defmap constants;
+    definition *type; ///< The type of the constants in this enum; a cast to this type is valid but not favored (in overload resolution).
+    unsigned modifiers; ///< Modifiers to our type, namely, unsigned.
+    
+    struct const_pair {
+      definition_valued* def;
+      AST* ast;
+      const_pair(definition_valued *d, AST *a): def(d), ast(a) {}
+    }; 
+    vector<const_pair> constants;
+    
     definition_enum(string classname, definition_scope* parent, unsigned flags = DEF_ENUM | DEF_TYPENAME);
   };
   

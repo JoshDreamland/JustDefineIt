@@ -949,35 +949,35 @@ namespace jdi
   //=: ASTOperator Class :=====================================================================================================
   //===========================================================================================================================
   
-  void AST::AST_Node::operate(ASTOperator *aop, void *param) { aop->operate(this, param); }
-  void AST::AST_Node_Definition::operate(ASTOperator *aop, void *param) { aop->operate_Definition(this, param); }
-  void AST::AST_Node_Scope::operate(ASTOperator *aop, void *param) { aop->operate_Scope(this, param); }
-  void AST::AST_Node_Type::operate(ASTOperator *aop, void *param) { aop->operate_Type(this, param); }
-  void AST::AST_Node_Unary::operate(ASTOperator *aop, void *param) { aop->operate_Unary(this, param); }
-  void AST::AST_Node_sizeof::operate(ASTOperator *aop, void *param) { aop->operate_sizeof(this, param); }
-  void AST::AST_Node_Cast::operate(ASTOperator *aop, void *param) { aop->operate_Cast(this, param); }
-  void AST::AST_Node_Binary::operate(ASTOperator *aop, void *param) { aop->operate_Binary(this, param); }
-  void AST::AST_Node_Ternary::operate(ASTOperator *aop, void *param) { aop->operate_Ternary(this, param); }
-  void AST::AST_Node_Parameters::operate(ASTOperator *aop, void *param) { aop->operate_Parameters(this, param); }
-  void AST::AST_Node_Array::operate(ASTOperator *aop, void *param) { aop->operate_Array(this, param); }
-  void AST::AST_Node_new::operate(ASTOperator *aop, void *param) { aop->operate_new(this, param); }
-  void AST::AST_Node_delete::operate(ASTOperator *aop, void *param) { aop->operate_delete(this, param); }
-  void AST::AST_Node_Subscript::operate(ASTOperator *aop, void *param) { aop->operate_Subscript(this, param); }
+  void AST::AST_Node            ::operate(ASTOperator *aop, void *param) { aop->operate            (this, param); }
+  void AST::AST_Node_Definition ::operate(ASTOperator *aop, void *param) { aop->operate_Definition (this, param); }
+  void AST::AST_Node_Scope      ::operate(ASTOperator *aop, void *param) { aop->operate_Scope      (this, param); }
+  void AST::AST_Node_Type       ::operate(ASTOperator *aop, void *param) { aop->operate_Type       (this, param); }
+  void AST::AST_Node_Unary      ::operate(ASTOperator *aop, void *param) { aop->operate_Unary      (this, param); }
+  void AST::AST_Node_sizeof     ::operate(ASTOperator *aop, void *param) { aop->operate_sizeof     (this, param); }
+  void AST::AST_Node_Cast       ::operate(ASTOperator *aop, void *param) { aop->operate_Cast       (this, param); }
+  void AST::AST_Node_Binary     ::operate(ASTOperator *aop, void *param) { aop->operate_Binary     (this, param); }
+  void AST::AST_Node_Ternary    ::operate(ASTOperator *aop, void *param) { aop->operate_Ternary    (this, param); }
+  void AST::AST_Node_Parameters ::operate(ASTOperator *aop, void *param) { aop->operate_Parameters (this, param); }
+  void AST::AST_Node_Array      ::operate(ASTOperator *aop, void *param) { aop->operate_Array      (this, param); }
+  void AST::AST_Node_new        ::operate(ASTOperator *aop, void *param) { aop->operate_new        (this, param); }
+  void AST::AST_Node_delete     ::operate(ASTOperator *aop, void *param) { aop->operate_delete     (this, param); }
+  void AST::AST_Node_Subscript  ::operate(ASTOperator *aop, void *param) { aop->operate_Subscript  (this, param); }
   
-  void AST::AST_Node::operate(ConstASTOperator *aop, void *param) const { aop->operate(this, param); }
-  void AST::AST_Node_Definition::operate(ConstASTOperator *aop, void *param) const { aop->operate_Definition(this, param); }
-  void AST::AST_Node_Scope::operate(ConstASTOperator *aop, void *param) const { aop->operate_Scope(this, param); }
-  void AST::AST_Node_Type::operate(ConstASTOperator *aop, void *param) const { aop->operate_Type(this, param); }
-  void AST::AST_Node_Unary::operate(ConstASTOperator *aop, void *param) const { aop->operate_Unary(this, param); }
-  void AST::AST_Node_sizeof::operate(ConstASTOperator *aop, void *param) const { aop->operate_sizeof(this, param); }
-  void AST::AST_Node_Cast::operate(ConstASTOperator *aop, void *param) const { aop->operate_Cast(this, param); }
-  void AST::AST_Node_Binary::operate(ConstASTOperator *aop, void *param) const { aop->operate_Binary(this, param); }
-  void AST::AST_Node_Ternary::operate(ConstASTOperator *aop, void *param) const { aop->operate_Ternary(this, param); }
-  void AST::AST_Node_Parameters::operate(ConstASTOperator *aop, void *param) const { aop->operate_Parameters(this, param); }
-  void AST::AST_Node_Array::operate(ConstASTOperator *aop, void *param) const { aop->operate_Array(this, param); }
-  void AST::AST_Node_new::operate(ConstASTOperator *aop, void *param) const { aop->operate_new(this, param); }
-  void AST::AST_Node_delete::operate(ConstASTOperator *aop, void *param) const { aop->operate_delete(this, param); }
-  void AST::AST_Node_Subscript::operate(ConstASTOperator *aop, void *param) const { aop->operate_Subscript(this, param); }
+  void AST::AST_Node            ::operate(ConstASTOperator *aop, void *param) const { aop->operate            (this, param); }
+  void AST::AST_Node_Definition ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Definition (this, param); }
+  void AST::AST_Node_Scope      ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Scope      (this, param); }
+  void AST::AST_Node_Type       ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Type       (this, param); }
+  void AST::AST_Node_Unary      ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Unary      (this, param); }
+  void AST::AST_Node_sizeof     ::operate(ConstASTOperator *aop, void *param) const { aop->operate_sizeof     (this, param); }
+  void AST::AST_Node_Cast       ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Cast       (this, param); }
+  void AST::AST_Node_Binary     ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Binary     (this, param); }
+  void AST::AST_Node_Ternary    ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Ternary    (this, param); }
+  void AST::AST_Node_Parameters ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Parameters (this, param); }
+  void AST::AST_Node_Array      ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Array      (this, param); }
+  void AST::AST_Node_new        ::operate(ConstASTOperator *aop, void *param) const { aop->operate_new        (this, param); }
+  void AST::AST_Node_delete     ::operate(ConstASTOperator *aop, void *param) const { aop->operate_delete     (this, param); }
+  void AST::AST_Node_Subscript  ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Subscript  (this, param); }
   
   //===========================================================================================================================
   //=: Everything else :=======================================================================================================

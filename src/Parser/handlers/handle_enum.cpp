@@ -157,13 +157,11 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
       else this_value = v;
     }
     
-    pair<definition_scope::defiter, bool> cins = nenum->constants.insert(pair<string,definition*>(cname,NULL));
+    pair<definition_scope::defiter, bool> cins = nenum->members.insert(pair<string,definition*>(cname,NULL));
     if (cins.second) { // If a new definition key was created, then allocate a new enum representation for it.
-      decpair sins = scope->declare(cname,cins.first->second);
-      if (sins.inserted)
-        cins.first->second = sins.def = new definition_valued(cname, nenum, nenum->type, nenum->modifiers, 0, this_value);
-      else
-        token.report_error(herr, "Declatation of constant `" + classname + "' in enumeration conflicts with definition in parent scope");
+      definition_valued *dv = new definition_valued(cname, nenum, nenum->type, nenum->modifiers, 0, this_value);
+      nenum->constants.push_back(definition_enum::const_pair(dv, NULL)); // FIXME: Should be the AST that was parsed, not NULL
+      scope->use_general(cname, cins.first->second = dv);
     }
     else
       token.report_error(herr, "Redeclatation of constant `" + classname + "' in enumeration");
