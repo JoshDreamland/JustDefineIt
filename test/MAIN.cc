@@ -182,13 +182,12 @@ void do_cli(context &ct) {
           while (is_letterd(buf[++e]));
           if (def->flags & DEF_SCOPE) {
             string name(buf+start, e-start);
-            definition_scope::defiter it = ((definition_scope*)def)->members.find(name);
-            if (it == ((definition_scope*)def)->members.end()) {
-              cout << "No `" << name << "' found in scope `" << def->name << "'" << endl;
-              def = NULL;
+            definition *defo = def;
+            def = ((definition_scope*)def)->find_local(name);
+            if (!def) {
+              cout << "No `" << name << "' found in scope `" << defo->name << "'" << endl;
               break;
             }
-            def = it->second;
           }
           else {
             cout << "Definition `" << def->name << "' is not a scope" << endl;

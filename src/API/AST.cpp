@@ -572,6 +572,10 @@ namespace jdi
     return !(root = parse_expression(token, precedence));
   }
   
+  void AST::remap(const remap_set& n) {
+    root->remap(n);
+  }
+  
   //===========================================================================================================================
   //=: Evaluators :============================================================================================================
   //===========================================================================================================================
@@ -926,6 +930,7 @@ namespace jdi
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
   AST::AST_Node_Parameters::AST_Node_Parameters(): func(NULL) {}
+  AST::AST_Node_new::AST_Node_new(const full_type &t, AST_Node *p, AST_Node *b): type(t), position(p), bound(b) {}
   AST::AST_Node_new::AST_Node_new(): type(), position(NULL), bound(NULL) {}
   AST::AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param), array(arr) {}
   AST::AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): left(l), index(ind) {}
@@ -995,6 +1000,8 @@ namespace jdi
   }
   
   AST::AST(): root(NULL), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(AST_Node* r): root(r), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(AST_Node* r, definition_scope *ss): root(r), search_scope(ss), tt_greater_is_op(true) {}
   AST::AST(definition* d): root(new AST_Node_Definition(d)), search_scope(NULL), tt_greater_is_op(true) {}
     
   AST::~AST() {

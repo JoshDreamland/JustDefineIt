@@ -118,6 +118,14 @@ namespace jdi {
         return res;
     return NULL;
   }
+  definition *definition_class::find_local(string sname) {
+    definition *res = definition_scope::find_local(sname);
+    if (res) return res;
+    for (vector<ancestor>::iterator ait = ancestors.begin(); ait != ancestors.end(); ++ait)
+      if ((res = ait->def->find_local(sname)))
+        return res;
+    return NULL;
+  }
   
   definition *definition_tempparam::look_up(string sname) {
     must_be_class = true;
@@ -173,6 +181,11 @@ namespace jdi {
   definition_scope::using_node::using_node(definition_scope* scope): use(scope), next(NULL), prev(NULL) { }
   definition_scope::using_node::using_node(definition_scope* scope, using_node* nprev): use(scope), next(nprev->next), prev(nprev) { nprev->next = this; }
   
+  definition_enum::~definition_enum() {
+    for (vector<const_pair>::iterator it = constants.begin(); it != constants.end(); ++it)
+      delete it->ast;
+  }
+  
   definition_class::ancestor::ancestor(unsigned protection_level, definition_class* inherit_from): protection(protection_level), def(inherit_from) {}
   definition_class::ancestor::ancestor() {}
   definition_class::definition_class(string classname, definition_scope* prnt, unsigned flgs): definition_scope(classname, prnt, flgs) {}
@@ -180,7 +193,7 @@ namespace jdi {
   definition_union::definition_union(string classname, definition_scope* prnt, unsigned flgs): definition_scope(classname, prnt, flgs) {}
   
   //definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, 0, flgs | DEF_VALUED), value_of(val) {}
-  definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned tflgs, unsigned int flgs, value &val): definition_typed(vname, parnt, tp, tflgs, flgs | DEF_VALUED), value_of(val) {}
+  definition_valued::definition_valued(string vname, definition *parnt, definition* tp, unsigned tflgs, unsigned int flgs, const value &val): definition_typed(vname, parnt, tp, tflgs, flgs | DEF_VALUED), value_of(val) {}
   
   definition_enum::definition_enum(string classname, definition_scope* parnt, unsigned flgs): definition_class(classname, parnt, flgs | DEF_ENUM) {}
   
@@ -194,15 +207,35 @@ namespace jdi {
       delete *i;
     delete def;
   }
+  definition_template::instantiation::~instantiation() {
+    delete def;
+    for (vector<definition*>::iterator it = parameter_defs.begin(); it != parameter_defs.end(); ++it)
+      delete *it;
+  }
   
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM) {}
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_type(tp) {}
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
   
   definition* definition_template::instantiate(arg_key& key) {
-    pair<arg_key,definition*> insme(key,NULL);
-    /*pair<map<arg_key,definition*>::iterator, bool> ins =*/ instantiations.insert(insme);
-    return def;//ins.first->second;
+    pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation>(key, instantiation()));
+    if (ins.second) {
+      remap_set n;
+      size_t ind = 0;
+      definition *ntemp = def->duplicate(n);
+      ntemp->name += "<" + key.toString() + ">";
+      ins.first->second.def = ntemp;
+      for (piterator it = params.begin(); it != params.end(); ++it) {
+        definition *ndef = key.new_definition(ind++, (*it)->name, this);
+        ins.first->second.parameter_defs.push_back(ndef);
+        n[*it] = ndef;
+        cout << "Added " << (void*)def << " => " << (void*)ndef << " to remap set" << endl;
+      }
+      ntemp->remap(n);
+      cout << "Duplicated " << def->name << " to " << ntemp->name << endl;
+      cout << ntemp->toString() << endl;
+    }
+    return ins.first->second.def;
   }
   
   definition_template *definition_template::specialize(arg_key& key, definition_template *spec) {
@@ -212,6 +245,31 @@ namespace jdi {
   }
   
   definition arg_key::abstract("<unspecified>", NULL, 0);
+  
+  definition *arg_key::new_definition(size_t index, string name, definition_scope* parent) const {
+    if (values[index].type == AKT_FULLTYPE)
+      return new definition_typed(name, parent, values[index].ft().def, values[index].ft().refs, values[index].ft().flags, DEF_TYPED | DEF_TYPENAME);
+    if (values[index].type == AKT_VALUE) {
+      value v = values[index].val();
+      definition* type =
+          v.type == VT_INTEGER? builtin_type__int    :
+          v.type == VT_DOUBLE?  builtin_type__double :
+          v.type == VT_STRING?  builtin_type__char   : builtin_type__void;
+      return new definition_valued(name, parent, type, 0, DEF_VALUED, v);
+    }
+    return NULL;
+  }
+  
+  string arg_key::toString() const {
+    string str;
+    bool c = false;
+    for (node* n = values; n != endv; ++n) {
+      if (c) str += ", ";
+      str += n->type == AKT_FULLTYPE? n->ft().toString() : n->type == AKT_VALUE? n->val().toString() : "<empty>";
+      c = true;
+    }
+    return str;
+  }
   
   bool arg_key::operator<(const arg_key& other) const {
     for (arg_key::node *i = values, *j = other.values; j != other.endv; ++i) {

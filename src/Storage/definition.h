@@ -85,7 +85,7 @@ typedef size_t pt;
 
 namespace jdi {
   /// Map type to contain definitions to remap along with the definition with which it will be replaced
-  typedef map<definition*, definition*> remap_set;
+  typedef map<const definition*, definition*> remap_set;
   typedef remap_set::const_iterator remap_citer;
   typedef remap_set::iterator remap_iter;
   
@@ -107,7 +107,7 @@ namespace jdi {
         @param n A remap_set containing any definitions to replace in this duplication.
                  This map will grow as more definitions are spawned recursively.
         @return A pointer to a newly-allocated copy of this definition. **/
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     
     /** Re-map all uses of each definition used as a key in the remap_set to the
         corresponding definition used as the value. For example, if the given map
@@ -172,7 +172,7 @@ namespace jdi {
     ref_stack referencers; ///< Any referencers modifying the type, such as *, &, [], or (*)().
     unsigned int modifiers; ///< Flags such as long, const, unsigned, etc, as a bitmask. These can be looked up in \c builtin_decls_byflag.
     
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -220,6 +220,8 @@ namespace jdi {
       bool operator<(const arg_key& other) const;
       /// A method to prepare this instance for storage of parameter values for the given template.
       void mirror(definition_template* temp);
+      /// Allocate a new definition for the parameter at the given index; this will be either a definition_typed or definition_valued.
+      definition *new_definition(size_t index, string name, definition_scope* parent) const;
       /// A fast function to assign to our list at a given index, consuming the given type.
       void swap_final_type(size_t argnum, full_type &type);
       /// A less fast function to assign to our list at a given index, copying the given type.
@@ -236,6 +238,10 @@ namespace jdi {
       inline node* begin() { return values; }
       /// A quick function to return a pointer past the end of our list
       inline node* end() { return endv; }
+      
+      /// Return a string version of this key's argument list. You'll need to wrap in () or <> yourself.
+      string toString() const;
+      
       /// Default constructor; mark values NULL.
       arg_key();
       /// Construct with a size, reserving sufficient memory.
@@ -265,7 +271,7 @@ namespace jdi {
     The class is based on implements a method of storing overload information.
   **/
   struct definition_function: definition_typed {
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -310,8 +316,7 @@ namespace jdi {
     
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
-    //definition_valued(string vname, definition *parnt, definition* type, unsigned int flags, value &val); ///< Construct with a value and type.
-    definition_valued(string vname, definition *parnt, definition* type, unsigned int modifiers, unsigned int flags, value &val); ///< Construct with a value and type.
+    definition_valued(string vname, definition *parnt, definition* type, unsigned int modifiers, unsigned int flags, const value &val); ///< Construct with a value and type.
   };
   
   /**
@@ -372,9 +377,9 @@ namespace jdi {
         @param name  The identifier by which the definition can be referenced. This is NOT qualified!
         @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
     **/
-    definition* find_local(string name);
+    virtual definition* find_local(string name);
     
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -407,7 +412,7 @@ namespace jdi {
     An extension of \c jdi::definition_scope for classes and structures, which can have ancestors.
   **/
   struct definition_class: definition_scope {
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -421,6 +426,7 @@ namespace jdi {
     };
     
     virtual definition* look_up(string name); ///< Look up a definition in this class (including its ancestors).
+    virtual definition* find_local(string name);
     virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope.
     vector<ancestor> ancestors; ///< Ancestors of this structure or class
     definition_class(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_TYPENAME);
@@ -431,7 +437,7 @@ namespace jdi {
     An extension of \c jdi::definition_scope for unions, which have a unified tyoe and unique sizeof() operator.
   **/
   struct definition_union: definition_scope {
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -444,7 +450,7 @@ namespace jdi {
     An extension of \c jdi::definition for enums, which contain mirrors of members in the parent scope.
   **/
   struct definition_enum: definition_class {
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -460,6 +466,7 @@ namespace jdi {
     vector<const_pair> constants;
     
     definition_enum(string classname, definition_scope* parent, unsigned flags = DEF_ENUM | DEF_TYPENAME);
+    ~definition_enum();
   };
   
   /**
@@ -473,9 +480,10 @@ namespace jdi {
     
     typedef vector<definition_tempparam*> pvector;
     typedef pvector::iterator piterator;
+    typedef pvector::const_iterator pciterator;
     pvector params;
     
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
@@ -483,7 +491,13 @@ namespace jdi {
     typedef map<arg_key,definition_template*> specmap; ///< Map type for specializations
     typedef specmap::iterator speciter; ///< Map iterator type for specializations
     
-    typedef map<arg_key,definition*> instmap; ///< Map type for instantiations
+    struct instantiation {
+      definition* def;
+      vector<definition*> parameter_defs;
+      instantiation(): def(NULL), parameter_defs() {}
+      ~instantiation();
+    };
+    typedef map<arg_key, instantiation> instmap; ///< Map type for instantiations
     typedef instmap::iterator institer; ///< Map iterator type for instantiations
     
     typedef vector<definition_hypothetical*> deplist; ///< Dependent member liat
@@ -541,12 +555,12 @@ namespace jdi {
       @param flags  The additional flag data about this scope. */
     definition_tempparam(string name, definition_scope* parent, full_type &tp, AST* defval, unsigned flags = DEF_TEMPPARAM);
     
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     
     virtual definition* look_up(string name); ///< Look up a definition in the parent of this scope (skip this scope). This function will never be used by the system.
     virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope. The definition will be marked HYPOTHETICAL, and the \c must_be_class flag will be set.
-    definition* find_local(string name); ///< Behaves identically to declare if the given name does not exist, or else returns it. In either case, the returned definition will be HYPOTHETICAL.
+    virtual definition* find_local(string name); ///< Behaves identically to declare if the given name does not exist, or else returns it. In either case, the returned definition will be HYPOTHETICAL.
   };
   
   /**
@@ -570,7 +584,7 @@ namespace jdi {
   struct definition_hypothetical: definition_class {
     AST *def;
     unsigned int required_flags; ///< Set of flags required of any type provided to this template parameter
-    virtual definition* duplicate(remap_set &n);
+    virtual definition* duplicate(remap_set &n) const;
     virtual void remap(const remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);

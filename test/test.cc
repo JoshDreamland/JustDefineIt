@@ -41,7 +41,9 @@ template<int x> class plusone {
 };
 
 class two: plusone<1> {
-  
+  enum v {
+    x = value
+  };
 };
 
 /* */

@@ -102,6 +102,7 @@ namespace jdi {
       AST_Node(string ct); ///< Constructor, with content string.
       virtual ~AST_Node(); ///< Virtual destructor.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -127,6 +128,7 @@ namespace jdi {
       ~AST_Node_Unary(); ///< Default destructor. Frees children recursively.
       bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -139,6 +141,7 @@ namespace jdi {
     struct AST_Node_sizeof: AST_Node_Unary {
       bool negate; ///< If this is true, then rather than sizeof, we represent its negation, is_empty.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -153,6 +156,7 @@ namespace jdi {
       AST_Node *position; ///< A posisition AST node, for placement new.
       AST_Node *bound; ///< An array bound AST node, for new[].
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -160,11 +164,14 @@ namespace jdi {
       virtual value eval() const; ///< Throw out a bad value.
       virtual full_type coerce() const; ///< Returns the contained type, with another pointer on the ref stack.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      
+      AST_Node_new(const full_type &type, AST_Node *position, AST_Node *bound);
       AST_Node_new();
     };
     struct AST_Node_delete: AST_Node_Unary {
       bool array; ///< True if we are delete[] rather than regular delete.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -177,9 +184,11 @@ namespace jdi {
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_Cast: AST_Node_Unary {
       full_type cast_type; ///< The type this cast represents.
+      
       virtual value eval() const; ///< Performs a cast, as it is able.
       virtual full_type coerce() const; ///< Returns \c cast_type.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -195,6 +204,8 @@ namespace jdi {
     /// Child of AST_Node for tokens with an attached \c definition.
     struct AST_Node_Definition: AST_Node {
       definition *def; ///< The \c definition of the constant or type this token represents.
+      
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
       virtual full_type coerce() const; ///< Returns the type of the given definition, if it has one.
@@ -206,9 +217,11 @@ namespace jdi {
     /// Child of AST_Node for tokens with an attached \c full_type.
     struct AST_Node_Type: AST_Node {
       full_type dec_type; ///< The \c full_type read into this node.
+      
       virtual value eval() const; ///< Returns zero; output should never be queried.
       virtual full_type coerce() const; ///< Returns the type contained, \c dec_type.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -230,6 +243,7 @@ namespace jdi {
       AST_Node_Binary(AST_Node* left, AST_Node* right, string op); ///< Default constructor. Sets children to NULL.
       ~AST_Node_Binary(); ///< Default destructor. Frees children recursively.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -243,6 +257,7 @@ namespace jdi {
       virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
       virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -263,6 +278,7 @@ namespace jdi {
       AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct); ///< Complete constructor, with children and a content string.
       ~AST_Node_Ternary(); ///< Default destructor. Frees children recursively.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -288,6 +304,7 @@ namespace jdi {
       void setright(AST_Node* r); ///< Set the right-hand operand (the index expression).
       bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -302,6 +319,7 @@ namespace jdi {
       
       virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
       virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -329,6 +347,7 @@ namespace jdi {
       void setright(AST_Node* r); ///< Set the right-hand operand (adds a parameter).
       bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
@@ -432,6 +451,9 @@ namespace jdi {
     **/
     int parse_expression(jdip::token_t &token, lexer *lex, definition_scope *scope, int prec, error_handler *uherr);
     
+    /// Filter this AST through a definition remap_set, to update references to old definitions.
+    void remap(const remap_set &n);
+    
     /// Evaluate the current AST, returning its \c value.
     value eval() const;
     
@@ -443,6 +465,9 @@ namespace jdi {
     
     /// Check if this AST is empty.
     bool empty();
+    
+    /// Return a new copy of this entire AST.
+    AST* duplicate() const;
     
     /// Render the AST as a string: This is a relatively costly operation.
     string toString() const; ///< Renders this node and its children as a string, recursively.
@@ -462,6 +487,16 @@ namespace jdi {
     
     /// Default destructor. Deletes the AST.
     ~AST();
+    
+    private:
+      /// Copy constructor; highly expensive. Not implemented. Use duplicate().
+      AST(const AST& ast);
+      
+      /// Construct with a root node; this will invariably be called internally.
+      AST(AST_Node* root);
+      
+      /// Construct with a root node; this will invariably be called internally.
+      AST(AST_Node* root, definition_scope *search_scope);
   };
 }
 

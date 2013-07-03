@@ -134,33 +134,41 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     string cname(token.content.toString());
     
     token = read_next_token(scope);
+    
+    AST *ast = NULL;
     if (token.type == TT_OPERATOR) {
       if (token.content.len != 1 or token.content.str[0] != '=') {
         token.report_error(herr, "Expected assignment operator `=' here before secondary operator");
       }
       token = read_next_token(scope);
-      AST ast;
-      if (ast.parse_expression(token,lex,scope,precedence::comma+1,herr)) {
+      ast = new AST();
+      if (ast->parse_expression(token, lex, scope, precedence::comma + 1, herr)) {
         token.report_error(herr, "Expected const expression here");
         continue;
       }
-      render_ast(ast, "enum_values");
-      value v = ast.eval();
+      render_ast(*ast, "enum_values");
+      value v = ast->eval();
       if (v.type != VT_INTEGER && v.type != VT_DEPENDENT) {
         #ifdef DEBUG_MODE
-          token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast.expression + ")");
+          token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast->expression + ")");
         #else
           token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given");
         #endif
         this_value = value(++this_value.val.i);
       }
-      else this_value = v;
+      else {
+        this_value = v;
+        if (v.type != VT_DEPENDENT) {
+          delete ast;
+          ast = NULL;
+        }
+      }
     }
     
     pair<definition_scope::defiter, bool> cins = nenum->members.insert(pair<string,definition*>(cname,NULL));
     if (cins.second) { // If a new definition key was created, then allocate a new enum representation for it.
       definition_valued *dv = new definition_valued(cname, nenum, nenum->type, nenum->modifiers, 0, this_value);
-      nenum->constants.push_back(definition_enum::const_pair(dv, NULL)); // FIXME: Should be the AST that was parsed, not NULL
+      nenum->constants.push_back(definition_enum::const_pair(dv, ast));
       scope->use_general(cname, cins.first->second = dv);
     }
     else
