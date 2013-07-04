@@ -229,11 +229,11 @@ namespace jdi {
         definition *ndef = key.new_definition(ind++, (*it)->name, this);
         ins.first->second.parameter_defs.push_back(ndef);
         n[*it] = ndef;
-        cout << "Added " << (void*)def << " => " << (void*)ndef << " to remap set" << endl;
+        // cout << "Added " << (void*)def << " => " << (void*)ndef << " to remap set" << endl;
       }
       ntemp->remap(n);
-      cout << "Duplicated " << def->name << " to " << ntemp->name << endl;
-      cout << ntemp->toString() << endl;
+      // cout << "Duplicated " << def->name << " to " << ntemp->name << endl;
+      // cout << ntemp->toString() << endl;
     }
     return ins.first->second.def;
   }

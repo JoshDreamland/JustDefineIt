@@ -171,7 +171,7 @@ namespace jdi {
     const int nid = svg->nodes_written++;
     int xx = x, yy = y+own_height()/2+16+(bound?bound->own_width()/2:0);
     
-    content = (position?"new() ":"new ") + type.toString();
+    content = (position?"new() ":"new ") + alloc_type.toString();
     if (bound) content += "[]";
     int r = own_width()/2;
     svg->draw_line(nid,'m',x,y,xx,yy);
@@ -311,7 +311,7 @@ namespace jdi {
   }
   string AST::AST_Node_new::toString() const {
     string res = (position)? "new(" + position->toString() + ") " : "new ";
-    res += type.toString();
+    res += alloc_type.toString();
     if (bound) res += "[" + bound->toString() + "]";
     return res;
   }

@@ -9,16 +9,7 @@
  * 
  * Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
- * void definition_scope::copy(const definition_scope* from) {
-    remap_set n;
-    for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
-      inspair dest = members.insert(entry(it->first,NULL));
-      if (dest.second) {
-        dest.first->second = it->second->duplicate(n);
-      }
-    }
-    remap(n);
-  }
+ * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
@@ -41,6 +32,21 @@ namespace jdi {
       inspair dest = members.insert(entry(it->first,NULL));
       if (dest.second) {
         dest.first->second = it->second->duplicate(n);
+      }
+    }
+    using_general = from->using_general;
+    if (from->using_front) {
+      if (!using_back)
+        using_front = using_back = new using_node(from->using_front->use, NULL);
+      for (using_node *un = from->using_front; un; un = un->next) {
+        bool news = true;
+        for (using_node *nf = using_front; nf; nf = nf->next)
+          if (nf->use == un->use) {
+            news = false;
+            break;
+          }
+        if (news)
+          using_back = new using_node(un->use, using_back);
       }
     }
     remap(n);
@@ -232,8 +238,10 @@ namespace jdi {
       if (it->def == d) {
         it->def->remap(n);
         if (it->ast) {
+          value cache = it->def->value_of;
           it->ast->remap(n);
           it->def->value_of = it->ast->eval();
+          // cout << "Remap called on enum: new value of `" << it->def->name << "': " << cache.toString() << " => " << it->def->value_of.toString() << endl;
         }
       }
       else {
@@ -281,16 +289,16 @@ namespace jdi {
   //======: AST Node Duplicate Functions :==================================================================
   //========================================================================================================
   
-  AST::AST_Node *AST::AST_Node            ::duplicate() const { return NULL; }
+  AST::AST_Node *AST::AST_Node            ::duplicate() const { return new AST_Node(content, type); }
   AST::AST_Node *AST::AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content); }
-  AST::AST_Node *AST::AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix); }
+  AST::AST_Node *AST::AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
   AST::AST_Node *AST::AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(operand, negate); }
   AST::AST_Node *AST::AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def); }
   AST::AST_Node *AST::AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt); }
   AST::AST_Node *AST::AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(operand, cast_type); }
   AST::AST_Node *AST::AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content); }
   AST::AST_Node *AST::AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(exp, left, right, content); }
-  AST::AST_Node *AST::AST_Node_new        ::duplicate() const { return new AST_Node_new(type, position, bound); }
+  AST::AST_Node *AST::AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound); }
   AST::AST_Node *AST::AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array); }
   AST::AST_Node *AST::AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index)); }
   
@@ -327,11 +335,12 @@ namespace jdi {
   void AST::AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n); }
   void AST::AST_Node_Unary      ::remap(const remap_set& n) { nremap(operand, n); }
   void AST::AST_Node_sizeof     ::remap(const remap_set& n) { nremap(operand, n); }
+  void AST::AST_Node_Definition ::remap(const remap_set& n) { def = filter(def, n); }
   void AST::AST_Node_Type       ::remap(const remap_set& n) { dec_type.def  = filter(dec_type.def,  n); }
   void AST::AST_Node_Cast       ::remap(const remap_set& n) { cast_type.def = filter(cast_type.def, n); }
   void AST::AST_Node_Binary     ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); }
   void AST::AST_Node_Ternary    ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); nremap(exp, n); }
-  void AST::AST_Node_new        ::remap(const remap_set& n) { type.def = filter(type.def, n); nremap(position, n); nremap(bound, n); }
+  void AST::AST_Node_new        ::remap(const remap_set& n) { alloc_type.def = filter(alloc_type.def, n); nremap(position, n); nremap(bound, n); }
   void AST::AST_Node_delete     ::remap(const remap_set& n) { AST_Node_Unary::remap(n); }
   void AST::AST_Node_Subscript  ::remap(const remap_set& n) { nremap(left, n); nremap(index, n); }
   
@@ -345,13 +354,4 @@ namespace jdi {
       (*e)->remap(n);
   }
   
-  void AST::AST_Node_Definition ::remap(const remap_set& n) {
-    definition *d = filter(def, n);
-    if (d != def)
-      def = d;
-    else {
-      cout << "Definition " << (void*)d << " not in remap set; delegating" << endl;
-      nremap(def, n);
-    }
-  }
 }

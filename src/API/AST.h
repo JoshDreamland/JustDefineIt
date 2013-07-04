@@ -55,8 +55,8 @@ namespace jdi {
     enum AST_TYPE {
       AT_UNARY_PREFIX, ///< This node is some kind of unary prefix operator, such as *, &, ~, or -.
       AT_UNARY_POSTFIX, ///< This node is some kind of unary postfix operator, such as ++, [], or ().
-      AT_BINARYOP, ///< This node is a binary operator, like /, *, -, or +.
-      AT_TERNARYOP, ///< This node is a ternary operator. Note that ?: is the only one currently supported.
+      AT_BINARYOP,   ///< This node is a binary operator, like /, *, -, or +.
+      AT_TERNARYOP,  ///< This node is a ternary operator. Note that ?: is the only one currently supported.
       AT_DECLITERAL, ///< This node is a decimal literal, such as 1337.
       AT_HEXLITERAL, ///< This node is a hexadecimal literal, such as 0x539
       AT_OCTLITERAL, ///< This node is an octal literal, such as 2471.
@@ -65,7 +65,13 @@ namespace jdi {
       AT_DEFINITION, ///< This node is a definition; an identifier that has been looked up.
       AT_TYPE,       ///< This node is a full type.
       AT_ARRAY,      ///< This node is an array of nodes.
-      AT_FUNCCALL    ///< This node is a function call. FIXME: This value is probably never used.
+      AT_SUBSCRIPT,  ///< This node is an array subscript, [expression].
+      AT_SCOPE,      ///< This node is a scope access, such as ::
+      AT_SIZEOF,     ///< This node is a sizeof() or empty() expression.
+      AT_CAST,       ///< This node is a typecast expression.
+      AT_PARAMLIST,  ///< This node is a list of parameters.
+      AT_NEW,        ///< This node is a new, new[], new(), or new()[] operator.
+      AT_DELETE      ///< This node is a delete or delete[] operator.
     };
     
     /// Structure containing info for use when rendering SVGs.
@@ -81,9 +87,7 @@ namespace jdi {
     **/
     struct AST_Node {
       AST_TYPE type; ///< The type of this node, as one of the AST_TYPE constants.
-      AST_Node *parent; ///< The parent of this node, or NULL iff it is the root.
       std::string content; ///< The literal, as a string, such as "1234", or the symbol representing the operator, as a symbol for lookup, such as "+=".
-      int precedence; ///< The priority with which this node is executed; 0 = highest precedence.
       
       #ifndef NO_ERROR_REPORTING
         std::string filename; ///< The name of the file in which the token was created, for error reporting.
@@ -98,8 +102,8 @@ namespace jdi {
       /// Coerces this node recursively for type, returning a full_type representing it.
       virtual full_type coerce() const;
       
-      AST_Node(); ///< Default constructor.
-      AST_Node(string ct); ///< Constructor, with content string.
+      AST_Node(AST_TYPE type); ///< Default constructor.
+      AST_Node(string ct, AST_TYPE type); ///< Constructor, with content string.
       virtual ~AST_Node(); ///< Virtual destructor.
       
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
@@ -123,8 +127,9 @@ namespace jdi {
       /// Coerces this node recursively for type, returning a full_type representing it.
       virtual full_type coerce() const;
       
-      AST_Node_Unary(AST_Node* r = NULL); ///< Default constructor. Sets children to NULL.
-      AST_Node_Unary(AST_Node* r, string ct, bool pre); ///< Complete constructor, with child node and operator string.
+      AST_Node_Unary(AST_TYPE type, AST_Node* r = NULL); ///< Construct arbitrarily, with a type.
+      AST_Node_Unary(AST_Node* r, string ct, bool pre, AST_TYPE type); ///< Complete constructor, with child node, operator string, prefix bool, and type.
+      AST_Node_Unary(AST_Node* r, string ct, bool pre); ///< Helper constructor, with child node and operator string, and a boolean to choose from prefix or postfix.
       ~AST_Node_Unary(); ///< Default destructor. Frees children recursively.
       bool full(); ///< Returns true if this node is already completely full, meaning it has no room for children.
       
@@ -152,7 +157,7 @@ namespace jdi {
       AST_Node_sizeof(AST_Node* param, bool negate);
     };
     struct AST_Node_new: AST_Node {
-      full_type type; ///< The type to be allocated.
+      full_type alloc_type; ///< The type to be allocated.
       AST_Node *position; ///< A posisition AST node, for placement new.
       AST_Node *bound; ///< An array bound AST node, for new[].
       
@@ -239,8 +244,8 @@ namespace jdi {
       /// Coerces this node recursively for type, returning a full_type representing it.
       virtual full_type coerce() const;
       
-      AST_Node_Binary(AST_Node* left=NULL, AST_Node* right=NULL); ///< Default constructor. Sets children to NULL.
-      AST_Node_Binary(AST_Node* left, AST_Node* right, string op); ///< Default constructor. Sets children to NULL.
+      AST_Node_Binary(AST_TYPE type = AT_BINARYOP, AST_Node* left=NULL, AST_Node* right=NULL); ///< Construct arbitrarily.
+      AST_Node_Binary(AST_Node* left, AST_Node* right, string op, AST_TYPE type = AT_BINARYOP); ///< Full constructor.
       ~AST_Node_Binary(); ///< Default destructor. Frees children recursively.
       
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
@@ -329,6 +334,7 @@ namespace jdi {
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
       
+      AST_Node_Array();
       virtual ~AST_Node_Array();
     };
     /// Child of AST_Node for function call parameters.

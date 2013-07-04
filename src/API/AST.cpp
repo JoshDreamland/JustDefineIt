@@ -89,8 +89,7 @@ namespace jdi
               read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
               track(ft.refs.toString());
               myroot = new AST_Node_Type(ft);
-              token_basics(
-                myroot->type = AT_TYPE,
+              token_basics(void(),
                 myroot->filename = (const char*)token.file,
                 myroot->linenum = token.linenum,
                 myroot->pos = token.pos
@@ -101,7 +100,7 @@ namespace jdi
               nr->content = nr->cast_type.toString();
               myroot = nr;
               token_basics(
-                myroot->type = AT_UNARY_PREFIX,
+                void(),
                 myroot->filename = (const char*)token.file,
                 myroot->linenum = token.linenum,
                 myroot->pos = token.pos
@@ -113,7 +112,7 @@ namespace jdi
             read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
             myroot = new AST_Node_Type(ft);
             token_basics(
-              myroot->type = AT_TYPE,
+              void(),
               myroot->filename = (const char*)token.file,
               myroot->linenum = token.linenum,
               myroot->pos = token.pos
@@ -133,13 +132,12 @@ namespace jdi
               at = AT_DEFINITION;
             }
             else {
-              myroot = new AST_Node();
-              at = AT_IDENTIFIER;
+              myroot = new AST_Node(at = AT_IDENTIFIER);
+              ;
             }
           }
           else {
-            myroot = new AST_Node();
-            at = AT_IDENTIFIER;
+            myroot = new AST_Node(at = AT_IDENTIFIER);
           }
           myroot->content = token.content.toString();
           track(myroot->content);
@@ -233,7 +231,7 @@ namespace jdi
           track(string(")"));
           token = get_next_token();
         }
-        ann->type = read_type(lex, token, search_scope, NULL, herr);
+        ann->alloc_type = read_type(lex, token, search_scope, NULL, herr);
         
         bool stillgoing = true;
         while (token.type == TT_OPERATOR) {
@@ -242,7 +240,7 @@ namespace jdi
             break;
           }
           else
-            ann->type.refs.push(ref_stack::RT_POINTERTO);
+            ann->alloc_type.refs.push(ref_stack::RT_POINTERTO);
         }
         
         if (stillgoing and token.type == TT_LEFTBRACKET) {
@@ -279,15 +277,15 @@ namespace jdi
         return NULL;
       
       case TT_STRINGLITERAL:
-      case TT_CHARLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
-                           track(myroot->content); at = AT_CHRLITERAL; break;
+      case TT_CHARLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_CHRLITERAL);
+                           track(myroot->content); break;
       
-      case TT_DECLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
-                          track(myroot->content); at = AT_DECLITERAL; break;
-      case TT_HEXLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
-                          track(myroot->content); at = AT_HEXLITERAL; break;
-      case TT_OCTLITERAL: myroot = new AST_Node(); myroot->content = token.content.toString();
-                          track(myroot->content); at = AT_OCTLITERAL; break;
+      case TT_DECLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_DECLITERAL);
+                          track(myroot->content); break;
+      case TT_HEXLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_HEXLITERAL);
+                          track(myroot->content); break;
+      case TT_OCTLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_OCTLITERAL);
+                          track(myroot->content); break;
       
       case TT_DECLTYPE:
           cerr << "Unimplemented: `decltype'." << endl;
@@ -889,8 +887,8 @@ namespace jdi
   }
   
   full_type AST::AST_Node_new::coerce() const {
-    full_type res = type;
-    if (bound) res.refs.push_array(0);
+    full_type res = alloc_type;
+    res.refs.push_array(bound? (long)bound->eval() : 0);
     return res;
   }
   
@@ -914,27 +912,29 @@ namespace jdi
   static string str_sizeof("sizeof",6);
   static string str_cast("cast",4);
   
-  AST::AST_Node::AST_Node(): parent(NULL) {}
-  AST::AST_Node::AST_Node(string ct): parent(NULL), content(ct) {}
-  AST::AST_Node_Definition::AST_Node_Definition(definition* d): def(d) {}
-  AST::AST_Node_Scope::AST_Node_Scope(AST_Node* l, AST_Node* r, string op): AST_Node_Binary(l,r,op) {}
-  AST::AST_Node_Type::AST_Node_Type(full_type &ft) { dec_type.swap(ft); }
-  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r): operand(r) {}
-  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct), operand(r), prefix(pre) {}
-  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param, bool n): AST_Node_Unary(param,str_sizeof, true), negate(n) {}
-  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft): AST_Node_Unary(param, str_cast, true) { cast_type.copy(ft); }
-  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft): AST_Node_Unary(param, str_cast, true) { cast_type.swap(ft); }
-  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, true) {}
-  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r): left(l), right(r) { type = AT_BINARYOP; }
-  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op): AST_Node(op), left(l), right(r) { type = AT_BINARYOP; }
-  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
-  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
-  AST::AST_Node_Parameters::AST_Node_Parameters(): func(NULL) {}
-  AST::AST_Node_new::AST_Node_new(const full_type &t, AST_Node *p, AST_Node *b): type(t), position(p), bound(b) {}
-  AST::AST_Node_new::AST_Node_new(): type(), position(NULL), bound(NULL) {}
-  AST::AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param), array(arr) {}
-  AST::AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): left(l), index(ind) {}
-  AST::AST_Node_Subscript::AST_Node_Subscript(): left(NULL), index(NULL) {}
+  AST::AST_Node::AST_Node(AST_TYPE tp): type(tp) {}
+  AST::AST_Node::AST_Node(string ct, AST_TYPE tp): type(tp), content(ct) {}
+  AST::AST_Node_Definition::AST_Node_Definition(definition* d): AST_Node(AT_DEFINITION), def(d) {}
+  AST::AST_Node_Scope::AST_Node_Scope(AST_Node* l, AST_Node* r, string op): AST_Node_Binary(l,r,op, AT_SCOPE) {}
+  AST::AST_Node_Type::AST_Node_Type(full_type &ft): AST_Node(AT_TYPE) { dec_type.swap(ft); }
+  AST::AST_Node_Unary::AST_Node_Unary(AST_TYPE tp, AST_Node* r): AST_Node(tp), operand(r) {}
+  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre, AST_TYPE tp): AST_Node(ct, tp), operand(r), prefix(pre) {}
+  AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct, pre? AT_UNARY_PREFIX : AT_UNARY_POSTFIX), operand(r), prefix(pre) {}
+  AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param, bool n): AST_Node_Unary(param, str_sizeof, AT_SIZEOF), negate(n) {}
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft): AST_Node_Unary(param, str_cast, AT_CAST) { cast_type.copy(ft); }
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft): AST_Node_Unary(param, str_cast, AT_CAST) { cast_type.swap(ft); }
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, AT_CAST) {}
+  AST::AST_Node_Binary::AST_Node_Binary(AST_TYPE tp, AST_Node* l, AST_Node* r): AST_Node(tp), left(l), right(r) { type = AT_BINARYOP; }
+  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op, AST_TYPE tp): AST_Node(op, tp), left(l), right(r) { type = AT_BINARYOP; }
+  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): AST_Node(AT_TERNARYOP), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
+  AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct, AT_TERNARYOP), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
+  AST::AST_Node_Parameters::AST_Node_Parameters(): AST_Node(AT_PARAMLIST), func(NULL) {}
+  AST::AST_Node_new::AST_Node_new(const full_type &t, AST_Node *p, AST_Node *b): AST_Node(AT_NEW), alloc_type(t), position(p), bound(b) {}
+  AST::AST_Node_new::AST_Node_new(): AST_Node(AT_NEW), alloc_type(), position(NULL), bound(NULL) {}
+  AST::AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param, arr? "delete" : "delete[]", AT_DELETE), array(arr) {}
+  AST::AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): AST_Node(AT_SUBSCRIPT), left(l), index(ind) {}
+  AST::AST_Node_Subscript::AST_Node_Subscript(): AST_Node(AT_SUBSCRIPT), left(NULL), index(NULL) {}
+  AST::AST_Node_Array::AST_Node_Array(): AST_Node(AT_ARRAY) {}
   
   
   //===========================================================================================================================

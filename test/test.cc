@@ -18,7 +18,8 @@ b: syntax_error {};
 #include <math.h>
 #include <stdlib.h>
 #include <malloc.h>
-*/
+/* */
+
 template<typename t1, typename t2> class my_template {
   t1 my_member;
   typename t2::whatever my_other_member;
