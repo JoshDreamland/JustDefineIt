@@ -26,8 +26,7 @@
 
 namespace jdi {
   
-  void definition_scope::copy(const definition_scope* from) {
-    remap_set n;
+  void definition_scope::copy(const definition_scope* from, remap_set &n) {
     for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
       inspair dest = members.insert(entry(it->first,NULL));
       if (dest.second) {
@@ -49,7 +48,6 @@ namespace jdi {
           using_back = new using_node(un->use, using_back);
       }
     }
-    remap(n);
   }
 
   //========================================================================================================
@@ -66,7 +64,7 @@ namespace jdi {
   
   definition *definition_class::duplicate(remap_set &n) const {
     definition_class* res= new definition_class(name, parent, flags);
-    res->definition_scope::copy(this);
+    res->definition_scope::copy(this, n);
     res->ancestors = ancestors;
     n[this] = res;
     return res;
@@ -104,7 +102,7 @@ namespace jdi {
     definition_scope* res = new definition_scope(name, parent, flags);
     n[this] = res;
     
-    res->copy(this);
+    res->copy(this, n);
     return res;
   }
   
@@ -137,7 +135,7 @@ namespace jdi {
     
     res->default_type = default_type;
     res->default_value = new AST(/*default_value*/); // FIXME: This drops information! Need an AST::duplicate.
-    res->definition_class::copy(this);
+    res->definition_class::copy(this, n);
     return res;
   }
   
@@ -153,7 +151,7 @@ namespace jdi {
     definition_union* res = new definition_union(name, parent, flags);
     n[this] = res;
     
-    res->definition_scope::copy(this);
+    res->definition_scope::copy(this, n);
     return res;
   }
   
@@ -233,6 +231,13 @@ namespace jdi {
     #endif
     type = filter(type, n);
     
+    static int nest_count = 0;
+    
+    if (nest_count >= 12.8) {
+      cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
+      return;
+    } ++nest_count;
+    
     for (vector<const_pair>::iterator it = constants.begin(); it != constants.end(); ++it) {
       definition_valued *d = filter(it->def, n);
       if (it->def == d) {
@@ -249,6 +254,8 @@ namespace jdi {
         it->def = d;
       }
     }
+    
+    --nest_count;
   }
   
   void definition_function::remap(const remap_set& n) {
@@ -289,22 +296,29 @@ namespace jdi {
   //======: AST Node Duplicate Functions :==================================================================
   //========================================================================================================
   
-  AST::AST_Node *AST::AST_Node            ::duplicate() const { return new AST_Node(content, type); }
-  AST::AST_Node *AST::AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content); }
+  AST::AST_Node *AST::AST_Node            ::duplicate() const { return new AST_Node(content, type);                         }
+  AST::AST_Node *AST::AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);  }
   AST::AST_Node *AST::AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
-  AST::AST_Node *AST::AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(operand, negate); }
-  AST::AST_Node *AST::AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def); }
-  AST::AST_Node *AST::AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt); }
-  AST::AST_Node *AST::AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(operand, cast_type); }
+  AST::AST_Node *AST::AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(operand, negate);                }
+  AST::AST_Node *AST::AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def, content);               }
+  AST::AST_Node *AST::AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt);       }
+  AST::AST_Node *AST::AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(operand, cast_type);               }
   AST::AST_Node *AST::AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content); }
-  AST::AST_Node *AST::AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(exp, left, right, content); }
-  AST::AST_Node *AST::AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound); }
-  AST::AST_Node *AST::AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array); }
-  AST::AST_Node *AST::AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index)); }
+  AST::AST_Node *AST::AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(exp, left, right, content);     }
+  AST::AST_Node *AST::AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound);       }
+  AST::AST_Node *AST::AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array);            }
+  AST::AST_Node *AST::AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index));       }
   
   AST::AST_Node *AST::AST_Node_Parameters ::duplicate() const {
     AST_Node_Parameters *res = new AST_Node_Parameters();
     res->func = dup(func);
+    res->params.reserve(params.size());
+    for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
+      res->params.push_back(dup(*p));
+    return res;
+  }
+  AST::AST_Node *AST::AST_Node_TempInst   ::duplicate() const {
+    AST_Node_TempInst *res = new AST_Node_TempInst(temp);
     res->params.reserve(params.size());
     for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
       res->params.push_back(dup(*p));
@@ -331,21 +345,26 @@ namespace jdi {
       cerr << "Why is this null?" << endl;
     }
   
-  void AST::AST_Node            ::remap(const remap_set&) {  }
-  void AST::AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n); }
-  void AST::AST_Node_Unary      ::remap(const remap_set& n) { nremap(operand, n); }
-  void AST::AST_Node_sizeof     ::remap(const remap_set& n) { nremap(operand, n); }
-  void AST::AST_Node_Definition ::remap(const remap_set& n) { def = filter(def, n); }
+  void AST::AST_Node            ::remap(const remap_set&)   {  }
+  void AST::AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n);  }
+  void AST::AST_Node_Unary      ::remap(const remap_set& n) { nremap(operand, n);         }
+  void AST::AST_Node_sizeof     ::remap(const remap_set& n) { nremap(operand, n);         }
+  void AST::AST_Node_Definition ::remap(const remap_set& n) { def = filter(def, n);       }
   void AST::AST_Node_Type       ::remap(const remap_set& n) { dec_type.def  = filter(dec_type.def,  n); }
   void AST::AST_Node_Cast       ::remap(const remap_set& n) { cast_type.def = filter(cast_type.def, n); }
-  void AST::AST_Node_Binary     ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); }
+  void AST::AST_Node_Binary     ::remap(const remap_set& n) { nremap(left, n); nremap(right, n);        }
   void AST::AST_Node_Ternary    ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); nremap(exp, n); }
   void AST::AST_Node_new        ::remap(const remap_set& n) { alloc_type.def = filter(alloc_type.def, n); nremap(position, n); nremap(bound, n); }
-  void AST::AST_Node_delete     ::remap(const remap_set& n) { AST_Node_Unary::remap(n); }
+  void AST::AST_Node_delete     ::remap(const remap_set& n) { AST_Node_Unary::remap(n);          }
   void AST::AST_Node_Subscript  ::remap(const remap_set& n) { nremap(left, n); nremap(index, n); }
   
   void AST::AST_Node_Parameters ::remap(const remap_set& n) {
     nremap(func, n);
+    for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
+      (*p)->remap(n);
+  }
+  void AST::AST_Node_TempInst   ::remap(const remap_set& n) {
+    temp = filter(temp, n);
     for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
       (*p)->remap(n);
   }

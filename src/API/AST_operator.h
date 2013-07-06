@@ -41,6 +41,7 @@ namespace jdi {
     virtual void operate_new(AST::AST_Node_new* x, void *param) = 0;
     virtual void operate_delete(AST::AST_Node_delete* x, void *param) = 0;
     virtual void operate_Subscript(AST::AST_Node_Subscript* x, void *param) = 0;
+    virtual void operate_TempInst(AST::AST_Node_TempInst* x, void *param) = 0;
     virtual ~ASTOperator();
   };
 
@@ -59,6 +60,7 @@ namespace jdi {
     virtual void operate_new(const AST::AST_Node_new* x, void *param) = 0;
     virtual void operate_delete(const AST::AST_Node_delete* x, void *param) = 0;
     virtual void operate_Subscript(const AST::AST_Node_Subscript* x, void *param) = 0;
+    virtual void operate_TempInst(const AST::AST_Node_TempInst* x, void *param) = 0;
     virtual ~ConstASTOperator();
   };
 }

@@ -123,23 +123,54 @@ namespace jdi
           handled_basics = read_next = true;
         } break;
       
-      case TT_IDENTIFIER: case TT_DEFINITION: {
+      case TT_DEFINITION: {
+        at = AT_DEFINITION;
+        if (token.def->flags & DEF_TEMPLATE) {
+          definition *def = token.def;
+          token = get_next_token();
+          if (token.type == TT_LESSTHAN) {
+            AST_Node_TempInst *ti = new AST_Node_TempInst((definition_template*)def);
+            token = get_next_token();
+            
+            bool gtio = tt_greater_is_op;
+            tt_greater_is_op = false;
+            for (;;) {
+              AST_Node *p = parse_expression(token, precedence::comma + 1);
+              if (p == NULL) break;
+              ti->params.push_back(p);
+              if (token.type == TT_GREATERTHAN)
+              { token = get_next_token(); break; }
+              if (token.type == TT_COMMA)
+              { token = get_next_token(); continue; }
+              token.report_errorf(herr, "Expected closing triangle bracket before %s");
+              break;
+            }
+            tt_greater_is_op = gtio;
+            myroot = ti;
+          }
+          else
+            myroot = new AST_Node_Definition(token.def, token.content.toString());
+          read_next = true;
+        }
+        else
+          myroot = new AST_Node_Definition(token.def, token.content.toString());
+        track(myroot->content);
+      } break;
+      
+      case TT_IDENTIFIER: {
           if (search_scope) {
             string n(token.content.toString());
             definition *def = search_scope->look_up(n);
             if (def) {
-              myroot = new AST_Node_Definition(def);
+              myroot = new AST_Node_Definition(def, token.content.toString());
               at = AT_DEFINITION;
             }
-            else {
-              myroot = new AST_Node(at = AT_IDENTIFIER);
-              ;
-            }
+            else
+              myroot = new AST_Node(token.content.toString(), at = AT_IDENTIFIER);
           }
-          else {
-            myroot = new AST_Node(at = AT_IDENTIFIER);
-          }
-          myroot->content = token.content.toString();
+          else
+            myroot = new AST_Node(token.content.toString(), at = AT_IDENTIFIER);
+          
           track(myroot->content);
         } break;
       
@@ -166,11 +197,11 @@ namespace jdi
       } break;
       
       case TT_GREATERTHAN: case TT_LESSTHAN: case TT_COLON:
-        token.report_error(herr, "Expected expression here before operator");
+        token.report_error(herr, tt_greater_is_op? "Expected expression here before greater-than operator" : "Expected expression here before closing triangle bracket");
         return NULL;
       
       case TT_SCOPE:
-          cerr << "Unimplemented: '::'";
+          cerr << "Unimplemented: '::'" << endl;
         return NULL;
       
       case TT_LEFTPARENTH:
@@ -294,10 +325,9 @@ namespace jdi
       {
           bool not_result;
           if (true) {
-            case TT_SIZEOF: not_result = false;
-          }
-          else {
             case TT_ISEMPTY: not_result = true;
+          } else {
+            case TT_SIZEOF: not_result = false;
           }
           if (true)
           token = get_next_token(); track(string("sizeof")); 
@@ -360,27 +390,6 @@ namespace jdi
       case TT_COLON:
         return left_node;
       
-      case TT_LESSTHAN: {
-        if (precedence::scope < prec_min)
-          return left_node;
-        full_type lt = left_node->coerce();
-        if (lt.def and (lt.def->flags & DEF_TEMPLATE)) {
-          arg_key k(((definition_template*)lt.def)->params.size());
-          delete left_node;
-          if (read_template_parameters(k, (definition_template*)lt.def, lex, token, search_scope, NULL, herr))
-            return NULL;
-          definition *d = ((definition_template*)lt.def)->instantiate(k);
-          if (d->flags & DEF_TYPENAME) {
-            lt.def = d;
-            left_node = new AST_Node_Type(lt);
-          }
-          else
-            left_node = new AST_Node_Definition(d);
-          token = get_next_token();
-          break;
-        }
-      } goto case_TT_OPERATOR;
-      
       case TT_GREATERTHAN:
         if (!tt_greater_is_op)
           return left_node; 
@@ -396,6 +405,8 @@ namespace jdi
         left_node = new AST_Node_Scope(left_node,right,"::");
         break;
       }
+      
+      case TT_LESSTHAN:
       case TT_OPERATOR: case_TT_OPERATOR: {
           string op(token.content.toString());
           map<string,symbol>::iterator b = symbols.find(op);
@@ -664,7 +675,10 @@ namespace jdi
     full_type res = left->coerce();
     if (!res.def or !(res.def->flags & DEF_SCOPE))
       return value();
-    definition* d = ((definition_scope*)res.def)->look_up(right->content);
+    if (res.def == builtin_type__void)
+      return value(VT_DEPENDENT);
+    // cout << "Evaluating :: operator: " << res.def->name << "::" << right->content << endl;
+    definition* d = ((definition_scope*)res.def)->find_local(right->content);
     if (!d or not(d->flags & DEF_VALUED)) {
       #ifdef DEBUG_MODE
         cerr << "Failure: No `" << right->content << "' found in scope `" << res.def->name << "'" << endl;
@@ -761,6 +775,9 @@ namespace jdi
         return value(0L);
       return value(long(str[ivl]));
     }
+  }
+  value AST::AST_Node_TempInst::eval() const {
+    return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
   }
   
   //===========================================================================================================================
@@ -905,6 +922,23 @@ namespace jdi
     return res;
   }
   
+  full_type AST::AST_Node_TempInst::coerce() const {
+    arg_key k(temp->params.size());
+    k.mirror(temp);
+    for (size_t i = 0; i < params.size(); ++i) {
+      if (temp->params[i]->flags & DEF_TYPENAME) {
+        k.put_type(i, params[i]->coerce().def);
+      }
+      else {
+        value v = params[i]->eval();
+        if (v.type == VT_DEPENDENT) // Bail out returning void if we have dependent parameters
+          return builtin_type__void;
+        k.put_value(i, v);
+      }
+    }
+    return full_type(temp->instantiate(k));
+  }
+  
   //===========================================================================================================================
   //=: Constructors :==========================================================================================================
   //===========================================================================================================================
@@ -914,7 +948,7 @@ namespace jdi
   
   AST::AST_Node::AST_Node(AST_TYPE tp): type(tp) {}
   AST::AST_Node::AST_Node(string ct, AST_TYPE tp): type(tp), content(ct) {}
-  AST::AST_Node_Definition::AST_Node_Definition(definition* d): AST_Node(AT_DEFINITION), def(d) {}
+  AST::AST_Node_Definition::AST_Node_Definition(definition* d, string ct): AST_Node(ct, AT_DEFINITION), def(d) {}
   AST::AST_Node_Scope::AST_Node_Scope(AST_Node* l, AST_Node* r, string op): AST_Node_Binary(l,r,op, AT_SCOPE) {}
   AST::AST_Node_Type::AST_Node_Type(full_type &ft): AST_Node(AT_TYPE) { dec_type.swap(ft); }
   AST::AST_Node_Unary::AST_Node_Unary(AST_TYPE tp, AST_Node* r): AST_Node(tp), operand(r) {}
@@ -934,6 +968,7 @@ namespace jdi
   AST::AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param, arr? "delete" : "delete[]", AT_DELETE), array(arr) {}
   AST::AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): AST_Node(AT_SUBSCRIPT), left(l), index(ind) {}
   AST::AST_Node_Subscript::AST_Node_Subscript(): AST_Node(AT_SUBSCRIPT), left(NULL), index(NULL) {}
+  AST::AST_Node_TempInst::AST_Node_TempInst(definition_template* d): AST_Node(d->name, AT_INSTANTIATE), temp(d) {}
   AST::AST_Node_Array::AST_Node_Array(): AST_Node(AT_ARRAY) {}
   
   
@@ -946,6 +981,7 @@ namespace jdi
   AST::AST_Node_Unary::~AST_Node_Unary() { delete operand; }
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
+  AST::AST_Node_TempInst::~AST_Node_TempInst() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
   AST::AST_Node_Array::~AST_Node_Array() { for (vector<AST_Node*>::iterator it = elements.begin(); it != elements.end(); ++it) delete *it; }
   AST::AST_Node_Subscript::~AST_Node_Subscript() { delete left; delete index; }
   
@@ -968,6 +1004,7 @@ namespace jdi
   void AST::AST_Node_new        ::operate(ASTOperator *aop, void *param) { aop->operate_new        (this, param); }
   void AST::AST_Node_delete     ::operate(ASTOperator *aop, void *param) { aop->operate_delete     (this, param); }
   void AST::AST_Node_Subscript  ::operate(ASTOperator *aop, void *param) { aop->operate_Subscript  (this, param); }
+  void AST::AST_Node_TempInst   ::operate(ASTOperator *aop, void *param) { aop->operate_TempInst   (this, param); }
   
   void AST::AST_Node            ::operate(ConstASTOperator *aop, void *param) const { aop->operate            (this, param); }
   void AST::AST_Node_Definition ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Definition (this, param); }
@@ -983,6 +1020,7 @@ namespace jdi
   void AST::AST_Node_new        ::operate(ConstASTOperator *aop, void *param) const { aop->operate_new        (this, param); }
   void AST::AST_Node_delete     ::operate(ConstASTOperator *aop, void *param) const { aop->operate_delete     (this, param); }
   void AST::AST_Node_Subscript  ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Subscript  (this, param); }
+  void AST::AST_Node_TempInst   ::operate(ConstASTOperator *aop, void *param) const { aop->operate_TempInst   (this, param); }
   
   //===========================================================================================================================
   //=: Everything else :=======================================================================================================
@@ -1002,7 +1040,7 @@ namespace jdi
   AST::AST(): root(NULL), search_scope(NULL), tt_greater_is_op(true) {}
   AST::AST(AST_Node* r): root(r), search_scope(NULL), tt_greater_is_op(true) {}
   AST::AST(AST_Node* r, definition_scope *ss): root(r), search_scope(ss), tt_greater_is_op(true) {}
-  AST::AST(definition* d): root(new AST_Node_Definition(d)), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(definition* d): root(new AST_Node_Definition(d, d->name)), search_scope(NULL), tt_greater_is_op(true) {}
     
   AST::~AST() {
     delete root;

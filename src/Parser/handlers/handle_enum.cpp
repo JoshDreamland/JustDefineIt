@@ -162,8 +162,6 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
           delete ast;
           ast = NULL;
         }
-        else
-          ast->eval();
       }
     }
     

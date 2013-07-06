@@ -71,7 +71,8 @@ namespace jdi {
       AT_CAST,       ///< This node is a typecast expression.
       AT_PARAMLIST,  ///< This node is a list of parameters.
       AT_NEW,        ///< This node is a new, new[], new(), or new()[] operator.
-      AT_DELETE      ///< This node is a delete or delete[] operator.
+      AT_DELETE,     ///< This node is a delete or delete[] operator.
+      AT_INSTANTIATE ///< This node is a template instantiation.
     };
     
     /// Structure containing info for use when rendering SVGs.
@@ -217,7 +218,7 @@ namespace jdi {
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
-      AST_Node_Definition(definition *def); ///< Construct with a definition
+      AST_Node_Definition(definition *def, string content); ///< Construct with a definition
     };
     /// Child of AST_Node for tokens with an attached \c full_type.
     struct AST_Node_Type: AST_Node {
@@ -336,6 +337,25 @@ namespace jdi {
       
       AST_Node_Array();
       virtual ~AST_Node_Array();
+    };
+    struct AST_Node_TempInst: AST_Node {
+      definition_template* temp; ///< The template to be instantiated.
+      vector<AST_Node*> params; ///< Vector of our template parameters.
+      
+      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
+      virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
+      virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
+      virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
+      
+      virtual string toString() const; ///< Renders this node and its children as a string, recursively.
+      virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      virtual int width(); ///< Returns the width which will be used to render this node and all its children.
+      virtual int height(); ///< Returns the height which will be used to render this node and all its children.
+      
+      AST_Node_TempInst(definition_template *def);
+      virtual ~AST_Node_TempInst();
     };
     /// Child of AST_Node for function call parameters.
     struct AST_Node_Parameters: AST_Node {

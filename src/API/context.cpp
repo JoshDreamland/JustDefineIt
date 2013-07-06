@@ -130,7 +130,10 @@ void context::reset_all()
 }
 void context::copy(const context &ct)
 {
-  ct.global->copy(global);
+  remap_set n;
+  ct.global->copy(global, n);
+  ct.global->remap(n);
+  
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
     if (dest.second) {

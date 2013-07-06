@@ -122,15 +122,15 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       temp->name = token.content.toString();
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
       temp->def = tclass;
+    
+      scope->declare(temp->name, temp);
       
       regular_template_class:
       
       token = read_next_token(scope);
       if (token.type == TT_COLON) {
-        if (handle_class_inheritance(scope, token, tclass, protection)) {
-          delete temp;
+        if (handle_class_inheritance(scope, token, tclass, protection))
           return 1;
-        }
       }
       
       if (token.type != TT_LEFTBRACE) {
@@ -140,14 +140,13 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       }
       
       if (handle_scope(tclass, token, protection))
-        FATAL_RETURN((void(delete temp), 1));
+        FATAL_RETURN(1);
       
       if (token.type != TT_RIGHTBRACE) {
         token.report_errorf(herr, "Expected closing brace to class body before %s");
-        FATAL_RETURN((void(delete temp), 1));
+        FATAL_RETURN(1);
       }
       
-      scope->declare(temp->name, temp);
       return 0;
     }
     else if (token.type == TT_DEFINITION) {
@@ -166,8 +165,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         return 1;
       }
       
-      arg_key argk(temp->params.size());
-      if (read_template_parameters(argk, temp, lex, token, scope, this, herr)) {
+      arg_key argk(basetemp->params.size());
+      // cout << "Specialize template `" << basetemp->name << "': " << basetemp->params.size() << " parameters" << endl;
+      if (read_template_parameters(argk, basetemp, lex, token, scope, this, herr)) {
         delete temp;
         return 1;
       }
@@ -188,7 +188,14 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         temp = spec;
       }
       
-      temp->name = basetemp->name;
+      /*#ifdef DEBUG_MODE
+      if (basetemp->specializations.find(argk) == basetemp->specializations.end())
+        cerr << "Well, this is terrible. Specialization is broken." << endl;
+      else
+        cout << argk.toString() << " => " << basetemp->specializations.find(argk)->first.toString() << endl;
+      #endif*/
+      
+      temp->name = basetemp->name + "<" + argk.toString() + ">";
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
       temp->def = tclass;
       

@@ -79,8 +79,16 @@ namespace jdi {
     defiter it = members.find(sname);
     if (it != members.end())
       return it->second;
+    //if (members.size() == 1)
+    //  cout << sname << ": Not my member: " << members.begin()->first << " => " << members.begin()->second->toString() << endl;
     if ((it = using_general.find(sname)) != using_general.end())
       return it->second;
+    /*if (members.size() == 1) {
+      cout << "Not in my using: {" << endl;
+      for (defiter u = using_general.begin(); u != using_general.end(); ++u)
+        cout << u->second->toString() << endl;
+      cout << "}" << endl;
+    }*/
     definition *res;
     for (using_node* n = using_front; n; n = n->next)
       if ((res = n->use->find_local(sname)))
@@ -218,6 +226,13 @@ namespace jdi {
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
   
   definition* definition_template::instantiate(arg_key& key) {
+    speciter spi = specializations.find(key);
+    if (spi != specializations.end())
+      return spi->second->instantiate(key);
+    // cout << "No specialization found for " << key.toString() << endl;
+    // if (!specializations.empty())
+    //   cout << "{ " << specializations.begin()->first.toString() << " }" << endl;
+    
     pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation>(key, instantiation()));
     if (ins.second) {
       remap_set n;
@@ -272,7 +287,13 @@ namespace jdi {
   }
   
   bool arg_key::operator<(const arg_key& other) const {
-    for (arg_key::node *i = values, *j = other.values; j != other.endv; ++i) {
+    // cout << "Comparing (" << toString() << ") < (" << other.toString() << ")" << endl;
+    {
+      register int l1 = other.endv - other.values, l2 = endv - values;
+      if (l1 != l2)
+        return l1 > l2;
+    }
+    for (arg_key::node *i = values, *j = other.values; j != other.endv; ++i, ++j) {
       if (i == endv) return true;
       if (i->type == AKT_VALUE) {
         if (j->type != AKT_VALUE) return false;

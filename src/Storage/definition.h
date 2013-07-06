@@ -356,7 +356,7 @@ namespace jdi {
     /** Relinquish all content to another definition. **/
     void dump(definition_scope* to);
     /** Copy content from another definition. **/
-    void copy(const definition_scope* from);
+    void copy(const definition_scope* from, remap_set &n);
     /** Swap content with another definition. **/
     void swap(definition_scope* with);
     

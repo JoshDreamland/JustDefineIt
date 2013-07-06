@@ -71,7 +71,7 @@ int main() {
        << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl
        << "sizeof(jdi::template::arg_key):  " << sizeof(jdi::arg_key) << endl;
   
-  test_expression_evaluator();
+  //test_expression_evaluator();
   
   #if 0
     builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++");
@@ -270,6 +270,7 @@ void do_cli(context &ct) {
           if (coerce) {
             full_type t = a.coerce();
             cout << "Type of expression: " << t.toString() << endl;
+            cout << (t.def? t.def->toString() : NULL) << endl;
           }
           if (show) {
             a.writeSVG("/tmp/anus.svg");

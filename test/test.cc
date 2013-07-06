@@ -12,13 +12,13 @@ template<int x> class
 b: syntax_error {};
 */
 
-/* Simple C test case * /
+/* Simple C test case */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <malloc.h>
-/* */
+/* * /
 
 template<typename t1, typename t2> class my_template {
   t1 my_member;
@@ -45,6 +45,21 @@ class two: plusone<1> {
   enum v {
     x = value
   };
+};
+/* */
+template<int x> struct factorial {
+  enum r {
+    value = x * factorial<x - 1>::value
+  };
+};
+
+template<> struct factorial<1> {
+  enum r {
+    value = 1
+  };
+};
+
+class seventwenty: factorial<6> {
 };
 
 /* */
