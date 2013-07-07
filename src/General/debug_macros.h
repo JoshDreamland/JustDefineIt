@@ -40,6 +40,9 @@
   #include <assert.h>
   #define dbg_assert(x) assert(x)
   #define DBG_TERNARY(x,y) x
+  
+  #include <API/AST.h>
+  void render_ast_nd(jdi::AST& ast, std::string cat);
 
 #else // NOT DEBUG_MODE
 
@@ -57,3 +60,4 @@
     void render_ast(jdi::AST& ast, std::string cat);
   #endif
 #endif
+

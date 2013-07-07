@@ -198,6 +198,7 @@ namespace jdi {
       } data;
       ak_type type;
       
+      bool is_abstract() const;
       inline const full_type& ft() const { return *(full_type*)&data; }
       inline const value& val() const { return *(value*)&data; }
       inline full_type& ft() { return *(full_type*)&data; }
@@ -230,6 +231,8 @@ namespace jdi {
       void swap_type(size_t argnum, full_type &type);
       /// An even slower function to put the most basic type representation down, copying the given starting type
       void put_type(size_t argnum, const full_type &type);
+      /// Function to copy over a full node
+      void put_node(size_t argnum, const node &n);
       /// A quick function to put a value at a given index
       void put_value(size_t argnum, const value& val);
       /// A quick function to grab the type at a position
@@ -238,6 +241,10 @@ namespace jdi {
       inline node* begin() { return values; }
       /// A quick function to return a pointer past the end of our list
       inline node* end() { return endv; }
+      /// Const begin() equivalent.
+      inline const node* begin() const { return values; }
+      /// Const end() equivalent.
+      inline const node* end() const { return endv; }
       
       /// Return a string version of this key's argument list. You'll need to wrap in () or <> yourself.
       string toString() const;

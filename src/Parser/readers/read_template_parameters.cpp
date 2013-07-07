@@ -43,15 +43,24 @@ int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lex
       full_type ft = read_fulltype(lex, token, scope, cp, herr);
       if (ft.def)
         argk[args_given].ft().swap(ft);
-    } else {
+    }
+    else
+    {
       AST a;
       a.set_use_for_templates(true);
       a.parse_expression(token, lex, scope, precedence::comma+1, herr);
-      if (args_given < temp->params.size()) {
+      if (args_given < temp->params.size())
+      {
         argk.put_value(args_given, a.eval());
         if (argk[args_given].val().type != VT_INTEGER) {
-          token.report_error(herr, "Expression must give integer result");
-          FATAL_RETURN(1); argk[args_given].val() = long(0);
+          if (argk[args_given].val().type == VT_DEPENDENT) {
+            argk[args_given].val() = VT_DEPENDENT;
+          }
+          else {
+            token.report_error(herr, "Expression must give integer result (value returned: " + argk[args_given].val().toString() + ")");
+            render_ast_nd(a, "ass");
+            FATAL_RETURN(1); argk[args_given].val() = long(0);
+          }
         }
       }
     }

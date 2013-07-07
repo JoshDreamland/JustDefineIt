@@ -227,8 +227,19 @@ namespace jdi {
   
   definition* definition_template::instantiate(arg_key& key) {
     speciter spi = specializations.find(key);
-    if (spi != specializations.end())
-      return spi->second->instantiate(key);
+    if (spi != specializations.end()) {
+      size_t missingno = 0;
+      for (const arg_key::node *it = spi->first.begin(); it != spi->first.end(); ++it)
+        if (it->is_abstract()) ++missingno;
+      arg_key speckey(missingno);
+      missingno = 0;
+      arg_key::node *cpit = key.begin();
+      for (const arg_key::node *it = spi->first.begin(); it != spi->first.end() && cpit != key.end(); ++it, ++cpit)
+        if (it->is_abstract())
+          speckey.put_node(missingno++, *cpit);
+      cout << "Specialization instantiation with key <" << speckey.toString() << ">" << endl;
+      return spi->second->instantiate(speckey);
+    }
     // cout << "No specialization found for " << key.toString() << endl;
     // if (!specializations.empty())
     //   cout << "{ " << specializations.begin()->first.toString() << " }" << endl;
@@ -275,6 +286,13 @@ namespace jdi {
     return NULL;
   }
   
+  void arg_key::put_node(size_t argnum, const node &n) {
+    if (n.type == AKT_FULLTYPE)
+      put_type(argnum, n.ft());
+    else
+      put_value(argnum, n.val());
+  }
+  
   string arg_key::toString() const {
     string str;
     bool c = false;
@@ -297,6 +315,7 @@ namespace jdi {
       if (i == endv) return true;
       if (i->type == AKT_VALUE) {
         if (j->type != AKT_VALUE) return false;
+        if (i->val().type == VT_DEPENDENT || i->val().type == VT_DEPENDENT) continue;
         if (i->val() < j->val()) return true;
         if (j->val() < i->val()) return false;
       }
@@ -401,6 +420,7 @@ namespace jdi {
       new(&data) value(other.val());
     return *this;
   }
+  bool arg_key::node::is_abstract() const { return type == AKT_FULLTYPE? ft().def == &abstract : val().type == VT_DEPENDENT; }
   arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)&data)->~full_type(); else if (type == AKT_VALUE) ((value*)&data)->~value(); }
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}

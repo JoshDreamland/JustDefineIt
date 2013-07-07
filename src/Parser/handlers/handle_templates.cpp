@@ -167,7 +167,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       
       arg_key argk(basetemp->params.size());
       // cout << "Specialize template `" << basetemp->name << "': " << basetemp->params.size() << " parameters" << endl;
-      if (read_template_parameters(argk, basetemp, lex, token, scope, this, herr)) {
+      if (read_template_parameters(argk, basetemp, lex, token, temp, this, herr)) {
         delete temp;
         return 1;
       }
@@ -188,12 +188,12 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         temp = spec;
       }
       
-      /*#ifdef DEBUG_MODE
+      #ifdef DEBUG_MODE
       if (basetemp->specializations.find(argk) == basetemp->specializations.end())
         cerr << "Well, this is terrible. Specialization is broken." << endl;
       else
         cout << argk.toString() << " => " << basetemp->specializations.find(argk)->first.toString() << endl;
-      #endif*/
+      #endif
       
       temp->name = basetemp->name + "<" + argk.toString() + ">";
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);

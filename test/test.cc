@@ -12,7 +12,7 @@ template<int x> class
 b: syntax_error {};
 */
 
-/* Simple C test case */
+/* Simple C test case * /
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -60,6 +60,18 @@ template<> struct factorial<1> {
 };
 
 class seventwenty: factorial<6> {
+};
+
+template<bool e, int t, int f> class ternary {
+  enum { value = -1 };
+};
+
+template<int t, int f> class ternary<true, t, f> {
+  enum { value = t };
+};
+
+template<int t, int f> class ternary<false, t, f> {
+  enum { value = f };
 };
 
 /* */
