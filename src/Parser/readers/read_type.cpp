@@ -254,7 +254,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
             return 1;
           }
           token.type = TT_DEFINITION;
-          token.def = temp->instantiate(k);
+          token.def = temp->instantiate(k, herr);
           return 0;
         }
         refs.name = d->name;

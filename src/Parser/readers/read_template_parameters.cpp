@@ -23,55 +23,37 @@
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 
-int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
-{
-  argk.mirror(temp);
-  size_t args_given = 0;
-  for (;;++args_given)
+int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr) {
+  if (argnum < temp->params.size() and temp->params[argnum]->flags & DEF_TYPENAME) {
+    full_type ft = read_fulltype(lex, token, scope, cp, herr);
+    if (ft.def)
+      argk[argnum].ft().swap(ft);
+  }
+  else
   {
-    token = lex->get_token_in_scope(scope, herr);
-    if (token.type == TT_GREATERTHAN)
-      break;
-    if (token.type == TT_SEMICOLON || token.type == TT_LEFTBRACE) {
-      token.report_errorf(herr, "Expected closing triangle bracket to template parameters before %s");
-      break;
-    }
-    
-    if (token.type == TT_COMMA) continue;
-    
-    if (args_given < temp->params.size() and temp->params[args_given]->flags & DEF_TYPENAME) {
-      full_type ft = read_fulltype(lex, token, scope, cp, herr);
-      if (ft.def)
-        argk[args_given].ft().swap(ft);
-    }
-    else
+    AST a;
+    a.set_use_for_templates(true);
+    a.parse_expression(token, lex, scope, precedence::comma+1, herr);
+    if (argnum < temp->params.size())
     {
-      AST a;
-      a.set_use_for_templates(true);
-      a.parse_expression(token, lex, scope, precedence::comma+1, herr);
-      if (args_given < temp->params.size())
-      {
-        argk.put_value(args_given, a.eval());
-        if (argk[args_given].val().type != VT_INTEGER) {
-          if (argk[args_given].val().type == VT_DEPENDENT) {
-            argk[args_given].val() = VT_DEPENDENT;
-          }
-          else {
-            token.report_error(herr, "Expression must give integer result (value returned: " + argk[args_given].val().toString() + ")");
-            render_ast_nd(a, "ass");
-            FATAL_RETURN(1); argk[args_given].val() = long(0);
-          }
+      argk.put_value(argnum, a.eval());
+      if (argk[argnum].val().type != VT_INTEGER) {
+        if (argk[argnum].val().type == VT_DEPENDENT) {
+          argk[argnum].val() = VT_DEPENDENT;
+        }
+        else {
+          token.report_error(herr, "Expression must give integer result (value returned: " + argk[argnum].val().toString() + ")");
+          render_ast_nd(a, "ass");
+          FATAL_RETURN(1); argk[argnum].val() = long(0);
         }
       }
     }
-    
-    if (token.type == TT_GREATERTHAN)
-      break;
-    if (token.type != TT_COMMA) {
-      token.report_errorf(herr, "Comma expected here before %s");
-      break;
-    }
   }
+  return 0;
+}
+
+int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, definition_template *temp, token_t &token, error_handler *herr)
+{
   if (args_given > temp->params.size()) {
       token.report_error(herr, "Too many template parameters provided to `" + temp->toString(0,0) + "'");
       FATAL_RETURN(1);
@@ -90,4 +72,33 @@ int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lex
     FATAL_RETURN(1);
   }
   return 0;
+}
+
+int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+{
+  argk.mirror(temp);
+  size_t args_given = 0;
+  for (;;++args_given)
+  {
+    token = lex->get_token_in_scope(scope, herr);
+    if (token.type == TT_GREATERTHAN)
+      break;
+    if (token.type == TT_SEMICOLON || token.type == TT_LEFTBRACE) {
+      token.report_errorf(herr, "Expected closing triangle bracket to template parameters before %s");
+      break;
+    }
+    
+    if (token.type == TT_COMMA) continue;
+    
+    if (read_template_parameter(argk, args_given, temp, lex, token, scope, cp, herr))
+      return 1;
+    
+    if (token.type == TT_GREATERTHAN)
+      break;
+    if (token.type != TT_COMMA) {
+      token.report_errorf(herr, "Comma expected here before %s");
+      break;
+    }
+  }
+  return check_read_template_parameters(argk, args_given, temp, token, herr);
 }

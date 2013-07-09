@@ -116,11 +116,9 @@ namespace jdi {
     res->params.reserve(params.size());
     for (pciterator it = params.begin(); it != params.end(); ++it)
       res->params.push_back((definition_tempparam*)(*it)->duplicate(n));
-    for (speciter it = res->specializations.begin(); it != res->specializations.end(); ++it) {
-      definition *nd = it->second->duplicate(n);
-      n[it->second] = nd;
-      it->second = (definition_template*)nd;
-    }
+    for (speciter it = res->specializations.begin(); it != res->specializations.end(); ++it)
+      for (speclist::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2)
+        (*it2)->spec_temp = (definition_template*)(*it2)->spec_temp->duplicate(n);
     for (institer it = res->instantiations.begin(); it != res->instantiations.end(); ++it) {
       definition *nd = it->second.def->duplicate(n);
       n[it->second.def] = nd;

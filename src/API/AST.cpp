@@ -936,7 +936,7 @@ namespace jdi
         k.put_value(i, v);
       }
     }
-    return full_type(temp->instantiate(k));
+    return full_type(temp->instantiate(k, def_error_handler));
   }
   
   //===========================================================================================================================

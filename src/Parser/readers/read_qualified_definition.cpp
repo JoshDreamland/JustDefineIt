@@ -22,7 +22,7 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
           arg_key k(dt->params.size());
           if (read_template_parameters(k, dt, lex, token, scope, cp, herr))
             return FATAL_TERNARY(NULL,res);
-          res = dt->instantiate(k);
+          res = dt->instantiate(k, herr);
           token = lex->get_token_in_scope(scope,herr);
         }
       }

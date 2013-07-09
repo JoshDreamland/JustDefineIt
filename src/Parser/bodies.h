@@ -200,6 +200,8 @@ namespace jdip {
              error state, as the error will have already been reported to the given error handler.
   **/
   int read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr = def_error_handler);
+  int read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr);
+  int check_read_template_parameters(arg_key &argk, size_t argnum, definition_template *temp, token_t &token, error_handler *herr);
   
   /**
     Handle accessing dependent types and members. Shoves the definitions into the

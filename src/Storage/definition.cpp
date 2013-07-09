@@ -25,6 +25,7 @@
 #include "definition.h"
 #include <iostream>
 #include <cstdio>
+#include <typeinfo>
 #include <System/builtins.h>
 #include <Parser/handlers/handle_function_impl.h>
 using namespace std;
@@ -210,7 +211,8 @@ namespace jdi {
     for (size_t i = 0; i < params.size(); ++i)
       delete params[i];
     for (speciter i = specializations.begin(); i != specializations.end(); ++i)
-      delete i->second;
+      for (speclist::iterator j = i->second.begin(); j != i->second.end(); ++j)
+        delete *j;
     for (depiter i = dependents.begin(); i != dependents.end(); ++i)
       delete *i;
     delete def;
@@ -221,24 +223,33 @@ namespace jdi {
       delete *it;
   }
   
+  definition_template::specialization::specialization(const specialization &x): key(x.key, false), spec_temp(x.spec_temp) {}
+  definition_template::specialization::~specialization() { delete spec_temp; }
+  
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM) {}
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_type(tp) {}
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
   
-  definition* definition_template::instantiate(arg_key& key) {
+  definition* definition_template::instantiate(arg_key& key, error_handler *herr) {
     speciter spi = specializations.find(key);
     if (spi != specializations.end()) {
-      size_t missingno = 0;
-      for (const arg_key::node *it = spi->first.begin(); it != spi->first.end(); ++it)
-        if (it->is_abstract()) ++missingno;
-      arg_key speckey(missingno);
-      missingno = 0;
-      arg_key::node *cpit = key.begin();
-      for (const arg_key::node *it = spi->first.begin(); it != spi->first.end() && cpit != key.end(); ++it, ++cpit)
-        if (it->is_abstract())
-          speckey.put_node(missingno++, *cpit);
-      cout << "Specialization instantiation with key <" << speckey.toString() << ">" << endl;
-      return spi->second->instantiate(speckey);
+      // cout << "Found specialization candidates for <" << key.toString() << ">:  <" << spi->first.toString() << ">" << endl;
+      specialization *spec = NULL;
+      int merit = 0;
+      
+      for (speclist::iterator i = spi->second.begin(); i != spi->second.end(); ++i) {
+        int m = (*i)->key.merit(key);
+        if (m > merit) {
+          spec = *i;
+          merit = m;
+        }
+      }
+      
+      if (spec) {
+        arg_key speckey = spec->key.get_key(key);
+        // cout << "Specialization instantiation with key <" << speckey.toString() << ">" << endl;
+        return spec->spec_temp->instantiate(speckey, herr);
+      }
     }
     // cout << "No specialization found for " << key.toString() << endl;
     // if (!specializations.empty())
@@ -262,12 +273,6 @@ namespace jdi {
       // cout << ntemp->toString() << endl;
     }
     return ins.first->second.def;
-  }
-  
-  definition_template *definition_template::specialize(arg_key& key, definition_template *spec) {
-    pair<speciter, bool> ins = specializations.insert(specmap::value_type(key, spec));
-    if (ins.second) return spec;
-    return ins.first->second;
   }
   
   definition arg_key::abstract("<unspecified>", NULL, 0);
@@ -320,7 +325,8 @@ namespace jdi {
         if (j->val() < i->val()) return false;
       }
       else if (i->type == AKT_FULLTYPE) { // I is not a value; ie, it is a full_type
-        if (j->type != AKT_FULLTYPE) return true; 
+        if (j->type != AKT_FULLTYPE) return true;
+        if (i->ft().def == &abstract || j->ft().def == &abstract) continue;
         if (i->ft() < j->ft()) return true;
         if (j->ft() < i->ft()) return false;
       }
@@ -422,6 +428,74 @@ namespace jdi {
   }
   bool arg_key::node::is_abstract() const { return type == AKT_FULLTYPE? ft().def == &abstract : val().type == VT_DEPENDENT; }
   arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)&data)->~full_type(); else if (type == AKT_VALUE) ((value*)&data)->~value(); }
+  
+  bool arg_key::node::operator!=(const node &n) const {
+    if (type != n.type) return true;
+    if (type == AKT_FULLTYPE) return ft().def != &abstract and n.ft().def != &abstract and ft() != n.ft();
+    return val().type != VT_DEPENDENT && n.val().type != VT_DEPENDENT && val() != n.val();
+  }
+  
+  arg_key spec_key::get_key(const arg_key &src_key)
+  {
+    arg_key res(ind_count);
+    for (size_t i = 0; i < ind_count; ++i)
+      res.put_node(i, src_key.begin()[arg_inds[i][1]]); // Copy the node from the first use
+    return res;
+  }
+  
+  int spec_key::merit(const arg_key &k) {
+    size_t maxm = 1;
+    for (size_t i = 0; i < ind_count; ++i) {
+      if (maxm < *arg_inds[i])
+        maxm = *arg_inds[i];
+      int o = arg_inds[i][1];
+      for (size_t j = 1; j <= *arg_inds[i]; ++j)
+        if (k[arg_inds[i][j]] != k[o]) return 0;
+    }
+    return maxm;
+  }
+  
+  bool spec_key::same_as(const spec_key &) {
+    // TODO: Implement
+    return false;
+  }
+  
+  /*spec_key::spec_key(const definition_template *small_kt, const arg_key &big_key) {
+    ind_count = small_kt->params.size();
+    arg_inds = new unsigned*[ind_count];
+    for (size_t i = 0; i < ind_count; ++i)
+      arg_inds[i] = 0;
+    unsigned big_count = big_key.end() - big_key.begin();
+    for (size_t mini = 0; mini < ind_count; ++mini) {
+      for (size_t maxi = 0; maxi < big_count; ++maxi) {
+        if (big_key[maxi] == small_kt->params[mini])
+          ++arg_inds[mini];
+      }
+    }
+  }*/
+  spec_key::spec_key(size_t big_count, size_t small_count): arg_inds(new unsigned*[small_count]), ind_count(small_count)  {
+    ++big_count;
+    for (size_t i = 0; i < small_count; ++i)
+      *(arg_inds[i] = new unsigned[big_count]) = 0;
+  }
+  
+  spec_key::spec_key(const spec_key &k, bool) {
+    arg_inds = new unsigned*[k.ind_count];
+    for (size_t i = 0; i < k.ind_count; ++i) {
+      unsigned nc = *k.arg_inds[i];
+      arg_inds[i] = new unsigned[nc + 1];
+      for (size_t j = 0; j <= nc; ++j)
+        arg_inds[i][j] = k.arg_inds[i][j]; 
+    }
+    max_param = k.max_param;
+    ind_count = k.ind_count;
+  }
+  
+  spec_key::~spec_key() {
+    for (size_t i = 0; i < ind_count; ++i)
+      delete[] arg_inds[i];
+    delete[] arg_inds;
+  }
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   

@@ -23,6 +23,7 @@
 #include <API/AST.h>
 #include <API/compile_settings.h>
 #include <Parser/handlers/handle_function_impl.h>
+#include <General/parse_basics.h>
 #include <cstdio>
 
 using namespace jdip;
@@ -158,7 +159,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       
       definition_template *basetemp = (definition_template*)token.def;
       
-      token = read_next_token(scope);
+      token = read_next_token(temp);
       if (token.type != TT_LESSTHAN) {
         token.report_errorf(herr, "Expected opening triangle bracket for template definition before %s");
         delete temp;
@@ -166,34 +167,81 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       }
       
       arg_key argk(basetemp->params.size());
-      // cout << "Specialize template `" << basetemp->name << "': " << basetemp->params.size() << " parameters" << endl;
-      if (read_template_parameters(argk, basetemp, lex, token, temp, this, herr)) {
-        delete temp;
-        return 1;
-      }
-      
-      definition_template* spec = basetemp->specialize(argk, temp);
-      if (spec != temp) {
-        if (~spec->flags & DEF_INCOMPLETE) {
-          token.report_error(herr, "Cannot specialize template: specialization by this type already exists.");
-          delete temp;
-          return 1;
+      definition_template::specialization *spec = new definition_template::specialization(basetemp->params.size(), temp->params.size(), temp);
+      argk.mirror(basetemp);
+      size_t args_given = 0;
+      for (;;++args_given)
+      {
+        token = read_next_token(temp);
+        if (token.type == TT_GREATERTHAN)
+          break;
+        if (token.type == TT_SEMICOLON || token.type == TT_LEFTBRACE) {
+          token.report_errorf(herr, "Expected closing triangle bracket to template parameters before %s");
+          break;
         }
         
-        spec->using_general.clear();
-        for (definition_template::piterator it = temp->params.begin(); it != temp->params.end(); ++it)
-          spec->use_general((*it)->name, *it);
+        if (token.type == TT_COMMA) continue;
         
-        delete temp;
-        temp = spec;
+        if ((token.type == TT_DEFINITION or token.type == TT_DECLARATOR) and token.def->flags & DEF_TEMPPARAM)
+        {
+          for (size_t i = 0; i < temp->params.size(); ++i) if (temp->params[i] == token.def)
+          {
+            spec->key.arg_inds[i][++spec->key.arg_inds[i][0]] = args_given;
+            
+            if (argk[args_given].type == arg_key::AKT_FULLTYPE) {
+              if (~temp->params[i]->flags & DEF_TYPENAME)
+                token.report_error(herr, "Type mismatch in passing parameter " + toString(args_given) + " to template specialization: typename parameter expected");
+              argk[args_given].ft().def = &arg_key::abstract;
+            }
+            else {
+              if (temp->params[i]->flags & DEF_TYPENAME)
+                token.report_error(herr, "Type mismatch in passing parameter " + toString(args_given) + " to template specialization: real-valued parameter expected");
+              argk[args_given].val() = VT_DEPENDENT;
+            }
+            
+            token = read_next_token(scope);
+            goto handled_argk; // I don't trust the optimizer enough to ugly up the code with a boolean for this. Suck it up.
+          }
+        }
+        
+        if (read_template_parameter(argk, args_given, basetemp, lex, token, scope, this, herr))
+          return 1;
+        handled_argk:
+        
+        if (token.type == TT_GREATERTHAN)
+          break;
+        if (token.type != TT_COMMA) {
+          token.report_errorf(herr, "Comma expected here before %s");
+          break;
+        }
       }
+      if (check_read_template_parameters(argk, args_given, basetemp, token, herr))
+        return 1;
       
-      #ifdef DEBUG_MODE
-      if (basetemp->specializations.find(argk) == basetemp->specializations.end())
-        cerr << "Well, this is terrible. Specialization is broken." << endl;
-      else
-        cout << argk.toString() << " => " << basetemp->specializations.find(argk)->first.toString() << endl;
-      #endif
+      cout << "Specialization key: " << argk.toString() << endl;
+      definition_template::speclist &slist = basetemp->specializations[argk];
+      
+      for (definition_template::speclist::iterator it = slist.begin(); it != slist.end(); ++it)
+        if ((*it)->key.same_as(spec->key))
+        {
+          delete spec;
+          spec = *it;
+          
+          if (~spec->spec_temp->flags & DEF_INCOMPLETE) {
+            token.report_error(herr, "Cannot specialize template: specialization by this type already exists.");
+            delete temp;
+            return 1;
+          }
+          
+          spec->spec_temp->using_general.clear(); // XXX: Maybe replace this with something to specifically delete template parameters, just in case? Could anything else be used? I'm thinking not.
+          for (definition_template::piterator pit = temp->params.begin(); pit != temp->params.end(); ++pit)
+            spec->spec_temp->use_general((*pit)->name, *pit);
+          
+          delete temp;
+          temp = spec->spec_temp;
+          break;
+        }
+      slist.push_back(spec);
       
       temp->name = basetemp->name + "<" + argk.toString() + ">";
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);

@@ -62,16 +62,37 @@ template<> struct factorial<1> {
 class seventwenty: factorial<6> {
 };
 
-template<bool e, int t, int f> class ternary {
-  enum { value = -1 };
+template<bool e, class t, class f> class ternary {
+  typedef void tp;
 };
 
-template<int t, int f> class ternary<true, t, f> {
-  enum { value = t };
+template<class t, class f> class ternary<true, t, f> {
+  typedef t tp;
 };
 
-template<int t, int f> class ternary<false, t, f> {
-  enum { value = f };
+template<class t, class f> class ternary<false, t, f> {
+  typedef f tp;
+};
+
+
+template<typename o, typename p, typename q> struct matches {
+  enum { value = 1 };
+};
+
+template<typename qq, typename pp> struct matches<pp, qq, qq> {
+  enum { value = 2 };
+};
+
+template<typename pp, typename qq> struct matches<pp, pp, qq> {
+  enum { value = 2 };
+};
+
+template<typename pp, typename qq> struct matches<pp, qq, pp> {
+  enum { value = 2 };
+};
+
+template<typename pp> struct matches<pp, pp, pp> {
+  enum { value = 3 };
 };
 
 /* */

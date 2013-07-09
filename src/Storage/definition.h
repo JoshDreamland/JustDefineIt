@@ -204,6 +204,7 @@ namespace jdi {
       inline full_type& ft() { return *(full_type*)&data; }
       inline value& val() { return *(value*)&data; }
       node &operator= (const node& other);
+      bool operator!=(const node& x) const;
       
       inline node(): type(AKT_NONE) {}
       ~node();
@@ -236,7 +237,8 @@ namespace jdi {
       /// A quick function to put a value at a given index
       void put_value(size_t argnum, const value& val);
       /// A quick function to grab the type at a position
-      node &operator[](int i) const { return values[i]; }
+      inline node &operator[](size_t x) { return values[x]; }
+      inline const node &operator[](size_t x) const { return values[x]; }
       /// A quick function to return an immutable pointer to the first parameter
       inline node* begin() { return values; }
       /// A quick function to return a pointer past the end of our list
@@ -259,6 +261,55 @@ namespace jdi {
       arg_key(const ref_stack& refs);
       /// Destruct, freeing items.
       ~arg_key();
+  };
+  
+  /// Structure to augment an arg_key when choosing the correct specialization
+  struct spec_key {
+    /** This is an array of counts of uses of arguments in an arg_key in a template specialization.
+        Each count is followed in memory by the indices of the parameters the argument was used in.
+        For instance, this code:
+        
+           template<int a, int b, int c> struct x<a, a, b, c, b, b> { .. } 
+        
+        Produces this arg_inds:
+        
+           { {2, 0,1}, {1, 3}, {3, 2,4,5} }
+        
+        The argument `a' occurs two times: parameters 0 and 1.
+        The argument `b' occurs one time: parameter 3.
+        The argument `c' occurs three times: parameters 2, 4, and 5.
+    */
+    unsigned **arg_inds;
+    /// The length of the arg_inds array.
+    unsigned ind_count;
+    /// The maximum number of parameters passed the same argument
+    unsigned max_param;
+    
+    /** Calculates the merit of an arg_key to this spec_key; that is, returns how well it matches,
+        which is based on the greatest number of parameter matches for one argument.
+      @return Returns the calculated merit; 0 marks incompatibility. */
+    int merit(const arg_key &k);
+    /** Construct from a parameter count of a particular specialization, and the parameter count of the original.
+        @param big_count    The parameter count of the specialization.
+        @param small_count  The parameter count of the specialization.
+    */
+    spec_key(size_t big_count, size_t small_count);
+    /* *
+      Construct from a template's parameter list and an arg_key containing the specialization.
+      @param special_template    The template whose parameters are used in the given key.
+      @param specialization_key  The arg_key read in from the specialization's parameters.
+                                 template<not this one> class my_specialized_class<this one> {};
+    * /
+    spec_key(const definition_template *special_template, const arg_key& specialization_key);*/
+    /** Construct a new argument key from which to instantiate this specialization. */
+    arg_key get_key(const arg_key &source_key);
+    /// Compare to another key to check if they mean the same thing.
+    bool same_as(const spec_key &other);
+    /// Destruct, freeing array.
+    ~spec_key();
+    
+    spec_key(const spec_key&, bool);
+    private: spec_key(const spec_key&);
   };
   
   /**
@@ -295,7 +346,6 @@ namespace jdi {
         @param key    The arg_key structure to consume, representing the parameter combination.
         @param ovrl   The definition representing the new overload; this definition will
                       belong to the system after you pass it.
-        @param errtok Token to facilitate error reporting.
         @param herr   Error handler to report problems to.
         @return Returns the final definition for the requested overload.
     */
@@ -495,7 +545,18 @@ namespace jdi {
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
-    typedef map<arg_key,definition_template*> specmap; ///< Map type for specializations
+    struct specialization {
+      spec_key key;
+      definition_template *spec_temp;
+      //specialization(definition_template *stemp, const arg_key &specialization_key):
+      //  key(stemp, specialization_key), spec_temp(stemp) {}
+      specialization(size_t big_count, size_t small_count, definition_template* spect):
+        key(big_count, small_count), spec_temp(spect) {}
+      specialization(const specialization&);
+      ~specialization();
+    };
+    typedef vector<specialization*> speclist;
+    typedef map<arg_key, speclist> specmap; ///< Map type for specializations
     typedef specmap::iterator speciter; ///< Map iterator type for specializations
     
     struct instantiation {
@@ -520,12 +581,7 @@ namespace jdi {
     /** Instantiate this template with the values given in the passed key.
         If this template has been instantiated previously, that instantiation is given.
         @param key  The \c arg_key structure containing the template parameter values to use. **/
-    definition *instantiate(arg_key& key);
-    /** Specialize this template with the values given in the passed key.
-        If the specialization exists, it is returned. Otherwise, the given pointer is inserted and returned.
-        @param key   The \c arg_key structure containing the template parameter values to use.
-        @param spec  The template specialization to insert. **/
-    definition_template *specialize(arg_key& key, definition_template *spec);
+    definition *instantiate(arg_key& key, error_handler *herr);
     
     /** Construct with name, parent, and flags **/
     definition_template(string name, definition *parent, unsigned flags);

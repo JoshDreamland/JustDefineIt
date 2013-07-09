@@ -137,7 +137,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           arg_key k(temp->params.size());
           if (read_template_parameters(k, temp, lex, token, scope, this, herr))
             return 1;
-          d = temp->instantiate(k);
+          d = temp->instantiate(k, herr);
           if (!d) return 1;
           token = read_next_token(scope);
           goto rescope;

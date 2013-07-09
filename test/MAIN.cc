@@ -270,7 +270,7 @@ void do_cli(context &ct) {
           if (coerce) {
             full_type t = a.coerce();
             cout << "Type of expression: " << t.toString() << endl;
-            cout << (t.def? t.def->toString() : NULL) << endl;
+            cout << (t.def? t.def->toString() : "NULL") << endl;
           }
           if (show) {
             a.writeSVG("/tmp/anus.svg");
