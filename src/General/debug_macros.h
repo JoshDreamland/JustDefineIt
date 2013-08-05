@@ -48,6 +48,7 @@
 
   #define dbg_assert(x)
   #define DBG_TERNARY(x,y) y
+  #define render_ast_nd(x, y) void()
 
 #endif // DEBUG_MODE ELSE
 #endif // Guard

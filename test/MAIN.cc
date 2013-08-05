@@ -1,4 +1,4 @@
-/* Copyright (C) 2011-2012 Josh Ventura
+/* Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under

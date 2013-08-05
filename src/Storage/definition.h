@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -411,6 +411,16 @@ namespace jdi {
     };
     /** Add a namespace to the using list. This can technically be used on any scope. **/
     using_node *use_namespace(definition_scope* scope);
+    
+    /// This is a map of structures declared in this scope, which is needed to emulate C's ability
+    /// to have an object and structure by the same name. C++ extends this ability by allowing the
+    /// behavior in any scope.
+    map<string, definition*> c_structs;
+    /** Function to insert into c_structs by the rules of definition_scope::declare.
+        @param name  The name of the definition to declare.
+        @param def   Pointer to the definition being declared, if one is presently available.
+    */
+    decpair declare_c_struct(string name, definition* def = NULL);
     
     /** Remove a previously added namespace from our using list. **/
     void unuse_namespace(using_node *ns);

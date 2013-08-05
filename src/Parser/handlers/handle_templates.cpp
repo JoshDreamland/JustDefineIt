@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -277,7 +277,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     definition *maybe = scope->find_local(funcname);
     if (maybe)
       if (!(maybe->flags & DEF_FUNCTION)) {
-        token.report_error(herr, "Cannot redeclare `" + funcname + "' as function in this scope");
+        token.report_error(herr, "Cannot redeclare " + maybe->kind() + " `" + funcname + "' as function in this scope");
         delete temp;
         return 1;
       }

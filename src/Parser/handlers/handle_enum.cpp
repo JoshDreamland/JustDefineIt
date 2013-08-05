@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -28,38 +28,10 @@
 
 using namespace jdip;
 
-static inline definition_enum* insnew(definition_scope *const &scope, int inherited_flags, const string& classname, const token_t &token, error_handler* const& herr, context *ct) {
-  definition_enum* nclass = NULL;
-  decpair dins = scope->declare(classname);
-  if (!dins.inserted) {
-    if (dins.def->flags & DEF_TYPENAME) {
-      token.report_error(herr, "Enum `" + classname + "' instantiated inadvertently during parse by another thread. Freeing.");
-      delete ~dins.def;
-    }
-    else {
-      dins = ct->declare_c_struct(classname);
-      if (dins.inserted)
-        goto my_else;
-      if (dins.def->flags & DEF_ENUM)
-        nclass = (definition_enum*)dins.def;
-      else {
-        #if FATAL_ERRORS
-          return NULL;
-        #else
-          token.report_error(herr, "Redeclaring `" + classname + "' as different kind of symbol.");
-          delete ~dins.def;
-          goto my_else;
-        #endif
-      }
-    }
-  } else {
-    my_else:
-    dins.def = nclass = new definition_enum(classname,scope, DEF_ENUM | DEF_TYPENAME | inherited_flags);
-  }
-  return nclass;
-}
+#define def_kind enum
+#define DEF_FLAG DEF_ENUM
+#include <Parser/cclass_base.h>
 
-static unsigned anon_count = 1;
 jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope, token_t& token, int inherited_flags)
 {
   dbg_assert(token.type == TT_ENUM);
@@ -72,38 +44,17 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
   bool will_redeclare = false; // True if this enum is from another scope; so true if implementing this enum will allocate it.
   unsigned incomplete = DEF_INCOMPLETE; // DEF_INCOMPLETE if this enum has a body, zero otherwise.
   
-  if (token.type == TT_IDENTIFIER || token.type == TT_DEFINITION) {
-    classname = token.content.toString();
-    token = read_next_token(scope);
-  }
-  else if (token.type == TT_DECLARATOR) {
-    nenum = (jdi::definition_enum*)token.def;
-    classname = nenum->name;
-    if (not(nenum->flags & DEF_ENUM)) {
-      if (nenum->parent == scope)
-        token.report_error(herr, "Attempt to redeclare `" + classname + "' as enum in this scope");
-      nenum = NULL;
-    }
-    else {
-      will_redeclare = nenum->parent != scope;
-      already_complete = not(nenum->flags & DEF_INCOMPLETE);
-    }
-    token = read_next_token(scope);
-  }
-  else {
-    char buf[32];
-    sprintf(buf, "<anonymousEnum%08d>", anon_count++);
-    classname = buf;
-  }
+  if (get_location(nenum, will_redeclare, already_complete, token, classname, scope, this, herr))
+    return NULL;
   
   if (!nenum)
-    if (not(nenum = insnew(scope,inherited_flags,classname,token,herr,this)))
+    if (not(nenum = insnew(scope,inherited_flags,classname,token,herr)))
       return NULL;
   
   if (token.type == TT_COLON) {
     if (will_redeclare) {
       will_redeclare = false;
-      if (not(nenum = insnew(scope,inherited_flags,classname,token,herr,this)))
+      if (not(nenum = insnew(scope,inherited_flags,classname,token,herr)))
       return NULL;
     }
     else if (already_complete) {

@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -23,38 +23,11 @@
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
 
-
 using namespace jdip;
-#define alloc_class() new definition_class(classname,scope, DEF_CLASS | DEF_TYPENAME | inherited_flags)
-static inline definition_class* insnew(definition_scope *const &scope, int inherited_flags, const string& classname, const token_t &token, error_handler* const& herr, context *ct) {
-  definition_class* nclass = NULL;
-  decpair dins = scope->declare(classname);
-  if (!dins.inserted) {
-    if (dins.def->flags & DEF_TYPENAME) { // This error is displayed because if the class existed earlier when we were checking, we'd have gotten a different token.
-      token.report_error(herr, "Class `" + classname + "' instantiated inadvertently during parse by another thread. Freeing.");
-      delete ~dins.def;
-    }
-    else {
-      dins = ct->declare_c_struct(classname);
-      if (dins.inserted)
-        goto my_else;
-      if (dins.def->flags & DEF_CLASS)
-        nclass = (definition_class*)dins.def;
-      else {
-        #if FATAL_ERRORS
-          return NULL;
-        #else
-          delete ~dins.def;
-          goto my_else;
-        #endif
-      }
-    }
-  } else { my_else:
-    dins.def = nclass = alloc_class();
-  }
-  return nclass;
-}
 
+#define def_kind class
+#define DEF_FLAG DEF_CLASS
+#include <Parser/cclass_base.h>
 
 int jdip::context_parser::handle_class_inheritance(definition_scope *scope, token_t& token, definition_class *recipient, unsigned default_protection) {
   do {
@@ -102,7 +75,6 @@ int jdip::context_parser::handle_class_inheritance(definition_scope *scope, toke
   return 0;
 }
 
-static unsigned anon_count = 1;
 jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scope, token_t& token, int inherited_flags)
 {
   unsigned protection = 0;
@@ -129,73 +101,18 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
   // Non-NULL  True               False           Complete class in this scope. MUST be used as a type, not implemented.
   // Non-NULL  True               True            Complete class in another scope; can be redeclared (reallocated and reimplemented) in this scope.
   
-  definition *dulldef = NULL;
-  if (token.type == TT_IDENTIFIER) {
-    classname = token.content.toString();
-    token = read_next_token(scope);
-  }
-  else if (token.type == TT_DEFINITION) {
-    classname = token.content.toString();
-    dulldef = token.def;
-    token = read_next_token(scope);
-  }
-  else if (token.type == TT_DECLARATOR) {
-    nclass = (jdi::definition_class*)token.def;
-    classname = nclass->name;
-    if (not(nclass->flags & DEF_CLASS)) {
-      if (nclass->parent == scope) {
-        pair<definition_scope::defiter, bool> dins = c_structs.insert(pair<string,definition*>(classname, NULL));
-        if (dins.second)
-          dins.first->second = nclass = alloc_class();
-        else {
-          if (dins.first->second->flags & DEF_CLASS)
-            nclass = (definition_class*)dins.first->second;
-          else {
-            token.report_error(herr, "Attempt to redeclare `" + classname + "' as class in this scope");
-            FATAL_RETURN(NULL);
-            nclass = NULL;
-          }
-        }
-      }
-      else
-        nclass = NULL;
-    }
-    else {
-      will_redeclare = nclass->parent != scope;
-      already_complete = not(nclass->flags & DEF_INCOMPLETE);
-    }
-    token = read_next_token(scope);
-  }
-  else {
-    char buf[32];
-    sprintf(buf, "<anonymousClass%08d>", anon_count++);
-    classname = buf; // I love std::string. Even if I'm lazy for it.
-  }
-  
-  if (dulldef)
-  {
-    if (dulldef->parent == scope)
-    {
-      if (dulldef->flags & DEF_TEMPLATE) {
-        token.report_error(herr, "Cannot redeclare template `" + dulldef->name + "' as class in this scope; did you mean to specialize it?");
-        return NULL;
-      }
-      else {
-        token.report_error(herr, "Cannot redeclare `" + dulldef->name + "' as class in this scope");
-        return NULL;
-      }
-    }
-  }
+  if (get_location(nclass, will_redeclare, already_complete, token, classname, scope, this, herr))
+    return NULL;
   
   if (!nclass)
-    if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+    if (not(nclass = insnew(scope,inherited_flags,classname,token,herr)))
       return NULL;
   
   // Handle inheritance
   if (token.type == TT_COLON) {
     if (will_redeclare) {
       will_redeclare = false;
-      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr)))
         return NULL;
     }
     else if (already_complete) {
@@ -213,7 +130,7 @@ jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scop
     incomplete = 0;
     if (will_redeclare) {
       will_redeclare = false;
-      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr,this)))
+      if (not(nclass = insnew(scope,inherited_flags,classname,token,herr)))
         return NULL;
     }
     else if (already_complete) {

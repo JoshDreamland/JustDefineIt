@@ -94,6 +94,10 @@ namespace jdi {
       delete *it;
   }
   
+  decpair definition_scope::declare_c_struct(string n, definition* def) {
+    pair<map<string,definition*>::iterator, bool> insp = c_structs.insert(pair<string,definition*>(n,def));
+    return decpair(&insp.first->second, insp.second);
+  }
   definition *definition_scope::look_up(string sname) {
     defiter it = members.find(sname);
     if (it != members.end())
@@ -198,12 +202,15 @@ namespace jdi {
   definition_scope::definition_scope(string name_, definition *parent_, unsigned int flags_): definition(name_,parent_,flags_ | DEF_SCOPE), using_front(NULL), using_back(NULL) {}
   definition_scope::~definition_scope() {
     for (defiter it = members.begin(); it != members.end(); it++)
+      if (!(it->second->flags & (DEF_ENUM | DEF_CLASS | DEF_UNION)))
       delete it->second;
     for (using_node *n = using_front; n; ) {
       using_node *dm = n; n = n->next;
       delete dm;
     }
     members.clear();
+    for (defiter it = c_structs.begin(); it != c_structs.end(); ++it)
+      delete it->second;
   }
   definition_scope::using_node::using_node(definition_scope* scope): use(scope), next(NULL), prev(NULL) { }
   definition_scope::using_node::using_node(definition_scope* scope, using_node* nprev): use(scope), next(nprev->next), prev(nprev) { nprev->next = this; }

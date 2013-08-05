@@ -21,6 +21,12 @@ b: syntax_error {};
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/file.h>
+#include <GL/gl.h>
+
+struct killa {};
+int killa;
+
 /* * /
 
 template<typename t1, typename t2> class my_template {

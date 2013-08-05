@@ -176,7 +176,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
     else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
     {
       if (ins.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM)) { // If the original definition is a class
-        decpair cins = declare_c_struct(tp.refs.name, ins.def); // Move that definition to the C structs list, so we can insert our definition in its place.
+        decpair cins = scope->declare_c_struct(tp.refs.name, ins.def); // Move that definition to the C structs list, so we can insert our definition in its place.
         if (!cins.inserted and cins.def != ins.def) {
           token.report_error(herr, "Attempt to redeclare `" + tp.refs.name + "' failed due to conflicts");
           FATAL_RETURN(1);
