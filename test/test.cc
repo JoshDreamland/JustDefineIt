@@ -12,12 +12,15 @@ template<int x> class
 b: syntax_error {};
 */
 
-/* Simple C test case * /
+/* Simple C test case */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
 /* * /
 
 template<typename t1, typename t2> class my_template {
@@ -46,7 +49,7 @@ class two: plusone<1> {
     x = value
   };
 };
-/* */
+/* * /
 template<int x> struct factorial {
   enum r {
     value = x * factorial<x - 1>::value
@@ -96,6 +99,16 @@ template<typename pp> struct matches<pp, pp, pp> {
 };
 
 /* */
+
+/*
+struct redherring {};
+namespace c {
+  template<typename t> t red_herring(t x) { return 0; }
+}
+*/
+
+// template<typename t> t add_one(t x) { return (++x)--; }
+// string t add_one(string x) { return x + "1"; }
 
 /*
 #include <cassert>

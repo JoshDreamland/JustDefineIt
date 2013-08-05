@@ -846,13 +846,14 @@ namespace jdi
     param_types.reserve(params.size());
     for (vector<AST_Node*>::const_iterator it = params.begin(); it != params.end(); ++it)
       param_types.push_back((*it)->coerce());
-    definition_function* df = (definition_function*)((AST_Node_Definition*)func)->def;
+    //definition_function* df = (definition_function*)((AST_Node_Definition*)func)->def;
     // TODO: Overload resolution
+    // FIXME: Overload resolution!
     full_type res;
-    res.def = df->type;
-    res.refs.copy(df->referencers);
-    res.refs.pop();
-    res.flags = df->flags;
+    res.def = builtin_type__int;
+    //res.refs.copy(df->referencers);
+    //res.refs.pop();
+    //res.flags = df->flags;
     return res;
   }
   

@@ -104,10 +104,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     token = read_next_token(scope);
   }
   
-  
-  definition* nd = NULL;
-  token = read_next_token(scope);
-  
+  token = read_next_token(temp);
   
   // ========================================================================================================================================
   // =====: Handle template class definitions :==============================================================================================
@@ -262,17 +259,42 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   
   if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE || token.type == TT_DEFINITION || token.type == TT_TYPENAME)
   {
-    
-    
-    definition *fdef = nd;
-    while (fdef and fdef->flags & DEF_TEMPLATE) fdef = ((definition_template*)fdef)->def;
-    if (fdef and fdef->flags & DEF_FUNCTION && token.type == TT_LEFTBRACE) {
-      ((definition_function*)nd)->implementation = handle_function_implementation(lex, token, scope, herr);
-      if (token.type != TT_RIGHTBRACE) {
-        token.report_errorf(herr, "Expected closing brace to function body before %s");
-        FATAL_RETURN(1);
-      }
+    full_type funcrefs = read_fulltype(lex, token, temp, this, herr);
+    if (!funcrefs.def) {
+      token.report_error(herr, "Expected return type for template function at this point");
+      delete temp;
+      return 1;
     }
+    
+    if (funcrefs.refs.top().type != ref_stack::RT_FUNCTION) {
+      token.report_error(herr, "Definition in template must be a function");
+      delete temp;
+      return 1;
+    }
+    
+    string funcname = funcrefs.refs.name;
+    definition_function *func = NULL;
+    definition *maybe = scope->find_local(funcname);
+    if (maybe)
+      if (!(maybe->flags & DEF_FUNCTION)) {
+        token.report_error(herr, "Cannot redeclare `" + funcname + "' as function in this scope");
+        delete temp;
+        return 1;
+      }
+      else func = (definition_function*)maybe;
+    else {}
+    
+    definition_overload *tovr = new definition_overload(funcname, scope, funcrefs.def, funcrefs.refs, funcrefs.flags, DEF_FUNCTION);
+    temp->def = tovr;
+    
+    if (!func)
+      func = new definition_function(funcname, scope);
+    func->overload(temp);
+    
+    if (token.type == TT_LEFTBRACE)
+      tovr->implementation = (handle_function_implementation(lex, token, temp, herr));
+    else if (token.type != TT_SEMICOLON)
+      token.report_errorf(herr, "Expected template function body or semicolon before %s");
   }
   else if (token.type == TT_TEMPLATE) // Specialization
   {

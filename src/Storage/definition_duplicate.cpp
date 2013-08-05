@@ -80,21 +80,18 @@ namespace jdi {
     return res;
   }
   
-  function_overload* function_overload::duplicate() {
-    function_overload *res = new function_overload();
-    res->type.def = type.def;
-    res->type.refs.copy(type.refs);
-    res->type.flags = type.flags;
-    res->declaration = declaration;
+  definition *definition_overload::duplicate(remap_set &n) const {
+    ref_stack dup; dup.copy(referencers);
+    definition_overload* res = new definition_overload(name, parent, type, dup, modifiers, flags);
+    n[this] = res;
     return res;
   }
   
   definition *definition_function::duplicate(remap_set &n) const {
-    ref_stack dup; dup.copy(referencers);
-    definition_function* res = new definition_function(name, parent, type, dup, modifiers, flags);
-    n[this] = res;
-    
+    definition_function *res = new definition_function(name, parent, flags);
     res->overloads = overloads;
+    for (overload_iter it = res->overloads.begin(); it != res->overloads.end(); ++it)
+      it->second = (definition_overload*)it->second->duplicate(n);
     return res;
   }
   
@@ -257,10 +254,19 @@ namespace jdi {
   }
   
   void definition_function::remap(const remap_set& n) {
-    definition_typed::remap(n);
-    for (overload_iter it = overloads.begin(); it != overloads.end(); ++it)
-      if (it->second != this)
+    definition::remap(n);
+    for (overload_iter it = overloads.begin(); it != overloads.end(); ++it) {
+      remap_citer rit = n.find(it->second);
+      if (rit != n.end())
+        it->second = (definition_overload*)rit->second;
+      else
         it->second->remap(n);
+    }
+  }
+  
+  void definition_overload::remap(const remap_set& n) {
+    definition_typed::remap(n);
+    // TODO: remap_function_implementation();
   }
   
   void definition_template::remap(const remap_set &n) {

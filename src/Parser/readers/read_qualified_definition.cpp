@@ -14,7 +14,7 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
     {
       res = token.def;
       definition_template* dt = (definition_template*)res;
-      if (dt->def->flags & DEF_CLASS)
+      if (dt->def && dt->def->flags & DEF_CLASS)
       {
         token = lex->get_token_in_scope(scope, herr);
         if (token.type == TT_LESSTHAN)

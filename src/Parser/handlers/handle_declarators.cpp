@@ -169,9 +169,9 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
     decpair ins = ((definition_scope*)scope)->declare(tp.refs.name);
     if (ins.inserted) { // If we successfully inserted,
       insert_anyway:
-      res = ins.def = (!tp.refs.empty() && tp.refs.top().type == ref_stack::RT_FUNCTION)?
-        new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags):
-        new definition_typed(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
+      res = (!tp.refs.empty() && tp.refs.top().type == ref_stack::RT_FUNCTION)?
+        (((definition_function*)(ins.def = new definition_function(tp.refs.name,scope,inherited_flags)))->overload(tp, inherited_flags, herr)):
+        ((ins.def = new definition_typed(tp.refs.name,scope,tp.def,&tp.refs,tp.flags,DEF_TYPED | inherited_flags)));
     }
     else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
     {
@@ -182,6 +182,14 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           FATAL_RETURN(1);
         }
         else goto insert_anyway;
+      }
+      else if (ins.def->flags & DEF_FUNCTION) { // Handle function overloading
+        if (tp.refs.empty() or tp.refs.top().type != ref_stack::RT_FUNCTION) {
+          token.report_error(herr, "Cannot declare `" + tp.refs.name + "' over existing function");
+          return 4;
+        }
+        definition_function* func = (definition_function*)ins.def;
+        res = func->overload(tp, inherited_flags, herr);
       }
       else if (not(ins.def->flags & DEF_TYPED)) {
         if (ins.def->flags & DEF_TEMPLATE and !tp.refs.empty() and tp.refs.top().type == ref_stack::RT_FUNCTION) {
@@ -195,15 +203,6 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           //cerr << ins.def->toString() << endl;
           return 3;
         }
-      }
-      else if (ins.def->flags & DEF_FUNCTION) { // Handle function overloading
-        if (tp.refs.empty() or tp.refs.top().type != ref_stack::RT_FUNCTION) {
-          token.report_error(herr, "Cannot declare `" + tp.refs.name + "' over existing function");
-          return 4;
-        }
-        definition_function* func = (definition_function*)ins.def;
-        arg_key k(func->referencers);
-        res = func->overload(k, new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags), herr);
       }
       else
         res = ins.def;

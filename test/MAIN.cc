@@ -209,6 +209,7 @@ void do_cli(context &ct) {
               case DEF_SCOPE: flagnames[DEF_SCOPE] = "DEF_SCOPE";
               case DEF_TYPED: flagnames[DEF_TYPED] = "DEF_TYPED";
               case DEF_FUNCTION: flagnames[DEF_FUNCTION] = "DEF_FUNCTION";
+              case DEF_OVERLOAD: flagnames[DEF_OVERLOAD] = "DEF_OVERLOAD";
               case DEF_VALUED: flagnames[DEF_VALUED] = "DEF_VALUED";
               case DEF_EXTERN: flagnames[DEF_EXTERN] = "DEF_EXTERN";
               case DEF_TEMPLATE: flagnames[DEF_TEMPLATE] = "DEF_TEMPLATE";

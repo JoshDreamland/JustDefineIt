@@ -28,6 +28,7 @@
 #include <typeinfo>
 #include <System/builtins.h>
 #include <Parser/handlers/handle_function_impl.h>
+#include <API/compile_settings.h>
 using namespace std;
 
 namespace jdi {
@@ -40,38 +41,55 @@ namespace jdi {
   }
   
   definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {}
-  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack *rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(*rf), modifiers(typeflags) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
   definition_typed::~definition_typed() {}
   
-  definition_function::definition_function(string n, definition* p, definition* tp, ref_stack &rf, unsigned int typeflags, int flgs): 
-    definition_typed(n, p, tp, rf, typeflags, flgs | DEF_FUNCTION), implementation(NULL) {
-    arg_key k(referencers);
-    overload(k, this, def_error_handler);
-  }
+  // NOTICE:
+  // This (flgs | DEF_FUNCTION) &~(DEF_PRIVATE | DEF_PROTECTED) stuff is to make sure that definition_function, which is basically a method group,
+  // is not itself protected or private. Only specific overloads, which actually have a prototype, may be private or protected.
+  // XXX: Should all flags be discarded in this manner?
   
-  definition *definition_function::overload(arg_key &key, definition_function* ovrl, error_handler *herr) {
-    pair<overload_iter, bool> ins = overloads.insert(pair<arg_key,definition_function*>(key, ovrl));
+  definition_function::definition_function(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): 
+    definition(n, p, (flgs | DEF_FUNCTION) &~(DEF_PRIVATE | DEF_PROTECTED)) {
+    overload(tp, rf, typeflags, flgs, NULL, def_error_handler);
+  }
+  definition_function::definition_function(string n, definition* p, int flgs): 
+    definition(n, p, (flgs | DEF_FUNCTION) &~(DEF_PRIVATE | DEF_PROTECTED)) {}
+    
+  definition_overload::definition_overload(string n, definition *p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): 
+    definition_typed(n, p, tp, rf, typeflags, (flgs & ~(DEF_FUNCTION)) | DEF_OVERLOAD), implementation(NULL) {}
+  
+  definition_overload *definition_function::overload(definition *tp, const ref_stack &rf, unsigned int typeflags, unsigned int addflags, void *implementation, error_handler *herr) {
+    arg_key key(rf);
+    pair<overload_iter, bool> ins = overloads.insert(pair<arg_key,definition_overload*>(key, NULL));
     if (!ins.second) {
-      if (ins.first->second->implementation) {
-        if (ovrl->implementation) {
+      if (implementation) {
+        if (ins.first->second->implementation) {
           herr->error("Reimplementation of function; old implementation discarded");
-          delete_function_implementation(ovrl->implementation);
-          ovrl->implementation = ins.first->second->implementation;
+          delete_function_implementation(ins.first->second->implementation);
+          FATAL_RETURN(NULL);
+          ins.first->second->implementation = implementation;
         }
+        ins.first->second->implementation = implementation;
       }
-      else
-        ins.first->second->implementation = ovrl->implementation;
-      delete ovrl;
     }
+    else
+      ins.first->second = new definition_overload(name, parent, tp, rf, typeflags, flags | addflags);
+    
     return ins.first->second;
   }
+  definition_overload *definition_function::overload(const full_type &ft, unsigned int addflags, error_handler *herr) {
+    return overload(ft.def, ft.refs, ft.flags, addflags, NULL, herr);
+  }
+  
   void definition_function::overload(definition_template* ovrl) {
     template_overloads.push_back(ovrl);
   }
   
   definition_function::~definition_function() {
     for (overload_iter it = overloads.begin(); it != overloads.end(); ++it)
-      if (it->second != this) delete it->second;
+      delete it->second;
     for (vector<definition_template*>::iterator it = template_overloads.begin(); it != template_overloads.end(); ++it)
       delete *it;
   }
@@ -625,10 +643,15 @@ namespace jdi {
     else res += "{ ... }";  
     return res;
   }
+  string definition_overload::toString(unsigned levels, unsigned indent) {
+    return definition_typed::toString(levels, indent);
+  }
   string definition_function::toString(unsigned levels, unsigned indent) {
-    string res = definition_typed::toString(levels, indent);
-    if (overloads.size() > 1)
-      res += " (And " + tostr(overloads.size()-1) + " overloads)";
+    string res;
+    for (overload_iter it = overloads.begin(); it != overloads.end(); ++it) {
+      if (res.size()) res += "\n";
+      res += it->second->toString(levels, indent);
+    }
     return res;
   }
   string definition_scope::toString(unsigned levels, unsigned indent) {
@@ -685,6 +708,20 @@ namespace jdi {
   string definition_hypothetical::toString(unsigned, unsigned indent) {
     return string(indent, ' ') + "template<typename " + parent->name + "> " + parent->name + "::" + name;
   }
+  
+  string definition::kind() const { return "definition"; }
+  string definition_atomic::kind() const    { return "primitive"; }
+  string definition_class::kind() const     { return "class"; }
+  string definition_enum::kind() const      { return "enum"; }
+  string definition_function::kind() const  { return "function"; }
+  string definition_hypothetical::kind() const { return "dependent object"; }
+  string definition_overload::kind() const  { return "function"; }
+  string definition_scope::kind() const     { return "namespace"; }
+  string definition_template::kind() const  { return "template"; }
+  string definition_tempparam::kind() const { return "template parameter"; }
+  string definition_typed::kind() const     { return "object"; }
+  string definition_union::kind() const     { return "union"; }
+  string definition_valued::kind() const    { return "constant"; }
 }
 
 #ifdef CUSTOM_MEMORY_MANAGEMENT

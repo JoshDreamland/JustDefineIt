@@ -30,8 +30,8 @@ namespace jdip {
       { FATAL_RETURN(1); }
     
     definition_scope *temps;
-    for (temps = scope; !(temps->flags & DEF_TEMPLATE); temps = temps->parent);
-    if (!(temps->flags & DEF_TEMPLATE)) {
+    for (temps = scope; temps && !(temps->flags & DEF_TEMPLATE); temps = temps->parent);
+    if (!temps || !(temps->flags & DEF_TEMPLATE)) {
       token.report_error(herr, "Cannot infer type outside of template");
       return NULL;
     }

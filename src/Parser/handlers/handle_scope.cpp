@@ -50,13 +50,19 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           handled_declarator_block:
           if (token.type != TT_SEMICOLON) {
             if (token.type == TT_LEFTBRACE || token.type == TT_ASM) {
-              if (!(decl and decl->flags & DEF_FUNCTION)) {
+              if (!(decl and decl->flags & DEF_OVERLOAD)) {
                 token.report_error(herr, "Unexpected opening brace here; declaration is not a function");
                 FATAL_RETURN(1);
                 handle_function_implementation(lex,token,scope,herr);
               }
-              else
-                ((definition_function*)decl)->implementation = handle_function_implementation(lex,token,scope,herr);
+              else {
+                definition_overload *ovr = ((definition_overload*)decl);
+                if (ovr->implementation != NULL) {
+                  token.report_error(herr, "Multiple implementations of function" FATAL_TERNARY("", "; old implementation discarded"));
+                  delete_function_implementation(ovr->implementation);
+                }
+                ovr->implementation = handle_function_implementation(lex,token,scope,herr);
+              }
               if (token.type != TT_RIGHTBRACE && token.type != TT_SEMICOLON) {
                 token.report_error(herr, "Expected closing symbol to function");
                 continue;
@@ -287,11 +293,15 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               ft.refs.append_c(my_func_refs);
             }
             
-            definition_function *const df = new definition_function(opname, scope, ft.def, ft.refs, ft.flags, inherited_flags);
-            decl = df;
+            decpair ins = scope->declare(opname, NULL);
+            definition_function *df;
             
-            decpair ins = scope->declare(decl->name, decl);
-            if (!ins.inserted) { arg_key k(df->referencers); decl = ((definition_function*)ins.def)->overload(k, df, herr); }
+            if (ins.inserted)
+              df = new definition_function(opname, scope, inherited_flags);
+            else df = (definition_function*)ins.def;
+            
+            definition_overload *ovr = df->overload(ft, inherited_flags, herr);
+            decl = ovr;
             goto handled_declarator_block;
           }
         break;
