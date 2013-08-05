@@ -5,7 +5,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -680,8 +680,10 @@ namespace jdi
     // cout << "Evaluating :: operator: " << res.def->name << "::" << right->content << endl;
     definition* d = ((definition_scope*)res.def)->find_local(right->content);
     if (!d or not(d->flags & DEF_VALUED)) {
+      if (res.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+        return value(VT_DEPENDENT);
       #ifdef DEBUG_MODE
-        cerr << "Failure: No `" << right->content << "' found in scope `" << res.def->name << "'" << endl;
+        cerr << "AST evaluation failure: No `" << right->content << "' found in scope `" << res.def->name << "'" << endl;
       #endif
       return value(long(0));
     }

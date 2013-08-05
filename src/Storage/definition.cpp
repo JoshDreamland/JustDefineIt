@@ -659,12 +659,16 @@ namespace jdi {
       if (res.size()) res += "\n";
       res += it->second->toString(levels, indent);
     }
+    for (vector<definition_template*>::iterator it = template_overloads.begin(); it != template_overloads.end(); ++it) {
+      if (res.size()) res += "\n";
+      res += (*it)->toString(levels, indent);
+    }
     return res;
   }
   string definition_scope::toString(unsigned levels, unsigned indent) {
     string inds(indent, ' '), res = inds;
     if (flags & DEF_NAMESPACE)
-      res = name.empty()? "namespace " : "namespace " + name + " ";
+      res += name.empty()? "namespace " : "namespace " + name + " ";
     if (levels) {
       res += "{\n";
       for (defiter it = members.begin(); it != members.end(); ++it)
@@ -673,6 +677,12 @@ namespace jdi {
     }
     else res += "{ ... }";
     return res;
+  }
+  static inline string trimhead(string x) {
+    size_t r = x.find_first_not_of(" \t");
+    if (!r) return x;
+    if (r == string::npos) return "";
+    return x.substr(r);
   }
   string definition_template::toString(unsigned levels, unsigned indent) {
     string res(indent, ' ');
@@ -694,7 +704,7 @@ namespace jdi {
       first = false;
     }
     res += "> ";
-    res += def? def->toString(levels, indent): "<null>";
+    res += def? trimhead(def->toString(levels, indent)): "<null>";
     return res;
   }
   string definition_typed::toString(unsigned, unsigned indent) {

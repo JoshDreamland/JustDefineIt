@@ -178,7 +178,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       if (ins.def->flags & (DEF_CLASS | DEF_UNION | DEF_ENUM)) { // If the original definition is a class
         decpair cins = scope->declare_c_struct(tp.refs.name, ins.def); // Move that definition to the C structs list, so we can insert our definition in its place.
         if (!cins.inserted and cins.def != ins.def) {
-          token.report_error(herr, "Attempt to redeclare `" + tp.refs.name + "' failed due to conflicts");
+          token.report_error(herr, "Attempt to redeclare `" + tp.refs.name + "' failed due to name conflicts");
           FATAL_RETURN(1);
         }
         else goto insert_anyway;

@@ -132,8 +132,11 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       }
       
       if (token.type != TT_LEFTBRACE) {
+        if (token.type == TT_SEMICOLON) {
+          tclass->flags |= DEF_INCOMPLETE;
+          return 0;
+        }
         token.report_errorf(herr, "Opening brace for class body expected before %s");
-        delete temp;
         return 1;
       }
       
@@ -251,8 +254,6 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     return 1;
   }
   
-  
-  
   // ========================================================================================================================================
   // =====: Handle template function definitions :===========================================================================================
   // ========================================================================================================================================
@@ -266,7 +267,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       return 1;
     }
     
-    if (funcrefs.refs.top().type != ref_stack::RT_FUNCTION) {
+    if (funcrefs.refs.empty() || funcrefs.refs.top().type != ref_stack::RT_FUNCTION) {
       token.report_error(herr, "Definition in template must be a function");
       delete temp;
       return 1;
@@ -288,7 +289,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     temp->def = tovr;
     
     if (!func)
-      func = new definition_function(funcname, scope);
+      scope->declare(funcname, func = new definition_function(funcname, scope));
     func->overload(temp);
     
     if (token.type == TT_LEFTBRACE)
