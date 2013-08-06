@@ -930,7 +930,7 @@ namespace jdi
     k.mirror(temp);
     for (size_t i = 0; i < params.size(); ++i) {
       if (temp->params[i]->flags & DEF_TYPENAME) {
-        k.put_type(i, params[i]->coerce().def);
+        k.put_type(i, params[i]->coerce());
       }
       else {
         value v = params[i]->eval();

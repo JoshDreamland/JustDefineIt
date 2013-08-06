@@ -182,30 +182,32 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         
         if (token.type == TT_COMMA) continue;
         
-        if ((token.type == TT_DEFINITION or token.type == TT_DECLARATOR) and token.def->flags & DEF_TEMPPARAM)
+        if ((argk[args_given].type == arg_key::AKT_VALUE)
+        and (token.type == TT_DEFINITION or token.type == TT_DECLARATOR) and token.def->flags & DEF_TEMPPARAM)
         {
-          for (size_t i = 0; i < temp->params.size(); ++i) if (temp->params[i] == token.def)
-          {
-            spec->key.arg_inds[i][++spec->key.arg_inds[i][0]] = args_given;
-            
-            if (argk[args_given].type == arg_key::AKT_FULLTYPE) {
-              if (~temp->params[i]->flags & DEF_TYPENAME)
-                token.report_error(herr, "Type mismatch in passing parameter " + toString(args_given) + " to template specialization: typename parameter expected");
-              argk[args_given].ft().def = &arg_key::abstract;
-            }
-            else {
-              if (temp->params[i]->flags & DEF_TYPENAME)
-                token.report_error(herr, "Type mismatch in passing parameter " + toString(args_given) + " to template specialization: real-valued parameter expected");
+          for (size_t i = 0; i < temp->params.size(); ++i) if (temp->params[i] == token.def) {
+            if (~temp->params[i]->flags & DEF_TYPENAME) {
+              spec->key.arg_inds[i][++spec->key.arg_inds[i][0]] = args_given;
               argk[args_given].val() = VT_DEPENDENT;
+              token = read_next_token(temp);
+              goto handled_argk; // I don't trust the optimizer enough to ugly up the code with a boolean for this. Suck it up.
             }
-            
-            token = read_next_token(scope);
-            goto handled_argk; // I don't trust the optimizer enough to ugly up the code with a boolean for this. Suck it up.
+            else
+              token.report_error(herr, "Type mismatch in passing parameter " + toString(args_given) + " to template specialization: real-valued parameter expected");
           }
         }
         
-        if (read_template_parameter(argk, args_given, basetemp, lex, token, scope, this, herr))
+        if (read_template_parameter(argk, args_given, basetemp, lex, token, temp, this, herr))
           return 1;
+        
+        if (argk[args_given].type == arg_key::AKT_FULLTYPE) {
+          definition *def = argk[args_given].ft().def;
+          for (size_t i = 0; i < temp->params.size(); ++i) if (temp->params[i] == def) {
+            spec->key.arg_inds[i][++spec->key.arg_inds[i][0]] = args_given;
+            argk[args_given].ft().def = &arg_key::abstract;
+          }
+        }
+        
         handled_argk:
         
         if (token.type == TT_GREATERTHAN)

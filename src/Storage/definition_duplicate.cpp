@@ -27,10 +27,19 @@
 namespace jdi {
   
   void definition_scope::copy(const definition_scope* from, remap_set &n) {
-    for (defiter_c it = from->members.begin(); it != from->members.end(); it++) {
+    for (defiter_c it = from->members.begin(); it != from->members.end(); it++)
+    if (!(it->second->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION))) {
       inspair dest = members.insert(entry(it->first,NULL));
       if (dest.second) {
         dest.first->second = it->second->duplicate(n);
+      }
+    }
+    for (defiter_c it = from->c_structs.begin(); it != from->c_structs.end(); ++it) {
+      inspair dest = c_structs.insert(entry(it->first, NULL));
+      if (dest.second) {
+        definition *cs = it->second->duplicate(n);
+        dest.first->second = cs;
+        declare(it->first, cs);
       }
     }
     using_general = from->using_general;
@@ -63,7 +72,7 @@ namespace jdi {
   }
   
   definition *definition_class::duplicate(remap_set &n) const {
-    definition_class* res= new definition_class(name, parent, flags);
+    definition_class* res = new definition_class(name, parent, flags);
     res->definition_scope::copy(this, n);
     res->ancestors = ancestors;
     n[this] = res;

@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -74,11 +74,13 @@ namespace jdi {
       friend struct ref_stack;
       friend struct ref_stack::iterator;
       node* duplicate(); ///< Actually duplicate this node
+      ~node(); ///< Non-virtual destructor; node freeing is handled by ref_stack.
       public:
         ref_type type; ///< The type of this node.
-        size_t arraysize(); ///< Return the size of this array if and only if type == RT_ARRAYBOUND. Undefined behavior otherwise.
+        size_t arraysize() const; ///< Return the size of this array if and only if type == RT_ARRAYBOUND. Undefined behavior otherwise.
         node(node* p, ref_type rt); ///< Allow constructing a new node easily.
-        ~node(); ///< Virtual destructor so \c node_func can be complicated.
+        bool operator==(const node &other) const; ///< Test for equality.
+        bool operator!=(const node &other) const; ///< Test for inequality.
     };
     /// Node containing an array boundary.
     struct node_array;
@@ -116,6 +118,8 @@ namespace jdi {
     
     /// Return whether this stack is empty.
     bool empty() const;
+    /// Returns whether this stack ends with the elements in another stack.
+    bool ends_with(const ref_stack& rf) const;
     
     /// Constructor wrapper to the copy() method so copying doesn't bite someone in the ass.
     ref_stack(const ref_stack&);
@@ -147,6 +151,9 @@ namespace jdi {
     const node &top() const;
     /// Get the bottom node without allowing modification.
     const node &bottom() const;
+    
+    /// Free a node* pointer.
+    static void free(node *n);
     
     /// Return the number of nodes contained.
     size_t size() const;

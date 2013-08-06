@@ -257,8 +257,8 @@ namespace jdi {
   
   definition* definition_template::instantiate(arg_key& key, error_handler *herr) {
     speciter spi = specializations.find(key);
+    //cout << "Find specialization candidates for <" << key.toString() << ">..." << endl;
     if (spi != specializations.end()) {
-      // cout << "Found specialization candidates for <" << key.toString() << ">:  <" << spi->first.toString() << ">" << endl;
       specialization *spec = NULL;
       int merit = 0;
       
@@ -351,7 +351,16 @@ namespace jdi {
       }
       else if (i->type == AKT_FULLTYPE) { // I is not a value; ie, it is a full_type
         if (j->type != AKT_FULLTYPE) return true;
-        if (i->ft().def == &abstract || j->ft().def == &abstract) continue;
+        if (i->ft().def == &abstract) {
+          if ((j->ft().flags & i->ft().flags) != i->ft().flags || !j->ft().refs.ends_with(i->ft().refs))
+            return false;
+          continue;
+        }
+        if (j->ft().def == &abstract) {
+          if ((i->ft().flags & j->ft().flags) != j->ft().flags || !i->ft().refs.ends_with(j->ft().refs))
+            return true;
+          continue;
+        }
         if (i->ft() < j->ft()) return true;
         if (j->ft() < i->ft()) return false;
       }
