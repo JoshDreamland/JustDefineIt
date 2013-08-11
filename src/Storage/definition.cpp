@@ -257,9 +257,10 @@ namespace jdi {
   definition_template::specialization::specialization(const specialization &x): key(x.key, false), spec_temp(x.spec_temp) {}
   definition_template::specialization::~specialization() { delete spec_temp; }
   
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM) {}
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_type(tp) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(NULL) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_value(NULL), default_type(tp) {}
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
+  definition_tempparam::~definition_tempparam() { delete default_value; }
   
   definition* definition_template::instantiate(arg_key& key, error_handler *herr) {
     // TODO: Move this specialization search into the not-found if (ins.second) below, then add the specialization to the instantiation map.

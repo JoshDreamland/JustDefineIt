@@ -12,7 +12,7 @@ template<int x> class
 b: syntax_error {};
 */
 
-/* Simple C test case * /
+/* Simple C test case */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>

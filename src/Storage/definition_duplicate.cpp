@@ -341,14 +341,15 @@ namespace jdi {
       for (remap_citer rit = n.begin(); rit != n.end(); ++rit)
         cerr << "  " << ((definition*)rit->first)->toString() << "\t\t=>\t\t" << rit->second->toString() << endl; 
       #endif
-      return;
     }
-    
-    #ifdef DEBUG_MODE
-      if (ft.refs.size() || ft.flags)
-        cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl;
-    #endif
-    n[(definition*)this] = ft.def;
+    else {
+      #ifdef DEBUG_MODE
+        if (ft.refs.size() || ft.flags)
+          cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl;
+      #endif
+      n[(definition*)this] = ft.def;
+    }
+    delete nast;
   }
   
   

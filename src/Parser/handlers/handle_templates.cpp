@@ -74,8 +74,10 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       pname = ft.refs.name;
       AST *ast = NULL;
       if (token.type == TT_OPERATOR) {
-        if (token.content.len != 1 or *token.content.str != '=')
+        if (token.content.len != 1 or *token.content.str != '=') {
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
+          FATAL_RETURN(1);
+        }
         token = read_next_token(scope);
         ast = new AST();
         ast->set_use_for_templates(true);

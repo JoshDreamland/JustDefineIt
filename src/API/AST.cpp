@@ -407,6 +407,7 @@ namespace jdi
             }
             track(string(">"));
             tt_greater_is_op = gtio;
+            delete left_node;
             left_node = ti;
             break;
           }
