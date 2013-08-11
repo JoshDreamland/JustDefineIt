@@ -221,6 +221,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_SCOPE:
           token = read_next_token(global);
         continue;
+      
       case TT_DEFINITION: {
         if (token.def->flags & DEF_NAMESPACE) {
           definition_scope* dscope = (definition_scope*)token.def;
@@ -252,7 +253,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               FATAL_RETURN(1);
             goto handled_declarator_block;
           }
-          token.report_error(herr, "Unexpected identifier in this scope; `" + tname + "' does not name a type");
+          token.report_error(herr, "Unexpected identifier in this scope (" + scope->name + "); `" + tname + "' does not name a type");
         } break;
       
       case TT_TEMPLATE:

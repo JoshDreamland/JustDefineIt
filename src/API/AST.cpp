@@ -123,39 +123,11 @@ namespace jdi
           handled_basics = read_next = true;
         } break;
       
-      case TT_DEFINITION: {
-        at = AT_DEFINITION;
-        if (token.def->flags & DEF_TEMPLATE) {
-          definition *def = token.def;
-          token = get_next_token();
-          if (token.type == TT_LESSTHAN) {
-            AST_Node_TempInst *ti = new AST_Node_TempInst((definition_template*)def);
-            token = get_next_token();
-            
-            bool gtio = tt_greater_is_op;
-            tt_greater_is_op = false;
-            for (;;) {
-              AST_Node *p = parse_expression(token, precedence::comma + 1);
-              if (p == NULL) break;
-              ti->params.push_back(p);
-              if (token.type == TT_GREATERTHAN)
-              { token = get_next_token(); break; }
-              if (token.type == TT_COMMA)
-              { token = get_next_token(); continue; }
-              token.report_errorf(herr, "Expected closing triangle bracket before %s");
-              break;
-            }
-            tt_greater_is_op = gtio;
-            myroot = ti;
-          }
-          else
-            myroot = new AST_Node_Definition(token.def, token.content.toString());
-          read_next = true;
-        }
-        else
+      case TT_DEFINITION:
+          at = AT_DEFINITION;
           myroot = new AST_Node_Definition(token.def, token.content.toString());
-        track(myroot->content);
-      } break;
+          track(myroot->content);
+        break;
       
       case TT_IDENTIFIER: {
           if (search_scope) {
@@ -179,8 +151,9 @@ namespace jdi
         break;
       
       case TT_TYPENAME:
-        token.report_error(herr, "Unimplemented: typename.");
-        return NULL;
+        //XXX: Is it safe to just ignore a typename directive in this system?
+        token = get_next_token();
+        return parse_expression(token, precedence::scope);
       
       case TT_OPERATOR: case TT_TILDE: {
         ct = token.content.toString();
@@ -396,10 +369,11 @@ namespace jdi
         goto case_TT_OPERATOR;
         
       case TT_SCOPE: {
+        track(string("::"));
         token = get_next_token();
         AST_Node *right = parse_expression(token, precedence::scope + 1);
         if (!right) {
-          token.report_error(herr, "Expected secondary expression after binary operator");
+          token.report_error(herr, "Expected qualified-id for scope access");
           return left_node;
         }
         left_node = new AST_Node_Scope(left_node,right,"::");
@@ -407,6 +381,38 @@ namespace jdi
       }
       
       case TT_LESSTHAN:
+        if (left_node->type == AT_SCOPE || left_node->type == AT_DEFINITION)
+        {
+          if (precedence::scope < prec_min)
+            return left_node;
+          definition *def = left_node->coerce().def;
+          if (def && (def->flags & DEF_TEMPLATE))
+          {
+            track(string("<"));
+            AST_Node_TempInst *ti = new AST_Node_TempInst((definition_template*)def);
+            token = get_next_token();
+            
+            bool gtio = tt_greater_is_op;
+            tt_greater_is_op = false;
+            for (;;) {
+              AST_Node *p = parse_expression(token, precedence::comma + 1);
+              if (p == NULL) break;
+              ti->params.push_back(p);
+              if (token.type == TT_GREATERTHAN)
+              { token = get_next_token(); break; }
+              if (token.type == TT_COMMA)
+              { token = get_next_token(); continue; }
+              token.report_errorf(herr, "Expected closing triangle bracket before %s");
+              break;
+            }
+            track(string(">"));
+            tt_greater_is_op = gtio;
+            left_node = ti;
+            break;
+          }
+        }
+          // Continue to next case
+          
       case TT_OPERATOR: case_TT_OPERATOR: {
           string op(token.content.toString());
           map<string,symbol>::iterator b = symbols.find(op);
@@ -422,7 +428,7 @@ namespace jdi
             track(op);
             AST_Node *right = parse_expression(token, s.prec_binary + !(s.type & ST_RTL_PARSED));
             if (!right) {
-              token.report_error(herr, "Expected secondary expression after binary operator");
+              token.report_error(herr, "Expected secondary expression after binary operator " + op);
               return left_node;
             }
             left_node = new AST_Node_Binary(left_node,right,op);
@@ -683,7 +689,7 @@ namespace jdi
       if (res.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
         return value(VT_DEPENDENT);
       #ifdef DEBUG_MODE
-        cerr << "AST evaluation failure: No `" << right->content << "' found in scope `" << res.def->name << "'" << endl;
+        cerr << "AST evaluation failure: No `" << right->content << "' found in " << res.def->kind() << " `" << res.def->name << "'" << endl;
       #endif
       return value(long(0));
     }
@@ -962,7 +968,7 @@ namespace jdi
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft): AST_Node_Unary(param, str_cast, AT_CAST) { cast_type.swap(ft); }
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, AT_CAST) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_TYPE tp, AST_Node* l, AST_Node* r): AST_Node(tp), left(l), right(r) { type = AT_BINARYOP; }
-  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op, AST_TYPE tp): AST_Node(op, tp), left(l), right(r) { type = AT_BINARYOP; }
+  AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op, AST_TYPE tp): AST_Node(op, tp), left(l), right(r) { type = tp; }
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): AST_Node(AT_TERNARYOP), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
   AST::AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct): AST_Node(ct, AT_TERNARYOP), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
   AST::AST_Node_Parameters::AST_Node_Parameters(): AST_Node(AT_PARAMLIST), func(NULL) {}

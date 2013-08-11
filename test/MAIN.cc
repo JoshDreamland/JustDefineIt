@@ -169,8 +169,11 @@ void do_cli(context &ct) {
   macro_map undamageable = ct.get_macros();
   while (c != 'q' and c != '\n') { switch (c) {
     case 'd': {
-        bool justflags; justflags = false;
-        if (false) { case 'f': justflags = true; }
+        bool justflags, justorder;
+        justflags = false;
+        justorder = false;
+        if (false) { case 'f': justflags = true; justorder = false; }
+        if (false) { case 'o': justorder = true; justflags = false; }
         cout << "Enter the item to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         size_t start, e = 0;
@@ -226,6 +229,15 @@ void do_cli(context &ct) {
               if (def->flags & i)
                 cout << (hadone? " | " : "  ") << flagnames[i], hadone = true;
             cout << endl;
+          }
+          else if (justorder) {
+            if (def->flags & DEF_TEMPLATE)
+              def = ((definition_template*)def)->def;
+            if (def->flags & DEF_SCOPE) {
+              definition_scope *sc = (definition_scope*)def;
+              for (definition_scope::orditer it = sc->dec_order.begin(); it != sc->dec_order.end(); ++it)
+                cout << "- " << (((*it)->def())? ((*it)->def())->name : "<null>") << endl;
+            }
           }
           else
             cout << def->toString() << endl;
@@ -289,6 +301,7 @@ void do_cli(context &ct) {
       "'f' Print flags for a given definition\n"
       "'h' Print this help information\n"
       "'m' Define a macro, printing a breakdown of its definition\n"
+      "'o' Print the order of declarations in a given scope\n"
       "'r' Render an AST representing an expression\n"
       "'s' Render an AST representing an expression and show it\n"
       "'q' Quit this interface\n";

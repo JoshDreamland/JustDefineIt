@@ -59,7 +59,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
         token = read_next_token(scope);
-        full_type fts = read_fulltype(lex, token, scope, this, herr);
+        full_type fts = read_fulltype(lex, token, temp, this, herr);
         ft.swap(fts);
         if (!ft.def) {
           token.report_error(herr,"Expected type name for default type to template parameter");
@@ -127,7 +127,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       
       token = read_next_token(scope);
       if (token.type == TT_COLON) {
-        if (handle_class_inheritance(scope, token, tclass, protection))
+        if (handle_class_inheritance(temp, token, tclass, protection))
           return 1;
       }
       
@@ -220,7 +220,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       if (check_read_template_parameters(argk, args_given, basetemp, token, herr))
         return 1;
       
-      cout << "Specialization key: " << argk.toString() << endl;
+      // cout << "Specialization key: " << argk.toString() << endl;
       definition_template::speclist &slist = basetemp->specializations[argk];
       
       for (definition_template::speclist::iterator it = slist.begin(); it != slist.end(); ++it)

@@ -95,7 +95,8 @@ namespace jdi {
   }
   
   decpair definition_scope::declare_c_struct(string n, definition* def) {
-    pair<map<string,definition*>::iterator, bool> insp = c_structs.insert(pair<string,definition*>(n,def));
+    pair<defiter, bool> insp = c_structs.insert(pair<string,definition*>(n,def));
+    dec_order.push_back(new dec_order_defiter(insp.first));
     return decpair(&insp.first->second, insp.second);
   }
   definition *definition_scope::look_up(string sname) {
@@ -208,6 +209,8 @@ namespace jdi {
       using_node *dm = n; n = n->next;
       delete dm;
     }
+    for (orditer it = dec_order.begin(); it != dec_order.end(); ++it)
+      delete *it;
     members.clear();
     for (defiter it = c_structs.begin(); it != c_structs.end(); ++it)
       delete it->second;
@@ -242,6 +245,9 @@ namespace jdi {
       delete *i;
     delete def;
   }
+  
+  definition* definition_template::dec_order_hypothetical::def() { return hyp; }
+  
   definition_template::instantiation::~instantiation() {
     delete def;
     for (vector<definition*>::iterator it = parameter_defs.begin(); it != parameter_defs.end(); ++it)
@@ -256,6 +262,8 @@ namespace jdi {
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
   
   definition* definition_template::instantiate(arg_key& key, error_handler *herr) {
+    // TODO: Move this specialization search into the not-found if (ins.second) below, then add the specialization to the instantiation map.
+    // TODO: Be careful not to double free those specializations. You may need to keep a separate map for regular instantiations to free.
     speciter spi = specializations.find(key);
     //cout << "Find specialization candidates for <" << key.toString() << ">..." << endl;
     if (spi != specializations.end()) {
@@ -292,6 +300,11 @@ namespace jdi {
         ins.first->second.parameter_defs.push_back(ndef);
         n[*it] = ndef;
         // cout << "Added " << (void*)def << " => " << (void*)ndef << " to remap set" << endl;
+      }
+      size_t keyc = size_t(key.end() - key.begin());
+      if (keyc != params.size()) {
+        herr->error("Attempt to instantiate template with an incorrect number of parameters; passed " + value(long(key.end() - key.begin())).toString() + ", required " + value(long(params.size())).toString());
+        FATAL_RETURN(NULL);
       }
       ntemp->remap(n);
       // cout << "Duplicated " << def->name << " to " << ntemp->name << endl;
@@ -548,11 +561,12 @@ namespace jdi {
   
   decpair definition_scope::declare(string n, definition* def) {
     inspair insp = members.insert(entry(n,def));
+    if (!(def && (def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION))))
+      dec_order.push_back(new dec_order_defiter(insp.first));
     return decpair(&insp.first->second, insp.second);
   }
   decpair definition_class::declare(string n, definition* def) {
-    inspair insp = members.insert(entry(n,def));
-    return decpair(&insp.first->second, insp.second);
+    return definition_scope::declare(n, def);
   }
   
   //========================================================================================================
@@ -716,12 +730,15 @@ namespace jdi {
     res += def? trimhead(def->toString(levels, indent)): "<null>";
     return res;
   }
-  string definition_typed::toString(unsigned, unsigned indent) {
+  string definition_typed::toString(unsigned levels, unsigned indent) {
     string res(indent, ' ');
     if (flags & DEF_TYPENAME) res += "typedef ";
     res += type? typeflags_string(type, modifiers) : "<NULL>";
     res += " ";
-    res += referencers.toStringLHS() + name + referencers.toStringRHS() + ";";
+    res += referencers.toStringLHS() + name + referencers.toStringRHS();
+    if (levels && (flags & DEF_TYPENAME) && type && (type->flags & DEF_TYPED))
+      res += " (" + type->toString(levels - 1, 0) + ")";
+    else res += ";";
     return res;
   }
   string definition_union::toString(unsigned levels, unsigned indent) {

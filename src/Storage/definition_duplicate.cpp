@@ -25,6 +25,11 @@
 #include "definition.h"
 
 namespace jdi {
+  struct dec_order_generic: definition_scope::dec_order_g {
+    definition *mydef;
+    dec_order_generic(definition *x): mydef(x) {}
+    definition *def() { return mydef; }
+  };
   
   void definition_scope::copy(const definition_scope* from, remap_set &n) {
     for (defiter_c it = from->members.begin(); it != from->members.end(); it++)
@@ -41,6 +46,16 @@ namespace jdi {
         dest.first->second = cs;
         declare(it->first, cs);
       }
+    }
+    dec_order = from->dec_order;
+    for (orditer it = dec_order.begin(); it != dec_order.end(); ++it) {
+        definition *def = (*it)->def();
+      remap_iter rit = n.find(def);
+      #ifdef DEBUG_MODE
+        if (rit == n.end() && !(def->flags & DEF_HYPOTHETICAL))
+          cerr << "FAILURE! Definition `" << def->name << "' in the order deque was not found in the remap set!" << endl;
+      #endif
+      *it = new dec_order_generic((rit == n.end())? def : rit->second);
     }
     using_general = from->using_general;
     if (from->using_front) {
@@ -184,17 +199,24 @@ namespace jdi {
     return it == remap.end()? x : (dc*)it->second;
   }
   
-  void definition::remap(const remap_set &n) {
+  void definition::remap(remap_set &n) {
     parent = filter(parent, n);
   }
   
-  void definition_scope::remap(const remap_set &n) {
+  void definition_scope::remap(remap_set &n) {
     definition::remap(n);
+    // cout << "Scope `" << name << "' has " << dec_order.size() << " ordered members" << endl;
+    for (orditer it = dec_order.begin(); it != dec_order.end(); ++it) {
+      definition *def = (*it)->def();
+      remap_set::const_iterator ex = n.find(def);
+      if (ex != n.end())
+        dec_order.erase(it);
+      else
+        def->remap(n);
+    }
     for (defiter it = members.begin(); it != members.end(); ++it) {
       remap_set::const_iterator ex = n.find(it->second);
-      if (ex == n.end())
-        it->second->remap(n);
-      else {
+      if (ex != n.end()) {
         delete it->second;
         it->second = ex->second;
       }
@@ -211,7 +233,7 @@ namespace jdi {
     }
   }
   
-  void definition_class::remap(const remap_set &n) {
+  void definition_class::remap(remap_set &n) {
     definition_scope::remap(n);
     for (vector<ancestor>::iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
       ancestor& an = *it;
@@ -227,7 +249,7 @@ namespace jdi {
     }
   }
   
-  void definition_enum::remap(const remap_set& n) {
+  void definition_enum::remap(remap_set& n) {
     #ifdef DEBUG_MODE
     if (n.find(type) != n.end()) {
       cerr << "Why are you replacing `" << type->name << "'?" << endl;
@@ -237,7 +259,7 @@ namespace jdi {
     
     static int nest_count = 0;
     
-    if (nest_count >= 12.8) {
+    if (nest_count >= 128) {
       cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
       return;
     } ++nest_count;
@@ -246,10 +268,17 @@ namespace jdi {
       definition_valued *d = filter(it->def, n);
       if (it->def == d) {
         it->def->remap(n);
-        if (it->ast) {
+        if (it->ast) { // FIXME: This doesn't keep counting after a successful remap!
           value cache = it->def->value_of;
           it->ast->remap(n);
           it->def->value_of = it->ast->eval();
+          if (it->def->value_of.type == VT_DEPENDENT)
+            cerr << "SHIT!" << endl;
+          else {
+            cout << "Refactored " << it->ast->toString() << ": " << cache.toString() << " → " << it->def->value_of.toString() << endl;
+            delete it->ast;
+            it->ast = NULL;
+          }
           // cout << "Remap called on enum: new value of `" << it->def->name << "': " << cache.toString() << " => " << it->def->value_of.toString() << endl;
         }
       }
@@ -262,7 +291,7 @@ namespace jdi {
     --nest_count;
   }
   
-  void definition_function::remap(const remap_set& n) {
+  void definition_function::remap(remap_set& n) {
     definition::remap(n);
     for (overload_iter it = overloads.begin(); it != overloads.end(); ++it) {
       remap_citer rit = n.find(it->second);
@@ -273,35 +302,53 @@ namespace jdi {
     }
   }
   
-  void definition_overload::remap(const remap_set& n) {
+  void definition_overload::remap(remap_set& n) {
     definition_typed::remap(n);
     // TODO: remap_function_implementation();
   }
   
-  void definition_template::remap(const remap_set &n) {
+  void definition_template::remap(remap_set &n) {
     if (def)
       def->remap(n);
   }
   
-  void definition_tempparam::remap(const remap_set &n) {
+  void definition_tempparam::remap(remap_set &n) {
     // TODO: Implement
     (void)n;
   }
   
-  void definition_typed::remap(const remap_set &n) {
+  void definition_typed::remap(remap_set &n) {
     remap_set::const_iterator ex = n.find(type);
     if (ex != n.end())
       type = ex->second;
   }
   
-  void definition_union::remap(const remap_set &) {
+  void definition_union::remap(remap_set &) {
     
   }
   
-  void definition_atomic::remap(const remap_set &) {}
+  void definition_atomic::remap(remap_set &) {}
   
-  void definition_hypothetical::remap(const remap_set &) {
-    cerr << "ERROR: Remap called on hypothetical type" << endl;
+  void definition_hypothetical::remap(remap_set &n) {
+    AST *nast = def->duplicate();
+    nast->remap(n);
+    full_type ft = nast->coerce();
+    
+    if (!ft.def) {
+      cerr << ("Problem instantiating `" + name + "': coercion failure in expression: " + def->toString() + " => " + nast->toString());
+      #ifdef DEBUG_MODE
+      cerr << "Remap dump:" << endl;
+      for (remap_citer rit = n.begin(); rit != n.end(); ++rit)
+        cerr << "  " << ((definition*)rit->first)->toString() << "\t\t=>\t\t" << rit->second->toString() << endl; 
+      #endif
+      return;
+    }
+    
+    #ifdef DEBUG_MODE
+      if (ft.refs.size() || ft.flags)
+        cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl;
+    #endif
+    n[(definition*)this] = ft.def;
   }
   
   

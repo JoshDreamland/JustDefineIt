@@ -53,7 +53,7 @@ class two: plusone<1> {
     x = value
   };
 };
-/* */
+/* * /
 template<int x> struct factorial {
   enum r {
     value = x * factorial<x - 1>::value
@@ -137,7 +137,9 @@ template<> string add_one(string x) { return x + "1"; }
 
 /* */
 
-// #include <cmath>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 /*
 #include <cassert>

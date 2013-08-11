@@ -38,8 +38,9 @@ namespace jdip {
     definition_template *temp = (definition_template*)temps;
     
     // TODO: XXX: Should this use hypothetical at all? Or should it just use a template parameter?
-    definition_hypothetical* h = new definition_hypothetical("<" + a->toString() + ">", scope, flags, a);
+    definition_hypothetical* h = new definition_hypothetical("(?=" + a->toString() + ")", scope, flags, a);
     temp->dependents.push_back(h);
+    scope->dec_order.push_back(new definition_template::dec_order_hypothetical(h));
     return h;
   }
 }

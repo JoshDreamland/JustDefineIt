@@ -50,8 +50,12 @@ namespace jdi {
   //===========================================================================================================================
   
   int AST::AST_Node::own_width() { return content.length()*8 + 16; }
+  int AST::AST_Node_Type::own_width() { return dec_type.toString().length()*8 + 16; }
+  int AST::AST_Node_Definition::own_width() { return def->name.length()*8 + 16; }
   int AST::AST_Node::own_height() { return own_width(); }
   int AST::AST_Node_Cast::own_height() { return 24; }
+  int AST::AST_Node_Type::own_height() { return 24; }
+  int AST::AST_Node_Definition::own_height() { return 24; }
   
   //===========================================================================================================================
   //=: SVG Renderers :=========================================================================================================
@@ -62,6 +66,18 @@ namespace jdi {
     const int nid = svg->nodes_written++;
     svg->draw_circle(nid,x,y,own_width()/2,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content);
+  }
+  void AST::AST_Node_Type::toSVG(int x, int y, SVGrenderInfo *svg)
+  {
+    const int nid = svg->nodes_written++, r = own_width()/2;
+    svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF1040C0,2);
+    svg->draw_text(nid,x,y+4,dec_type.toString());
+  }
+  void AST::AST_Node_Definition::toSVG(int x, int y, SVGrenderInfo *svg)
+  {
+    const int nid = svg->nodes_written++, r = own_width()/2;
+    svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF804010,2);
+    svg->draw_text(nid,x,y+4,def->name);
   }
   void AST::AST_Node_Unary::toSVG(int x, int y, SVGrenderInfo *svg)
   {
@@ -263,7 +279,7 @@ namespace jdi {
   //=: Recursive Width/Height Resolvers :======================================================================================
   //===========================================================================================================================
   
-  int AST::AST_Node::width() { return own_width(); }
+  int AST::AST_Node           ::width() { return own_width(); }
   int AST::AST_Node_Binary    ::width() { return 24 + (left?left->width():0) + (right?right->width():0); }
   int AST::AST_Node_Unary     ::width() { return operand?max(operand->width(),own_width()):own_width(); }
   int AST::AST_Node_Ternary   ::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }

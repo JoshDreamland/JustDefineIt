@@ -218,6 +218,10 @@ namespace jdi {
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
+      virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      virtual int own_width(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
+      virtual int own_height(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
+      
       AST_Node_Definition(definition *def, string content); ///< Construct with a definition
     };
     /// Child of AST_Node for tokens with an attached \c full_type.
@@ -232,6 +236,9 @@ namespace jdi {
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
+      virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      virtual int own_width(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
+      virtual int own_height(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
       
       AST_Node_Type(full_type &ft); ///< Construct consuming a \c full_type.
     };

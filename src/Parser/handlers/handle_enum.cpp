@@ -80,9 +80,17 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
       token.report_error(herr, "Expected closing brace to enum `" + classname + "'");
       return FATAL_ERRORS_T(NULL, nenum);
     }
-    if (token.type != TT_IDENTIFIER)
-      { token.report_error(herr, "Expected identifier at this point"); token = read_next_token(scope); continue; }
-    string cname(token.content.toString());
+    string cname;
+    if (token.type != TT_IDENTIFIER) {
+        if (token.type != TT_DECLARATOR && token.type != TT_DEFINITION) {
+        token.report_errorf(herr, "Expected identifier for constant name before %s"); token = read_next_token(scope);
+        FATAL_RETURN(NULL);
+        continue;
+      }
+      cname = token.def->name;
+    }
+    else
+      cname = token.content.toString();
     
     token = read_next_token(scope);
     

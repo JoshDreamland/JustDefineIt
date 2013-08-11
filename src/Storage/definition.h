@@ -80,6 +80,7 @@ namespace jdi {
 #include <map>
 #include <string>
 #include <vector>
+#include <deque>
 #include <iostream>
 using namespace std;
 typedef size_t pt;
@@ -118,7 +119,7 @@ namespace jdi {
         contained in this definition or its descendents will be replaced with a
         double. This can be used to eliminate references to a particular definition
         before free, or to instantiate templates without hassle. **/
-    virtual void remap(const remap_set& n);
+    virtual void remap(remap_set& n);
     
     /** Return the size of this definition. **/
     virtual size_t size_of();
@@ -177,7 +178,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -323,7 +324,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     definition_overload(string name, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION);
@@ -343,7 +344,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -422,6 +423,23 @@ namespace jdi {
     */
     decpair declare_c_struct(string name, definition* def = NULL);
     
+    /// A structure for keeping a pointer to a declaration.
+    struct dec_order_g { virtual definition *def() = 0; virtual ~dec_order_g() {} };
+    struct dec_order_defiter: dec_order_g {
+      defiter it;
+      dec_order_defiter(defiter i): it(i) {}
+      virtual definition *def() { return it->second; }
+      ~dec_order_defiter() {}
+    };
+    
+    typedef deque<dec_order_g*> ordeque;
+    typedef ordeque::iterator orditer;
+    typedef ordeque::const_iterator orditer_c;
+    
+    /// A deque listing all declaraions (and dependent object references) in this scope, in order.
+    /// May contain duplicates.
+    ordeque dec_order;
+    
     /** Remove a previously added namespace from our using list. **/
     void unuse_namespace(using_node *ns);
     /** Add a namespace to the using list. This can technically be used on any scope. **/
@@ -457,7 +475,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -502,7 +520,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -520,7 +538,7 @@ namespace jdi {
   struct definition_union: definition_scope {
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -545,7 +563,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -590,11 +608,19 @@ namespace jdi {
       instantiation(): def(NULL), parameter_defs() {}
       ~instantiation();
     };
+    
     typedef map<arg_key, instantiation> instmap; ///< Map type for instantiations
     typedef instmap::iterator institer; ///< Map iterator type for instantiations
     
     typedef vector<definition_hypothetical*> deplist; ///< Dependent member liat
     typedef deplist::iterator depiter; ///< Dependent member iterator
+    
+    struct dec_order_hypothetical: dec_order_g {
+      definition_hypothetical *hyp;
+      dec_order_hypothetical(definition_hypothetical *h): hyp(h) {}
+      virtual definition *def();
+      ~dec_order_hypothetical() {}
+    };
     
     /** A map of all specializations **/
     specmap specializations;
@@ -610,7 +636,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
@@ -651,7 +677,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     
     virtual definition* look_up(string name); ///< Look up a definition in the parent of this scope (skip this scope). This function will never be used by the system.
     virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope. The definition will be marked HYPOTHETICAL, and the \c must_be_class flag will be set.
@@ -666,7 +692,7 @@ namespace jdi {
     definition* duplicate(remap_set &n);
     
     string kind() const;
-    void remap(const remap_set &n);
+    void remap(remap_set &n);
     size_t size_of();
     string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     size_t sz;
@@ -684,7 +710,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(const remap_set &n);
+    virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     

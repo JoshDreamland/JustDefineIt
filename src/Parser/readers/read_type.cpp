@@ -98,7 +98,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       }
       else {
         if (token.type == TT_IDENTIFIER or token.type == TT_DEFINITION)
-          token.report_error(herr,"Type name expected here; `" + token.content.toString() + "' does not name a type");
+          token.report_error(herr,"Type name expected here; `" + token.content.toString() + (token.type == TT_DEFINITION? "' does not name a type" : " is not declared"));
         else
           token.report_errorf(herr,"Type name expected here before %s");
         return full_type();
