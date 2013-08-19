@@ -277,7 +277,7 @@ namespace jdi
       
       case TT_COMMA:
       case TT_SEMICOLON:
-        token.report_error(herr, "Expected expression");
+        token.report_errorf(herr, "Expected expression before %s");
         return NULL;
       
       case TT_STRINGLITERAL:

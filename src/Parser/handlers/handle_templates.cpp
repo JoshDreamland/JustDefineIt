@@ -24,6 +24,7 @@
 #include <API/compile_settings.h>
 #include <Parser/handlers/handle_function_impl.h>
 #include <General/parse_basics.h>
+#include <Parser/is_potential_constructor.h>
 #include <cstdio>
 
 using namespace jdip;
@@ -32,6 +33,13 @@ using namespace jdip;
 #else
 #define ERROR_CODE 0
 #endif
+
+static inline bool in_template(definition *d) {
+  for (definition* s = d; s; s = s->parent)
+    if (s->flags & DEF_TEMPLATE)
+      return true;
+  return false;
+}
 
 int context_parser::handle_template(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
@@ -63,6 +71,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         ft.swap(fts);
         if (!ft.def) {
           token.report_error(herr,"Expected type name for default type to template parameter");
+          delete temp;
           return 1; // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
         }
       }
@@ -76,7 +85,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       if (token.type == TT_OPERATOR) {
         if (token.content.len != 1 or *token.content.str != '=') {
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-          FATAL_RETURN(1);
+          FATAL_RETURN((void(delete temp),1));
         }
         token = read_next_token(scope);
         ast = new AST();
@@ -199,8 +208,10 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           }
         }
         
-        if (read_template_parameter(argk, args_given, basetemp, lex, token, temp, this, herr))
+        if (read_template_parameter(argk, args_given, basetemp, lex, token, temp, this, herr)) {
+          delete temp; // XXX: is this needed?
           return 1;
+        }
         
         if (argk[args_given].type == arg_key::AKT_FULLTYPE) {
           definition *def = argk[args_given].ft().def;
@@ -219,8 +230,10 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           break;
         }
       }
-      if (check_read_template_parameters(argk, args_given, basetemp, token, herr))
+      if (check_read_template_parameters(argk, args_given, basetemp, token, herr)) {
+        delete temp; // XXX: Needed?
         return 1;
+      }
       
       // cout << "Specialization key: " << argk.toString() << endl;
       definition_template::speclist &slist = basetemp->specializations[argk];
@@ -255,6 +268,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     }
     
     token.report_errorf(herr, "Expected class name here before %s");
+    delete temp;
     return 1;
   }
   
@@ -272,12 +286,40 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     }
     
     if (funcrefs.refs.empty() || funcrefs.refs.top().type != ref_stack::RT_FUNCTION) {
-      token.report_error(herr, "Definition in template must be a function");
+      if (token.type == TT_DEFINITION && in_template(token.def)) {
+        read_qualified_definition(lex, scope, token, this, herr); // We don't need to know the definition, just skip it. If we were a compiler, we'd need to know this. :P
+        if (token.type == TT_OPERATOR && token.content.len == 1 && *token.content.str == '=') { // We don't need to know the value, either; we just need to skip it.
+          token = read_next_token(scope),
+          AST().parse_expression(token, lex, scope, precedence::comma, herr); // Read and discard; kind of a hack, but it's safe.
+        }
+        if (token.type != TT_SEMICOLON) {
+          token.report_errorf(herr, "Expected semicolon following template member definition before %s");
+          FATAL_RETURN(1);
+        }
+        delete temp; // We're done with temp.
+        return 0;
+      }
+      token.report_errorf(herr, "Definition in template must be a function; `" + funcrefs.def->name + " " + funcrefs.refs.name + "' is not a function (at %s " + token.content.toString() + ")");
       delete temp;
       return 1;
     }
     
     string funcname = funcrefs.refs.name;
+    if (funcname.empty()) {
+      if (is_potential_constructor(scope, funcrefs)) {
+        funcname = constructor_name;
+        if (token.type == TT_COLON) {
+          // TODO: Actually store this. And the other one. :P
+          handle_constructor_initializers(lex, token, scope, herr);
+        }
+      }
+      else {
+        token.report_error(herr, "Template functions must have names");
+        delete temp;
+        return 1;
+      }
+    }
+    
     definition_function *func = NULL;
     definition *maybe = scope->find_local(funcname);
     if (maybe)
@@ -296,10 +338,17 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       scope->declare(funcname, func = new definition_function(funcname, scope));
     func->overload(temp);
     
+    if (token.type == TT_COLON) {
+      token.report_error(herr, "Unexpected colon; `" + funcname + "' is not a constructor");
+      return 1;
+    }
+    
     if (token.type == TT_LEFTBRACE)
       tovr->implementation = (handle_function_implementation(lex, token, temp, herr));
-    else if (token.type != TT_SEMICOLON)
+    else if (token.type != TT_SEMICOLON) {
       token.report_errorf(herr, "Expected template function body or semicolon before %s");
+      FATAL_RETURN(1);
+    }
   }
   else if (token.type == TT_TEMPLATE) // Specialization
   {

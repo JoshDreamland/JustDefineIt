@@ -81,26 +81,19 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   return handle_declarators(scope, token, tp, inherited_flags, res);
 }
 
+#include <Parser/is_potential_constructor.h>
+#include "handle_function_impl.h"
+
 int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, full_type &tp, unsigned inherited_flags, definition* &res)
 {
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (tp.refs.name.empty()) {
-    const bool potentialc = ((scope->flags & DEF_CLASS) and tp.def->name == scope->name);
-    
-    #define invalid_ctor_flags ~(builtin_flag__explicit | builtin_flag__virtual) // Virtual's a bit of a longshot, but we'll take it.
-    
-    // Handle constructors; this might need moved to a handle_constructors method.
+    const bool potentialc = is_potential_constructor(scope, tp);
     if (potentialc and !(tp.flags & invalid_ctor_flags) and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION) {
-      tp.refs.name = "<construct>";
+      tp.refs.name = constructor_name;
       if (token.type == TT_COLON) {
         // TODO: When you have a place to store constructor data, 
-        do {
-          token = read_next_token(scope);
-          if (token.type == TT_SEMICOLON) {
-            token.report_error(herr, "Expected constructor body here after initializers.");
-            return FATAL_TERNARY(1,0);
-          }
-        } while (token.type != TT_LEFTBRACE);
+        handle_constructor_initializers(lex, token, scope, herr);
       }
     }
     else if (token.type == TT_COLON) {

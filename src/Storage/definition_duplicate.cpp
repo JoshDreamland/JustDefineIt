@@ -33,6 +33,12 @@ namespace jdi {
   
   void definition_scope::copy(const definition_scope* from, remap_set &n) {
     for (defiter_c it = from->members.begin(); it != from->members.end(); it++)
+    #ifdef DEBUG_MODE
+    if (it->second == NULL) {
+      cerr << "COMPLETE FAILURE. `" << it->first << "' in `" << from->name << "' is NULL!" << endl;
+      abort();
+    } else
+    #endif
     if (!(it->second->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION))) {
       inspair dest = members.insert(entry(it->first,NULL));
       if (dest.second) {
@@ -116,6 +122,7 @@ namespace jdi {
     res->overloads = overloads;
     for (overload_iter it = res->overloads.begin(); it != res->overloads.end(); ++it)
       it->second = (definition_overload*)it->second->duplicate(n);
+    n[this] = res;
     return res;
   }
   

@@ -40,15 +40,15 @@ namespace jdi {
     DEF_TYPED =        1 <<  6, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
     DEF_FUNCTION =     1 <<  7, ///< This definition is a function containing a list of zero or more overloads.
     DEF_OVERLOAD =     1 <<  8, ///< This definition is a function overload, containing a type and implementation.
-    DEF_VALUED =       1 << 10, ///< This definition has a default expression attached.
-    DEF_EXTERN =       1 << 11, ///< This definition was declared with the "extern" flag.
-    DEF_TEMPLATE =     1 << 12, ///< This definition has template parameters attached.
-    DEF_TEMPPARAM =    1 << 13, ///< This definition belongs to a list of template parameters, and is therefore abstract.
-    DEF_HYPOTHETICAL = 1 << 15, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_PRIVATE =      1 << 16, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 17, ///< This definition was declared as a protected member.
-    DEF_INCOMPLETE =   1 << 18, ///< This definition was declared but not implemented.
-    DEF_ATOMIC =       1 << 19  ///< This is a global definition for objects of a fixed size, such as primitives.
+    DEF_VALUED =       1 <<  9, ///< This definition has a default expression attached.
+    DEF_EXTERN =       1 << 10, ///< This definition was declared with the "extern" flag.
+    DEF_TEMPLATE =     1 << 11, ///< This definition has template parameters attached.
+    DEF_TEMPPARAM =    1 << 12, ///< This definition belongs to a list of template parameters, and is therefore abstract.
+    DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
+    DEF_PRIVATE =      1 << 15, ///< This definition was declared as a private member.
+    DEF_PROTECTED =    1 << 16, ///< This definition was declared as a protected member.
+    DEF_INCOMPLETE =   1 << 17, ///< This definition was declared but not implemented.
+    DEF_ATOMIC =       1 << 18  ///< This is a global definition for objects of a fixed size, such as primitives.
   };
   
   struct definition;
@@ -138,6 +138,9 @@ namespace jdi {
         @return Returns a string representation of everything in this definition.
     **/
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    
+    /// Return the qualified ID of this definition, eg, ::std::string.
+    string qualified_id() const;
     
     #ifdef CUSTOM_MEMORY_MANAGEMENT
     void *operator new(size_t sz);

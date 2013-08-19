@@ -298,7 +298,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
             definition_function *df;
             
             if (ins.inserted)
-              df = new definition_function(opname, scope, inherited_flags);
+              ins.def = df = new definition_function(opname, scope, inherited_flags);
             else df = (definition_function*)ins.def;
             
             definition_overload *ovr = df->overload(ft, inherited_flags, herr);

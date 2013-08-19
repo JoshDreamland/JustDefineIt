@@ -137,9 +137,24 @@ template<> string add_one(string x) { return x + "1"; }
 
 /* */
 
+// Completely working
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+
+// In progress
+/*#include <bits/stl_algobase.h>  // std::copy, std::fill_n
+#include <bits/postypes.h>      // For streampos
+#include <cwchar>               // For WEOF, wmemmove, wmemset, etc.
+
+// Down the road
+#include <bits/char_traits.h>
+
+// Way down the road
+#include <string>
+
+// The north pole
+#include <iostream>
 
 /*
 #include <cassert>
@@ -201,3 +216,19 @@ template<> string add_one(string x) { return x + "1"; }
 */
 
 
+
+#ifndef _STL_ALGOBASE_H
+#define _STL_ALGOBASE_H 1
+
+#include <bits/c++config.h>
+#include <bits/functexcept.h>
+#include <bits/cpp_type_traits.h>
+#include <ext/type_traits.h>
+#include <ext/numeric_traits.h>
+#include <bits/stl_pair.h>
+#include <bits/stl_iterator_base_types.h>
+#include <bits/stl_iterator_base_funcs.h>
+#include <bits/stl_iterator.h>
+#include <bits/concept_check.h>
+#include <debug/debug.h>
+#include <bits/move.h> // For std::swap and _GLIBCXX_MOVE

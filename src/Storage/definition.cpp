@@ -45,6 +45,11 @@ namespace jdi {
   definition_typed::definition_typed(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
   definition_typed::~definition_typed() {}
   
+  string definition::qualified_id() const {
+    if (!parent) return name;
+    return parent->qualified_id() + "::" + name;
+  }
+  
   // NOTICE:
   // This (flgs | DEF_FUNCTION) &~(DEF_PRIVATE | DEF_PROTECTED) stuff is to make sure that definition_function, which is basically a method group,
   // is not itself protected or private. Only specific overloads, which actually have a prototype, may be private or protected.

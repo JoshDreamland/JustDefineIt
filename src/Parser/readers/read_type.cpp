@@ -71,6 +71,8 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
           if (rdef->flags & DEF_TEMPLATE) {
             if ((scope->flags & DEF_CLASS) and scope->name == rdef->name)
               rdef = scope;
+            else if ((scope->flags & DEF_TEMPLATE) && scope->parent && (scope->parent->flags & DEF_CLASS) and scope->parent->name == rdef->name)
+              rdef = scope->parent;
             else if (rdef->flags & DEF_HYPOTHETICAL) {
               token.report_warning(herr, "Template definition should be qualified using `typename'");
               ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
@@ -186,6 +188,8 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   return full_type(rdef, rrefs, rflags);
 }
 
+#include <Parser/is_potential_constructor.h>
+
 #include <General/debug_macros.h>
 int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
@@ -205,7 +209,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         token = lex->get_token_in_scope(scope, herr);
         
         // Check if we're a constructor.
-        bool potentialc = (scope->flags & DEF_CLASS) and ft.def->name == scope->name;
+        bool potentialc = is_potential_constructor(scope, ft.def->name);
         if (potentialc and (token.type != TT_OPERATOR or token.content.len != 1 or *token.content.str != '*'))
         {
           if (read_function_params(refs, lex, token, scope, cp, herr))
