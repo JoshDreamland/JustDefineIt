@@ -81,6 +81,7 @@
 		<Unit filename="src/API/AST.cpp" />
 		<Unit filename="src/API/AST.h" />
 		<Unit filename="src/API/AST_Export.cpp" />
+		<Unit filename="src/API/AST_forward.h" />
 		<Unit filename="src/API/compile_settings.h" />
 		<Unit filename="src/API/context.cpp" />
 		<Unit filename="src/API/context.h" />
@@ -116,6 +117,7 @@
 		<Unit filename="src/Parser/handlers/handle_scope.cpp" />
 		<Unit filename="src/Parser/handlers/handle_templates.cpp" />
 		<Unit filename="src/Parser/handlers/handle_union.cpp" />
+		<Unit filename="src/Parser/is_potential_constructor.h" />
 		<Unit filename="src/Parser/parse_context.cpp" />
 		<Unit filename="src/Parser/parse_context.h" />
 		<Unit filename="src/Parser/readers/read_expression.cpp" />
@@ -124,9 +126,11 @@
 		<Unit filename="src/Parser/readers/read_qualified_definition.cpp" />
 		<Unit filename="src/Parser/readers/read_template_parameters.cpp" />
 		<Unit filename="src/Parser/readers/read_type.cpp" />
+		<Unit filename="src/Storage/arg_key.h" />
 		<Unit filename="src/Storage/definition.cpp" />
 		<Unit filename="src/Storage/definition.h" />
 		<Unit filename="src/Storage/definition_duplicate.cpp" />
+		<Unit filename="src/Storage/definition_forward.h" />
 		<Unit filename="src/Storage/full_type.cpp" />
 		<Unit filename="src/Storage/full_type.h" />
 		<Unit filename="src/Storage/references.cpp" />

@@ -21,6 +21,7 @@
 
 #include "AST.h"
 #include <General/svg_simple.h>
+using std::max;
 
 namespace jdi {
   string AST::toString() const {

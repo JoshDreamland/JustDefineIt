@@ -195,9 +195,9 @@ namespace jdi {
 //=========================================================================================================
 
 #include <Storage/full_type.h>
-#include <Storage/definition.h>
+#include <Storage/definition_forward.h>
 #include <General/quickvector.h>
-#include <API/AST.h>
+#include <API/AST_forward.h>
 
 namespace jdi {
   /// Parameter storage type; contains type info and other important parameter info.

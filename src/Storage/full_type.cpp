@@ -94,6 +94,7 @@ namespace jdi {
       refs.append_c(app);
       flags |= type->flags;
     }
+    def = type;
     return *this;
   }
   

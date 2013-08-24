@@ -54,19 +54,22 @@ int jdip::context_parser::handle_class_inheritance(definition_scope *scope, toke
       token.report_errorf(herr, "Expected class name to inherit before %s");
       return 1;
     }
+    ft.reduce();
+    if (ft.refs.size())
+      token.report_warning(herr, "Extra qualifications in `" + ft.toString() + "' for ancestor class discarded");
     if (not(ft.def->flags & DEF_CLASS)) {
       if (ft.def->flags & DEF_TEMPPARAM) {
         definition_tempparam *tp = (definition_tempparam*)ft.def;
         tp->must_be_class = true;
       }
+      else if (ft.def->flags & DEF_HYPOTHETICAL) {
+        definition_hypothetical *tp = (definition_hypothetical*)ft.def;
+        tp->required_flags |= DEF_CLASS;
+      }
       else {
         token.report_errorf(herr, "Expected class name to inherit before %s");
         return 1;
       }
-    }
-    else {
-      if (ft.flags or ft.refs.size())
-        token.report_warning(herr, "Extra modifiers to inherited class ignored");
     }
     recipient->ancestors.push_back(definition_class::ancestor(iprotection, (definition_class*)ft.def));
   }

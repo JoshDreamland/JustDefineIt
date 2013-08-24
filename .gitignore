@@ -8,3 +8,4 @@ ValgrindOut.xml
 cachegrind.*
 src/User/token_cases.h
 src/User/token_cases.h
+*.cbTemp

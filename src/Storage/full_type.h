@@ -28,7 +28,7 @@ namespace jdi {
 
 #endif
 
-#include <Storage/definition.h>
+#include <Storage/definition_forward.h>
 #include <Storage/references.h>
 
 #ifndef _FULL_TYPE__H__DETAIL

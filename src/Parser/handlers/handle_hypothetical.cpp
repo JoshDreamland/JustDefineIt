@@ -23,24 +23,27 @@
 #include <API/compile_settings.h>
 
 namespace jdip {
-  definition_hypothetical* handle_hypothetical(lexer *lex, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
-    
-    AST *a = new AST();
-    if (a->parse_expression(token, lex, scope, precedence::scope, herr))
-      { FATAL_RETURN(1); }
-    
+  inline definition_hypothetical* handle_hypothetical_ast(AST *a, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
     definition_scope *temps;
     for (temps = scope; temps && !(temps->flags & DEF_TEMPLATE); temps = temps->parent);
     if (!temps || !(temps->flags & DEF_TEMPLATE)) {
       token.report_error(herr, "Cannot infer type outside of template");
+      delete a;
       return NULL;
     }
     definition_template *temp = (definition_template*)temps;
     
-    // TODO: XXX: Should this use hypothetical at all? Or should it just use a template parameter?
     definition_hypothetical* h = new definition_hypothetical("(?=" + a->toString() + ")", scope, flags, a);
     temp->dependents.push_back(h);
     scope->dec_order.push_back(new definition_template::dec_order_hypothetical(h));
     return h;
+  }
+  
+  definition_hypothetical* handle_hypothetical(lexer *lex, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
+    AST *a = new AST();
+    if (a->parse_expression(token, lex, scope, precedence::scope, herr))
+      { FATAL_RETURN(1); }
+    
+    return handle_hypothetical_ast(a, scope, token, flags, herr);
   }
 }

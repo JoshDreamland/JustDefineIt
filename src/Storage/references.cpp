@@ -24,6 +24,7 @@
 **/
 
 #include "references.h"
+#include <API/AST.h>
 
 #ifndef dbg_assert
   #ifdef DEBUG_MODE
@@ -35,6 +36,7 @@
 #endif
 #include <iostream>
 #include <cstdio>
+using namespace std;
 
 namespace jdi {
   ref_stack::ref_stack(): ntop(NULL), nbottom(NULL), sz(0) {}

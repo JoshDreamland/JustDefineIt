@@ -29,13 +29,15 @@
 #define _AST__H
 #define _AST__H__DEBUG // Used in debug_macros.h. Do not rename on a whim.
 
-namespace jdi { class AST; }
+#include "AST_forward.h"
 
 #include <string>
+#include <Storage/arg_key.h>
 #include <System/token.h>
 #include <Storage/value.h>
 #include <API/lexer_interface.h>
 #include <API/error_reporting.h>
+#include <Storage/definition.h>
 
 namespace jdi {
   struct ASTOperator;
@@ -364,6 +366,25 @@ namespace jdi {
       AST_Node_TempInst(definition_template *def);
       virtual ~AST_Node_TempInst();
     };
+    struct AST_Node_TempInstByKey: AST_Node {
+      definition_template* temp; ///< The template to be instantiated.
+      arg_key key; ///< The \c arg_key which will be used to instantiate \c temp, after some remapping.
+      
+      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
+      virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
+      virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
+      virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
+      
+      virtual string toString() const; ///< Renders this node and its children as a string, recursively.
+      virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
+      virtual int width(); ///< Returns the width which will be used to render this node and all its children.
+      virtual int height(); ///< Returns the height which will be used to render this node and all its children.
+      
+      AST_Node_TempInstByKey(definition_template *def);
+      virtual ~AST_Node_TempInstByKey();
+    };
     /// Child of AST_Node for function call parameters.
     struct AST_Node_Parameters: AST_Node {
       AST_Node *func;
@@ -517,6 +538,8 @@ namespace jdi {
     AST();
     /// Construct with a single node
     AST(definition* def);
+    /// Construct with a single template instantiation node (by key)
+    AST(definition_template* temp, const arg_key& key);
     
     /// Default destructor. Deletes the AST.
     ~AST();

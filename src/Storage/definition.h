@@ -26,71 +26,28 @@
 #define _DEFINITION__H
 
 #include <General/quickreference.h>
-
-namespace jdi {
-  /** Flags given to a definition to describe its type simply and quickly. **/
-  enum DEF_FLAGS
-  {
-    DEF_TYPENAME =     1 <<  0, ///< This definition can be used as a typename. This does not imply that it has a valid type; see DEF_TYPED.
-    DEF_NAMESPACE =    1 <<  1, ///< This definition is a namespace.
-    DEF_CLASS =        1 <<  2, ///< This definition is a class or structure. 
-    DEF_ENUM =         1 <<  3, ///< This definition is an enumeration of valued constants.
-    DEF_UNION =        1 <<  4, ///< This definition is a union of multiple types.
-    DEF_SCOPE =        1 <<  5, ///< This definition is a scope of some sort.
-    DEF_TYPED =        1 <<  6, ///< This definition contains a type and referencer list. Used with DEF_TYPENAME to mean TYPEDEF.
-    DEF_FUNCTION =     1 <<  7, ///< This definition is a function containing a list of zero or more overloads.
-    DEF_OVERLOAD =     1 <<  8, ///< This definition is a function overload, containing a type and implementation.
-    DEF_VALUED =       1 <<  9, ///< This definition has a default expression attached.
-    DEF_EXTERN =       1 << 10, ///< This definition was declared with the "extern" flag.
-    DEF_TEMPLATE =     1 << 11, ///< This definition has template parameters attached.
-    DEF_TEMPPARAM =    1 << 12, ///< This definition belongs to a list of template parameters, and is therefore abstract.
-    DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
-    DEF_PRIVATE =      1 << 15, ///< This definition was declared as a private member.
-    DEF_PROTECTED =    1 << 16, ///< This definition was declared as a protected member.
-    DEF_INCOMPLETE =   1 << 17, ///< This definition was declared but not implemented.
-    DEF_ATOMIC =       1 << 18  ///< This is a global definition for objects of a fixed size, such as primitives.
-  };
-  
-  struct definition;
-  struct definition_typed;
-  struct function_overload;
-  struct definition_function;
-  struct definition_valued;
-  struct definition_scope;
-  struct definition_class;
-  struct definition_enum;
-  struct definition_template;
-  struct definition_tempparam;
-  struct definition_atomic;
-  struct definition_hypothetical;
-  
-  /// Structure for inserting declarations into a scope.
-  struct decpair {
-    quick::double_pointer<definition> def; ///< The definition that was there previously, or that was inserted if it did not exist.
-    bool inserted; ///< True if the given definition was inserted, false otherwise.
-    /** Construct with data.
-      @param def        A pointer to the pointer to the definition that exists under the previously given key.
-      @param inserted   True if a new entry was created under the given key, false if the key-value was left unchanged.
-    */
-    decpair(definition* *def, bool inserted);
-  };
-}
-
+#include "definition_forward.h"
 
 #include <map>
 #include <string>
+#include <cstddef>
 #include <vector>
 #include <deque>
-#include <iostream>
-using namespace std;
-typedef size_t pt;
+using std::map;
+using std::vector;
+using std::deque;
+using std::pair;
 
 namespace jdi {
   /// Map type to contain definitions to remap along with the definition with which it will be replaced
   typedef map<const definition*, definition*> remap_set;
   typedef remap_set::const_iterator remap_citer;
   typedef remap_set::iterator remap_iter;
-  
+}
+
+#include <Storage/arg_key.h>
+
+namespace jdi {
   /**
     @struct jdi::definition
     @brief  The class responsible for storing all parsed definitions.
@@ -192,85 +149,6 @@ namespace jdi {
     definition_typed(string name, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flags = DEF_TYPED);
     
     virtual ~definition_typed();
-  };
-  
-  /** Structure containing template arguments; can be used as the key in an std::map. **/
-  class arg_key {
-  public:
-    enum ak_type { AKT_NONE, AKT_FULLTYPE, AKT_VALUE };
-    /** Improvised C++ Union of full_type and value. */
-    struct node {
-      struct antialias {
-        char data[
-          (((sizeof(full_type) > sizeof(value))? sizeof(full_type) : sizeof(value)) + sizeof(char) - 1)
-          /sizeof(char)
-        ];
-      } data;
-      ak_type type;
-      
-      bool is_abstract() const;
-      inline const full_type& ft() const { return *(full_type*)&data; }
-      inline const value& val() const { return *(value*)&data; }
-      inline full_type& ft() { return *(full_type*)&data; }
-      inline value& val() { return *(value*)&data; }
-      node &operator= (const node& other);
-      bool operator!=(const node& x) const;
-      
-      inline node(): type(AKT_NONE) {}
-      ~node();
-    };
-    
-    private:
-      /// An array of all our values
-      node *values;
-      /// A pointer past our value array
-      node *endv;
-      
-    public:
-      static definition abstract; ///< A sentinel pointer marking that this parameter is still abstract.
-      /// A comparator to allow storage in a map.
-      bool operator<(const arg_key& other) const;
-      /// A method to prepare this instance for storage of parameter values for the given template.
-      void mirror(definition_template* temp);
-      /// Allocate a new definition for the parameter at the given index; this will be either a definition_typed or definition_valued.
-      definition *new_definition(size_t index, string name, definition_scope* parent) const;
-      /// A fast function to assign to our list at a given index, consuming the given type.
-      void swap_final_type(size_t argnum, full_type &type);
-      /// A less fast function to assign to our list at a given index, copying the given type.
-      void put_final_type(size_t argnum, const full_type &type);
-      /// A slower function to put the most basic type representation down, consuming the given type
-      void swap_type(size_t argnum, full_type &type);
-      /// An even slower function to put the most basic type representation down, copying the given starting type
-      void put_type(size_t argnum, const full_type &type);
-      /// Function to copy over a full node
-      void put_node(size_t argnum, const node &n);
-      /// A quick function to put a value at a given index
-      void put_value(size_t argnum, const value& val);
-      /// A quick function to grab the type at a position
-      inline node &operator[](size_t x) { return values[x]; }
-      inline const node &operator[](size_t x) const { return values[x]; }
-      /// A quick function to return an immutable pointer to the first parameter
-      inline node* begin() { return values; }
-      /// A quick function to return a pointer past the end of our list
-      inline node* end() { return endv; }
-      /// Const begin() equivalent.
-      inline const node* begin() const { return values; }
-      /// Const end() equivalent.
-      inline const node* end() const { return endv; }
-      
-      /// Return a string version of this key's argument list. You'll need to wrap in () or <> yourself.
-      string toString() const;
-      
-      /// Default constructor; mark values NULL.
-      arg_key();
-      /// Construct with a size, reserving sufficient memory.
-       arg_key(size_t n);
-      /// Construct a copy.
-      arg_key(const arg_key& other);
-      /// Construct from a ref_stack.
-      arg_key(const ref_stack& refs);
-      /// Destruct, freeing items.
-      ~arg_key();
   };
   
   /// Structure to augment an arg_key when choosing the correct specialization

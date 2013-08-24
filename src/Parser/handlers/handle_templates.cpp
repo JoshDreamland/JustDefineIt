@@ -61,12 +61,12 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       token = lex->get_token(herr);
       if (token.type == TT_IDENTIFIER) {
         pname = token.content.toString();
-        token = read_next_token(scope);
+        token = read_next_token(temp);
       }
       if (token.type == TT_OPERATOR) {
         if (token.content.len != 1 or *token.content.str != '=')
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-        token = read_next_token(scope);
+        token = read_next_token(temp);
         full_type fts = read_fulltype(lex, token, temp, this, herr);
         ft.swap(fts);
         if (!ft.def) {
@@ -78,7 +78,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       dtn = new definition_tempparam(pname, temp, ft, DEF_TYPENAME | DEF_TEMPPARAM);
     }
     else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
-      full_type fts = read_fulltype(lex, token, scope, this, herr);
+      full_type fts = read_fulltype(lex, token, temp, this, herr);
       ft.swap(fts);
       pname = ft.refs.name;
       AST *ast = NULL;
@@ -87,10 +87,10 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
           FATAL_RETURN((void(delete temp),1));
         }
-        token = read_next_token(scope);
+        token = read_next_token(temp);
         ast = new AST();
         ast->set_use_for_templates(true);
-        ast->parse_expression(token, lex, scope, precedence::comma+1, herr);
+        ast->parse_expression(token, lex, temp, precedence::comma+1, herr);
       }
       dtn = new definition_tempparam(pname, temp, ft, ast, DEF_TEMPPARAM);
     }
@@ -112,7 +112,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       break;
     if (token.type != TT_COMMA)
       token.report_errorf(herr, "Expected '>' or ',' before %s");
-    token = read_next_token(scope);
+    token = read_next_token(temp);
   }
   
   token = read_next_token(temp);
@@ -217,7 +217,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           definition *def = argk[args_given].ft().def;
           for (size_t i = 0; i < temp->params.size(); ++i) if (temp->params[i] == def) {
             spec->key.arg_inds[i][++spec->key.arg_inds[i][0]] = args_given;
-            argk[args_given].ft().def = &arg_key::abstract;
+            argk[args_given].ft().def = arg_key::abstract;
           }
         }
         
@@ -226,7 +226,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         if (token.type == TT_GREATERTHAN)
           break;
         if (token.type != TT_COMMA) {
-          token.report_errorf(herr, "Comma expected here before %s");
+          token.report_errorf(herr, "Comma or closing triangle bracket expected here before %s");
           break;
         }
       }

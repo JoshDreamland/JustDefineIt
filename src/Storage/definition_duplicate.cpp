@@ -23,6 +23,10 @@
 **/
 
 #include "definition.h"
+#include <iostream>
+using std::cerr;
+using std::cout;
+using std::endl;
 
 namespace jdi {
   struct dec_order_generic: definition_scope::dec_order_g {
@@ -342,12 +346,12 @@ namespace jdi {
     full_type ft = nast->coerce();
     
     if (!ft.def) {
-      cerr << ("Problem instantiating `" + name + "': coercion failure in expression: " + def->toString() + " => " + nast->toString());
-      #ifdef DEBUG_MODE
+      cerr << "Problem instantiating `" + name + "': coercion failure in expression: " + nast->toString() << endl;
+      /*#ifdef DEBUG_MODE
       cerr << "Remap dump:" << endl;
       for (remap_citer rit = n.begin(); rit != n.end(); ++rit)
         cerr << "  " << ((definition*)rit->first)->toString() << "\t\t=>\t\t" << rit->second->toString() << endl; 
-      #endif
+      #endif*/
     }
     else {
       #ifdef DEBUG_MODE

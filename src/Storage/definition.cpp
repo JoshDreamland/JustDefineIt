@@ -319,7 +319,7 @@ namespace jdi {
     return ins.first->second.def;
   }
   
-  definition arg_key::abstract("<unspecified>", NULL, 0);
+  definition *arg_key::abstract = new definition("<unspecified>", NULL, 0);
   
   definition *arg_key::new_definition(size_t index, string name, definition_scope* parent) const {
     if (values[index].type == AKT_FULLTYPE)
@@ -370,12 +370,12 @@ namespace jdi {
       }
       else if (i->type == AKT_FULLTYPE) { // I is not a value; ie, it is a full_type
         if (j->type != AKT_FULLTYPE) return true;
-        if (i->ft().def == &abstract) {
+        if (i->ft().def == abstract) {
           if ((j->ft().flags & i->ft().flags) != i->ft().flags || !j->ft().refs.ends_with(i->ft().refs))
             return false;
           continue;
         }
-        if (j->ft().def == &abstract) {
+        if (j->ft().def == abstract) {
           if ((i->ft().flags & j->ft().flags) != j->ft().flags || !i->ft().refs.ends_with(j->ft().refs))
             return true;
           continue;
@@ -479,12 +479,12 @@ namespace jdi {
       new(&data) value(other.val());
     return *this;
   }
-  bool arg_key::node::is_abstract() const { return type == AKT_FULLTYPE? ft().def == &abstract : val().type == VT_DEPENDENT; }
+  bool arg_key::node::is_abstract() const { return type == AKT_FULLTYPE? ft().def == abstract : val().type == VT_DEPENDENT; }
   arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)&data)->~full_type(); else if (type == AKT_VALUE) ((value*)&data)->~value(); }
   
   bool arg_key::node::operator!=(const node &n) const {
     if (type != n.type) return true;
-    if (type == AKT_FULLTYPE) return ft().def != &abstract and n.ft().def != &abstract and ft() != n.ft();
+    if (type == AKT_FULLTYPE) return ft().def != abstract and n.ft().def != abstract and ft() != n.ft();
     return val().type != VT_DEPENDENT && n.val().type != VT_DEPENDENT && val() != n.val();
   }
   
