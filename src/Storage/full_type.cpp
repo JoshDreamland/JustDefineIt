@@ -92,7 +92,7 @@ namespace jdi {
       type = typed->type;
       ref_stack app = typed->referencers;
       refs.append_c(app);
-      flags |= type->flags;
+      flags |= typed->modifiers;
     }
     def = type;
     return *this;

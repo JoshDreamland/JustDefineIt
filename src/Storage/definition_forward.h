@@ -24,6 +24,7 @@
 #ifndef _DEFINITION_FORWARD__H
 #define _DEFINITION_FORWARD__H
 
+#include <map>
 #include <General/quickreference.h>
 
 namespace jdi {
@@ -73,6 +74,11 @@ namespace jdi {
     */
     decpair(definition* *def, bool inserted);
   };
+  
+  /// Map type to contain definitions to remap along with the definition with which it will be replaced
+  typedef std::map<const definition*, definition*> remap_set;
+  typedef remap_set::const_iterator remap_citer;
+  typedef remap_set::iterator remap_iter;
 }
 
 #endif

@@ -682,7 +682,7 @@ namespace jdi
     full_type res = left->coerce();
     if (!res.def or !(res.def->flags & DEF_SCOPE))
       return value();
-    if (res.def == builtin_type__void)
+    if (res.def == arg_key::abstract)
       return value(VT_DEPENDENT);
     // cout << "Evaluating :: operator: " << res.def->name << "::" << right->content << endl;
     definition* d = ((definition_scope*)res.def)->find_local(right->content);
@@ -788,6 +788,9 @@ namespace jdi
   value AST::AST_Node_TempInst::eval() const {
     return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
   }
+  value AST::AST_Node_TempKeyInst::eval() const {
+    return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
+  }
   
   //===========================================================================================================================
   //=: Coercers :==============================================================================================================
@@ -824,6 +827,7 @@ namespace jdi
     full_type res = left->coerce();
     if (!res.def or !(res.def->flags & DEF_SCOPE))
       return full_type();
+    if (res.def == arg_key::abstract) return arg_key::abstract;
     res.def = ((definition_scope*)res.def)->look_up(right->content);
     return res;
   }
@@ -937,16 +941,22 @@ namespace jdi
     k.mirror(temp);
     for (size_t i = 0; i < params.size(); ++i) {
       if (temp->params[i]->flags & DEF_TYPENAME) {
-        k.put_type(i, params[i]->coerce());
+        full_type t = params[i]->coerce();
+        if (t.def == arg_key::abstract) return arg_key::abstract;
+        k.put_type(i, t);
       }
       else {
         value v = params[i]->eval();
         if (v.type == VT_DEPENDENT) // Bail out returning void if we have dependent parameters
-          return builtin_type__void;
+          return arg_key::abstract;
         k.put_value(i, v);
       }
     }
     return full_type(temp->instantiate(k, def_error_handler));
+  }
+  full_type AST::AST_Node_TempKeyInst::coerce() const {
+    if (key.is_abstract()) return arg_key::abstract;
+    return full_type(temp->instantiate(key, def_error_handler));
   }
   
   //===========================================================================================================================
@@ -979,6 +989,7 @@ namespace jdi
   AST::AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): AST_Node(AT_SUBSCRIPT), left(l), index(ind) {}
   AST::AST_Node_Subscript::AST_Node_Subscript(): AST_Node(AT_SUBSCRIPT), left(NULL), index(NULL) {}
   AST::AST_Node_TempInst::AST_Node_TempInst(definition_template* d): AST_Node(d->name, AT_INSTANTIATE), temp(d) {}
+  AST::AST_Node_TempKeyInst::AST_Node_TempKeyInst(definition_template* t, const arg_key &k): AST_Node(t->name, AT_INSTBYKEY), temp(t), key(k) {}
   AST::AST_Node_Array::AST_Node_Array(): AST_Node(AT_ARRAY) {}
   
   
@@ -992,6 +1003,7 @@ namespace jdi
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
   AST::AST_Node_TempInst::~AST_Node_TempInst() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
+  AST::AST_Node_TempKeyInst::~AST_Node_TempKeyInst() { }
   AST::AST_Node_Array::~AST_Node_Array() { for (vector<AST_Node*>::iterator it = elements.begin(); it != elements.end(); ++it) delete *it; }
   AST::AST_Node_Subscript::~AST_Node_Subscript() { delete left; delete index; }
   
@@ -1015,6 +1027,7 @@ namespace jdi
   void AST::AST_Node_delete     ::operate(ASTOperator *aop, void *param) { aop->operate_delete     (this, param); }
   void AST::AST_Node_Subscript  ::operate(ASTOperator *aop, void *param) { aop->operate_Subscript  (this, param); }
   void AST::AST_Node_TempInst   ::operate(ASTOperator *aop, void *param) { aop->operate_TempInst   (this, param); }
+  void AST::AST_Node_TempKeyInst::operate(ASTOperator *aop, void *param) { aop->operate_TempKeyInst(this, param); }
   
   void AST::AST_Node            ::operate(ConstASTOperator *aop, void *param) const { aop->operate            (this, param); }
   void AST::AST_Node_Definition ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Definition (this, param); }
@@ -1031,6 +1044,7 @@ namespace jdi
   void AST::AST_Node_delete     ::operate(ConstASTOperator *aop, void *param) const { aop->operate_delete     (this, param); }
   void AST::AST_Node_Subscript  ::operate(ConstASTOperator *aop, void *param) const { aop->operate_Subscript  (this, param); }
   void AST::AST_Node_TempInst   ::operate(ConstASTOperator *aop, void *param) const { aop->operate_TempInst   (this, param); }
+  void AST::AST_Node_TempKeyInst::operate(ConstASTOperator *aop, void *param) const { aop->operate_TempKeyInst(this, param); }
   
   //===========================================================================================================================
   //=: Everything else :=======================================================================================================
@@ -1047,10 +1061,17 @@ namespace jdi
     return !root;
   }
   
+  void AST::swap(AST& o) {
+    AST_Node *r = o.root;
+    o.root = root;
+    root = r;
+  }
+  
   AST::AST(): root(NULL), search_scope(NULL), tt_greater_is_op(true) {}
   AST::AST(AST_Node* r): root(r), search_scope(NULL), tt_greater_is_op(true) {}
   AST::AST(AST_Node* r, definition_scope *ss): root(r), search_scope(ss), tt_greater_is_op(true) {}
   AST::AST(definition* d): root(new AST_Node_Definition(d, d->name)), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(definition_template* temp, const arg_key &key): root(new AST_Node_TempKeyInst(temp, key)), search_scope(NULL), tt_greater_is_op(true) {}
     
   AST::~AST() {
     delete root;

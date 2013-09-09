@@ -40,6 +40,9 @@ int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_templ
       if (argk[argnum].val().type != VT_INTEGER) {
         if (argk[argnum].val().type == VT_DEPENDENT) {
           argk[argnum].val() = VT_DEPENDENT;
+          AST *ah = new AST();
+          ah->swap(a);
+          argk[argnum].av().ast = ah;
         }
         else {
           token.report_error(herr, "Expression must give integer result (value returned: " + argk[argnum].val().toString() + ")");

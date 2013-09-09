@@ -57,24 +57,25 @@ namespace jdi {
     enum AST_TYPE {
       AT_UNARY_PREFIX, ///< This node is some kind of unary prefix operator, such as *, &, ~, or -.
       AT_UNARY_POSTFIX, ///< This node is some kind of unary postfix operator, such as ++, [], or ().
-      AT_BINARYOP,   ///< This node is a binary operator, like /, *, -, or +.
-      AT_TERNARYOP,  ///< This node is a ternary operator. Note that ?: is the only one currently supported.
-      AT_DECLITERAL, ///< This node is a decimal literal, such as 1337.
-      AT_HEXLITERAL, ///< This node is a hexadecimal literal, such as 0x539
-      AT_OCTLITERAL, ///< This node is an octal literal, such as 2471.
-      AT_CHRLITERAL, ///< This node is a character literal, such as 'a'.
-      AT_IDENTIFIER, ///< This node is an identifier that could not be looked up.
-      AT_DEFINITION, ///< This node is a definition; an identifier that has been looked up.
-      AT_TYPE,       ///< This node is a full type.
-      AT_ARRAY,      ///< This node is an array of nodes.
-      AT_SUBSCRIPT,  ///< This node is an array subscript, [expression].
-      AT_SCOPE,      ///< This node is a scope access, such as ::
-      AT_SIZEOF,     ///< This node is a sizeof() or empty() expression.
-      AT_CAST,       ///< This node is a typecast expression.
-      AT_PARAMLIST,  ///< This node is a list of parameters.
-      AT_NEW,        ///< This node is a new, new[], new(), or new()[] operator.
-      AT_DELETE,     ///< This node is a delete or delete[] operator.
-      AT_INSTANTIATE ///< This node is a template instantiation.
+      AT_BINARYOP,    ///< This node is a binary operator, like /, *, -, or +.
+      AT_TERNARYOP,   ///< This node is a ternary operator. Note that ?: is the only one currently supported.
+      AT_DECLITERAL,  ///< This node is a decimal literal, such as 1337.
+      AT_HEXLITERAL,  ///< This node is a hexadecimal literal, such as 0x539
+      AT_OCTLITERAL,  ///< This node is an octal literal, such as 2471.
+      AT_CHRLITERAL,  ///< This node is a character literal, such as 'a'.
+      AT_IDENTIFIER,  ///< This node is an identifier that could not be looked up.
+      AT_DEFINITION,  ///< This node is a definition; an identifier that has been looked up.
+      AT_TYPE,        ///< This node is a full type.
+      AT_ARRAY,       ///< This node is an array of nodes.
+      AT_SUBSCRIPT,   ///< This node is an array subscript, [expression].
+      AT_SCOPE,       ///< This node is a scope access, such as ::
+      AT_SIZEOF,      ///< This node is a sizeof() or empty() expression.
+      AT_CAST,        ///< This node is a typecast expression.
+      AT_PARAMLIST,   ///< This node is a list of parameters.
+      AT_NEW,         ///< This node is a new, new[], new(), or new()[] operator.
+      AT_DELETE,      ///< This node is a delete or delete[] operator.
+      AT_INSTANTIATE, ///< This node is a template instantiation.
+      AT_INSTBYKEY    ///< This node is a template instantiation with an arg_key.
     };
     
     /// Structure containing info for use when rendering SVGs.
@@ -327,6 +328,7 @@ namespace jdi {
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
+      virtual int own_width(); ///< Returns the width in pixels of this node as it will render. This does not include its children.
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
     };
     struct AST_Node_Array: AST_Node {
@@ -366,7 +368,7 @@ namespace jdi {
       AST_Node_TempInst(definition_template *def);
       virtual ~AST_Node_TempInst();
     };
-    struct AST_Node_TempInstByKey: AST_Node {
+    struct AST_Node_TempKeyInst: AST_Node {
       definition_template* temp; ///< The template to be instantiated.
       arg_key key; ///< The \c arg_key which will be used to instantiate \c temp, after some remapping.
       
@@ -382,8 +384,8 @@ namespace jdi {
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
       
-      AST_Node_TempInstByKey(definition_template *def);
-      virtual ~AST_Node_TempInstByKey();
+      AST_Node_TempKeyInst(definition_template *temp, const arg_key &key);
+      virtual ~AST_Node_TempKeyInst();
     };
     /// Child of AST_Node for function call parameters.
     struct AST_Node_Parameters: AST_Node {
@@ -533,6 +535,9 @@ namespace jdi {
     
     /// Use this AST for template parameters
     inline void set_use_for_templates(bool use) { tt_greater_is_op = !use; }
+    
+    /// Swap roots with another AST, for efficient transfer
+    void swap(AST &ast);
     
     /// Default constructor. Zeroes some stuff.
     AST();

@@ -53,6 +53,7 @@ namespace jdi {
   int AST::AST_Node::own_width() { return content.length()*8 + 16; }
   int AST::AST_Node_Type::own_width() { return dec_type.toString().length()*8 + 16; }
   int AST::AST_Node_Definition::own_width() { return def->name.length()*8 + 16; }
+  int AST::AST_Node_Subscript::own_width() { return 24; }
   int AST::AST_Node::own_height() { return own_width(); }
   int AST::AST_Node_Cast::own_height() { return 24; }
   int AST::AST_Node_Type::own_height() { return 24; }
@@ -183,6 +184,13 @@ namespace jdi {
     svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
     svg->draw_text(nid,x,y+4,content + "<>");
   }
+  void AST::AST_Node_TempKeyInst::toSVG(int x, int y, SVGrenderInfo *svg)
+  {
+    const int nid = svg->nodes_written++;
+    int r = own_width()/2 + 8;
+    svg->draw_rectangle(nid,x-r,y-12,x+r,y+12,0xFFFFFFFF,svg->cur == this ? 0xFF00C000 : 0xFF000000,2);
+    svg->draw_text(nid,x,y+4,content + "<" + key.toString() + ">");
+  }
   void AST::AST_Node_Array::toSVG(int x, int y, SVGrenderInfo *svg)
   {
     const int nid = svg->nodes_written++;
@@ -280,23 +288,25 @@ namespace jdi {
   //=: Recursive Width/Height Resolvers :======================================================================================
   //===========================================================================================================================
   
-  int AST::AST_Node           ::width() { return own_width(); }
-  int AST::AST_Node_Binary    ::width() { return 24 + (left?left->width():0) + (right?right->width():0); }
-  int AST::AST_Node_Unary     ::width() { return operand?max(operand->width(),own_width()):own_width(); }
-  int AST::AST_Node_Ternary   ::width() { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }
-  int AST::AST_Node_Parameters::width() { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width(), res); }
-  int AST::AST_Node_TempInst  ::width() { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width() + 16, res); }
-  int AST::AST_Node_Array     ::width() { int res = -24; for (size_t i = 0; i < elements.size(); i++) res += 24 + elements[i]->width(); return max(own_width(), res); }
-  int AST::AST_Node_Subscript ::width() { return 24 + (left?left->width():0) + (index?index->width():0); }
-  int AST::AST_Node           ::height() { return own_height(); }
-  int AST::AST_Node_Binary    ::height() { return max((left?left->height():0), (right?right->height():0)) + 16 + own_height(); }
-  int AST::AST_Node_Unary     ::height() { return own_height() + (operand? 16 + operand->height():0); }
-  int AST::AST_Node_Cast      ::height() { return 24 + (operand? 16 + operand->height():0); }
-  int AST::AST_Node_Ternary   ::height() { return own_height() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
-  int AST::AST_Node_Parameters::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
-  int AST::AST_Node_TempInst  ::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
-  int AST::AST_Node_Array     ::height() { int mh = 0; for (size_t i = 0; i < elements.size(); i++) mh = max(mh,elements[i]->height()); return own_width() + 16 + mh; }
-  int AST::AST_Node_Subscript ::height() { return max((left?left->height():0), (index?index->height():0)) + 16 + own_height(); }
+  int AST::AST_Node            ::width()  { return own_width(); }
+  int AST::AST_Node_Binary     ::width()  { return 24 + (left?left->width():0) + (right?right->width():0); }
+  int AST::AST_Node_Unary      ::width()  { return operand?max(operand->width(),own_width()):own_width(); }
+  int AST::AST_Node_Ternary    ::width()  { return 24 + ((exp?exp->width():0) + (left?left->width():0) + (right? 24 + right->width():0)); }
+  int AST::AST_Node_Parameters ::width()  { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width(), res); }
+  int AST::AST_Node_TempInst   ::width()  { int res = -24; for (size_t i = 0; i < params.size(); i++) res += 24 + params[i]->width(); return max(own_width() + 16, res); }
+  int AST::AST_Node_TempKeyInst::width()  { return ((temp? temp->name.length() : 0) + 1 + (key.toString().length()) + 1) * 8 + 16; }
+  int AST::AST_Node_Array      ::width()  { int res = -24; for (size_t i = 0; i < elements.size(); i++) res += 24 + elements[i]->width(); return max(own_width(), res); }
+  int AST::AST_Node_Subscript  ::width()  { return 24 + (left?left->width():0) + (index?index->width():0); }
+  int AST::AST_Node            ::height() { return own_height(); }
+  int AST::AST_Node_Binary     ::height() { return max((left?left->height():0), (right?right->height():0)) + 16 + own_height(); }
+  int AST::AST_Node_Unary      ::height() { return own_height() + (operand? 16 + operand->height():0); }
+  int AST::AST_Node_Cast       ::height() { return 24 + (operand? 16 + operand->height():0); }
+  int AST::AST_Node_Ternary    ::height() { return own_height() + 16 + max(max((exp?exp->height():0), (left?left->height():0)), (right?right->height():0)); }
+  int AST::AST_Node_Parameters ::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
+  int AST::AST_Node_TempInst   ::height() { int mh = 0; for (size_t i = 0; i < params.size(); i++) mh = max(mh,params[i]->height()); return own_width() + 16 + mh; }
+  int AST::AST_Node_TempKeyInst::height() { return own_height(); }
+  int AST::AST_Node_Array      ::height() { int mh = 0; for (size_t i = 0; i < elements.size(); i++) mh = max(mh,elements[i]->height()); return own_width() + 16 + mh; }
+  int AST::AST_Node_Subscript  ::height() { return max((left?left->height():0), (index?index->height():0)) + 16 + own_height(); }
   
   
   //===========================================================================================================================
@@ -357,5 +367,8 @@ namespace jdi {
     string res = temp? temp->name + "<" : "(<NULL TEMPLATE>)<";
     for (size_t i = 0; i < params.size(); ++i) { res += params[i]->toString(); if (i+1<params.size()) res += ", "; }
     return res + ">";
+  }
+  string AST::AST_Node_TempKeyInst::toString() const {
+    return (temp? temp->name + "<" : "(<NULL TEMPLATE>)<") + key.toString() + ">";
   }
 }

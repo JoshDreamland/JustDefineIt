@@ -22,7 +22,10 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
           arg_key k(dt->params.size());
           if (read_template_parameters(k, dt, lex, token, scope, cp, herr))
             return FATAL_TERNARY(NULL,res);
-          res = dt->instantiate(k, herr);
+          if (k.is_dependent())
+            res = handle_dependent_tempinst(scope, token, dt, k, 0, herr);
+          else
+            res =  dt->instantiate(k, herr);
           if (token.type != TT_GREATERTHAN)
             token.report_errorf(herr, "Expected closing triangle bracket before %s");
           token = lex->get_token_in_scope(scope,herr);

@@ -34,11 +34,21 @@ namespace jdi {
   class arg_key {
   public:
     enum ak_type { AKT_NONE, AKT_FULLTYPE, AKT_VALUE };
+    
+    /** Means of storing a value and an AST, just in case. */
+    struct aug_value: value {
+      AST *ast;
+      aug_value();
+      aug_value(const aug_value&);
+      aug_value(const value&, AST *ast = NULL);
+      ~aug_value();
+    };
+    
     /** Improvised C++ Union of full_type and value. */
     struct node {
       struct antialias {
         char data[
-          (((sizeof(full_type) > sizeof(value))? sizeof(full_type) : sizeof(value)) + sizeof(char) - 1)
+          (((sizeof(full_type) > sizeof(aug_value))? sizeof(full_type) : sizeof(aug_value)) + sizeof(char) - 1)
           /sizeof(char)
         ];
       } data;
@@ -46,9 +56,11 @@ namespace jdi {
       
       bool is_abstract() const;
       inline const full_type& ft() const { return *(full_type*)&data; }
-      inline const value& val() const { return *(value*)&data; }
+      inline const aug_value& av() const { return *(aug_value*)&data; }
+      inline const value& val() const { return *(value*)(aug_value*)&data; }
       inline full_type& ft() { return *(full_type*)&data; }
-      inline value& val() { return *(value*)&data; }
+      inline aug_value& av() { return *(aug_value*)&data; }
+      inline value& val() { return *(value*)(aug_value*)&data; }
       node &operator= (const node& other);
       bool operator!=(const node& x) const;
       
@@ -93,6 +105,17 @@ namespace jdi {
       inline const node* begin() const { return values; }
       /// Const end() equivalent.
       inline const node* end() const { return endv; }
+      /// Return number of elements
+      inline size_t size() const { return endv - values; }
+      /// Check if empty
+      inline bool empty() const { return !size(); }
+      
+      /// Re-map all types and default values in this key
+      void remap(const remap_set &n);
+      /// Return whether we contain any abstract arguments
+      bool is_abstract() const;
+      /// Return whether we contain any abstract arguments or dependent arguments (DEF_TEMPPARAM or DEF_HYPOTHETICAL)
+      bool is_dependent() const;
       
       /// Return a string version of this key's argument list. You'll need to wrap in () or <> yourself.
       string toString() const;

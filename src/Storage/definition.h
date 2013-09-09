@@ -38,13 +38,6 @@ using std::vector;
 using std::deque;
 using std::pair;
 
-namespace jdi {
-  /// Map type to contain definitions to remap along with the definition with which it will be replaced
-  typedef map<const definition*, definition*> remap_set;
-  typedef remap_set::const_iterator remap_citer;
-  typedef remap_set::iterator remap_iter;
-}
-
 #include <Storage/arg_key.h>
 
 namespace jdi {
@@ -513,7 +506,7 @@ namespace jdi {
     /** Instantiate this template with the values given in the passed key.
         If this template has been instantiated previously, that instantiation is given.
         @param key  The \c arg_key structure containing the template parameter values to use. **/
-    definition *instantiate(arg_key& key, error_handler *herr);
+    definition *instantiate(const arg_key& key, error_handler *herr);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;

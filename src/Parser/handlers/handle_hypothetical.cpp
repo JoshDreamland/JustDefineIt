@@ -39,6 +39,13 @@ namespace jdip {
     return h;
   }
   
+  definition_hypothetical* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr) {
+    AST *a = new AST(temp, key);
+    if (temp->def && (temp->def->flags & (DEF_CLASS | DEF_TYPENAME)))
+      flags |= DEF_TYPENAME;
+    return handle_hypothetical_ast(a, scope, token, flags, herr);
+  }
+  
   definition_hypothetical* handle_hypothetical(lexer *lex, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
     AST *a = new AST();
     if (a->parse_expression(token, lex, scope, precedence::scope, herr))

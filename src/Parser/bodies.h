@@ -221,6 +221,25 @@ namespace jdip {
   definition_hypothetical* handle_hypothetical(lexer *lex, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr);
   
   /**
+    Handle accessing dependent types and members. Shoves the definitions into the
+    template for fix later.
+    
+    This function is a complete handler. All inputs are liable to be modified.
+    See \section Handlers for details.
+    
+    @param  lex    The lexer to poll for tokens. [in-out]
+    @param  scope  The scope from which the member is being accessed. [in-out]
+    @param  token  The first token to handle, and the token structure into which the next unhandled token will be placed. [in-out]
+    @param  temp   The template to be instantiated, later. [in]
+    @param  key    The key that will be remapped and used to instantiate the template, later. [in]
+    @param  flags  Flags known about this hypothetical type. [in]
+    @param  herr   Error handler to which errors will be reported. [in-out]
+    
+    @return A representation of the dependent member, or NULL if an error occurred.
+  **/
+  definition_hypothetical* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr);
+  
+  /**
     Read a string from code containing the name of an operator function, eg, `operator*', `operator[]', `operator.', `operator new[]'.
     @param  lex   The lexer to poll for tokens.
     @param token  The token which sparked this function call. Should be TT_OPERATORKW.

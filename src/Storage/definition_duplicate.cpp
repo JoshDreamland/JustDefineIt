@@ -345,22 +345,49 @@ namespace jdi {
     nast->remap(n);
     full_type ft = nast->coerce();
     
-    if (!ft.def) {
+    if (!ft.def || ft.def == arg_key::abstract) {
       cerr << "Problem instantiating `" + name + "': coercion failure in expression: " + nast->toString() << endl;
-      /*#ifdef DEBUG_MODE
+      #if 0 && defined(DEBUG_MODE)
       cerr << "Remap dump:" << endl;
       for (remap_citer rit = n.begin(); rit != n.end(); ++rit)
-        cerr << "  " << ((definition*)rit->first)->toString() << "\t\t=>\t\t" << rit->second->toString() << endl; 
-      #endif*/
+        cerr << (void*)rit->first << ": " << ((definition*)rit->first)->toString(2) << "\n=>\n" << (void*)rit->second << ": " << rit->second->toString(2) << endl; 
+      cerr << "End dump." << endl;
+      #endif
     }
     else {
       #ifdef DEBUG_MODE
         if (ft.refs.size() || ft.flags)
-          cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl;
+          cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl << endl << endl;
+        cout << "Successfully remapped " << name << " to" << endl << ft.def->toString(-1, 2) << endl;
       #endif
       n[(definition*)this] = ft.def;
     }
     delete nast;
+  }
+  
+  void arg_key::remap(const remap_set &r) {
+    for (node* n = values; n != endv; ++n)
+      if (n->type == AKT_FULLTYPE) {
+        n->ft().def = filter(n->ft().def, r);
+        n->ft().reduce();
+      }
+      else if (n->av().ast) {
+        AST *ao = n  -> av().ast;
+        AST *a  = ao -> duplicate();
+        a->remap(r);
+        value v = a->eval();
+        if (v.type != VT_DEPENDENT) {
+          n->av().ast = NULL;
+          n->val() = v;
+          delete ao;
+        }
+        else {
+          cerr << "No dice in unrolling template expression" << endl;
+          cerr << "original expression: " << ao->toString() << endl;
+          cerr << "evaluated expression: " << a->toString() << endl;
+        }
+        delete a;
+      }
   }
   
   
@@ -395,6 +422,9 @@ namespace jdi {
     for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
       res->params.push_back(dup(*p));
     return res;
+  }
+  AST::AST_Node *AST::AST_Node_TempKeyInst::duplicate() const {
+    return new AST_Node_TempKeyInst(temp, key);
   }
   AST::AST_Node *AST::AST_Node_Array      ::duplicate() const {
     AST_Node_Array *res = new AST_Node_Array();
@@ -439,6 +469,10 @@ namespace jdi {
     temp = filter(temp, n);
     for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
       (*p)->remap(n);
+  }
+  void AST::AST_Node_TempKeyInst::remap(const remap_set& n) {
+    temp = filter(temp, n);
+    key.remap(n);
   }
   void AST::AST_Node_Array      ::remap(const remap_set& n) {
     for (vector<AST_Node*>::iterator e = elements.begin(); e != elements.end(); ++e)

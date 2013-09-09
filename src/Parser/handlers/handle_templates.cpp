@@ -138,7 +138,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       
       token = read_next_token(scope);
       if (token.type == TT_COLON) {
-        if (handle_class_inheritance(temp, token, tclass, protection))
+        if (handle_class_inheritance(tclass, token, tclass, protection))
           return 1;
       }
       
@@ -349,10 +349,6 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       token.report_errorf(herr, "Expected template function body or semicolon before %s");
       FATAL_RETURN(1);
     }
-  }
-  else if (token.type == TT_TEMPLATE) // Specialization
-  {
-    
   }
   else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
