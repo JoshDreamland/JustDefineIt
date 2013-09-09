@@ -152,9 +152,10 @@ namespace jdi {
       for (speclist::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2)
         (*it2)->spec_temp = (definition_template*)(*it2)->spec_temp->duplicate(n);
     for (institer it = res->instantiations.begin(); it != res->instantiations.end(); ++it) {
-      definition *nd = it->second.def->duplicate(n);
-      n[it->second.def] = nd;
-      it->second.def = nd;
+      definition *nd = it->second->def->duplicate(n);
+      n[it->second->def] = nd;
+      it->second = new instantiation();
+      it->second->def = nd;
     }
     return res;
   }
@@ -358,7 +359,7 @@ namespace jdi {
       #ifdef DEBUG_MODE
         if (ft.refs.size() || ft.flags)
           cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl << endl << endl;
-        cout << "Successfully remapped " << name << " to" << endl << ft.def->toString(-1, 2) << endl;
+        // cout << "Successfully remapped " << name << " to" << endl << ft.def->toString(-1, 2) << endl;
       #endif
       n[(definition*)this] = ft.def;
     }
@@ -398,12 +399,12 @@ namespace jdi {
   AST::AST_Node *AST::AST_Node            ::duplicate() const { return new AST_Node(content, type);                         }
   AST::AST_Node *AST::AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);  }
   AST::AST_Node *AST::AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
-  AST::AST_Node *AST::AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(operand, negate);                }
+  AST::AST_Node *AST::AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(dup(operand), negate);           }
   AST::AST_Node *AST::AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def, content);               }
   AST::AST_Node *AST::AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt);       }
-  AST::AST_Node *AST::AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(operand, cast_type);               }
+  AST::AST_Node *AST::AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(dup(operand), cast_type);          }
   AST::AST_Node *AST::AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content); }
-  AST::AST_Node *AST::AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(exp, left, right, content);     }
+  AST::AST_Node *AST::AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(dup(exp), dup(left), dup(right), content); }
   AST::AST_Node *AST::AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound);       }
   AST::AST_Node *AST::AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array);            }
   AST::AST_Node *AST::AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index));       }

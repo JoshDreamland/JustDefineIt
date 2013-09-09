@@ -145,7 +145,7 @@ template<> string add_one(string x) { return x + "1"; }
 /* */
 
 // In progress
-#include <bits/stl_algobase.h>  // std::copy, std::fill_n
+//#include <bits/stl_algobase.h>  // std::copy, std::fill_n
 
 // Down the road
 // #include <bits/char_traits.h>
@@ -156,7 +156,7 @@ template<> string add_one(string x) { return x + "1"; }
 // The north pole
 #include <iostream>
 
-/*
+/* */
 #include <cassert>
 #include <cctype>
 #include <cerrno>
@@ -182,8 +182,8 @@ template<> string add_one(string x) { return x + "1"; }
 #include <utility>
 #include <new>
 #include <numeric>
-*/
-/*
+/* */
+/* */
 #include <algorithm>
 #include <bitset>
 #include <complex>
@@ -213,7 +213,7 @@ template<> string add_one(string x) { return x + "1"; }
 #include <string>
 #include <strstream>
 #include <vector>
-*/
+/* */
 
 /*
 template<typename a> class is_double { enum { isdbl = 0 }; };

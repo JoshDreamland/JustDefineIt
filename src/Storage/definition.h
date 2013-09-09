@@ -481,9 +481,10 @@ namespace jdi {
       vector<definition*> parameter_defs;
       instantiation(): def(NULL), parameter_defs() {}
       ~instantiation();
+      private: instantiation(const instantiation&);
     };
     
-    typedef map<arg_key, instantiation> instmap; ///< Map type for instantiations
+    typedef map<arg_key, instantiation*> instmap; ///< Map type for instantiations
     typedef instmap::iterator institer; ///< Map iterator type for instantiations
     
     typedef vector<definition_hypothetical*> deplist; ///< Dependent member liat

@@ -248,6 +248,8 @@ namespace jdi {
         delete *j;
     for (depiter i = dependents.begin(); i != dependents.end(); ++i)
       delete *i;
+    for (institer i = instantiations.begin(); i != instantiations.end(); ++i)
+      delete i->second;
     delete def;
   }
   
@@ -294,16 +296,17 @@ namespace jdi {
     // if (!specializations.empty())
     //   cout << "{ " << specializations.begin()->first.toString() << " }" << endl;
     
-    pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation>(key, instantiation()));
+    pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation*>(key, NULL));
     if (ins.second) {
       remap_set n;
       size_t ind = 0;
       definition *ntemp = def->duplicate(n);
       ntemp->name += "<" + key.toString() + ">";
-      ins.first->second.def = ntemp;
+      ins.first->second = new instantiation();
+      ins.first->second->def = ntemp;
       for (piterator it = params.begin(); it != params.end(); ++it) {
         definition *ndef = key.new_definition(ind++, (*it)->name, this);
-        ins.first->second.parameter_defs.push_back(ndef);
+        ins.first->second->parameter_defs.push_back(ndef);
         n[*it] = ndef;
         // cout << "Added " << (void*)def << " => " << (void*)ndef << " to remap set" << endl;
       }
@@ -316,7 +319,7 @@ namespace jdi {
       // cout << "Duplicated " << def->name << " to " << ntemp->name << endl;
       // cout << ntemp->toString() << endl;
     }
-    return ins.first->second.def;
+    return ins.first->second->def;
   }
   
   arg_key spec_key::get_key(const arg_key &src_key)
