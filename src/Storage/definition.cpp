@@ -172,8 +172,19 @@ namespace jdi {
     must_be_class = true;
     return definition_class::declare(sname, def);
   }
-  definition *definition_tempparam::find_local(string sname) {
+  definition *definition_scope::get_local(string n) {
+    return find_local(n);
+  }
+  definition *definition_tempparam::get_local(string sname) {
     must_be_class = true;
+    pair<defmap::iterator, bool> insp = members.insert(defmap::value_type(sname, NULL));
+    if (insp.second) {
+      insp.first->second = new definition_tempparam(sname, this);  
+    }
+    return insp.first->second;
+  }
+  definition *definition_hypothetical::get_local(string sname) {
+    required_flags |= DEF_CLASS;
     pair<defmap::iterator, bool> insp = members.insert(defmap::value_type(sname, NULL));
     if (insp.second) {
       insp.first->second = new definition_tempparam(sname, this);  
@@ -269,7 +280,15 @@ namespace jdi {
   definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
   definition_tempparam::~definition_tempparam() { delete default_value; }
   
+  static int nest_count = 0;
+  struct nest_ { nest_() { ++nest_count; } ~nest_() { --nest_count; } };
   definition* definition_template::instantiate(const arg_key& key, error_handler *herr) {
+    if (nest_count >= 32) {
+      cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
+      return NULL;
+    }
+    nest_ this_nest;
+    
     // TODO: Move this specialization search into the not-found if (ins.second) below, then add the specialization to the instantiation map.
     // TODO: Be careful not to double free those specializations. You may need to keep a separate map for regular instantiations to free.
     speciter spi = specializations.find(key);
@@ -605,6 +624,41 @@ namespace jdi {
   string definition_typed::kind() const     { return "object"; }
   string definition_union::kind() const     { return "union"; }
   string definition_valued::kind() const    { return "constant"; }
+  
+  
+  static map<int, string> flagnamemap;
+  string flagnames(unsigned flags) {
+    if (flagnamemap.empty()) {
+      unsigned d = DEF_TYPENAME;
+      switch (d) {
+        case DEF_TYPENAME:     flagnamemap[DEF_TYPENAME]     = "DEF_TYPENAME";
+        case DEF_NAMESPACE:    flagnamemap[DEF_NAMESPACE]    = "DEF_NAMESPACE";
+        case DEF_CLASS:        flagnamemap[DEF_CLASS]        = "DEF_CLASS";
+        case DEF_ENUM:         flagnamemap[DEF_ENUM]         = "DEF_ENUM";
+        case DEF_UNION:        flagnamemap[DEF_UNION]        = "DEF_UNION";
+        case DEF_SCOPE:        flagnamemap[DEF_SCOPE]        = "DEF_SCOPE";
+        case DEF_TYPED:        flagnamemap[DEF_TYPED]        = "DEF_TYPED";
+        case DEF_FUNCTION:     flagnamemap[DEF_FUNCTION]     = "DEF_FUNCTION";
+        case DEF_OVERLOAD:     flagnamemap[DEF_OVERLOAD]     = "DEF_OVERLOAD";
+        case DEF_VALUED:       flagnamemap[DEF_VALUED]       = "DEF_VALUED";
+        case DEF_EXTERN:       flagnamemap[DEF_EXTERN]       = "DEF_EXTERN";
+        case DEF_TEMPLATE:     flagnamemap[DEF_TEMPLATE]     = "DEF_TEMPLATE";
+        case DEF_TEMPPARAM:    flagnamemap[DEF_TEMPPARAM]    = "DEF_TEMPPARAM";
+        case DEF_HYPOTHETICAL: flagnamemap[DEF_HYPOTHETICAL] = "DEF_HYPOTHETICAL";
+        case DEF_PRIVATE:      flagnamemap[DEF_PRIVATE]      = "DEF_PRIVATE";
+        case DEF_PROTECTED:    flagnamemap[DEF_PROTECTED]    = "DEF_PROTECTED";
+        case DEF_INCOMPLETE:   flagnamemap[DEF_INCOMPLETE]   = "DEF_INCOMPLETE";
+        case DEF_ATOMIC:       flagnamemap[DEF_ATOMIC]       = "DEF_ATOMIC";
+        default: ;
+      }
+    }
+    string res;
+    bool hadone = false;
+    for (int i = 1; i < (1 << 30); i <<= 1)
+      if (flags & i)
+        res += (hadone? " | " : "  ") + flagnamemap[i], hadone = true;
+    return res;
+  }
 }
 
 #ifdef CUSTOM_MEMORY_MANAGEMENT

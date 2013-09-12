@@ -271,12 +271,16 @@ bool lexer_cpp::parse_macro_params(const macro_function* mf, vector<string>& des
 
 bool lexer_cpp::parse_macro_function(const macro_function* mf, error_handler *herr)
 {
-  const size_t spos = pos, slpos = lpos, sline = line;
+  size_t spos = pos, slpos = lpos, sline = line;
   skip_whitespace(); // Move to the next "token"
   if (pos >= length or cfile[pos] != '(') { pos = spos, lpos = slpos, line = sline; return false; }
   
   vector<string> params;
+  spos = pos;
   parse_macro_params(mf, params, herr);
+  while (++spos < pos)
+    if (cfile[spos] == '\n' or (cfile[spos] == '\r' and (spos + 1 >= pos or cfile[spos] != '\n')))
+      lpos = spos, ++line;
   
   // Enter the macro
   openfile of(filename, sdir, line, lpos, *this);

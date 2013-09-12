@@ -134,9 +134,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     
       scope->declare(temp->name, temp);
       
+      token = read_next_token(scope);
       regular_template_class:
       
-      token = read_next_token(scope);
       if (token.type == TT_COLON) {
         if (handle_class_inheritance(tclass, token, tclass, protection))
           return 1;
@@ -172,6 +172,36 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       
       token = read_next_token(temp);
       if (token.type != TT_LESSTHAN) {
+        if (basetemp->def && (basetemp->def->flags & (DEF_CLASS | DEF_INCOMPLETE)) == (DEF_CLASS | DEF_INCOMPLETE)) {
+          if (basetemp->params.size() != temp->params.size()) {
+            token.report_error(herr, "Argument count differs from forward declaration");
+            delete temp;
+            return 1;
+          }
+          for (size_t i = 0; i < basetemp->params.size(); ++i) {
+            if (basetemp->params[i]->flags != temp->params[i]->flags) {
+              token.report_error(herr, "Parameter " + value((long)i).toString() + " of declaration differs from forward");
+              delete temp;
+              return 1;
+            }
+            if (!temp->params[i]->name.empty() && basetemp->params[i]->name != temp->params[i]->name) {
+              definition_scope::defiter it = basetemp->members.find(basetemp->params[i]->name);
+              if (it != basetemp->members.end() && it->second == basetemp->params[i]) {
+                basetemp->members.erase(it);
+                if (!basetemp->members.insert(pair<string,definition*>(temp->params[i]->name, basetemp->params[i])).second)
+                  token.report_warning(herr, "Template parameter renamed from `" + basetemp->params[i]->name
+                                       + "' in forward declaration to `" + temp->params[i]->name + "', which is already declared");
+              }
+              else
+                token.report_warning(herr, "Template parameter `" + basetemp->params[i]->name + "' not found in forward declaration's scope");
+              basetemp->params[i]->name = temp->params[i]->name;
+            }
+          }
+          delete temp;
+          temp = basetemp;
+          tclass = (definition_class*)temp->def;
+          goto regular_template_class;
+        }
         token.report_errorf(herr, "Expected opening triangle bracket for template definition before %s");
         delete temp;
         return 1;
@@ -264,6 +294,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
       temp->def = tclass;
       
+      token = read_next_token(scope);
       goto regular_template_class;
     }
     
@@ -293,13 +324,23 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           AST().parse_expression(token, lex, scope, precedence::comma, herr); // Read and discard; kind of a hack, but it's safe.
         }
         if (token.type != TT_SEMICOLON) {
+          if (token.type == TT_LEFTPARENTH) // We're implementing a template function within a different class
+          {
+            read_referencers_post(funcrefs.refs, lex, token, temp, this, herr);
+            if (token.type == TT_LEFTBRACE)
+              delete_function_implementation(handle_function_implementation(lex, token, temp, herr));
+            else
+              token.report_error(herr, "I have no idea where I am.");
+            delete temp;
+            return 0;
+          }
           token.report_errorf(herr, "Expected semicolon following template member definition before %s");
           FATAL_RETURN(1);
         }
         delete temp; // We're done with temp.
         return 0;
       }
-      token.report_errorf(herr, "Definition in template must be a function; `" + funcrefs.def->name + " " + funcrefs.refs.name + "' is not a function (at %s " + token.content.toString() + ")");
+      token.report_errorf(herr, "Definition in template must be a function; `" + funcrefs.def->name + " " + funcrefs.refs.name + "' is not a function (at %s)");
       delete temp;
       return 1;
     }
@@ -350,11 +391,24 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       FATAL_RETURN(1);
     }
   }
+  else if (token.type == TT_TEMPLATE) {
+    // OH MY FUCKING WHAT
+    handle_template(temp, token, inherited_flags);
+    delete temp;
+    return 0;
+  }
   else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
     delete temp; return ERROR_CODE;
   }
   
   
+  return 0;
+}
+
+int jdip::context_parser::handle_template_extern(definition_scope *scope, token_t &token, unsigned inherited_flags) {
+  while (token.type != TT_ENDOFCODE and token.type != TT_SEMICOLON)
+    token = read_next_token(scope);
+  (void)inherited_flags;
   return 0;
 }

@@ -329,7 +329,7 @@ namespace jdi {
     void swap(definition_scope* with);
     
     /** Look up a \c definition* given its identifier.
-        @param name  The identifier by which the definition can be referenced. This is NOT qualified!
+        @param name  The identifier by which the definition can be referenced. This is NOT qualified! If you have a qualified ID, break it into tokens and ask read_qualified_id, or parse it yourself.
         @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
     **/
     virtual definition* look_up(string name);
@@ -346,6 +346,13 @@ namespace jdi {
         @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
     **/
     virtual definition* find_local(string name);
+    /** Same as find_local, except called when failure to retrieve a local will result in an error.
+        This call may still fail; the system will just "try harder."
+        Used so definition_hypothetical can return another definition_hypothetical.
+        @param name  The identifier by which the definition can be referenced. This is NOT qualified!
+        @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
+    **/
+    virtual definition* get_local(string name);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
@@ -556,7 +563,7 @@ namespace jdi {
     
     virtual definition* look_up(string name); ///< Look up a definition in the parent of this scope (skip this scope). This function will never be used by the system.
     virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope. The definition will be marked HYPOTHETICAL, and the \c must_be_class flag will be set.
-    virtual definition* find_local(string name); ///< Behaves identically to declare if the given name does not exist, or else returns it. In either case, the returned definition will be HYPOTHETICAL.
+    virtual definition* get_local(string name); ///< Behaves identically to declare if the given name does not exist, or else returns it. In either case, the returned definition will be HYPOTHETICAL.
     
     ~definition_tempparam();
   };
@@ -590,6 +597,7 @@ namespace jdi {
     virtual void remap(remap_set &n);
     virtual size_t size_of();
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual definition* get_local(string name);
     
     /// Construct with basic definition info.
     definition_hypothetical(string name, definition_scope *parent, unsigned flags, AST* def);

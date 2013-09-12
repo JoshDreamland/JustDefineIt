@@ -83,8 +83,12 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
               return NULL;
             }
           }
+          else if (rdef->flags & DEF_HYPOTHETICAL)
+            ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
+          else if (rdef->flags & DEF_TEMPPARAM)
+            ((definition_tempparam*)rdef)->must_be_class = true;
           else {
-            token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type");
+            token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type (" + flagnames(rdef->flags) + ")");
             return NULL;
           }
         }

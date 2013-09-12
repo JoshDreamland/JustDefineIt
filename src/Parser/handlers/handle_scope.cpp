@@ -108,6 +108,9 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
               token.report_errorf(herr, "Expected template specialization following `extern template' directive; %s unhandled");
               FATAL_RETURN(1);
             }
+            if (handle_template_extern(scope, token, inherited_flags))
+              FATAL_RETURN(1);
+            break;
           }
         goto handle_declarator_block;
       

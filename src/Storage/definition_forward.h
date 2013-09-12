@@ -25,6 +25,7 @@
 #define _DEFINITION_FORWARD__H
 
 #include <map>
+#include <string>
 #include <General/quickreference.h>
 
 namespace jdi {
@@ -79,6 +80,8 @@ namespace jdi {
   typedef std::map<const definition*, definition*> remap_set;
   typedef remap_set::const_iterator remap_citer;
   typedef remap_set::iterator remap_iter;
+  
+  std::string flagnames(unsigned flags);
 }
 
 #endif

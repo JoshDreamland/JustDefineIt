@@ -269,13 +269,6 @@ namespace jdi {
     #endif
     type = filter(type, n);
     
-    static int nest_count = 0;
-    
-    if (nest_count >= 128) {
-      cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
-      return;
-    } ++nest_count;
-    
     for (vector<const_pair>::iterator it = constants.begin(); it != constants.end(); ++it) {
       definition_valued *d = filter(it->def, n);
       if (it->def == d) {
@@ -299,8 +292,6 @@ namespace jdi {
         it->def = d;
       }
     }
-    
-    --nest_count;
   }
   
   void definition_function::remap(remap_set& n) {

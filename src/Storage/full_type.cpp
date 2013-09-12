@@ -87,6 +87,8 @@ namespace jdi {
   
   full_type &full_type::reduce() {
     definition *type = def; definition_typed *typed;
+    if (!type)
+      return *this;
     while ((type->flags & (DEF_TYPED | DEF_TYPENAME)) == (DEF_TYPED | DEF_TYPENAME) and ((definition_typed*)type)->type) {
       typed = (definition_typed*)type;
       type = typed->type;

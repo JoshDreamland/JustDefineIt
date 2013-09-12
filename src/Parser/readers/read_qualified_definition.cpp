@@ -1,5 +1,27 @@
+/**
+ * @file read_qualified_definition.cpp
+ * @brief Source implementing the parser function to read an entire qualified-id.
+ * 
+ * @section License
+ * 
+ * Copyright (C) 2011-2013 Josh Ventura
+ * This file is part of JustDefineIt.
+ * 
+ * JustDefineIt is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, version 3 of the License, or (at your option) any later version.
+ * 
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
+**/
+
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
+#include <iostream>
 
 using namespace jdip;
 definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope, token_t &token, context_parser *cp, error_handler *herr)
@@ -9,7 +31,23 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
     token = lex->get_token_in_scope(scope);
     res = token.def = cp->get_global();
   }
+  if (token.type == TT_IDENTIFIER) {
+    token.report_error(herr, "Expeceted qualified-id here; `" + token.content.toString() + "' is not declared");
+    return NULL;
+  }
+  #ifdef DEBUG_MODE
+  if (!token.def) {
+    std::cerr << "This function was invoked improperly." << std::endl;
+    abort();
+  }
+  #endif
   for (;;) {
+    #ifdef DEBUG_MODE
+    if (!token.def) {
+      std::cerr << "Something in the program went wrong." << std::endl;
+      abort();
+    }
+    #endif
     if (token.def->flags & DEF_TEMPLATE)
     {
       res = token.def;
@@ -71,13 +109,20 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
         if (!res) { token.report_error(herr, "Accessing NULL scope..."); return NULL; }
         if (!(res->flags & DEF_SCOPE)) { token.report_error(herr, "Accessing non-scope object " + res->name + "..."); return NULL; }
       #endif
-      token = lex->get_token_in_scope((definition_scope*)res, herr);
-      if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
-        token.report_errorf(herr, "Expected qualified-id following `::' before %s");
+      token = lex->get_token(herr);
+      if (token.type != TT_IDENTIFIER) {
+        token.report_errorf(herr, "Expected variable name following `::' before %s");
         return NULL;
       }
-      else
+      else {
+        // This loop checks token.def for things; we have to set it here.
+        token.def = ((definition_scope*)res)->get_local(token.content.toString());
+        if (!token.def) {
+          token.report_error(herr, "Scope `" + res->name + "' does not contain `" + token.content.toString() + "'");
+          return NULL;
+        }
         res = token.def;
+      }
     }
     else break;
   }

@@ -447,6 +447,20 @@ namespace jdip {
     int handle_template(definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
     
     /**
+      Handle parsing an extern template specialization.
+      
+      This function is a complete handler. All inputs are liable to be modified.
+      See \section Handlers for details.
+      
+      @param  scope  The scope into which declarations will be stored. [in-out]
+      @param  token  The token structure into which the next unhandled token will be placed. [out]
+      @param  inherited_flags  Any flags which must be given to all members of this scope. [in]
+      
+      @return Zero if no error occurred, a non-zero exit status otherwise.
+    **/
+    int handle_template_extern(definition_scope *scope, token_t& token, unsigned inherited_flags = 0);
+    
+    /**
       Read an expression from the given input stream, evaluating it for a value.
       
       This function is a reader. Many inputs are liable to be modified in some form or another.
