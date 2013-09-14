@@ -154,6 +154,13 @@ namespace jdi
         //XXX: Is it safe to just ignore a typename directive in this system?
         token = get_next_token();
         return parse_expression(token, precedence::scope);
+      case TT_TEMPLATE:
+        token = get_next_token();
+        if (token.type != TT_DEFINITION and token.type != TT_IDENTIFIER) {
+          token.report_errorf(herr, "Expected identifier to treat as template before %s");
+          return NULL;
+        }
+        return parse_expression(token, precedence::scope);
       
       case TT_OPERATOR: case TT_TILDE: {
         ct = token.content.toString();
@@ -165,7 +172,6 @@ namespace jdi
         track(ct);
         token = get_next_token();
         myroot = new AST_Node_Unary(parse_expression(token, op.prec_unary_pre), ct, true);
-        if (!myroot) return NULL;
         read_next = true;
       } break;
       
@@ -321,7 +327,7 @@ namespace jdi
       case TT_ELLIPSIS:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
-      case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
+      case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: 
       #include <User/token_cases.h>
         token.report_errorf(herr, "Expected expression before %s");
@@ -1071,7 +1077,23 @@ namespace jdi
   AST::AST(AST_Node* r): root(r), search_scope(NULL), tt_greater_is_op(true) {}
   AST::AST(AST_Node* r, definition_scope *ss): root(r), search_scope(ss), tt_greater_is_op(true) {}
   AST::AST(definition* d): root(new AST_Node_Definition(d, d->name)), search_scope(NULL), tt_greater_is_op(true) {}
-  AST::AST(definition_template* temp, const arg_key &key): root(new AST_Node_TempKeyInst(temp, key)), search_scope(NULL), tt_greater_is_op(true) {}
+  
+  AST* AST::create_from_instantiation(definition_template* temp, const arg_key &key) { return new AST(new AST_Node_TempKeyInst(temp, key), NULL); }
+  AST* AST::create_from_access(definition_scope* scope, string id, string scope_op) {
+    return new AST(
+      new AST_Node_Scope(
+        new AST_Node_Definition(
+          scope,
+          scope->name
+        ),
+        new AST_Node(
+          id,
+          AT_IDENTIFIER
+        ),
+        scope_op
+      ), NULL
+    );
+  }
     
   AST::~AST() {
     delete root;

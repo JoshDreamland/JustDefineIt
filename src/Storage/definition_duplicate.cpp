@@ -164,8 +164,8 @@ namespace jdi {
     definition_tempparam* res = new definition_tempparam(name, parent, flags);
     n[this] = res;
     
-    res->default_type = default_type;
-    res->default_value = new AST(/*default_value*/); // FIXME: This drops information! Need an AST::duplicate.
+    res->default_type.copy(default_type);
+    res->default_value = default_value? default_value->duplicate() : NULL; // FIXME: This drops information! Need an AST::duplicate.
     res->definition_class::copy(this, n);
     return res;
   }

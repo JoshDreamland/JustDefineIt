@@ -126,6 +126,7 @@
 		<Unit filename="src/Parser/readers/read_qualified_definition.cpp" />
 		<Unit filename="src/Parser/readers/read_template_parameters.cpp" />
 		<Unit filename="src/Parser/readers/read_type.cpp" />
+		<Unit filename="src/Storage/arg_key.cpp" />
 		<Unit filename="src/Storage/arg_key.h" />
 		<Unit filename="src/Storage/definition.cpp" />
 		<Unit filename="src/Storage/definition.h" />

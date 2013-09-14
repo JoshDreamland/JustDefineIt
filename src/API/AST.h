@@ -543,8 +543,20 @@ namespace jdi {
     AST();
     /// Construct with a single node
     AST(definition* def);
+    
+    
+    // Non-constructor AST factory methods
+    
     /// Construct with a single template instantiation node (by key)
-    AST(definition_template* temp, const arg_key& key);
+    /// @param temp  The template to be instantiated.
+    /// @param key   The arg_key with which to instantiate the template, after some remapping.
+    static AST* create_from_instantiation(definition_template* temp, const arg_key& key);
+    
+    /// Construct with a single template instantiation node (by key)
+    /// @param temp      The scope from which the access will occur, after some remapping.
+    /// @param key       The identifier which is to be accessed in the scope.
+    /// @param scope_op  The scope resolution operator, probably "::", but "." and "->" are also permitted.
+    static AST* create_from_access(definition_scope* scope, string id, string scope_op);
     
     /// Default destructor. Deletes the AST.
     ~AST();
@@ -556,7 +568,7 @@ namespace jdi {
       /// Construct with a root node; this will invariably be called internally.
       AST(AST_Node* root);
       
-      /// Construct with a root node; this will invariably be called internally.
+      /// Construct with a root node and search_scope; this will invariably be called internally.
       AST(AST_Node* root, definition_scope *search_scope);
   };
 }

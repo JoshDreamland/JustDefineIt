@@ -29,6 +29,7 @@
 #include <System/builtins.h>
 #include <Parser/handlers/handle_function_impl.h>
 #include <API/compile_settings.h>
+#include <Parser/bodies.h>
 using namespace std;
 
 namespace jdi {
@@ -183,13 +184,10 @@ namespace jdi {
     }
     return insp.first->second;
   }
+  
   definition *definition_hypothetical::get_local(string sname) {
     required_flags |= DEF_CLASS;
-    pair<defmap::iterator, bool> insp = members.insert(defmap::value_type(sname, NULL));
-    if (insp.second) {
-      insp.first->second = new definition_tempparam(sname, this);  
-    }
-    return insp.first->second;
+    return jdip::handle_hypothetical_access(this, sname);
   }
   
   definition_scope::using_node *definition_scope::use_namespace(definition_scope *ns) {

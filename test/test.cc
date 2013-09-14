@@ -138,7 +138,7 @@ template<> string add_one(string x) { return x + "1"; }
 /* */
 
 // Completely working
-/* */
+/* * /
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -182,6 +182,7 @@ template<> string add_one(string x) { return x + "1"; }
 #include <utility>
 #include <new>
 #include <numeric>
+
 /* */
 /* */
 #include <algorithm>
@@ -225,4 +226,23 @@ typedef double da;
 typedef da  da2;
 typedef da2 da3;
 */
+
+/*
+int a;
+class my_class {
+  my_class();
+};
+
+#pragma DEBUG_ENTRY_POINT
+my_class::my_class() {}
+
+template<typename a> class my_tclass { a x; my_class(a x); };
+template<typename a>
+  my_tclass<a>::
+    my_tclass(a x):
+      x(x) {
+      
+    }
+    */
+
 

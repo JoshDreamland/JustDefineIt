@@ -240,6 +240,19 @@ namespace jdip {
   definition_hypothetical* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr);
   
   /**
+    Handle symple nested hypothetical access.
+    
+    This function is a complete handler. All inputs are liable to be modified.
+    See \section Handlers for details.
+    
+    @param  scope  The scope from which the name is being read.
+    @param  scope  The identifier being read.
+    
+    @return A representation of the dependent member being accessed, or NULL if an error occurred.
+  **/
+  definition_hypothetical* handle_hypothetical_access(definition_hypothetical *scope, string id);
+  
+  /**
     Read a string from code containing the name of an operator function, eg, `operator*', `operator[]', `operator.', `operator new[]'.
     @param  lex   The lexer to poll for tokens.
     @param token  The token which sparked this function call. Should be TT_OPERATORKW.
