@@ -124,10 +124,8 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       token = lex->get_token_in_scope(scope,herr);
     }
   }
-  else {
-    rdef = token.def;
-    token = lex->get_token_in_scope(scope,herr);
-  }
+  else
+    rdef = read_qualified_definition(lex, scope, token, cp, herr);
   
   // Read any additional type info
   typeloop: while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
@@ -139,7 +137,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         token.report_error(herr,"Two types named in expression");
         FATAL_RETURN(full_type());
       }
-      rdef = token.def;
+      rdef = read_qualified_definition(lex, scope, token, cp, herr);
       rflags |= swif;
     }
     else {
@@ -159,8 +157,8 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       else if (tf->usage & UF_STANDALONE_FLAG)
         inferred_type = tf->def,
         rflags |= tf->flagbit;
+      token = lex->get_token_in_scope(scope, herr);
     }
-    token = lex->get_token_in_scope(scope, herr);
   }
   if (rdef == NULL) {
     if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM)
@@ -238,33 +236,8 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       
       case TT_DEFINITION:
       case TT_DECLARATOR: {
-        definition *d = token.def;
-        token = lex->get_token_in_scope(scope);
-        if (token.type == TT_SCOPE) {
-          if (!(d->flags & DEF_SCOPE)) {
-            token.report_error(herr, "Cannot access `" + d->name + "' as scope");
-            return 1;
-          }
-          token = lex->get_token_in_scope((definition_scope*)d, herr);
-          if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
-            token.report_errorf(herr, "Expected qualified-id before %s");
-            return 1;
-          }
-          return 0;
-        }
-        else if (token.type == TT_LESSTHAN and d->flags & DEF_TEMPLATE) {
-          definition_template* temp = (definition_template*)d;
-          arg_key k(temp->params.size());
-          if (read_template_parameters(k, temp, lex, token, scope, cp, herr))
-            return 1;
-          if (token.type != TT_GREATERTHAN) {
-            token.report_error(herr, "Expected closing triangle brackets to template parameters before %s");
-            return 1;
-          }
-          token.type = TT_DEFINITION;
-          token.def = temp->instantiate(k, herr);
-          return 0;
-        }
+        definition *d = read_qualified_definition(lex, scope, token, cp, herr);
+        if (!d) return 1;
         refs.name = d->name;
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
         refs.append_c(appme); return res;

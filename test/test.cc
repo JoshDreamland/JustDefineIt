@@ -24,116 +24,8 @@ b: syntax_error {};
 #include <sys/file.h>
 #include <GL/gl.h>
 #include <AL/al.h>
-
-/* * /
-
-template<typename t1, typename t2> class my_template {
-  t1 my_member;
-  typename t2::whatever my_other_member;
-};
-
-template<typename t2> class my_template<int, t2> {
-  int fantastic;
-  typename t2::hahahahahaha hahahaha;
-};
-
-my_template<int, long> qool;
-
-enum tits { mcgavin = 10 };
-
-template<int x> class plusone {
-  enum val {
-    value = x + 1,
-    ass = mcgavin
-  };
-};
-
-class two: plusone<1> {
-  enum v {
-    x = value
-  };
-};
-/* * /
-template<int x> struct factorial {
-  enum r {
-    value = x * factorial<x - 1>::value
-  };
-};
-
-template<> struct factorial<1> {
-  enum r {
-    value = 1
-  };
-};
-
-class seventwenty: factorial<6> {
-};
-
-template<bool e, class t, class f> class ternary {
-  typedef void tp;
-};
-
-template<class t, class f> class ternary<true, t, f> {
-  typedef t tp;
-};
-
-template<class t, class f> class ternary<false, t, f> {
-  typedef f tp;
-};
-
-
-template<typename o, typename p, typename q> struct matches {
-  enum { value = 1 };
-};
-
-template<typename qq, typename pp> struct matches<pp, qq, qq> {
-  enum { value = 2 };
-};
-
-template<typename pp, typename qq> struct matches<pp, pp, qq> {
-  enum { value = 2 };
-};
-
-template<typename pp, typename qq> struct matches<pp, qq, pp> {
-  enum { value = 2 };
-};
-
-template<typename pp> struct matches<pp, pp, pp> {
-  enum { value = 3 };
-};
-
-template<typename t> struct is_pointer {
-  enum { value = 0 };
-}
-template<typename t> struct is_pointer<t*> {
-  enum { value = 1 };
-}
-
-template<typename t> struct is_const {
-  enum { value = 0 };
-}
-template<typename t> struct is_const<const t> {
-  enum { value = 1 };
-}
-
-template<typename t> struct is_int { enum { value = false }; };
-template<> struct is_int<int> { enum { value = true }; };
-
-/* */
-
-/* * /
-struct redherring {};
-namespace c {
-  template<typename t> t red_herring(t x) { return 0; }
-}
-
-/* * /
-
-struct string {};
-
-template<typename t> t add_one(t x) { return (++x)--; }
-string add_one(string x) { return x + "1"; }
-template<> string add_one(string x) { return x + "1"; }
+#include <zlib.h>
+#include <png.h>
 
 /* */
 
@@ -184,7 +76,7 @@ template<> string add_one(string x) { return x + "1"; }
 #include <numeric>
 
 /* */
-/* */
+/* * /
 #include <algorithm>
 #include <bitset>
 #include <complex>
@@ -227,15 +119,19 @@ typedef da  da2;
 typedef da2 da3;
 */
 
-/*
+//#include <vector>
+
 int a;
 class my_class {
   my_class();
+  typedef int t;
 };
+
+my_class::t sommat;
 
 #pragma DEBUG_ENTRY_POINT
 my_class::my_class() {}
-
+/*
 template<typename a> class my_tclass { a x; my_class(a x); };
 template<typename a>
   my_tclass<a>::
@@ -243,6 +139,6 @@ template<typename a>
       x(x) {
       
     }
-    */
+*/    
 
 
