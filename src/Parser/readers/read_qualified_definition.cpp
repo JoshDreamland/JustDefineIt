@@ -82,8 +82,8 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
       token = lex->get_token_in_scope(scope, herr);
       if (token.type != TT_SCOPE)
         break;
-      token = lex->get_token_in_scope(as, herr);
-      if (token.type != TT_DEFINITION and token.type != TT_DECLARATOR) {
+      token = lex->get_token(herr);
+      if (token.type != TT_IDENTIFIER) {
         if (token.type == TT_OPERATORKW) {
           res = token.def = as->look_up(read_operatorkw_name(lex, token, scope, herr));
           if (!token.def)
@@ -97,7 +97,11 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
           return FATAL_TERNARY(NULL,res);
         }
       }
-      res = token.def;
+      res = token.def = as->get_local(token.content.toString());
+      if (!res) {
+        token.report_errorf(herr, "Scope `" + as->name + "' contains no member `" + token.content.toString() + "'");
+        return FATAL_TERNARY(NULL,res);
+      }
       continue;
     }
     else {

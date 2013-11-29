@@ -27,9 +27,10 @@
 #define _REFERENCES__H
 
 #include <string>
-using std::string;
+#include "definition_forward.h"
 
 namespace jdi {
+  using std::string;
   /**
     @struct jdi::ref_stack
     @brief  A stack-like structure representing C referencers.
@@ -183,10 +184,12 @@ namespace jdi {
     };
     
     string name; ///< The name of the object with the contained referencers.
+    definition *ndef; ///< Any definition from which the name was derived.
+    
     private:
-      node *ntop; ///< The topmost node on the list, for everything else.
+      node *ntop;     ///< The topmost node on the list, for everything else.
       node *nbottom; ///< The bottommost node on the list; used in the prepend method.
-      size_t sz; ///< The number of nodes on the list
+      size_t sz;    ///< The number of nodes on the list
   };
 }
 

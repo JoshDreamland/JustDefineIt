@@ -157,6 +157,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       return 0;
   }
   
+  if (!tp.refs.ndef)
   {
     // Add it to our definitions map, without overwriting the existing member.
     decpair ins = ((definition_scope*)scope)->declare(tp.refs.name);
@@ -200,6 +201,18 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       else
         res = ins.def;
     }
+  }
+  else {
+    res = tp.refs.ndef;
+    if (res->flags & DEF_FUNCTION) {
+      if (tp.refs.empty() or tp.refs.top().type != ref_stack::RT_FUNCTION) {
+        token.report_error(herr, "Cannot declare `" + tp.refs.name + "' over existing function");
+        return 4;
+      }
+      definition_function* func = (definition_function*)res;
+      res = func->overload(tp, inherited_flags, herr);
+    }
+    // cout << "Implementing " << res->name << std::endl;
   }
   
   extra_loop:

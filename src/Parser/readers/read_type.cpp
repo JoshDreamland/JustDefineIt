@@ -172,7 +172,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       }
     }
     else if (token.type == TT_DEFINITION and token.def->flags & (DEF_SCOPE | DEF_TEMPLATE)) {
-     rdef = read_qualified_definition(lex, scope, token, cp, herr);
+      rdef = read_qualified_definition(lex, scope, token, cp, herr);
     }
     else if (token.type == TT_TYPENAME) {
       //if (!cp) { token.report_error(herr, "Cannot use dependent type in this context"); return full_type(); }
@@ -190,9 +190,80 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   return full_type(rdef, rrefs, rflags);
 }
 
-#include <Parser/is_potential_constructor.h>
-
+#include <System/lex_buffer.h>
 #include <General/debug_macros.h>
+
+enum parenth_type { PT_FUNCTION, PT_GROUPORINIT, PT_INITIALIZERS, PT_NA };
+static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffer &lb, token_t &token, context_parser *cp, error_handler *herr)
+{
+  if (token.type == TT_LEFTPARENTH)
+  {
+    bool seen_type = false, seen_comma = false;
+    token_t *backt = &lb.push(token = lex->get_token_in_scope(scope, herr));
+    
+    bool read_next = false;
+    for (; token.type != TT_RIGHTPARENTH; backt = &lb.push(read_next? token : (token = lex->get_token_in_scope(scope, herr))))
+    {
+      read_next = false;
+      if (token.type == TT_LEFTPARENTH) {
+        if (!seen_type) {
+          parenth_type res = parenths_type(lex, scope, lb, token, cp, herr);
+          return res == PT_INITIALIZERS || seen_comma? PT_INITIALIZERS : PT_GROUPORINIT;
+        }
+        break;
+      }
+      else if (token.type == TT_DECLARATOR or token.type == TT_DECFLAG) {
+        seen_type = true;
+      }
+      else if (token.type == TT_DEFINITION) {
+        if (!seen_type)
+          return seen_comma? PT_INITIALIZERS : PT_GROUPORINIT;
+        definition* bd = read_qualified_definition(lex, scope, token, cp, herr);
+        if (bd and (backt->def = bd)->flags & DEF_TYPENAME)
+          seen_type = true;
+        read_next = true;
+      }
+      else if (token.type == TT_IDENTIFIER) {
+        if (seen_type)
+          return PT_FUNCTION;
+        return PT_GROUPORINIT;
+      }
+      else if (token.type == TT_OPERATOR) {
+        if (token.content.len > 1) return PT_INITIALIZERS;
+        if (*token.content.str == '=') return PT_FUNCTION;
+        if (*token.content.str == '*' or *token.content.str == '&')
+          return seen_type? PT_FUNCTION : PT_GROUPORINIT;
+        return PT_INITIALIZERS;
+      }
+      else if (token.type == TT_COMMA)
+        seen_comma = true;
+      else
+        token.report_errorf(herr, "Unexpected %s in referencers");
+    }
+    return PT_FUNCTION;
+  }
+  else {
+    while (token.type != TT_ENDOFCODE) {
+    lb.push(token = lex->get_token_in_scope(scope, herr));
+    if (token.type == TT_LEFTPARENTH) {
+      parenths_type(lex, scope, lb, token, cp, herr);
+      if (token.type != TT_RIGHTPARENTH) return token.report_errorf(herr, "Expected closing parenthesis before %s"), PT_NA;
+    }
+    else if (token.type == TT_LEFTBRACKET) {
+      parenths_type(lex, scope, lb, token, cp, herr);
+      if (token.type != TT_RIGHTBRACKET) return token.report_errorf(herr, "Expected closing bracket before %s"), PT_NA;
+    }
+    else if (token.type == TT_LEFTBRACE) {
+      parenths_type(lex, scope, lb, token, cp, herr);
+      if (token.type != TT_RIGHTBRACKET) return token.report_errorf(herr, "Expected closing brace before %s"), PT_NA;
+    }
+    else if (token.type == TT_RIGHTPARENTH or token.type == TT_RIGHTBRACKET or token.type == TT_RIGHTBRACE)
+      return PT_NA;
+    }
+    return PT_NA;
+  }
+}
+
 int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
   #ifdef DEBUG_MODE
@@ -207,14 +278,19 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       case TT_LEFTBRACKET:
         return read_referencers_post(refs, lex, token, scope, cp, herr);
       
-      case TT_LEFTPARENTH: { // Either a function or a grouping
-        token = lex->get_token_in_scope(scope, herr);
+      case TT_LEFTPARENTH: { // Either a function or a grouping, or, potentially, a constructor call.
+        lex_buffer lb(lex);
+        bool is_func = parenths_type(lex, scope, lb, token, cp, herr) == PT_FUNCTION;
         
-        // Check if we're a constructor.
-        bool potentialc = is_potential_constructor(scope, ft.def->name);
-        if (potentialc and (token.type != TT_OPERATOR or token.content.len != 1 or *token.content.str != '*'))
+        lb.reset();
+        lex = &lb;
+        token = lex->get_token(herr);
+        
+        if (is_func)
         {
-          if (read_function_params(refs, lex, token, scope, cp, herr))
+          bool error = read_function_params(refs, lex, token, scope, cp, herr);
+          lex = lb.fallback_lexer;
+          if (error)
             return 1;
           ref_stack appme;
           int res = read_referencers_post(appme, lex, token, scope, cp, herr);
@@ -224,6 +300,9 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         
         ref_stack nestedrefs;
         read_referencers(nestedrefs, ft, lex, token, scope, cp, herr); // It's safe to recycle ft because we already know we're not a constructor at this point.
+        
+        lex = lb.fallback_lexer;
+        
         if (token.type != TT_RIGHTPARENTH) {
           token.report_errorf(herr, "Expected right parenthesis before %s to close nested referencers");
           FATAL_RETURN(1);
@@ -236,9 +315,14 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       
       case TT_DEFINITION:
       case TT_DECLARATOR: {
+        definition *pd = token.def;
         definition *d = read_qualified_definition(lex, scope, token, cp, herr);
         if (!d) return 1;
+        
         refs.name = d->name;
+        if (pd != d)
+          refs.ndef = d;
+        
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
         refs.append_c(appme); return res;
       }
@@ -303,7 +387,7 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
         AST ast;
         token = lex->get_token_in_scope(scope, herr);
         if (token.type != TT_RIGHTBRACKET) {
-          if (ast.parse_expression(token,lex,precedence::comma+1,herr))
+          if (ast.parse_expression(token,lex,scope,precedence::comma+1,herr))
             return 1; // This error has already been reported, just return empty.
           if (token.type != TT_RIGHTBRACKET) {
             token.report_errorf(herr,"Expected closing square bracket here before %s");

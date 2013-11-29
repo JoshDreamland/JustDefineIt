@@ -27,6 +27,8 @@
 #include <API/AST.h>
 #include "debug_macros.h"
 
+using std::string;
+
 #include <sys/stat.h>
 static unsigned ast_rn = 0;
 void render_ast_nd(jdi::AST& ast, std::string cat)

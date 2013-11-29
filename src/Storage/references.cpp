@@ -39,8 +39,8 @@
 using namespace std;
 
 namespace jdi {
-  ref_stack::ref_stack(): ntop(NULL), nbottom(NULL), sz(0) {}
-  ref_stack::ref_stack(ref_stack& rf): ntop(NULL), nbottom(NULL), sz(0) { swap(rf); }
+  ref_stack::ref_stack(): name(), ndef(NULL), ntop(NULL), nbottom(NULL), sz(0) {}
+  ref_stack::ref_stack(ref_stack& rf): name(), ndef(NULL), ntop(NULL), nbottom(NULL), sz(0) { swap(rf); }
   ref_stack::ref_stack(const ref_stack& rf) { /* cerr << "IMPLICITLY DUPLICATED REF STACK (CTOR)" << endl; */ copy(rf); }
   ref_stack::~ref_stack() { clear(); }
   
@@ -124,6 +124,7 @@ namespace jdi {
 
   void ref_stack::copy(const ref_stack& rf) {
     name = rf.name;
+    ndef = rf.ndef;
     sz = rf.sz;
     if (!rf.nbottom) {
       ntop = nbottom = NULL;
@@ -137,6 +138,8 @@ namespace jdi {
   }
   void ref_stack::swap(ref_stack& rf) {
     name.swap(rf.name);
+    definition* sdef = ndef;
+    ndef = rf.ndef; rf.ndef = sdef;
     node *ts = ntop, *bs= nbottom;
     ntop = rf.ntop, nbottom = rf.nbottom;
     rf.ntop = ts, rf.nbottom = bs;
@@ -156,6 +159,7 @@ namespace jdi {
   void ref_stack::append_nest_c(ref_stack &rf) {
     if (!rf.nbottom) {
       if (!rf.name.empty()) name = rf.name; // Grab the name, if it's meaningful
+      if (rf.ndef) ndef = rf.ndef; // This way, we don't overwrite with NULL/""
       return; // Appending an empty stack is meaningless
     }
     if (!nbottom) nbottom = rf.nbottom; // If we didn't have anything on our stack, our nbottom is now its nbottom.
@@ -164,6 +168,7 @@ namespace jdi {
     rf.ntop = rf.nbottom = NULL; // Make sure it doesn't free what we just stole
     sz += rf.sz; rf.sz = 0; // Steal its size, too.
     name = rf.name; // Steal the name from the nested expression.
+    ndef = rf.ndef;
   }
   
   void ref_stack::prepend_c(ref_stack& rf) {

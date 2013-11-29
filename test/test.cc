@@ -12,7 +12,7 @@ template<int x> class
 b: syntax_error {};
 */
 
-/* Simple C test case */
+/* Simple C test case * /
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -27,13 +27,6 @@ b: syntax_error {};
 #include <zlib.h>
 #include <png.h>
 
-/* */
-
-// Completely working
-/* * /
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
 /* */
 
 // In progress
@@ -74,15 +67,23 @@ b: syntax_error {};
 #include <utility>
 #include <new>
 #include <numeric>
-
+//#include <algorithm>
 /* */
 /* * /
-#include <algorithm>
+#include <memory>
+#include <functional>
+#include <list>
+#include <deque>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <set>
+#include <map>
+#include <string>
+#include <stdexcept>
 #include <bitset>
 #include <complex>
-#include <deque>
 #include <fstream>
-#include <functional>
 #include <hash_map>
 #include <hash_set>
 #include <iomanip>
@@ -92,20 +93,11 @@ b: syntax_error {};
 #include <istream>
 #include <iterator>
 #include <limits>
-#include <list>
 #include <locale>
-#include <map>
-#include <memory>
 #include <ostream>
-#include <queue>
-#include <set>
 #include <sstream>
-#include <stack>
-#include <stdexcept>
 #include <streambuf>
-#include <string>
 #include <strstream>
-#include <vector>
 /* */
 
 /*
@@ -119,26 +111,50 @@ typedef da  da2;
 typedef da2 da3;
 */
 
-//#include <vector>
+#include <vector>
+/*
+enum {
+  confusion = (int
+  #pragma DEBUG_ENTRY_POINT
+  (*)(int, int))(1+1)
+};
 
 int a;
 class my_class {
   my_class();
+  my_class(int x, double d);
   typedef int t;
+  t q;
+  int f();
 };
 
 my_class::t sommat;
+int my_class::f() { return 0; }
 
-#pragma DEBUG_ENTRY_POINT
+int f();
+int f() {}
+int f(int x);
+int f(int x) {}
+
 my_class::my_class() {}
-/*
-template<typename a> class my_tclass { a x; my_class(a x); };
+my_class::my_class(int x, double d): q(x) {}
+
+my_class::my_class() {}
+
+template<typename a> class my_tclass {
+  a x;
+  my_tclass(a x);
+};
 template<typename a>
-  my_tclass<a>::
-    my_tclass(a x):
+  my_tclass<a>::my_tclass(a x):
       x(x) {
-      
+        return fucknuts;
+        zero;
     }
-*/    
 
+template<typename t> struct arses {
+  template<typename q> arses(t x);
+};
 
+template<typename t, typename q> arses<q>::arses(t x) {}
+*/

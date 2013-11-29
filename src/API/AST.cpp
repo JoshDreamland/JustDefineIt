@@ -59,71 +59,20 @@ namespace jdi
     bool handled_basics = false; // True at the end of this switch if the basic token info was already read in.
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
+      case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
           full_type ft = read_type(lex, token, search_scope, NULL, herr); // Read the full set of declarators
           track(ft.toString());
-          if (token.type == TT_LEFTPARENTH) {
-            lex_buffer lb(lex);
-            bool is_cast = true; // True if the contents of these parentheses are part of the cast;
-            // For example, in bool(*)(), the (*) is part of the cast. In bool(10), (10) is not part of the cast.
-            
-            lb.push(token);
-            for (int depth = 1;;) {
-              token_t &tk = lb.push(get_next_token());
-              if (tk.type == TT_RIGHTPARENTH) {
-                  if (!--depth) { token = tk; break; }
-              } else if (tk.type == TT_LEFTPARENTH) ++depth;
-              else if (tk.type == TT_ENDOFCODE) break;
-              else if (tk.type != TT_OPERATOR or tk.content.len != 1
-                   or (*tk.content.str != '*' and *tk.content.str != '&'))
-                is_cast = false;
-            }
-            if (token.type != TT_RIGHTPARENTH) {
-              token.report_errorf(herr, "Expected closing parenthesis to cast here before %s");
-              return NULL;
-            }
-            
-            lb.reset(); lex = &lb;
-            token = get_next_token();
-            if (is_cast) {
-              read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
-              track(ft.refs.toString());
-              myroot = new AST_Node_Type(ft);
-              token_basics(void(),
-                myroot->filename = (const char*)token.file,
-                myroot->linenum = token.linenum,
-                myroot->pos = token.pos
-              );
-            }
-            else {
-              AST_Node_Cast* nr = new AST_Node_Cast(parse_expression(token, 0), ft);
-              nr->content = nr->cast_type.toString();
-              myroot = nr;
-              token_basics(
-                void(),
-                myroot->filename = (const char*)token.file,
-                myroot->linenum = token.linenum,
-                myroot->pos = token.pos
-              );
-            }
-            lex = lb.fallback_lexer;
-          }
-          else {
-            read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
-            myroot = new AST_Node_Type(ft);
-            token_basics(
+          myroot = new AST_Node_Type(ft);
+          token_basics(
               void(),
               myroot->filename = (const char*)token.file,
               myroot->linenum = token.linenum,
               myroot->pos = token.pos
             );
-          }
-          if (token.type == TT_RIGHTPARENTH) // Facilitate casts
-            return myroot;
           handled_basics = read_next = true;
         } break;
       
-      case TT_DEFINITION:
+      case TT_DECLARATOR: case TT_DEFINITION:
           at = AT_DEFINITION;
           myroot = new AST_Node_Definition(token.def, token.content.toString());
           track(myroot->content);
@@ -201,6 +150,14 @@ namespace jdi
           nr->cast_type.swap(ad->dec_type); nr->content = nr->cast_type.toString();
           delete myroot; myroot = nr;
         }
+        else if (myroot->type == AT_DEFINITION && (((AST_Node_Definition*)myroot)->def->flags & DEF_TYPENAME)) {
+          AST_Node_Definition *ad = (AST_Node_Definition*)myroot;
+          token = get_next_token(); read_next = true;
+          AST_Node_Cast *nr = new AST_Node_Cast(parse_expression(token, symbols["(cast)"].prec_unary_pre));
+          nr->cast_type.def = ad->def; nr->content = nr->cast_type.toString();
+          delete myroot; myroot = nr;
+        }
+          
         handled_basics = true;
         break;
       
@@ -304,15 +261,16 @@ namespace jdi
       {
           bool not_result;
           if (true) {
-            case TT_ISEMPTY: not_result = true;
+            case TT_ISEMPTY: not_result = true; track(string("isempty"));
           } else {
-            case TT_SIZEOF: not_result = false;
+            case TT_SIZEOF: not_result = false; track(string("sizeof"));
           }
           if (true)
-          token = get_next_token(); track(string("sizeof")); 
+          token = get_next_token();
           if (token.type == TT_LEFTPARENTH) {
               token = get_next_token(); track(string("(")); 
-              myroot = new AST_Node_sizeof(parse_expression(token,precedence::max), not_result);
+              full_type ft = read_fulltype(lex, token, search_scope, NULL, herr);
+              myroot = new AST_Node_sizeof(new AST_Node_Type(ft), not_result);
               if (token.type != TT_RIGHTPARENTH)
                 token.report_errorf(herr, "Expected closing parenthesis to sizeof before %s");
               else { track(string(")")); }
@@ -427,6 +385,30 @@ namespace jdi
             token.report_error(herr, "Operator `" + token.content.toString() + "' not defined");
             delete left_node; return NULL;
           }
+          if (left_node->type == AT_DEFINITION) {
+            AST_Node_Definition *ad = (AST_Node_Definition*)left_node;
+            if (ad->def->flags & DEF_TYPENAME) {
+              full_type cme(ad->def);
+              left_node = new AST_Node_Type(cme);
+              delete ad;
+            }
+          }
+          if (left_node->type == AT_TYPE) {
+            if (token.content.len == 1) {
+              if (*token.content.str == '*') {
+                ((AST_Node_Type*)left_node)->dec_type.refs.push(ref_stack::RT_POINTERTO);
+                token = get_next_token();
+                break;
+              }
+              if (*token.content.str == '&') {
+                ((AST_Node_Type*)left_node)->dec_type.refs.push(ref_stack::RT_REFERENCE);
+                token = get_next_token();
+                break;
+              }
+            }
+            token.report_error(herr, "Cannot operate on type `" + ((AST_Node_Type*)left_node)->dec_type.toString() + "'");
+            return NULL;
+          }
           symbol &s = b->second;
           if (s.type & ST_BINARY) {
             if (s.prec_binary < prec_min)
@@ -483,9 +465,81 @@ namespace jdi
       case TT_TILDE:
       
       case TT_LEFTPARENTH:
-          if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE) {
+          if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE or left_node->type == AT_SCOPE) {
+            full_type ltype = left_node->coerce();
+            if (ltype.def and ltype.def->flags & DEF_TYPENAME)
+            {
+              AST_Node_Type *ant;
+              full_type ft_stacked, *ft_annoying;
+              if (left_node->type == AT_TYPE)
+                ft_annoying = &(ant = (AST_Node_Type*)left_node)->dec_type;
+              else
+                ant = NULL, ft_annoying = &ft_stacked;
+              full_type &ft = *ft_annoying;
+              
+              lex_buffer lb(lex);
+              bool is_cast = true; // True if the contents of these parentheses are part of the cast;
+              // For example, in bool(*)(), the (*) is part of the cast. In bool(10), (10) is not part of the cast.
+              
+              lb.push(token);
+              for (int depth = 1;;) {
+                token_t &tk = lb.push(get_next_token());
+                if (tk.type == TT_RIGHTPARENTH) {
+                    if (!--depth) { token = tk; break; }
+                } else if (tk.type == TT_LEFTPARENTH) ++depth;
+                else if (tk.type == TT_ENDOFCODE) break;
+                else if (tk.type != TT_OPERATOR or tk.content.len != 1
+                     or (*tk.content.str != '*' and *tk.content.str != '&'))
+                  is_cast = false;
+              }
+              if (token.type != TT_RIGHTPARENTH) {
+                token.report_errorf(herr, "Expected closing parenthesis to cast here before %s");
+                return NULL;
+              }
+              
+              lb.reset();
+              lex = &lb;
+                token = get_next_token();
+                if (is_cast) {
+                  read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
+                  track(ft.refs.toString());
+                  if (!ant) {
+                   left_node = ant = new AST_Node_Type(ft);
+                    token_basics(void(),
+                      left_node->filename = (const char*)token.file,
+                      left_node->linenum = token.linenum,
+                      left_node->pos = token.pos
+                    );
+                  }
+                }
+                else {
+                  #if DEBUG_MODE
+                    if (token.type != TT_LEFTPARENTH)
+                      cerr << "INTERNAL ERROR: Token is not a left parenthesis. This should not happen." << endl;
+                  #endif
+                  track(string("("));
+                  token = get_next_token();
+                  AST_Node_Cast* nr = new AST_Node_Cast(parse_expression(token, 0), ft);
+                  if (token.type != TT_RIGHTPARENTH)
+                    token.report_errorf(herr, "Expected closing parenthesis before %s");
+                  else token = get_next_token();
+                  nr->content = nr->cast_type.toString();
+                  delete left_node;
+                  left_node = nr;
+                  token_basics(
+                    void(),
+                    left_node->filename = (const char*)token.file,
+                    left_node->linenum = token.linenum,
+                    left_node->pos = token.pos
+                  );
+                  track(string(")"));
+                }
+              lex = lb.fallback_lexer;
+              break;
+            }
             track(string("("));
             token = get_next_token();
+            
             bool gtio = tt_greater_is_op; tt_greater_is_op = true;
             AST_Node *params = parse_expression(token, precedence::all);
             tt_greater_is_op = gtio;
@@ -628,6 +682,8 @@ namespace jdi
           return value(atof(number));
         return value(atol(number));
       }
+      if (content.find('.', 0) != string::npos)
+        return value(atof(content.c_str()));
       return value(atol(content.c_str()));
     }
     if (type == AT_OCTLITERAL) {
@@ -725,9 +781,13 @@ namespace jdi
     return 0L;
   }
   value AST::AST_Node_sizeof::eval() const {
-    return (long)operand->coerce().def->size_of();
+    if (!operand)
+      return 0L;
+    definition *cd = operand->coerce().def;
+    return cd? (long)cd->size_of() : 0;
   }
   value AST::AST_Node_Cast::eval() const {
+    if (!operand || !cast_type.def) return value();
     if (cast_type.def == builtin_type__int)
       if (cast_type.flags & builtin_flag__long)
         if (cast_type.flags & builtin_flag__unsigned)

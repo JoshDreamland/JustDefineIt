@@ -29,8 +29,9 @@
 #include <Storage/definition.h>
 #include <System/builtins.h>
 
+#define constructor_name "<construct>"
 inline bool ipc(jdi::definition_scope *scope, std::string dname) {
-  return ((scope->flags & jdi::DEF_CLASS) and dname == scope->name);
+  return (((scope->flags & jdi::DEF_CLASS) and dname == scope->name) or dname == constructor_name);
 }
 inline bool is_potential_constructor(jdi::definition_scope *scope, std::string dname) {
   return ipc(scope, dname) || ((scope->flags & jdi::DEF_TEMPLATE) && ipc(scope->parent, dname));
@@ -40,6 +41,5 @@ inline bool is_potential_constructor(jdi::definition_scope *scope, const jdi::fu
   #define invalid_ctor_flags ~(jdi::builtin_flag__explicit | jdi::builtin_flag__virtual) // Virtual's a bit of a longshot, but we'll take it.
   return (potentialc and !(tp.flags & invalid_ctor_flags) and tp.refs.size() == 1 and tp.refs.top().type == jdi::ref_stack::RT_FUNCTION);
 }
-#define constructor_name "<construct>"
 
 #endif

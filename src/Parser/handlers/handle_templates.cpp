@@ -340,7 +340,11 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         delete temp; // We're done with temp.
         return 0;
       }
-      token.report_errorf(herr, "Definition in template must be a function; `" + funcrefs.def->name + " " + funcrefs.refs.name + "' is not a function (at %s)");
+      if (funcrefs.refs.ndef && funcrefs.refs.ndef->flags & DEF_HYPOTHETICAL) {
+        // TODO: Do some error checking here to make sure whatever's being declared in that AST is a member of the template. Mark it non-extern.
+      }
+      else
+        token.report_errorf(herr, "Definition in template must be a function; `" + funcrefs.def->name + " " + funcrefs.refs.name + "' is not a function (at %s)");
       delete temp;
       return 1;
     }
@@ -354,7 +358,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           handle_constructor_initializers(lex, token, scope, herr);
         }
       }
-      else {
+      else if (!funcrefs.refs.ndef) {
         token.report_error(herr, "Template functions must have names");
         delete temp;
         return 1;

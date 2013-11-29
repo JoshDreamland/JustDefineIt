@@ -30,6 +30,7 @@
 #include <Parser/handlers/handle_function_impl.h>
 #include <API/compile_settings.h>
 #include <Parser/bodies.h>
+#include <Parser/is_potential_constructor.h>
 using namespace std;
 
 namespace jdi {
@@ -184,7 +185,13 @@ namespace jdi {
     }
     return insp.first->second;
   }
-  
+  definition *definition_class::get_local(string sname) {
+    defiter it;
+    definition *res = definition_scope::get_local(sname);
+    if (!res && sname == name and (it = members.find(constructor_name)) != members.end())
+      res = it->second;
+    return res;
+  }
   definition *definition_hypothetical::get_local(string sname) {
     required_flags |= DEF_CLASS;
     return jdip::handle_hypothetical_access(this, sname);

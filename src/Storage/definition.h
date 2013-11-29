@@ -407,6 +407,14 @@ namespace jdi {
     
     virtual definition* look_up(string name); ///< Look up a definition in this class (including its ancestors).
     virtual definition* find_local(string name);
+    /** Same as find_local, except called when failure to retrieve a local will result in an error.
+        This call may still fail; the system will just "try harder." In this case, that means returning
+        the constructor definition, named @c constructor_name, when asked for an identifier by the same name.
+        Used so definition_hypothetical can return another definition_hypothetical.
+        @param name  The identifier by which the definition can be referenced. This is NOT qualified!
+        @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
+    **/
+    virtual definition* get_local(string name);
     virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope.
     
     definition_class(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_TYPENAME);
