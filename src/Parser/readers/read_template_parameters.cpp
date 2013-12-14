@@ -22,6 +22,7 @@
 #include <API/AST.h>
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
+#include <cstdio>
 
 int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr) {
   if (argnum < temp->params.size() and temp->params[argnum]->flags & DEF_TYPENAME) {
@@ -33,6 +34,7 @@ int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_templ
   {
     AST a;
     a.set_use_for_templates(true);
+    static int iv = 0; ++iv;
     a.parse_expression(token, lex, scope, precedence::comma+1, herr);
     if (argnum < temp->params.size())
     {
@@ -45,7 +47,7 @@ int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_templ
           argk[argnum].av().ast = ah;
         }
         else {
-          token.report_error(herr, "Expression must give integer result (value returned: " + argk[argnum].val().toString() + ")");
+          token.report_error(herr, "Expression must give integer result (value returned: " + argk[argnum].val().toString() + "):" + value(long(iv)).toString());
           render_ast_nd(a, "ass");
           FATAL_RETURN(1); argk[argnum].val() = long(0);
         }
@@ -55,17 +57,26 @@ int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_templ
   return 0;
 }
 
-int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, definition_template *temp, token_t &token, error_handler *herr)
+int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, definition_template *temp, const token_t &token, error_handler *herr)
 {
   if (args_given > temp->params.size()) {
       token.report_error(herr, "Too many template parameters provided to `" + temp->toString(0,0) + "'");
       FATAL_RETURN(1);
   }
-  int bad_params = 0;
+  int bad_params = 0, abstract_at = -1;
   for (size_t i = 0; i < temp->params.size(); ++i)
-    if ((argk[i].type == arg_key::AKT_FULLTYPE and !argk[i].ft().def)
-    or  ((argk[i].type == arg_key::AKT_VALUE and (argk[i].val().type == VT_NONE))))
-      ++bad_params;
+    if (argk[i].type == arg_key::AKT_FULLTYPE) {
+      if (!argk[i].ft().def)
+        ++bad_params;
+      else if (i >= args_given && abstract_at == -1 && argk[i].ft().def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+        abstract_at = i;
+    }
+    else if (argk[i].type == arg_key::AKT_VALUE) {
+      if (argk[i].val().type == VT_NONE)
+        ++bad_params;
+      else if (i >= args_given && abstract_at == -1 && argk[i].val().type == VT_DEPENDENT)
+        abstract_at = i;
+    }
   if (bad_params) {
     token.report_error(herr, "Insufficient parameters to `" + temp->toString(0,0) + "'; " + value((long)bad_params).toString() + " more required" );
     for (size_t i = 0; i < temp->params.size(); ++i)
@@ -74,6 +85,17 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
         token.report_error(herr, "Missing parameter " + value((long)i).toString() + ": parameter is not defaulted");
     FATAL_RETURN(1);
   }
+  
+  // TODO: Replace template default_x with single AST; use for both cases
+  /*if (abstract_at >= 0) { printf("AYE-AYE, CAP'N (%d)\n", abstract_at);
+  for (size_t i = args_given; i < temp->params.size(); ++i)
+    if (temp->params[i]->flags & DEF_TYPENAME) {
+    }
+    else {
+        
+    }
+  }*/
+  
   return 0;
 }
 
@@ -103,5 +125,6 @@ int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lex
       break;
     }
   }
+  
   return check_read_template_parameters(argk, args_given, temp, token, herr);
 }

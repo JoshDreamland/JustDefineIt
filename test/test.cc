@@ -67,7 +67,7 @@ b: syntax_error {};
 #include <utility>
 #include <new>
 #include <numeric>
-//#include <algorithm>
+#include <algorithm>
 /* */
 /* * /
 #include <memory>
@@ -111,7 +111,6 @@ typedef da  da2;
 typedef da2 da3;
 */
 
-#include <vector>
 /*
 enum {
   confusion = (int
@@ -158,3 +157,23 @@ template<typename t> struct arses {
 
 template<typename t, typename q> arses<q>::arses(t x) {}
 */
+
+//#include <vector>
+
+template<typename x> class isdbl { enum { v = false }; };
+template<> class isdbl<double>   { enum { v = true  }; };
+
+template<typename tp, typename ass = tp> struct a {
+  tp yay;
+  ass cakes;
+  enum { v = isdbl<ass>::v };
+};
+
+enum { basic = isdbl<double>::v, adv = a<double,double>::v, advfail = a<double,int>::v };
+a<int
+  #pragma DEBUG_ENTRY_POINT
+  > b;
+
+template<int a, int b = a + 1> class add { enum { v = a + b }; };
+add<1, 2> three;
+add<4> nine;

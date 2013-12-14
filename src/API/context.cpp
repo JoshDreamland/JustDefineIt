@@ -116,7 +116,10 @@ void context::add_search_directory(string dir)
 }
 
 static definition* find_mirror(definition *x, definition_scope* root) {
-  if (x) return ((definition_scope*)find_mirror(x->parent, root))->look_up(x->name);
+  if (x) {
+    definition_scope *n = (definition_scope*)find_mirror(x->parent, root);
+    return n? n->look_up(x->name) : n;
+  }
   return root;
 }
 

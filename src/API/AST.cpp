@@ -743,7 +743,7 @@ namespace jdi
   value AST::AST_Node_Scope::eval() const {
     full_type res = left->coerce();
     if (!res.def or !(res.def->flags & DEF_SCOPE))
-      return value();
+      return res.def == arg_key::abstract? value(VT_DEPENDENT) : value();
     if (res.def == arg_key::abstract)
       return value(VT_DEPENDENT);
     // cout << "Evaluating :: operator: " << res.def->name << "::" << right->content << endl;
@@ -1008,7 +1008,8 @@ namespace jdi
     for (size_t i = 0; i < params.size(); ++i) {
       if (temp->params[i]->flags & DEF_TYPENAME) {
         full_type t = params[i]->coerce();
-        if (t.def == arg_key::abstract) return arg_key::abstract;
+        if (t.def == arg_key::abstract || t.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+          return arg_key::abstract;
         k.put_type(i, t);
       }
       else {
@@ -1018,6 +1019,7 @@ namespace jdi
         k.put_value(i, v);
       }
     }
+    check_read_template_parameters(k, params.size(), temp, token_t(), def_error_handler);
     return full_type(temp->instantiate(k, def_error_handler));
   }
   full_type AST::AST_Node_TempKeyInst::coerce() const {

@@ -49,9 +49,13 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
       abort();
     }
     #endif
-    if (token.def->flags & DEF_TEMPLATE)
+    definition* tdef = token.def; // Reduce the type; full_type::reduce is more work than we need
+    while (((tdef->flags & (DEF_TYPED | DEF_TYPENAME)) == (DEF_TYPED | DEF_TYPENAME)) && ((definition_typed*)tdef)->type)
+      tdef = ((definition_typed*)tdef)->type;
+    
+    if (tdef->flags & DEF_TEMPLATE)
     {
-      res = token.def;
+      res = tdef;
       definition_template* dt = (definition_template*)res;
       if (dt->def && dt->def->flags & DEF_CLASS)
       {
@@ -76,9 +80,9 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
         return FATAL_TERNARY(NULL,res);
       }
     }
-    else if (token.def->flags & DEF_SCOPE)
+    else if (tdef->flags & DEF_SCOPE)
     {
-      definition_scope* as = (definition_scope*)token.def;
+      definition_scope* as = (definition_scope*)tdef;
       token = lex->get_token_in_scope(scope, herr);
       if (token.type != TT_SCOPE)
         break;

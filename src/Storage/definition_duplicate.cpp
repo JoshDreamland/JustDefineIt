@@ -337,16 +337,7 @@ namespace jdi {
     nast->remap(n);
     full_type ft = nast->coerce();
     
-    if (!ft.def || ft.def == arg_key::abstract) {
-      cerr << "Problem instantiating `" + name + "': coercion failure in expression: " + nast->toString() << endl;
-      #if 0 && defined(DEBUG_MODE)
-      cerr << "Remap dump:" << endl;
-      for (remap_citer rit = n.begin(); rit != n.end(); ++rit)
-        cerr << (void*)rit->first << ": " << ((definition*)rit->first)->toString(2) << "\n=>\n" << (void*)rit->second << ": " << rit->second->toString(2) << endl; 
-      cerr << "End dump." << endl;
-      #endif
-    }
-    else {
+    if (ft.def && ft.def != arg_key::abstract) {
       #ifdef DEBUG_MODE
         if (ft.refs.size() || ft.flags)
           cerr << "Coerced refstack somehow has additional info attached! Discarded!" << endl << endl << endl;

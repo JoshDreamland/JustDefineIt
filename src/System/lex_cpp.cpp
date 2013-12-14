@@ -668,8 +668,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           string n = read_preprocessor_args(herr);
           if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.top().is_true)) {
             signal(SIGTRAP, donothing); // Try not to die when we raise hell in the interrupt handler briefly
-            cout << "* Debug entry point" << endl;
             asm("INT3;"); // Raise hell in the interrupt handler; the debugger will grab us from here
+            cout << "* Debug entry point" << endl;
           }
         }
         #else
