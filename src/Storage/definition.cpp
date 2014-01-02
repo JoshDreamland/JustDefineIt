@@ -280,15 +280,14 @@ namespace jdi {
   definition_template::specialization::specialization(const specialization &x): key(x.key, false), spec_temp(x.spec_temp) {}
   definition_template::specialization::~specialization() { delete spec_temp; }
   
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(NULL) {}
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_TYPENAME), default_value(NULL), default_type(tp) {}
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, full_type &tp, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_value(defval), default_type(tp) {}
-  definition_tempparam::~definition_tempparam() { delete default_value; }
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_assignment(NULL) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_assignment(defval) {}
+  definition_tempparam::~definition_tempparam() { delete default_assignment; }
   
   static int nest_count = 0;
   struct nest_ { nest_() { ++nest_count; } ~nest_() { --nest_count; } };
   definition* definition_template::instantiate(const arg_key& key, error_handler *herr) {
-    if (nest_count >= 32) {
+    if (nest_count >= 128) {
       cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
       return NULL;
     }
@@ -580,11 +579,11 @@ namespace jdi {
       if (!first) res += ", ";
       if (d->flags & DEF_TYPENAME) {
         res += d->name.empty()? "typename" : "typename " + d->name;
-        if (d->default_type.def)
-          res += " = " + d->default_type.toString();
+        if (d->default_assignment)
+          res += " = " + d->default_assignment->toString();
       }
       else {
-        res += (d->default_type.def? d->default_type.toString() : "<ERROR>");
+        res += (d->integer_type.def? d->integer_type.toString() : "<ERROR>");
         if (d->flags & DEF_VALUED)
           res += " = " + ((definition_valued*)d)->value_of;
       }

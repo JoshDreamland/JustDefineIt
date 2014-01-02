@@ -170,9 +170,7 @@ template<typename tp, typename ass = tp> struct a {
 };
 
 enum { basic = isdbl<double>::v, adv = a<double,double>::v, advfail = a<double,int>::v };
-a<int
-  #pragma DEBUG_ENTRY_POINT
-  > b;
+a<int> b;
 
 template<int a, int b = a + 1> class add { enum { v = a + b }; };
 add<1, 2> three;

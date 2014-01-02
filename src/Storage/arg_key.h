@@ -79,7 +79,7 @@ namespace jdi {
       /// A comparator to allow storage in a map.
       bool operator<(const arg_key& other) const;
       /// A method to prepare this instance for storage of parameter values for the given template.
-      void mirror(definition_template* temp);
+      void mirror_types(definition_template* temp);
       /// Allocate a new definition for the parameter at the given index; this will be either a definition_typed or definition_valued.
       definition *new_definition(size_t index, string name, definition_scope* parent) const;
       /// A fast function to assign to our list at a given index, consuming the given type.

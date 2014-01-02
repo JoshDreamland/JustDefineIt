@@ -54,7 +54,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   
   for (;;) {
     string pname; // The name given to this parameter
-    full_type ft(NULL); // The type of this parameter; default type or integer type
+    unsigned dtpflags = DEF_TEMPPARAM;
     
     definition_tempparam* dtn;
     if (token.type == TT_TYPENAME || token.type == TT_CLASS || token.type == TT_STRUCT) {
@@ -63,36 +63,11 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         pname = token.content.toString();
         token = read_next_token(temp);
       }
-      if (token.type == TT_OPERATOR) {
-        if (token.content.len != 1 or *token.content.str != '=')
-          token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-        token = read_next_token(temp);
-        full_type fts = read_fulltype(lex, token, temp, this, herr);
-        ft.swap(fts);
-        if (!ft.def) {
-          token.report_error(herr,"Expected type name for default type to template parameter");
-          delete temp;
-          return 1; // I can't think of a good way of recovering from this; we'll just end up trapped in this loop
-        }
-      }
-      dtn = new definition_tempparam(pname, temp, ft, DEF_TYPENAME | DEF_TEMPPARAM);
+      dtpflags |= DEF_TYPENAME;
     }
     else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
       full_type fts = read_fulltype(lex, token, temp, this, herr);
-      ft.swap(fts);
-      pname = ft.refs.name;
-      AST *ast = NULL;
-      if (token.type == TT_OPERATOR) {
-        if (token.content.len != 1 or *token.content.str != '=') {
-          token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-          FATAL_RETURN((void(delete temp),1));
-        }
-        token = read_next_token(temp);
-        ast = new AST();
-        ast->set_use_for_templates(true);
-        ast->parse_expression(token, lex, temp, precedence::comma+1, herr);
-      }
-      dtn = new definition_tempparam(pname, temp, ft, ast, DEF_TEMPPARAM);
+      pname = fts.refs.name;
     }
     else {
       if (token.type == TT_GREATERTHAN) break;
@@ -100,6 +75,19 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       FATAL_RETURN((delete temp, 1));
       break;
     }
+    
+    AST *ast = NULL;
+    if (token.type == TT_OPERATOR) {
+      if (token.content.len != 1 or *token.content.str != '=') {
+        token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
+        FATAL_RETURN((void(delete temp),1));
+      }
+      token = read_next_token(temp);
+      ast = new AST();
+      ast->set_use_for_templates(true);
+      ast->parse_expression(token, lex, temp, precedence::comma+1, herr);
+    }
+    dtn = new definition_tempparam(pname, temp, ast, dtpflags);
     
     temp->params.push_back(dtn);
     if (pname.empty()) {
@@ -186,14 +174,13 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
             }
             if (!temp->params[i]->name.empty() && basetemp->params[i]->name != temp->params[i]->name) {
               definition_scope::defiter it = basetemp->members.find(basetemp->params[i]->name);
-              if (it != basetemp->members.end() && it->second == basetemp->params[i]) {
+              if (it != basetemp->members.end() && it->second == basetemp->params[i])
                 basetemp->members.erase(it);
-                if (!basetemp->members.insert(pair<string,definition*>(temp->params[i]->name, basetemp->params[i])).second)
-                  token.report_warning(herr, "Template parameter renamed from `" + basetemp->params[i]->name
-                                       + "' in forward declaration to `" + temp->params[i]->name + "', which is already declared");
-              }
-              else
-                token.report_warning(herr, "Template parameter `" + basetemp->params[i]->name + "' not found in forward declaration's scope");
+              else if (!basetemp->params[i]->name.empty())
+                token.report_warning(herr, "Template parameter `" + temp->params[i]->name + "' not found in forward declaration's scope");
+              if (!basetemp->members.insert(pair<string,definition*>(temp->params[i]->name, basetemp->params[i])).second)
+                token.report_warning(herr, "Template parameter renamed from `" + basetemp->params[i]->name
+                                     + "' in forward declaration to `" + temp->params[i]->name + "', which is already declared");
               basetemp->params[i]->name = temp->params[i]->name;
             }
           }
@@ -209,7 +196,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       
       arg_key argk(basetemp->params.size());
       definition_template::specialization *spec = new definition_template::specialization(basetemp->params.size(), temp->params.size(), temp);
-      argk.mirror(basetemp);
+      argk.mirror_types(basetemp);
       size_t args_given = 0;
       for (;;++args_given)
       {
@@ -231,7 +218,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
               spec->key.arg_inds[i][++spec->key.arg_inds[i][0]] = args_given;
               argk[args_given].val() = VT_DEPENDENT;
               token = read_next_token(temp);
-              goto handled_argk; // I don't trust the optimizer enough to ugly up the code with a boolean for this. Suck it up.
+              goto handled_argk; // break 2;
             }
             else
               token.report_error(herr, "Type mismatch in passing parameter " + toString(args_given) + " to template specialization: real-valued parameter expected");
@@ -253,8 +240,10 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         
         handled_argk:
         
-        if (token.type == TT_GREATERTHAN)
+        if (token.type == TT_GREATERTHAN) {
+          ++args_given;
           break;
+        }
         if (token.type != TT_COMMA) {
           token.report_errorf(herr, "Comma or closing triangle bracket expected here before %s");
           break;

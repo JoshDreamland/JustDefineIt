@@ -63,20 +63,30 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
       token.report_error(herr, "Too many template parameters provided to `" + temp->toString(0,0) + "'");
       FATAL_RETURN(1);
   }
-  int bad_params = 0, abstract_at = -1;
+  
+  for (size_t i = args_given; i < temp->params.size(); ++i)
+    if (temp->params[i]->flags & DEF_TYPENAME) {
+      if (temp->params[i]->default_assignment)
+        argk[i].ft() = temp->params[i]->default_assignment->coerce();
+      else token.report_error(herr, "Parameter " + value((long)i).toString() + " is not defaulted");
+    }
+    else {
+      if (temp->params[i]->default_assignment)
+        argk[i].val() = temp->params[i]->default_assignment->eval();
+      else token.report_error(herr, "Parameter " + value((long)i).toString() + " is not defaulted");
+    }
+  
+  int bad_params = 0;
   for (size_t i = 0; i < temp->params.size(); ++i)
     if (argk[i].type == arg_key::AKT_FULLTYPE) {
       if (!argk[i].ft().def)
         ++bad_params;
-      else if (i >= args_given && abstract_at == -1 && argk[i].ft().def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
-        abstract_at = i;
     }
     else if (argk[i].type == arg_key::AKT_VALUE) {
       if (argk[i].val().type == VT_NONE)
         ++bad_params;
-      else if (i >= args_given && abstract_at == -1 && argk[i].val().type == VT_DEPENDENT)
-        abstract_at = i;
     }
+  
   if (bad_params) {
     token.report_error(herr, "Insufficient parameters to `" + temp->toString(0,0) + "'; " + value((long)bad_params).toString() + " more required" );
     for (size_t i = 0; i < temp->params.size(); ++i)
@@ -86,22 +96,12 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
     FATAL_RETURN(1);
   }
   
-  // TODO: Replace template default_x with single AST; use for both cases
-  /*if (abstract_at >= 0) { printf("AYE-AYE, CAP'N (%d)\n", abstract_at);
-  for (size_t i = args_given; i < temp->params.size(); ++i)
-    if (temp->params[i]->flags & DEF_TYPENAME) {
-    }
-    else {
-        
-    }
-  }*/
-  
   return 0;
 }
 
 int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
-  argk.mirror(temp);
+  argk.mirror_types(temp);
   size_t args_given = 0;
   for (;;++args_given)
   {
@@ -118,8 +118,10 @@ int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lex
     if (read_template_parameter(argk, args_given, temp, lex, token, scope, cp, herr))
       return 1;
     
-    if (token.type == TT_GREATERTHAN)
+    if (token.type == TT_GREATERTHAN) {
+      ++args_given;
       break;
+    }
     if (token.type != TT_COMMA) {
       token.report_errorf(herr, "Comma expected here before %s");
       break;

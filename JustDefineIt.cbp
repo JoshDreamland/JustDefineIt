@@ -35,6 +35,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O3" />
+					<Add option="-flto" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -82,6 +83,8 @@
 		<Unit filename="src/API/AST.h" />
 		<Unit filename="src/API/AST_Export.cpp" />
 		<Unit filename="src/API/AST_forward.h" />
+		<Unit filename="src/API/AST_operator.cpp" />
+		<Unit filename="src/API/AST_operator.h" />
 		<Unit filename="src/API/compile_settings.h" />
 		<Unit filename="src/API/context.cpp" />
 		<Unit filename="src/API/context.h" />

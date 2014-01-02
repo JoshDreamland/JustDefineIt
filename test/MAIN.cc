@@ -93,12 +93,12 @@ int main() {
       
       llreader macro_reader("test/defines_mingw.txt");
     #else
-      builtin->add_search_directory("/usr/include/c++/4.7");
-      builtin->add_search_directory("/usr/include/x86_64-linux-gnu/c++/4.7");
-      builtin->add_search_directory("/usr/include/c++/4.7/backward");
-      builtin->add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.7/include");
+      builtin->add_search_directory("/usr/include/c++/4.8");
+      builtin->add_search_directory("/usr/include/x86_64-linux-gnu/c++/4.8");
+      builtin->add_search_directory("/usr/include/c++/4.8/backward");
+      builtin->add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.8/include");
       builtin->add_search_directory("/usr/local/include");
-      builtin->add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.7/include-fixed");
+      builtin->add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed");
       builtin->add_search_directory("/usr/include/x86_64-linux-gnu");
       builtin->add_search_directory("/usr/include");
       builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");

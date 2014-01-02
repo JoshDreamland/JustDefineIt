@@ -76,21 +76,14 @@ namespace jdi {
     } return false;
   }
   
-  void arg_key::mirror(definition_template *temp) {
+  void arg_key::mirror_types(definition_template *temp) {
     for (size_t i = 0; i < temp->params.size(); ++i)
       if (temp->params[i]->flags & DEF_TYPENAME) {
-        new(&values[i].data) full_type(temp->params[i]->default_type);
+        new(&values[i].data) full_type();
         values[i].type = AKT_FULLTYPE;
       }
       else {
-        if (temp->params[i]->default_value) {
-          new(&values[i].data) aug_value(temp->params[i]->default_value->eval());
-          if (values[i].av().type == VT_NONE)
-            fprintf(stderr, "Expression in template parameter could not be evaluated.");
-          else if (values[i].av().type == VT_DEPENDENT)
-            values[i].av().ast = temp->params[i]->default_value->duplicate();
-        }
-        else new(&values[i].data) aug_value();
+        new(&values[i].data) aug_value();
         values[i].type = AKT_VALUE;
       }
   }

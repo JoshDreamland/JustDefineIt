@@ -542,8 +542,8 @@ namespace jdi {
     class are considered hypothetical; they must exist in the type 
   */
   struct definition_tempparam: definition_class {
-    AST *default_value;
-    full_type default_type;
+    AST *default_assignment;
+    full_type integer_type;
     bool must_be_class; ///< Denotes to the compiler that this template parameter was used in a way only a class can be used (such as inheritance or member access).
     
     /** Construct with default information.
@@ -551,19 +551,19 @@ namespace jdi {
       @param parent The scope above this one.
       @param flags  The additional flag data about this scope. */
     definition_tempparam(string name, definition_scope* parent, unsigned flags = DEF_TEMPPARAM);
-    /** Construct with a type and some flags. The DEF_TYPENAME flag is automatically given to the type, and the
-        DEF_DEFAULTED flag is given to it if \p tp.def is non-null.
-      @param name   Some unique key name for this scope.
-      @param parent The scope above this one.
-      @param tp     The default type given to this parameter.
-      @param flags  The additional flag data about this scope. */
-    definition_tempparam(string name, definition_scope* parent, full_type &tp, unsigned flags = DEF_TEMPPARAM | DEF_TYPENAME);
     /** Construct with default information.
       @param name   Some unique key name for this scope.
       @param parent The scope above this one.
       @param defval The default value given to this parameter, read in as an AST to enable it to depend on other parameters.
       @param flags  The additional flag data about this scope. */
-    definition_tempparam(string name, definition_scope* parent, full_type &tp, AST* defval, unsigned flags = DEF_TEMPPARAM);
+    definition_tempparam(string name, definition_scope* parent, AST* defval, unsigned flags = DEF_TEMPPARAM);
+    /** Construct with default information.
+      @param name    Some unique key name for this scope.
+      @param parent  The scope above this one.
+      @param inttype The integer type used if this template parameter is instead a numeric constant.
+      @param defval  The default value given to this parameter, read in as an AST to enable it to depend on other parameters.
+      @param flags   The additional flag data about this scope. */
+    definition_tempparam(string name, definition_scope* parent, full_type &inttype, AST* defval = NULL, unsigned flags = DEF_TEMPPARAM);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;

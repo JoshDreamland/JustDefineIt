@@ -513,7 +513,7 @@ namespace jdi
                   }
                 }
                 else {
-                  #if DEBUG_MODE
+                  #if defined(DEBUG_MODE) && DEBUG_MODE
                     if (token.type != TT_LEFTPARENTH)
                       cerr << "INTERNAL ERROR: Token is not a left parenthesis. This should not happen." << endl;
                   #endif
@@ -1004,7 +1004,7 @@ namespace jdi
   
   full_type AST::AST_Node_TempInst::coerce() const {
     arg_key k(temp->params.size());
-    k.mirror(temp);
+    k.mirror_types(temp);
     for (size_t i = 0; i < params.size(); ++i) {
       if (temp->params[i]->flags & DEF_TYPENAME) {
         full_type t = params[i]->coerce();
