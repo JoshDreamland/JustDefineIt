@@ -108,8 +108,15 @@ namespace jdi {
     definition_enum* res = new definition_enum(name, parent, flags);
     res->type = type;
     res->constants.reserve(constants.size());
-    for (vector<const_pair>::const_iterator c = constants.begin(); c != constants.end(); ++c)
-      res->constants.push_back(const_pair(c->def, dup(c->ast)));
+    for (vector<const_pair>::const_iterator c = constants.begin(); c != constants.end(); ++c) {
+      res->constants.push_back(const_pair((definition_valued*)c->def->duplicate(n), dup(c->ast)));
+    }
+    n[this] = res;
+    return res;
+  }
+  
+  definition *definition_valued::duplicate(remap_set &n) const {
+    definition* res = new definition_valued(name, parent, type, modifiers, flags, value_of);
     n[this] = res;
     return res;
   }
@@ -146,17 +153,21 @@ namespace jdi {
     res->specializations = specializations;
     res->instantiations = instantiations;
     res->params.reserve(params.size());
+    
     for (pciterator it = params.begin(); it != params.end(); ++it)
       res->params.push_back((definition_tempparam*)(*it)->duplicate(n));
+    
     for (speciter it = res->specializations.begin(); it != res->specializations.end(); ++it)
       for (speclist::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2)
         (*it2)->spec_temp = (definition_template*)(*it2)->spec_temp->duplicate(n);
+    
     for (institer it = res->instantiations.begin(); it != res->instantiations.end(); ++it) {
       definition *nd = it->second->def->duplicate(n);
       n[it->second->def] = nd;
       it->second = new instantiation();
       it->second->def = nd;
     }
+    
     return res;
   }
   
@@ -165,7 +176,7 @@ namespace jdi {
     n[this] = res;
     
     res->integer_type.copy(integer_type);
-    res->default_assignment = default_assignment? default_assignment->duplicate() : NULL;
+    res->default_assignment = dup(default_assignment);
     res->definition_class::copy(this, n);
     return res;
   }

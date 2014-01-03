@@ -45,6 +45,7 @@ namespace jdi {
   definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {}
   definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack *rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(*rf), modifiers(typeflags) {}
   definition_typed::definition_typed(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
+  definition_typed::definition_typed(string n, definition* p, const full_type &tp, int flgs): definition(n,p,flgs), type(tp.def), referencers(tp.refs), modifiers(tp.flags) {}
   definition_typed::~definition_typed() {}
   
   string definition::qualified_id() const {
@@ -315,9 +316,14 @@ namespace jdi {
         return spec->spec_temp->instantiate(speckey, herr);
       }
     }
-    // cout << "No specialization found for " << key.toString() << endl;
-    // if (!specializations.empty())
-    //   cout << "{ " << specializations.begin()->first.toString() << " }" << endl;
+    
+    //bool pnospec = false;
+    //if (pnospec) {
+    //  cout << "No specialization found for " << name << "<" << key.toString() << "> (" << specializations.size() << " total available) {" << endl;
+    //  for (speciter it = specializations.begin(); it != specializations.end(); ++it)
+    //    cout << it->first.toString() << endl;
+    //  cout << " }" << endl;
+    //}
     
     pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation*>(key, NULL));
     if (ins.second) {
@@ -338,11 +344,23 @@ namespace jdi {
         herr->error("Attempt to instantiate template with an incorrect number of parameters; passed " + value(long(key.end() - key.begin())).toString() + ", required " + value(long(params.size())).toString());
         FATAL_RETURN(NULL);
       }
+      // cout << "Remap set:" << endl << "  {" << endl;
+      // for (remap_iter rit = n.begin(); rit != n.end(); ++rit)
+      //  cout << "  " << rit->first << " -> " << rit->second << "  (" << rit->first->name << " -> " << rit->second->name << ")" << endl;
+      //cout << "  }" << endl;
       ntemp->remap(n);
       // cout << "Duplicated " << def->name << " to " << ntemp->name << endl;
       // cout << ntemp->toString() << endl;
     }
-    return ins.first->second->def;
+    //else cout << "Instantiation found for " << name << "<" << key.toString() << ">" << endl;
+    //cout << "All instantiations:" << endl << "{" << endl;
+    //for (institer insts = instantiations.begin(); insts != instantiations.end(); ++insts) {
+    //  definition_scope *ds = (definition_scope*)insts->second->def;
+    //  cout << "  " << name << "<" << insts->first.toString() << "> = " << ds << " / " << ds->find_local("v") << endl;
+    //}
+    //cout << "}" << endl;
+    definition *d = ins.first->second->def;
+    return d;
   }
   
   arg_key spec_key::get_key(const arg_key &src_key)

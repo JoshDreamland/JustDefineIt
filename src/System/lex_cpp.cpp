@@ -905,9 +905,9 @@ token_t lexer_cpp::get_token(error_handler *herr)
           pos += cfile[pos] == '*';
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
       
-      case '(': return token_t(token_basics(TT_LEFTPARENTH,filename,line,spos-lpos));
-      case '[': return token_t(token_basics(TT_LEFTBRACKET,filename,line,spos-lpos));
-      case '{': return token_t(token_basics(TT_LEFTBRACE,  filename,line,spos-lpos));
+      case '(': return token_t(token_basics(TT_LEFTPARENTH, filename,line,spos-lpos));
+      case '[': return token_t(token_basics(TT_LEFTBRACKET, filename,line,spos-lpos));
+      case '{': return token_t(token_basics(TT_LEFTBRACE,   filename,line,spos-lpos));
       case '}': return token_t(token_basics(TT_RIGHTBRACE,  filename,line,spos-lpos));
       case ']': return token_t(token_basics(TT_RIGHTBRACKET,filename,line,spos-lpos));
       case ')': return token_t(token_basics(TT_RIGHTPARENTH,filename,line,spos-lpos));

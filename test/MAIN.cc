@@ -15,6 +15,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <iomanip>
 #include <unistd.h>
 using namespace std;
 #include <API/jdi.h>
@@ -72,6 +73,20 @@ int main() {
        << "sizeof(jdi::template::arg_key):  " << sizeof(jdi::arg_key) << endl;
   
   //test_expression_evaluator();
+  
+  cout << endl << "Test arg_key::operator<" << endl;
+  {
+    arg_key a(2), b(2);
+    a.put_type(0, full_type(builtin_type__double));
+    a.put_type(1, full_type(builtin_type__int));
+    b.put_type(0, full_type(builtin_type__double));
+    b.put_type(1, full_type(builtin_type__double));
+    const int w = max(a.toString().length(), b.toString().length());
+    cout << "  [" << setw(w) << a.toString() << "]  <  [" << setw(w) << b.toString() << "]: " << (a < b) << endl;
+    cout << "  [" << setw(w) << b.toString() << "]  <  [" << setw(w) << a.toString() << "]: " << (b < a) << endl;
+    cout << "  [" << setw(w) << a.toString() << "]  <  [" << setw(w) << a.toString() << "]: " << (a < a) << endl;
+    cout << "  [" << setw(w) << b.toString() << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
+  }
   
   #if 0
     builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++");

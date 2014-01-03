@@ -69,7 +69,9 @@ b: syntax_error {};
 #include <numeric>
 #include <algorithm>
 /* */
+
 /* * /
+#include <hash_map>
 #include <memory>
 #include <functional>
 #include <list>
@@ -84,7 +86,6 @@ b: syntax_error {};
 #include <bitset>
 #include <complex>
 #include <fstream>
-#include <hash_map>
 #include <hash_set>
 #include <iomanip>
 #include <ios>
@@ -160,6 +161,7 @@ template<typename t, typename q> arses<q>::arses(t x) {}
 
 //#include <vector>
 
+/*
 template<typename x> class isdbl { enum { v = false }; };
 template<> class isdbl<double>   { enum { v = true  }; };
 
@@ -169,9 +171,17 @@ template<typename tp, typename ass = tp> struct a {
   enum { v = isdbl<ass>::v };
 };
 
-enum { basic = isdbl<double>::v, adv = a<double,double>::v, advfail = a<double,int>::v };
-a<int> b;
+enum {
+  basic = isdbl<double>::v,
+  basicfail = isdbl<int>::v,
+  adv = a<double,double>::v,
+  advfail = a<double,int>::v,
+  nobullshit = a<double,double>::v,
+  expert = a<double>::v,
+  expertfail = a<int>::v
+};
 
 template<int a, int b = a + 1> class add { enum { v = a + b }; };
 add<1, 2> three;
 add<4> nine;
+*/

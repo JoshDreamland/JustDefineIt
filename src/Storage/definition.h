@@ -140,6 +140,8 @@ namespace jdi {
     definition_typed(string name, definition* p, definition* tp, ref_stack *rf, unsigned int typeflags, int flags = DEF_TYPED);
     /// Construct without consuming a ref_stack.
     definition_typed(string name, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flags = DEF_TYPED);
+    /// Convenience ctor
+    definition_typed(string name, definition* p, const full_type &tp, int flags = DEF_TYPED);
     
     virtual ~definition_typed();
   };
@@ -255,6 +257,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual definition* duplicate(remap_set &n) const;
     
     definition_valued(string vname, definition *parnt, definition* type, unsigned int modifiers, unsigned int flags, const value &val); ///< Construct with a value and type.
   };
@@ -477,6 +480,8 @@ namespace jdi {
     typedef pvector::const_iterator pciterator;
     pvector params;
     
+    /// Class representing a single template specialization. Stored in a list of
+    /// specializations which is mapped by arg_key fitting.
     struct specialization {
       spec_key key;
       definition_template *spec_temp;
@@ -487,8 +492,9 @@ namespace jdi {
       specialization(const specialization&);
       ~specialization();
     };
-    typedef vector<specialization*> speclist;
-    typedef map<arg_key, speclist> specmap; ///< Map type for specializations
+    
+    typedef vector<specialization*> speclist; ///< List of specializations fitting a certain abstracted arg_key
+    typedef map<arg_key, speclist> specmap; ///< Multimap type for specializations
     typedef specmap::iterator speciter; ///< Map iterator type for specializations
     
     struct instantiation {

@@ -64,17 +64,31 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
       FATAL_RETURN(1);
   }
   
-  for (size_t i = args_given; i < temp->params.size(); ++i)
-    if (temp->params[i]->flags & DEF_TYPENAME) {
-      if (temp->params[i]->default_assignment)
-        argk[i].ft() = temp->params[i]->default_assignment->coerce();
-      else token.report_error(herr, "Parameter " + value((long)i).toString() + " is not defaulted");
+  if (args_given < temp->params.size()) {
+    remap_set n;
+    
+    for (size_t i = 0; i < args_given; ++i) {
+      if (argk[i].type == arg_key::AKT_FULLTYPE)
+        n[temp->params[i]] = new definition_typed(temp->params[i]->name, temp, argk[i].ft(), DEF_TYPENAME | DEF_TYPED);
+      else if (argk[i].type == arg_key::AKT_VALUE)
+        n[temp->params[i]] = new definition_valued(temp->params[i]->name, temp, temp->params[i]->integer_type.def, temp->params[i]->integer_type.flags, DEF_VALUED, argk[i].val());
     }
-    else {
-      if (temp->params[i]->default_assignment)
-        argk[i].val() = temp->params[i]->default_assignment->eval();
+    
+    for (size_t i = args_given; i < temp->params.size(); ++i)
+      if (temp->params[i]->default_assignment) {
+        AST* nast = temp->params[i]->default_assignment->duplicate();
+        nast->remap(n);
+        if (temp->params[i]->flags & DEF_TYPENAME)
+          argk.put_type(i, nast->coerce());
+        else
+          argk.put_value(i, nast->eval());
+        delete nast;
+      }
       else token.report_error(herr, "Parameter " + value((long)i).toString() + " is not defaulted");
-    }
+    
+    for (remap_iter rit = n.begin(); rit != n.end(); ++rit)
+      delete rit->second;
+  }
   
   int bad_params = 0;
   for (size_t i = 0; i < temp->params.size(); ++i)
