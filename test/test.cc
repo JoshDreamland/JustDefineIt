@@ -70,7 +70,7 @@ b: syntax_error {};
 #include <algorithm>
 /* */
 
-/* */
+/* * /
 #include <memory>
 #include <functional>
 #include <list>
@@ -100,96 +100,12 @@ b: syntax_error {};
 #include <strstream>
 /* */
 
-/*
-template<typename a> class is_double { enum { isdbl = 0 }; };
-template<> class is_double<double>   { enum { isdbl = 1 }; };
-template<int seven> class is_seven   { enum { is7   = 0 }; };
-template<> class is_seven<7>         { enum { is7   = 1 }; };
-template<typename a, int n> class is_d7: public is_double<a>, is_seven<n> {};
-typedef double da;
-typedef da  da2;
-typedef da2 da3;
-*/
-
-/*
-enum {
-  confusion = (int
-  #pragma DEBUG_ENTRY_POINT
-  (*)(int, int))(1+1)
+template<int x> class what {
+  int a;
+  what(
+       #pragma DEBUG_ENTRY_POINT
+       what &__a):
+    a(x)
+    {}
+  template<typename q> what(q hel) {}
 };
-
-int a;
-class my_class {
-  my_class();
-  my_class(int x, double d);
-  typedef int t;
-  t q;
-  int f();
-};
-
-my_class::t sommat;
-int my_class::f() { return 0; }
-
-int f();
-int f() {}
-int f(int x);
-int f(int x) {}
-
-my_class::my_class() {}
-my_class::my_class(int x, double d): q(x) {}
-
-my_class::my_class() {}
-
-template<typename a> class my_tclass {
-  a x;
-  my_tclass(a x);
-};
-template<typename a>
-  my_tclass<a>::my_tclass(a x):
-      x(x) {
-        return fucknuts;
-        zero;
-    }
-
-template<typename t> struct arses {
-  template<typename q> arses(t x);
-};
-
-template<typename t, typename q> arses<q>::arses(t x) {}
-*/
-
-//#include <vector>
-
-/*
-template<typename x> class isdbl { enum { v = false }; };
-template<> class isdbl<double>   { enum { v = true  }; };
-
-template<typename tp, typename ass = tp> struct a {
-  tp yay;
-  ass cakes;
-  enum { v = isdbl<ass>::v };
-};
-
-enum {
-  basic = isdbl<double>::v,
-  basicfail = isdbl<int>::v,
-  adv = a<double,double>::v,
-  advfail = a<double,int>::v,
-  nobullshit = a<double,double>::v,
-  expert = a<double>::v,
-  expertfail = a<int>::v
-};
-
-template<int a, int b = a + 1> class add { enum { v = a + b }; };
-add<1, 2> three;
-add<4> nine;
-*/
-
-/*
-namespace std {
-  template<typename> class allocator;
-}
-
-template<class _Alloc = std::allocator<_Val> > class hashtable;
-template<class _All> class hashtable;
-*/

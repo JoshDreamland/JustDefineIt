@@ -216,11 +216,13 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
         seen_type = true;
       }
       else if (token.type == TT_DEFINITION) {
-        if (!seen_type)
-          return seen_comma? PT_INITIALIZERS : PT_GROUPORINIT;
         definition* bd = read_qualified_definition(lex, scope, token, cp, herr);
         if (bd and (backt->def = bd)->flags & DEF_TYPENAME)
           seen_type = true;
+        else if (bd->flags & DEF_TEMPLATE && bd->name == scope->name)
+          seen_type = true;
+        else if (!seen_type)
+          return seen_comma? PT_INITIALIZERS : PT_GROUPORINIT;
         read_next = true;
       }
       else if (token.type == TT_IDENTIFIER) {
