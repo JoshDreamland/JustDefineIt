@@ -70,8 +70,7 @@ b: syntax_error {};
 #include <algorithm>
 /* */
 
-/* * /
-#include <hash_map>
+/* */
 #include <memory>
 #include <functional>
 #include <list>
@@ -184,4 +183,13 @@ enum {
 template<int a, int b = a + 1> class add { enum { v = a + b }; };
 add<1, 2> three;
 add<4> nine;
+*/
+
+/*
+namespace std {
+  template<typename> class allocator;
+}
+
+template<class _Alloc = std::allocator<_Val> > class hashtable;
+template<class _All> class hashtable;
 */

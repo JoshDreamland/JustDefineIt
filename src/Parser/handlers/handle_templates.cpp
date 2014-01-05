@@ -173,15 +173,18 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
               return 1;
             }
             if (!temp->params[i]->name.empty() && basetemp->params[i]->name != temp->params[i]->name) {
-              definition_scope::defiter it = basetemp->members.find(basetemp->params[i]->name);
-              if (it != basetemp->members.end() && it->second == basetemp->params[i])
-                basetemp->members.erase(it);
+              definition_scope::defiter it = basetemp->using_general.find(basetemp->params[i]->name);
+              if (it != basetemp->using_general.end())
+                if (it->second == basetemp->params[i])
+                  basetemp->using_general.erase(it);
+                else token.report_warning(herr, "Template parameter `" + basetemp->params[i]->name
+                                          + "' in forward declaration's using is not mapped to `" + temp->params[i]->name + "'");
               else if (!basetemp->params[i]->name.empty())
-                token.report_warning(herr, "Template parameter `" + temp->params[i]->name + "' not found in forward declaration's scope");
-              if (!basetemp->members.insert(pair<string,definition*>(temp->params[i]->name, basetemp->params[i])).second)
-                token.report_warning(herr, "Template parameter renamed from `" + basetemp->params[i]->name
-                                     + "' in forward declaration to `" + temp->params[i]->name + "', which is already declared");
+                token.report_warning(herr, "Template parameter `" + basetemp->params[i]->name
+                                     + "' not found in forward declaration's using; cannot be renamed to `" + temp->params[i]->name + "'");
+              
               basetemp->params[i]->name = temp->params[i]->name;
+              basetemp->use_general(basetemp->params[i]->name, basetemp->params[i]);
             }
           }
           delete temp;

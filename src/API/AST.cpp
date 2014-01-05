@@ -383,7 +383,8 @@ namespace jdi
           map<string,symbol>::iterator b = symbols.find(op);
           if (b == symbols.end()) {
             token.report_error(herr, "Operator `" + token.content.toString() + "' not defined");
-            delete left_node; return NULL;
+            delete left_node;
+            return NULL;
           }
           if (left_node->type == AT_DEFINITION) {
             AST_Node_Definition *ad = (AST_Node_Definition*)left_node;
@@ -407,6 +408,7 @@ namespace jdi
               }
             }
             token.report_error(herr, "Cannot operate on type `" + ((AST_Node_Type*)left_node)->dec_type.toString() + "'");
+            delete left_node;
             return NULL;
           }
           symbol &s = b->second;
@@ -494,6 +496,7 @@ namespace jdi
               }
               if (token.type != TT_RIGHTPARENTH) {
                 token.report_errorf(herr, "Expected closing parenthesis to cast here before %s");
+                delete left_node;
                 return NULL;
               }
               
@@ -504,7 +507,8 @@ namespace jdi
                   read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
                   track(ft.refs.toString());
                   if (!ant) {
-                   left_node = ant = new AST_Node_Type(ft);
+                    delete left_node;
+                    left_node = ant = new AST_Node_Type(ft);
                     token_basics(void(),
                       left_node->filename = (const char*)token.file,
                       left_node->linenum = token.linenum,

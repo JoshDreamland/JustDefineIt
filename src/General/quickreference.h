@@ -27,20 +27,23 @@ namespace quick
   /// Class meant to beautify code using a pointer to a pointer.
   template<typename tp> struct double_pointer {
     tp **refd;
-    inline tp *operator->() { return *refd; }
-    inline tp &operator*() { return **refd; }
-    inline const tp *operator->() const { return *refd; }
-    inline const tp &operator*() const { return **refd; }
+    inline tp *operator->() const { return *refd; }
+    inline tp &operator*() const { return **refd; }
     inline double_pointer<tp> &operator=(tp* x) { *refd = x; return *this; }
+    
     inline operator tp*() { return *refd; }
     template<typename tpto> inline operator tpto*() { return (tpto*)*refd; }
+    
+    /// Single dereference: return the actual pointer. The ugly hack to make up for how pleasant this looks, otherwise.
+    inline tp* operator~() { return *refd; }
+    
     inline bool operator==(tp *x) { return *refd == x; }
     inline bool operator!=(tp *x) { return *refd != x; }
     inline bool operator>=(tp *x) { return *refd >= x; }
     inline bool operator<=(tp *x) { return *refd <= x; }
     inline bool operator> (tp *x) { return *refd >  x; }
     inline bool operator< (tp *x) { return *refd <  x; }
-    inline tp* operator~() { return *refd; }
+    
     double_pointer(tp** to_ref): refd(to_ref) {}
   };
 }

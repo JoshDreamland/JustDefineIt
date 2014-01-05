@@ -109,7 +109,14 @@ namespace jdi {
     res->type = type;
     res->constants.reserve(constants.size());
     for (vector<const_pair>::const_iterator c = constants.begin(); c != constants.end(); ++c) {
-      res->constants.push_back(const_pair((definition_valued*)c->def->duplicate(n), dup(c->ast)));
+      definition_valued* dv = (definition_valued*)c->def->duplicate(n);
+      decpair dp = res->declare(dv->name, dv);
+      if (!dp.inserted) {
+        cerr << "ERROR: enum member `" << c->def->name << "' in new definition is already mapped! This is a program error!" << endl;
+        delete ~dp.def;
+        dp.def = dv;
+      }
+      res->constants.push_back(const_pair(dv, dup(c->ast)));
     }
     n[this] = res;
     return res;
