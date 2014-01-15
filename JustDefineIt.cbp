@@ -76,6 +76,9 @@
 			<Add option="-Werror" />
 			<Add directory="./src" />
 		</Compiler>
+		<Unit filename="dox/scope.dox">
+			<Option virtualFolder="Documentation/" />
+		</Unit>
 		<Unit filename="dox/token.dox">
 			<Option virtualFolder="Documentation/" />
 		</Unit>
@@ -117,6 +120,7 @@
 		<Unit filename="src/Parser/handlers/handle_function_impl.h" />
 		<Unit filename="src/Parser/handlers/handle_hypothetical.cpp" />
 		<Unit filename="src/Parser/handlers/handle_namespace.cpp" />
+		<Unit filename="src/Parser/handlers/handle_operatorkw_cast.cpp" />
 		<Unit filename="src/Parser/handlers/handle_scope.cpp" />
 		<Unit filename="src/Parser/handlers/handle_templates.cpp" />
 		<Unit filename="src/Parser/handlers/handle_union.cpp" />
@@ -159,9 +163,12 @@
 		<Unit filename="test/MAIN.cc" />
 		<Unit filename="test/debug_lexer.cpp" />
 		<Unit filename="test/debug_lexer.h" />
-		<Unit filename="test/defines.txt" />
-		<Unit filename="test/modifiers.txt" />
-		<Unit filename="test/primitives.txt" />
+		<Unit filename="test/modifiers.txt">
+			<Option virtualFolder="test/" />
+		</Unit>
+		<Unit filename="test/primitives.txt">
+			<Option virtualFolder="test/" />
+		</Unit>
 		<Unit filename="test/test.cc">
 			<Option compile="0" />
 			<Option link="0" />

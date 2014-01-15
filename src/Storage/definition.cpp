@@ -91,8 +91,46 @@ namespace jdi {
     return overload(ft.def, ft.refs, ft.flags, addflags, NULL, herr);
   }
   
-  void definition_function::overload(definition_template* ovrl) {
+  void definition_function::overload(definition_template* ovrl, error_handler *) {
+    // FIXME: This could push a forward declaration and an actual implementation
     template_overloads.push_back(ovrl);
+  }
+  
+  definition_overload* definition_scope::overload_function(string fname, full_type &ft, unsigned inflags, const jdip::token_t& errtok, error_handler *herr) {
+    definition_function *df;
+    definition_overload *dov;
+    decpair dp = declare(fname, NULL);
+    if (dp.inserted)
+      dp.def = df = new definition_function(fname, this, inflags);
+    else {
+      if (dp.def->flags & DEF_FUNCTION)
+        df = (definition_function*)dp.def;
+      else {
+        errtok.report_error(herr, "Cannot redeclare `" + fname + "' as function in this scope");
+        return NULL;
+      }
+    }
+    
+    dov = df->overload(ft, inflags, herr);
+    return dov;
+  }
+  
+  definition_function* definition_scope::overload_function(string fname, definition_template* dtemp, unsigned inflags, const jdip::token_t& errtok, error_handler *herr) {
+    definition_function *df;
+    decpair dp = declare(fname, NULL);
+    if (dp.inserted)
+      dp.def = df = new definition_function(fname, this, inflags);
+    else {
+      if (dp.def->flags & DEF_FUNCTION)
+        df = (definition_function*)dp.def;
+      else {
+        errtok.report_error(herr, "Cannot redeclare `" + fname + "' as function in this scope");
+        return NULL;
+      }
+    }
+    
+    df->overload(dtemp, herr);
+    return df;
   }
   
   definition_function::~definition_function() {

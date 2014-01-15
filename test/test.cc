@@ -70,7 +70,7 @@ b: syntax_error {};
 #include <algorithm>
 /* */
 
-/* * /
+/* */
 #include <memory>
 #include <functional>
 #include <list>
@@ -100,12 +100,16 @@ b: syntax_error {};
 #include <strstream>
 /* */
 
-template<int x> class what {
+class plus {
   int a;
-  what(
-       #pragma DEBUG_ENTRY_POINT
-       what &__a):
-    a(x)
-    {}
-  template<typename q> what(q hel) {}
+  template<typename i> i operator+(i q) {
+    // whatever, man
+  }
+  int whateve;
+  template<typename i> operator i() {
+    // no body; too lazy
+  }
+  int whatever;
+  operator int() {}
+  virtual operator int();
 };

@@ -266,49 +266,12 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         }
         break;
       
-      case TT_OPERATORKW:
-          token = read_next_token(scope);
-          if (token.type != TT_DECLARATOR and token.type != TT_DECFLAG and token.type != TT_DECLTYPE) {
-            token.report_errorf(herr, "Expected cast type to overload before %s");
-            FATAL_RETURN(1);
-          }
-          else {
-            lex_buffer lb(lex);
-            while (token.type != TT_LEFTPARENTH and token.type != TT_LEFTBRACE and token.type != TT_SEMICOLON and token.type != TT_ENDOFCODE)
-              lb.push(token), token = read_next_token(scope);
-            if (token.type != TT_LEFTPARENTH) {
-              token.report_error(herr, "Expected function parmeters before %s");
-              FATAL_RETURN(1); break;
-            }
-            
-            token.type = TT_ENDOFCODE; lb.push(token);
-            token.type = TT_LEFTPARENTH;
-            lb.reset(); token_t kick = lb.get_token(herr);
-            full_type ft = read_fulltype(&lb, kick, scope, this, herr);
-            
-            string opname; {
-              ref_stack my_func_refs;
-              read_referencers_post(my_func_refs, lex, token, scope, this, herr);
-              if (my_func_refs.empty() or my_func_refs.top().type != ref_stack::RT_FUNCTION) {
-                token.report_error(herr, "Expected function parameters for operator overload");
-                return 1;
-              }
-              opname = "operator " + ft.toString();
-              ft.refs.append_c(my_func_refs);
-            }
-            
-            decpair ins = scope->declare(opname, NULL);
-            definition_function *df;
-            
-            if (ins.inserted)
-              ins.def = df = new definition_function(opname, scope, inherited_flags);
-            else df = (definition_function*)ins.def;
-            
-            definition_overload *ovr = df->overload(ft, inherited_flags, herr);
-            decl = ovr;
-            goto handled_declarator_block;
-          }
-        break;
+      case TT_OPERATORKW: {
+          full_type ft = read_operatorkw_cast_type(lex, token, scope, this, herr);
+          if (!(decl = scope->overload_function("(cast)", ft, inherited_flags, token, herr)))
+            return 1;
+          goto handled_declarator_block;
+      } break;
       
       case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY:
       case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:

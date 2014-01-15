@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -29,7 +29,7 @@
 #include <Storage/definition.h>
 #include <System/builtins.h>
 
-#define constructor_name "<construct>"
+#define constructor_name "(construct)"
 inline bool ipc(jdi::definition_scope *scope, std::string dname) {
   return (((scope->flags & jdi::DEF_CLASS) and dname == scope->name) or dname == constructor_name);
 }

@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -263,10 +263,21 @@ namespace jdip {
   string read_operatorkw_name(lexer* lex, token_t &token, definition_scope *scope, error_handler *herr);
   
   /**
+    Parse a cast operator, eg, operator int().
+    @param lex    The lexer to poll for tokens.
+    @param token  The token which sparked this function call. Should be TT_OPERATORKW.
+    @param scope  The scope from which class names will be read for class casts.
+    @param cp     The context parser to be polled for any additional information.
+    @param herr   An error handler to receive any error reports.
+    @return The string containing the legible name of the operator function.
+  */
+  full_type read_operatorkw_cast_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr);
+  
+  /**
     Read a definition from a string of scope qualifiers.
     @param lex    The lexer to poll for tokens.
     @param scope  The scope from which class names will be read for class casts.
-    @param token  The token which sparked this function call. Should be TT_OPERATORKW.
+    @param token  The token which sparked this function call.
     @param cp     The context parser to be polled for any additional information.
     @param herr   An error handler to receive any error reports.
     @return The string containing the legible name of the operator function.

@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -238,8 +238,9 @@ namespace jdi {
         exists, or to merge it in (handling any errors) otherwise.
         @param ovrl  The template definition representing the new overload; this definition
                      will belong to the system after you pass it.
+        @param herr  An error handler to which errors will be reported.
     */
-    void overload(definition_template* ovrl);
+    void overload(definition_template* ovrl, error_handler *herr);
     
     definition_function(string name, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION); ///< Create a function with one overload, created from the given ref_stack.
     definition_function(string name, definition* p, int flags = DEF_FUNCTION); ///< Create a function which has no prototypes/overloads; it is impossible to call this function.
@@ -356,6 +357,29 @@ namespace jdi {
         @return  If found, a pointer to the definition with the given name is returned. Otherwise, NULL is returned.
     **/
     virtual definition* get_local(string name);
+    
+    /** Wrapper around `declare()` which overloads a function, creating it if it does not exist.
+        If the function already exists, an overload will be created for it.
+        If the overload already exists, its pointer is returned.
+        @param name   The function name.
+        @param tp     The return type and parameters of the overload to add.
+        @param flags  Flags to assign to this overload, such as DEF_PRIVATE or DEF_VIRTUAL.
+        @param errtok A token referenced for error reporting purposes.
+        @param herr   An error handler to receieve errors.
+        @return Returns the definition_overload corresponding to the overload with the given parameters, or NULL if an error occurred.
+    */
+    definition_overload *overload_function(string name, full_type &tp, unsigned flags, const jdip::token_t& errtok, error_handler *herr);
+    /** Function to add the given definition as a template overload
+        exists, or to merge it in (handling any errors) otherwise.
+        @param name   The function name.
+        @param ovrl   The template definition representing the new overload; this definition
+                      will belong to the system after you pass it.
+        @param flags  Flags to assign to this overload, such as DEF_PRIVATE or DEF_VIRTUAL.
+        @param errtok A token referenced for error reporting purposes.
+        @param herr   An error handler to which errors will be reported.
+        @return Returns the definition_function to which the overload was added, or NULL if an error occurred.
+    */
+    definition_function *overload_function(string name, definition_template* ovrl, unsigned flags, const jdip::token_t& errtok, error_handler *herr);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;

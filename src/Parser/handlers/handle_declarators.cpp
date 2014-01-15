@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -71,6 +71,13 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       tp2.flags |= tp.flags;
       tp2.def = builtin_type__void;
       tp.swap(tp2);
+    }
+    else if (token.type == TT_OPERATORKW) {
+      full_type ft = read_operatorkw_cast_type(lex, token, scope, this, herr);
+      if (!ft.def)
+        return 1;
+      res = scope->overload_function("(cast)", ft, inherited_flags, token, herr);
+      return !res;
     }
     else {
       token.report_error(herr, "Declaration does not give a valid type");
@@ -188,7 +195,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       else if (not(ins.def->flags & DEF_TYPED)) {
         if (ins.def->flags & DEF_TEMPLATE and !tp.refs.empty() and tp.refs.top().type == ref_stack::RT_FUNCTION) {
           definition_function* func = new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
-          func->overload((definition_template*)ins.def);
+          func->overload((definition_template*)ins.def, herr);
           res = ins.def = func;
         }
         else {

@@ -5,7 +5,8 @@
  * This file defines two subclasses of \c jdi::lexer. The first is meant to lex
  * C++ definitions, and so returns a wide range of token types. It will also do
  * any needed preprocessing, handing the second lexer to \c jdi::AST to handle
- * #if expression evaluation. The second lexer is much simpler, and treats 
+ * `#if` expression evaluation. The second lexer is much simpler, and treats all
+ * identifiers the same.
  * 
  * @section License
  * 
@@ -157,7 +158,7 @@ namespace jdip {
     
     set<string> visited_files; ///< For record and reporting purposes only.
   protected:
-    /// Storage mechanism for conditionals, such as #if, #ifdef, and #1ifndef
+    /// Storage mechanism for conditionals, such as <code>\#if</code>, <code>\#ifdef</code>, and <code>\#ifndef</code>.
     struct condition {
       bool is_true; ///< True if code in this layer is to be parsed; ie, the condition given is true.
       bool can_be_true; ///< True if an `else` statement or the like can set is_true to true.
@@ -166,7 +167,7 @@ namespace jdip {
     };
     /// FLatten a macro parameter, evaluating nested macro functions.
     static string _flatten(string param, const macro_map& macros, const token_t &errep, error_handler *herr);
-    quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested #if*)
+    quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested `\#if*`)
     lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
   };
   

@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -299,10 +299,19 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   // =====: Handle template function definitions :===========================================================================================
   // ========================================================================================================================================
   
+  int funcflags = 0;
   if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE || token.type == TT_DEFINITION || token.type == TT_TYPENAME)
   {
     full_type funcrefs = read_fulltype(lex, token, temp, this, herr);
     if (!funcrefs.def) {
+      if (token.type == TT_OPERATORKW) {
+        funcflags = funcrefs.flags;
+        if (!funcrefs.refs.empty()) {
+          token.report_error(herr, "Program error: references attatched to typeless expression");
+          return 1;
+        }
+        goto template_cast_operator;
+      }
       token.report_error(herr, "Expected return type for template function at this point");
       delete temp;
       return 1;
@@ -373,7 +382,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     
     if (!func)
       scope->declare(funcname, func = new definition_function(funcname, scope));
-    func->overload(temp);
+    func->overload(temp, herr);
     
     if (token.type == TT_COLON) {
       token.report_error(herr, "Unexpected colon; `" + funcname + "' is not a constructor");
@@ -387,15 +396,30 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       FATAL_RETURN(1);
     }
   }
+  else if (token.type == TT_OPERATORKW) {
+    template_cast_operator:
+    full_type ft = read_operatorkw_cast_type(lex, token, temp, this, herr);
+    definition_overload *ovr = new definition_overload("(cast)", scope, ft.def, ft.refs, ft.flags, DEF_FUNCTION | inherited_flags | funcflags);
+    if (!ovr)
+      return 1;
+    if (token.type == TT_LEFTBRACE)
+      ovr->implementation = handle_function_implementation(lex, token, scope, herr);
+    else ovr->flags |= DEF_INCOMPLETE;
+    temp->def = ovr;
+    scope->overload_function("(cast)", temp, inherited_flags | funcflags, token, herr);
+    return 0;
+  }
   else if (token.type == TT_TEMPLATE) {
-    // OH MY FUCKING WHAT
+    // FIXME: OH MY FUCKING WHAT
+    // These templates are used when declaring functions which have templates as parameters,
     handle_template(temp, token, inherited_flags);
     delete temp;
     return 0;
   }
   else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");
-    delete temp; return ERROR_CODE;
+    delete temp;
+    return ERROR_CODE;
   }
   
   
