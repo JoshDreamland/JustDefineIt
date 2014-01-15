@@ -143,14 +143,14 @@ namespace jdi {
     #ifdef DEBUG_MODE
       if (rf.empty()) {
         cerr << "Critical error." << endl;
-        return;
+        asm("int3"); return;
       }
     #endif
     const ref_stack::node &n = rf.top();
     #ifdef DEBUG_MODE
       if (n.type != ref_stack::RT_FUNCTION) {
         cerr << "Critical error." << endl;
-        return;
+        asm("int3"); return;
       }
     #endif
     

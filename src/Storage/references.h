@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -79,6 +79,7 @@ namespace jdi {
       public:
         ref_type type; ///< The type of this node.
         size_t arraysize() const; ///< Return the size of this array if and only if type == RT_ARRAYBOUND. Undefined behavior otherwise.
+        size_t paramcount() const; ///< Return the number of parameters if and only if type == RT_FUNCTION. Undefined behavior otherwise.
         node(node* p, ref_type rt); ///< Allow constructing a new node easily.
         bool operator==(const node &other) const; ///< Test for equality.
         bool operator!=(const node &other) const; ///< Test for inequality.
@@ -209,6 +210,7 @@ namespace jdi {
     AST *default_value; ///< An AST if a default value was given. NULL otherwise.
     
     parameter(); ///< Default constructor.
+    parameter(const full_type& ft, AST *default_value); ///< Construct by copying a full_type and accepting an optional default value AST.
     ~parameter(); ///< Destructor; frees the default value AST.
     void swap_in(full_type& param); ///< Swap contents with another parameter class.
     void swap(parameter& param); ///< Swap contents with another parameter class.

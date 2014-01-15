@@ -68,10 +68,10 @@ b: syntax_error {};
 #include <new>
 #include <numeric>
 #include <algorithm>
+#include <memory>
 /* */
 
 /* */
-#include <memory>
 #include <functional>
 #include <list>
 #include <deque>
@@ -100,16 +100,3 @@ b: syntax_error {};
 #include <strstream>
 /* */
 
-class plus {
-  int a;
-  template<typename i> i operator+(i q) {
-    // whatever, man
-  }
-  int whateve;
-  template<typename i> operator i() {
-    // no body; too lazy
-  }
-  int whatever;
-  operator int() {}
-  virtual operator int();
-};

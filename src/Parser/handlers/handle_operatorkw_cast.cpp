@@ -41,33 +41,22 @@ using namespace jdip;
 full_type jdip::read_operatorkw_cast_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
 {
   token = lex->get_token_in_scope(scope);
-  if (token.type != TT_DECLARATOR and token.type != TT_DECFLAG and token.type != TT_DECLTYPE) {
-    token.report_errorf(herr, "Expected cast type to overload before %s");
-    return NULL;
+  full_type ft = read_fulltype(lex, token, scope, cp, herr);
+  if (!ft.def) {
+    token.report_errorf(herr, "Cast type needed before %s");
+    return full_type();
   }
   
-  lex_buffer lb(lex);
-  while (token.type != TT_LEFTPARENTH and token.type != TT_LEFTBRACE and token.type != TT_SEMICOLON and token.type != TT_ENDOFCODE)
-    lb.push(token), token = lex->get_token_in_scope(scope);
-  if (token.type != TT_LEFTPARENTH) {
-    token.report_error(herr, "Expected function parmeters before %s");
-    return NULL;
+  if (ft.refs.empty() || ft.refs.top().type != ref_stack::RT_FUNCTION || ft.refs.top().paramcount()) {
+    token.report_error(herr, "Cast operator must be a function accepting zero parameters");
+    return full_type();
   }
   
-  token.type = TT_ENDOFCODE; lb.push(token);
-  token.type = TT_LEFTPARENTH;
-  lb.reset(); token_t kick = lb.get_token(herr);
-  full_type ft = read_fulltype(&lb, kick, scope, cp, herr);
-  
-  {
-    ref_stack my_func_refs;
-    read_referencers_post(my_func_refs, lex, token, scope, cp, herr);
-    if (my_func_refs.empty() or my_func_refs.top().type != ref_stack::RT_FUNCTION) {
-      token.report_error(herr, "Expected function parameters for operator overload");
-      return NULL;
-    }
-    ft.refs.append_c(my_func_refs);
-  }
+  ft.refs.pop();
+  ref_stack::parameter_ct funcparams;
+  ref_stack::parameter oneparam(ft, NULL);
+  funcparams.throw_on(oneparam);
+  ft.refs.push_func(funcparams);
   
   return ft;
 }

@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -64,6 +64,10 @@ namespace jdi {
   size_t ref_stack::node::arraysize() const {
     dbg_assert(this->type == RT_ARRAYBOUND);
     return ((node_array*)this)->bound;
+  }
+  size_t ref_stack::node::paramcount() const {
+    dbg_assert(this->type == RT_FUNCTION);
+    return ((node_func*)this)->params.size();
   }
   
   ref_stack::node* ref_stack::iterator::operator*() { return n; }
@@ -206,6 +210,7 @@ namespace jdi {
   }
   
   ref_stack::parameter::parameter(): variadic(false), default_value(NULL) {}
+  ref_stack::parameter::parameter(const full_type& ft, AST* dv): full_type(ft), variadic(false), default_value(dv) {}
   ref_stack::parameter::~parameter() { delete default_value; }
     
   void ref_stack::parameter::swap(ref_stack::parameter &param) {

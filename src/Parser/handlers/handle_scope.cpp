@@ -268,6 +268,8 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       
       case TT_OPERATORKW: {
           full_type ft = read_operatorkw_cast_type(lex, token, scope, this, herr);
+          if (!ft.def)
+            return 1;
           if (!(decl = scope->overload_function("(cast)", ft, inherited_flags, token, herr)))
             return 1;
           goto handled_declarator_block;
