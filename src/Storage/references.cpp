@@ -51,9 +51,11 @@ namespace jdi {
   ref_stack::node::node(node* p, ref_type rt): previous(p), type(rt) {}
   ref_stack::node_array::node_array(node* p, size_t b): node(p,RT_ARRAYBOUND), bound(b) {}
   ref_stack::node_func::node_func(node* p, parameter_ct &ps): node(p,RT_FUNCTION), params() { params.swap(ps); }
+  ref_stack::node_memptr::node_memptr(node* p, definition_class *memof): node(p,RT_MEMBER_POINTER), member_of(memof) {}
   
   ref_stack::node::~node() { }
   ref_stack::node_func::~node_func() {}
+  ref_stack::node_memptr::~node_memptr() {}
   
   ref_stack::node* ref_stack::node::duplicate() {
     if (type == RT_ARRAYBOUND) return new node_array(NULL,((node_array*)this)->bound);
@@ -107,6 +109,13 @@ namespace jdi {
     else ntop = nbottom;
     ++sz;
   }
+  void ref_stack::push_memptr(definition_class *memof) {
+    node* bo = nbottom;
+    nbottom = new node_memptr(NULL, memof);
+    if (bo) bo->previous = nbottom;
+    else ntop = nbottom;
+    ++sz;
+  }
   
   void ref_stack::pop() {
     node *dme = ntop;
@@ -122,6 +131,7 @@ namespace jdi {
     switch (n->type) {
       case RT_FUNCTION: delete (node_func*)n; break;
       case RT_ARRAYBOUND: delete (node_array*)n; break;
+      case RT_MEMBER_POINTER: delete (node_memptr*)n; break;
       case RT_POINTERTO: case RT_REFERENCE: default: delete n; break;
     }
   }

@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -86,6 +86,7 @@ static struct token_info_c {
       case TT_PROTECTED: name[TT_PROTECTED] = "`protected' token";
       case TT_COLON: name[TT_COLON] = "`:' token";
       case TT_SCOPE: name[TT_SCOPE] = "`::' token";
+      case TT_MEMBEROF: name[TT_MEMBEROF] = "member specifier (class::*)";
       case TT_LEFTPARENTH: name[TT_LEFTPARENTH] = "'(' token";
       case TT_RIGHTPARENTH: name[TT_RIGHTPARENTH] = "')' token";
       case TT_LEFTBRACKET: name[TT_LEFTBRACKET] = "'[' token";

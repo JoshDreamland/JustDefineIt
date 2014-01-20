@@ -69,10 +69,10 @@ b: syntax_error {};
 #include <numeric>
 #include <algorithm>
 #include <memory>
+#include <functional>
 /* */
 
-/* */
-#include <functional>
+/* * /
 #include <list>
 #include <deque>
 #include <vector>
@@ -100,3 +100,33 @@ b: syntax_error {};
 #include <strstream>
 /* */
 
+template<typename a> struct phuk {
+  phuk(int) {}
+  typedef double q;
+  enum { r = 10 };
+};
+
+class myclass {
+  myclass *a;
+  myclass(*b)();
+  myclass(int x);
+  myclass(myclass  *c): a(0) {}
+  myclass(myclass::*c)(myclass);
+  myclass(myclass::*)(myclass);
+  myclass(phuk<int> X3);
+  myclass(phuk<int>::q X3);
+  myclass(int(phuk<int>::q)): a(0) {}
+  static int bait(phuk<int>::q) { return 0; }
+  
+  int ign1 = myclass(10);
+  int ign2 = myclass(myclass(10));
+  int ign3 = myclass(int(phuk<int>::r));
+  int ign4 = myclass(bait);
+  int ign4 = (this ->* x)(*this);
+};
+
+myclass(myclass::*x)(myclass) = c;
+
+int main() {
+return 0;
+}

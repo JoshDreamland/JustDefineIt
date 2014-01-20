@@ -239,6 +239,10 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
       }
       else if (token.type == TT_COMMA)
         seen_comma = true;
+      else if (token.type == TT_SCOPE) {
+        if (seen_type)
+          return PT_GROUPORINIT;
+      }
       else
         token.report_errorf(herr, "Unexpected %s in referencers");
     }
@@ -321,9 +325,23 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         definition *d = read_qualified_definition(lex, scope, token, cp, herr);
         if (!d) return 1;
         
-        refs.name = d->name;
-        if (pd != d)
-          refs.ndef = d;
+        if (token.type == TT_MEMBEROF) {
+          if (!d->flags & DEF_CLASS) {
+            token.report_error(herr, "Member pointer to non-class `" + d->name + "'");
+            return 1;
+          }
+          refs.push_memptr((definition_class*)d);
+          token = lex->get_token(herr);
+          if (token.type == TT_IDENTIFIER) {
+            refs.name = token.content.toString();
+            token = lex->get_token_in_scope(scope, herr);
+          }
+        }
+        else {
+          refs.name = d->name;
+          if (pd != d)
+            refs.ndef = d;
+        }
         
         ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
         refs.append_c(appme); return res;
@@ -335,6 +353,10 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         refs.append_c(appme); return res;
       }
       
+      case TT_MEMBEROF:
+        token.report_error(herr, "Member pointer (class::*) not presently supported...");
+        return 1;
+         
       case TT_OPERATORKW: {
           refs.name = read_operatorkw_name(lex, token, scope, herr);
           ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
@@ -360,7 +382,6 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
         goto default_;
-      
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
@@ -430,6 +451,10 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
       
       case TT_LESSTHAN:
         goto default_;
+      
+      case TT_MEMBEROF:
+        token.report_error(herr, "Member access (class::*) expected before name in type");
+        return 1;
       
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_DEFINITION: 

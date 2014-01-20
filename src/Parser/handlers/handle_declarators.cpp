@@ -270,6 +270,10 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           token.report_error(herr, "Expected initializer `=' here before literal.");
         return 5;
       
+      case TT_MEMBEROF:
+          token.report_error(herr, "Unhandled (class::*) pointer");
+        return 1;
+      
       case TT_ELLIPSIS:
       case TT_SEMICOLON:
       

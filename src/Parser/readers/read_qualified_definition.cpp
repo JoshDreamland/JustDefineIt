@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -95,6 +95,10 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
           if (token.type != TT_SCOPE)
             break;
           continue;
+        }
+        if (res && token.type == TT_OPERATOR && token.content.len == 1 && *token.content.str == '*') {
+          token.type = TT_MEMBEROF;
+          return res;
         }
         else {
           token.report_errorf(herr, "Expected type or qualified-id before %s");

@@ -45,6 +45,7 @@ not thoroughly describe the data in a file.
   </tr>                                        
   <tr><td>TT_COLON</td>         <td>The literal ":"</td> <td>&mdash;</td> </tr>
   <tr><td>TT_SCOPE</td>         <td>The literal "::"</td> <td>&mdash;</td>
+  <tr><td>TT_MEMBEROF</td>      <td>&mdash;</td> <td>&mdash;</td>
   </tr>
   <tr><td>TT_LEFTPARENTH</td>   <td>&mdash;</td> <td>&mdash;</td> </tr>
   <tr><td>TT_RIGHTPARENTH</td>  <td>&mdash;</td> <td>&mdash;</td> </tr>
@@ -94,5 +95,15 @@ parameters corresponding to members which are pre-processed out, comma-separatin
 rest. As such, you will often see calls to token_t(TOKEN_BASICS(...)), and, more generally,
 TOKEN_BASICS(statement, statement, statement...). This is so removing those members does not
 cause compilation error.
+
+While the majority of the above tokens correspond to an actual in-file syntactical construct,
+two do not. The first, TT_OPERATOR, corresponds to any generic operator not covered by its
+own token, and is provided in the interest of simplifying code that has no use for operators.
+
+The other token, TT_MEMBEROF, does not correspond to any single textual element. It is used
+internally when specifying class membership of a function pointer. For example, in reading
+`void (myclass::* x)()`, the `::*` becomes TT_MEMBEROF when, for example, `read_qualified_definition`
+encounters the `*` operator. To simplify communication, no backtracking is done, and instead,
+the token type is changed to TT_MEMBEROF before returning success on reading `myclass`.
 
 */

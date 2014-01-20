@@ -61,7 +61,8 @@ namespace jdi {
       RT_POINTERTO, ///< This referencer is a pointer-to asterisk, (*).
       RT_REFERENCE, ///< This referencer is a reference ampersand (&).
       RT_ARRAYBOUND, ///< This referencer is an array boundary subscript, [].
-      RT_FUNCTION ///< This referencer is a set of function parameters.
+      RT_FUNCTION,   ///< This referencer is a set of function parameters.
+      RT_MEMBER_POINTER ///< This referencer is a pointer to a member function
     };
     
     struct parameter;
@@ -82,12 +83,14 @@ namespace jdi {
         size_t paramcount() const; ///< Return the number of parameters if and only if type == RT_FUNCTION. Undefined behavior otherwise.
         node(node* p, ref_type rt); ///< Allow constructing a new node easily.
         bool operator==(const node &other) const; ///< Test for equality.
-        bool operator!=(const node &other) const; ///< Test for inequality.
+        bool operator!=(const node &other) const; ///< Test for inequality.push_memptr
     };
     /// Node containing an array boundary.
     struct node_array;
     /// Node containing function parameters.
     struct node_func;
+    /// Node containing a pointer to a class member function.
+    struct node_memptr;
     
     /// Push a node onto this stack by a given type.
     /// @param reference_type The type of this reference; should be either \c RT_REFERENCE or \c RT_POINTERTO.
@@ -95,9 +98,12 @@ namespace jdi {
     /// Push an array node onto the bottom of this stack with the given boundary size.
     /// @param array_size  The number of elements in this array, or node_array::nbound for unspecified.
     void push_array(size_t array_size);
-    /// Push a funciton node onto the bottom of this stack with the given parameter descriptors, consuming them.
+    /// Push a function node onto the bottom of this stack with the given parameter descriptors, consuming them.
     /// @param parameters  A \c parameter_ct to consume containing details about the parameters of this function.
     void push_func(parameter_ct &parameters);
+    /// Push a class member pointer onto the bottom of this stack, from the given class definition.
+    /// @param member_of  The \c definition_class to which this member pointer belongs.
+    void push_memptr(definition_class *member_of);
     /// Append a stack to the top of this stack, consuming it.
     void append_c(ref_stack &rf);
     /// Similar to append_c, but for reference stacks composed in a nest. This method copies the name member as well.
@@ -252,6 +258,15 @@ namespace jdi {
     /// @param ps  The parameter container to consume.
     node_func(node* p, parameter_ct &ps);
     ~node_func();
+  };
+  /// A special ref_stack node with a list of function parameters.
+  struct ref_stack::node_memptr: ref_stack::node {
+    definition_class* member_of;
+    /// Construct new function node with previous node and a parameter container, consuming the parameter container.
+    /// @param p      The previous node.
+    /// @param memof  The parameter container to consume.
+    node_memptr(node* p, definition_class *memof);
+    ~node_memptr();
   };
 }
 

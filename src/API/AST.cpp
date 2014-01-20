@@ -5,7 +5,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -130,6 +130,9 @@ namespace jdi
       
       case TT_SCOPE:
           cerr << "Unimplemented: '::'" << endl;
+        return NULL;
+      case TT_MEMBEROF:
+          cerr << "Unhandled (class::*) pointer" << endl;
         return NULL;
       
       case TT_LEFTPARENTH:
@@ -343,7 +346,12 @@ namespace jdi
         left_node = new AST_Node_Scope(left_node,right,"::");
         break;
       }
-      
+      case TT_MEMBEROF:
+        track(string("::*"));
+        token.report_error(herr, "Not handled: (class::*) pointers");
+        delete left_node;
+        return NULL;
+        
       case TT_LESSTHAN:
         if (left_node->type == AT_SCOPE || left_node->type == AT_DEFINITION)
         {

@@ -224,6 +224,9 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_SCOPE:
           token = read_next_token(global);
         continue;
+      case TT_MEMBEROF:
+          token.report_error(herr, "Unexpected (scope::*) reference");
+        return 1;
       
       case TT_DEFINITION: {
         if (token.def->flags & DEF_NAMESPACE) {

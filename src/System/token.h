@@ -6,7 +6,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -58,6 +58,7 @@ namespace jdip {
     
     TT_COLON,      ///< A simple colon, which should always mark a label.
     TT_SCOPE,      ///< The scope accessor `::' symbol.
+    TT_MEMBEROF,   ///< A pseudo-token representing ::*. Will be returned instead of * when reading passes the ::.
     
     TT_LEFTPARENTH,   ///< A left parenthesis, `('.
     TT_RIGHTPARENTH,  ///< A right parenthesis, `)'.
