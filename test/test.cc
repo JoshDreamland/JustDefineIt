@@ -100,6 +100,7 @@ b: syntax_error {};
 #include <strstream>
 /* */
 
+/*
 template<typename a> struct phuk {
   phuk(int) {}
   typedef double q;
@@ -130,3 +131,17 @@ myclass(myclass::*x)(myclass) = c;
 int main() {
 return 0;
 }
+*/
+
+struct asses {
+  typedef int squirrel;
+  int lemon(squirrel q);
+};
+int asses::lemon(squirrel q) {};
+
+template<typename wee> class yay {};
+template<class x> class y {
+  typedef typename x::
+  #pragma DEBUG_ENTRY_POINT
+  template rebind<yay<int> >::z w;
+};

@@ -4,7 +4,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -343,7 +343,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
             refs.ndef = d;
         }
         
-        ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
+       ref_stack appme; int res = read_referencers_post(appme, lex, token, (pd != d)? d->parent : scope, cp, herr);
         refs.append_c(appme); return res;
       }
       case TT_IDENTIFIER: {// The name associated with this type
