@@ -64,6 +64,7 @@ namespace jdi {
       AT_OCTLITERAL,  ///< This node is an octal literal, such as 2471.
       AT_CHRLITERAL,  ///< This node is a character literal, such as 'a'.
       AT_IDENTIFIER,  ///< This node is an identifier that could not be looked up.
+      AT_TEMPID,      ///< This node is an identifier that is specified to be a template.
       AT_DEFINITION,  ///< This node is a definition; an identifier that has been looked up.
       AT_TYPE,        ///< This node is a full type.
       AT_ARRAY,       ///< This node is an array of nodes.
@@ -350,7 +351,7 @@ namespace jdi {
       virtual ~AST_Node_Array();
     };
     struct AST_Node_TempInst: AST_Node {
-      definition_template* temp; ///< The template to be instantiated.
+      AST_Node* temp; ///< The expression giving the template to be instantiated.
       vector<AST_Node*> params; ///< Vector of our template parameters.
       
       virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
@@ -366,6 +367,7 @@ namespace jdi {
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
       
       AST_Node_TempInst(definition_template *def);
+      AST_Node_TempInst(AST_Node *tempast, string content);
       virtual ~AST_Node_TempInst();
     };
     struct AST_Node_TempKeyInst: AST_Node {

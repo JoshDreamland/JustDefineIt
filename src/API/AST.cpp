@@ -109,7 +109,8 @@ namespace jdi
           token.report_errorf(herr, "Expected identifier to treat as template before %s");
           return NULL;
         }
-        return parse_expression(token, precedence::scope);
+        myroot = new AST_Node(token.content.toString(), at = AT_TEMPID);
+        break;
       
       case TT_OPERATOR: case TT_TILDE: {
         ct = token.content.toString();
@@ -353,15 +354,16 @@ namespace jdi
         return NULL;
         
       case TT_LESSTHAN:
-        if (left_node->type == AT_SCOPE || left_node->type == AT_DEFINITION)
+        if (left_node->type == AT_SCOPE || left_node->type == AT_DEFINITION || left_node->type == AT_TEMPID)
         {
           if (precedence::scope < prec_min)
             return left_node;
           definition *def = left_node->coerce().def;
-          if (def && (def->flags & DEF_TEMPLATE))
+          if ((def && (def->flags & DEF_TEMPLATE)) || (left_node->type == AT_TEMPID)
+          ||  (left_node->type == AT_SCOPE && ((AST_Node_Scope*)left_node)->right && ((AST_Node_Scope*)left_node)->right->type == AT_TEMPID))
           {
             track(string("<"));
-            AST_Node_TempInst *ti = new AST_Node_TempInst((definition_template*)def);
+            AST_Node_TempInst *ti = new AST_Node_TempInst(left_node, "()<>");
             token = get_next_token();
             
             bool gtio = tt_greater_is_op;
@@ -379,7 +381,6 @@ namespace jdi
             }
             track(string(">"));
             tt_greater_is_op = gtio;
-            delete left_node;
             left_node = ti;
             break;
           }
@@ -1014,11 +1015,20 @@ namespace jdi
     return res;
   }
   
-  full_type AST::AST_Node_TempInst::coerce() const {
-    arg_key k(temp->params.size());
-    k.mirror_types(temp);
+  full_type AST::AST_Node_TempInst::coerce() const
+  {
+    full_type tpd = temp->coerce();
+    
+    if (tpd.def == arg_key::abstract)
+      return arg_key::abstract;
+    if (!tpd.def or not(tpd.def->flags & DEF_TEMPLATE))
+      return full_type();
+    
+    definition_template *tplate = (definition_template*)tpd.def;
+    arg_key k(tplate->params.size());
+    k.mirror_types(tplate);
     for (size_t i = 0; i < params.size(); ++i) {
-      if (temp->params[i]->flags & DEF_TYPENAME) {
+      if (tplate->params[i]->flags & DEF_TYPENAME) {
         full_type t = params[i]->coerce();
         if (t.def == arg_key::abstract || t.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
           return arg_key::abstract;
@@ -1031,8 +1041,8 @@ namespace jdi
         k.put_value(i, v);
       }
     }
-    check_read_template_parameters(k, params.size(), temp, token_t(), def_error_handler);
-    return full_type(temp->instantiate(k, def_error_handler));
+    check_read_template_parameters(k, params.size(), tplate, token_t(), def_error_handler);
+    return full_type(tplate->instantiate(k, def_error_handler));
   }
   full_type AST::AST_Node_TempKeyInst::coerce() const {
     if (key.is_abstract()) return arg_key::abstract;
@@ -1068,7 +1078,8 @@ namespace jdi
   AST::AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param, arr? "delete" : "delete[]", AT_DELETE), array(arr) {}
   AST::AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): AST_Node(AT_SUBSCRIPT), left(l), index(ind) {}
   AST::AST_Node_Subscript::AST_Node_Subscript(): AST_Node(AT_SUBSCRIPT), left(NULL), index(NULL) {}
-  AST::AST_Node_TempInst::AST_Node_TempInst(definition_template* d): AST_Node(d->name, AT_INSTANTIATE), temp(d) {}
+  AST::AST_Node_TempInst::AST_Node_TempInst(definition_template* d): AST_Node(d->name, AT_INSTANTIATE), temp(new AST_Node_Definition(d, d->name)) {}
+  AST::AST_Node_TempInst::AST_Node_TempInst(AST_Node* d, string c): AST_Node(c, AT_INSTANTIATE), temp(d) {}
   AST::AST_Node_TempKeyInst::AST_Node_TempKeyInst(definition_template* t, const arg_key &k): AST_Node(t->name, AT_INSTBYKEY), temp(t), key(k) {}
   AST::AST_Node_Array::AST_Node_Array(): AST_Node(AT_ARRAY) {}
   

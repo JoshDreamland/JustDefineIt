@@ -418,7 +418,7 @@ namespace jdi {
     return res;
   }
   AST::AST_Node *AST::AST_Node_TempInst   ::duplicate() const {
-    AST_Node_TempInst *res = new AST_Node_TempInst(temp);
+    AST_Node_TempInst *res = new AST_Node_TempInst(temp->duplicate(), content);
     res->params.reserve(params.size());
     for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
       res->params.push_back(dup(*p));
@@ -467,7 +467,7 @@ namespace jdi {
       (*p)->remap(n);
   }
   void AST::AST_Node_TempInst   ::remap(const remap_set& n) {
-    temp = filter(temp, n);
+    temp->remap(n);
     for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
       (*p)->remap(n);
   }

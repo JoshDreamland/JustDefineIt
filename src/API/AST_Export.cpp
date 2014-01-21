@@ -364,7 +364,7 @@ namespace jdi {
     return (array?"delete ":"delete[] ") + operand->toString();
   }
   string AST::AST_Node_TempInst::toString() const {
-    string res = temp? temp->name + "<" : "(<NULL TEMPLATE>)<";
+    string res = temp? temp->toString() + "<" : "(<NULL TEMPLATE>)<";
     for (size_t i = 0; i < params.size(); ++i) { res += params[i]->toString(); if (i+1<params.size()) res += ", "; }
     return res + ">";
   }
