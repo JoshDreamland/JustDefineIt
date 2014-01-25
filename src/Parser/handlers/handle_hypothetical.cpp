@@ -39,7 +39,12 @@ namespace jdip {
     return h;
   }
   
-  definition_hypothetical* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr) {
+  definition* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr) {
+    if (scope->flags & DEF_TEMPLATE) {
+      definition_template::specialization *spec = temp->find_specialization(key);
+      if (spec && spec->spec_temp && spec->spec_temp->def) return spec->spec_temp->def;
+      return temp->def;
+    }
     AST *a = AST::create_from_instantiation(temp, key);
     if (temp->def && (temp->def->flags & (DEF_CLASS | DEF_TYPENAME)))
       flags |= DEF_TYPENAME;

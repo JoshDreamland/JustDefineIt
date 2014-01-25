@@ -7,7 +7,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -334,25 +334,11 @@ namespace jdi {
     
     // TODO: Move this specialization search into the not-found if (ins.second) below, then add the specialization to the instantiation map.
     // TODO: Be careful not to double free those specializations. You may need to keep a separate map for regular instantiations to free.
-    speciter spi = specializations.find(key);
-    //cout << "Find specialization candidates for <" << key.toString() << ">..." << endl;
-    if (spi != specializations.end()) {
-      specialization *spec = NULL;
-      int merit = 0;
-      
-      for (speclist::iterator i = spi->second.begin(); i != spi->second.end(); ++i) {
-        int m = (*i)->key.merit(key);
-        if (m > merit) {
-          spec = *i;
-          merit = m;
-        }
-      }
-      
-      if (spec) {
-        arg_key speckey = spec->key.get_key(key);
-        // cout << "Specialization instantiation with key <" << speckey.toString() << ">" << endl;
-        return spec->spec_temp->instantiate(speckey, herr);
-      }
+    specialization *spec = find_specialization(key);
+    if (spec) {
+      arg_key speckey = spec->key.get_key(key);
+      // cout << "Specialization instantiation with key <" << speckey.toString() << ">" << endl;
+      return spec->spec_temp->instantiate(speckey, herr);
     }
     
     //bool pnospec = false;
@@ -399,6 +385,27 @@ namespace jdi {
     //cout << "}" << endl;
     definition *d = ins.first->second->def;
     return d;
+  }
+  
+  definition_template::specialization *definition_template::find_specialization(const arg_key &key) const
+  {
+    speciter_c spi = specializations.find(key);
+    //cout << "Find specialization candidates for <" << key.toString() << ">..." << endl;
+    if (spi != specializations.end()) {
+      specialization *spec = NULL;
+      int merit = 0;
+      
+      for (speclist::const_iterator i = spi->second.begin(); i != spi->second.end(); ++i) {
+        int m = (*i)->key.merit(key);
+        if (m > merit) {
+          spec = *i;
+          merit = m;
+        }
+      }
+      
+      return spec;
+    }
+    return NULL;
   }
   
   arg_key spec_key::get_key(const arg_key &src_key)

@@ -27,6 +27,7 @@
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
 #include <Parser/parse_context.h>
+#include <Parser/is_potential_constructor.h>
 #include <System/builtins.h>
 #include <cstdio>
 using namespace jdip;
@@ -87,6 +88,11 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
             ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
           else if (rdef->flags & DEF_TEMPPARAM)
             ((definition_tempparam*)rdef)->must_be_class = true;
+          else if (rdef->name == constructor_name && rdef->flags & DEF_FUNCTION) {
+            full_type res(builtin_type__void);
+            res.refs.ndef = rdef;
+            return res;
+          }
           else {
             token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type (" + flagnames(rdef->flags) + ")");
             return NULL;
@@ -103,8 +109,8 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
           return full_type();
       }
       else {
-        if (token.type == TT_IDENTIFIER or token.type == TT_DEFINITION)
-          token.report_error(herr,"Type name expected here; `" + token.content.toString() + (token.type == TT_DEFINITION? "' does not name a type" : "' is not declared"));
+        if (token.type == TT_IDENTIFIER)
+          token.report_error(herr,"Type name expected here; `" + token.content.toString() + "' is not declared");
         else
           token.report_errorf(herr,"Type name expected here before %s");
         return full_type();
@@ -343,7 +349,20 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
             refs.ndef = d;
         }
         
-       ref_stack appme; int res = read_referencers_post(appme, lex, token, (pd != d)? d->parent : scope, cp, herr);
+        int res;
+        ref_stack appme;
+        if (pd != d)
+        {
+          if (scope->flags & DEF_TEMPLATE) {
+            // definition_scope *dp = d->parent, *sp = scope->parent; d->parent = scope; scope->parent = dp;
+            res = read_referencers_post(appme, lex, token, scope, cp, herr);
+            // d->parent = dp; scope->parent = sp;
+          }
+          else
+            res = read_referencers_post(appme, lex, token, scope, cp, herr);
+        }
+        else
+          res = read_referencers_post(appme, lex, token, scope, cp, herr);
         refs.append_c(appme); return res;
       }
       case TT_IDENTIFIER: {// The name associated with this type

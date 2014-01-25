@@ -517,9 +517,15 @@ namespace jdi {
       ~specialization();
     };
     
+    /// Look up a specialization fitting an arg_key.
+    /// @param key  The key to find a specialization for.
+    /// @return  The best-fit specialization, or NULL if none was found.
+    specialization *find_specialization(const arg_key &key) const;
+    
     typedef vector<specialization*> speclist; ///< List of specializations fitting a certain abstracted arg_key
     typedef map<arg_key, speclist> specmap; ///< Multimap type for specializations
     typedef specmap::iterator speciter; ///< Map iterator type for specializations
+    typedef specmap::const_iterator speciter_c; ///< Constant map iterator type for specializations
     
     struct instantiation {
       definition* def;

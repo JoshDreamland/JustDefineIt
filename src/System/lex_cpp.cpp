@@ -8,7 +8,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -367,7 +367,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     case 'd':
       if (strbw(cfile+pos, "efine")) { pos += 5; goto case_define; }
       goto failout;
-	  case 'e':
+    case 'e':
       if (cfile[pos] == 'n') { if (strbw(cfile+pos+1, "dif")) { pos += 4; goto case_endif; } goto failout; }
       if (cfile[pos] == 'l')
       { 
@@ -382,7 +382,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       }
       if (strbw(cfile+pos, "rror")) { pos += 4; goto case_error; }
       goto failout;
-	  case 'i':
+    case 'i':
       if (cfile[pos] == 'f')
       {
         if (strbw(cfile[++pos])) goto case_if;
@@ -397,13 +397,13 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       }
       if (cfile[pos] == 'm') { if (strbw(cfile+pos+1, "port"))  { pos += 5; goto case_import;  } goto failout; }
       goto failout;
-	  case 'l':
+    case 'l':
       if (strbw(cfile+pos, "ine")) { pos += 3; goto case_line; }
       goto failout;
-	  case 'p':
+    case 'p':
       if (strbw(cfile+pos, "ragma")) { pos += 5; goto case_pragma; }
       goto failout;
-	  case 'u':
+    case 'u':
       if (strbw(cfile+pos, "ndef")) { pos += 4; goto case_undef; }
       if (strbw(cfile+pos, "sing")) { pos += 4; goto case_using; }
       goto failout;

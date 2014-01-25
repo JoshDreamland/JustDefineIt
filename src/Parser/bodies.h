@@ -237,7 +237,7 @@ namespace jdip {
     
     @return A representation of the dependent member, or NULL if an error occurred.
   **/
-  definition_hypothetical* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr);
+  definition* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr);
   
   /**
     Handle symple nested hypothetical access.

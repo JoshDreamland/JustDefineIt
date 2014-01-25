@@ -1093,7 +1093,7 @@ namespace jdi
   AST::AST_Node_Unary::~AST_Node_Unary() { delete operand; }
   AST::AST_Node_Ternary::~AST_Node_Ternary() { delete exp; delete left; delete right; }
   AST::AST_Node_Parameters::~AST_Node_Parameters() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
-  AST::AST_Node_TempInst::~AST_Node_TempInst() { for (size_t i = 0; i < params.size(); i++) delete params[i]; }
+  AST::AST_Node_TempInst::~AST_Node_TempInst() { delete temp; for (size_t i = 0; i < params.size(); i++) delete params[i]; }
   AST::AST_Node_TempKeyInst::~AST_Node_TempKeyInst() { }
   AST::AST_Node_Array::~AST_Node_Array() { for (vector<AST_Node*>::iterator it = elements.begin(); it != elements.end(); ++it) delete *it; }
   AST::AST_Node_Subscript::~AST_Node_Subscript() { delete left; delete index; }

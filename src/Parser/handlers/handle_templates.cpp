@@ -116,6 +116,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     definition_class *tclass;
     
     if (token.type == TT_IDENTIFIER) {
+      regular_identifier:
       temp->name = token.content.toString();
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
       temp->def = tclass;
@@ -150,6 +151,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       return 0;
     }
     else if (token.type == TT_DEFINITION) {
+      if (token.def->parent != scope)
+        goto regular_identifier;
+      
       if (not((token.def->flags & DEF_TEMPLATE) && (((definition_template*)token.def)->def->flags & DEF_CLASS))) {
         token.report_error(herr, "Expected class name for specialization; `" + token.def->name + "' does not name a template class");
         delete temp;
@@ -344,6 +348,13 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       if (funcrefs.refs.ndef && funcrefs.refs.ndef->flags & DEF_HYPOTHETICAL) {
         // TODO: Do some error checking here to make sure whatever's being declared in that AST is a member of the template. Mark it non-extern.
       }
+      else if (funcrefs.refs.ndef && (funcrefs.refs.ndef->flags & DEF_TYPED)) {
+          definition_typed* dt = (definition_typed*)funcrefs.refs.ndef;
+        if (dt->modifiers & builtin_flag__static)
+          dt->flags &= ~DEF_INCOMPLETE; // TODO: Make structures OR static members by DEF_INCOMPLETE on creation; add error checking here
+        else
+          token.report_error(herr, "Definition of non-static member `" + dt->name + "'");
+      }
       else
         token.report_errorf(herr, "Definition in template must be a function; `" + funcrefs.def->name + " " + funcrefs.refs.name + "' is not a function (at %s)");
       delete temp;
@@ -352,7 +363,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     
     string funcname = funcrefs.refs.name;
     if (funcname.empty()) {
-      if (is_potential_constructor(scope, funcrefs)) {
+      if ((funcrefs.refs.ndef && funcrefs.refs.ndef->name == constructor_name) || is_potential_constructor(scope, funcrefs)) {
         funcname = constructor_name;
         if (token.type == TT_COLON) {
           // TODO: Actually store this. And the other one. :P
@@ -367,7 +378,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     }
     
     definition_function *func = NULL;
-    definition *maybe = scope->find_local(funcname);
+    definition *maybe = funcrefs.refs.ndef;
+    if (!maybe)
+      maybe = scope->find_local(funcname);
     if (maybe)
       if (!(maybe->flags & DEF_FUNCTION)) {
         token.report_error(herr, "Cannot redeclare " + maybe->kind() + " `" + funcname + "' as function in this scope");
