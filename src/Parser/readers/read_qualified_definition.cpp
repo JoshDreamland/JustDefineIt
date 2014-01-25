@@ -124,18 +124,31 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
       #endif
       token = lex->get_token(herr);
       if (token.type != TT_IDENTIFIER) {
+        if (token.type == TT_OPERATORKW) {
+          string dname = read_operatorkw_name(lex, token, scope, herr);
+          return ((definition_scope*)res)->get_local(dname);
+        }
+        if (token.type == TT_TILDE) {
+          token = lex->get_token(herr);
+          if (token.type != TT_IDENTIFIER || token.content.toString() != res->name) {
+            token.report_errorf(herr, "Expected class name following '~' before %s");
+            return NULL;
+          }
+          res = ((definition_scope*)res)->get_local("~" + res->name);
+          token = lex->get_token_in_scope(scope, herr);
+          return res;
+        }
         token.report_errorf(herr, "Expected variable name following `::' before %s");
         return NULL;
       }
-      else {
-        // This loop checks token.def for things; we have to set it here.
-        token.def = ((definition_scope*)res)->get_local(token.content.toString());
-        if (!token.def) {
-          token.report_error(herr, "Scope `" + res->name + "' does not contain `" + token.content.toString() + "'");
-          return NULL;
-        }
-        res = token.def;
+      
+      // This loop checks token.def for things; we have to set it here.
+      token.def = ((definition_scope*)res)->get_local(token.content.toString());
+      if (!token.def) {
+        token.report_error(herr, "Scope `" + res->name + "' does not contain `" + token.content.toString() + "'");
+        return NULL;
       }
+      res = token.def;
     }
     else break;
   }

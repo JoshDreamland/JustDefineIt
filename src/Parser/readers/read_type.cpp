@@ -88,7 +88,8 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
             ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
           else if (rdef->flags & DEF_TEMPPARAM)
             ((definition_tempparam*)rdef)->must_be_class = true;
-          else if (rdef->name == constructor_name && rdef->flags & DEF_FUNCTION) {
+          else if ((rdef->name == constructor_name || rdef->name[0] == '~') && rdef->flags & DEF_FUNCTION) {
+            // TODO: This block's a little tacky. It replaces ctor/dtor types with void and expects caller to perform this check again; DEF_CTOR/DTOR would speed things up
             full_type res(builtin_type__void);
             res.refs.ndef = rdef;
             return res;
@@ -354,9 +355,9 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         if (pd != d)
         {
           if (scope->flags & DEF_TEMPLATE) {
-            // definition_scope *dp = d->parent, *sp = scope->parent; d->parent = scope; scope->parent = dp;
+            definition_scope *dp = d->parent, *sp = scope->parent; d->parent = scope; scope->parent = dp;
             res = read_referencers_post(appme, lex, token, scope, cp, herr);
-            // d->parent = dp; scope->parent = sp;
+            d->parent = dp; scope->parent = sp;
           }
           else
             res = read_referencers_post(appme, lex, token, scope, cp, herr);

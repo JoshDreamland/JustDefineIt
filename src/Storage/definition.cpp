@@ -506,6 +506,7 @@ namespace jdi {
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME)) {
         size_t as = it->second->size_of();
+        if (!as) return 0;
         sz += as - 1;
         sz /= as; sz *= as;
         sz += as;
