@@ -289,6 +289,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       temp->name = basetemp->name + "<" + argk.toString() + ">";
       tclass = new definition_class(temp->name, temp, DEF_CLASS | DEF_TYPENAME);
       temp->def = tclass;
+      tclass->instance_of = basetemp;
       
       token = read_next_token(scope);
       goto regular_template_class;

@@ -58,10 +58,10 @@
 #include <memory>
 #include <list>
 #include <deque>
+#include <vector>
 /* */
 
 /* * /
-#include <vector>
 #include <stack>
 #include <queue>
 #include <set>

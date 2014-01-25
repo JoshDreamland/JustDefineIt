@@ -80,8 +80,20 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
               rdef->flags |= DEF_TYPENAME;
             }
             else {
-              token.report_error(herr, "Invalid use of template `" + rdef->name + "'");
-              return NULL;
+              bool found = 0;
+              for (definition_scope *scp = scope; scp; scp = scp->parent)
+                if (scp->flags & DEF_CLASS) {
+                  definition_class* dsc = (definition_class*)scp;
+                  if (dsc->instance_of && dsc->instance_of->name == rdef->name) {
+                    rdef = dsc;
+                    found = true;
+                    break;
+                  }
+                }
+              if (!found) {
+                token.report_error(herr, "Invalid use of template `" + rdef->name + "'");
+                return NULL;
+              }
             }
           }
           else if (rdef->flags & DEF_HYPOTHETICAL)

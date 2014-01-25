@@ -425,6 +425,8 @@ namespace jdi {
     
     /// Ancestors of this structure or class
     vector<ancestor> ancestors;
+    /// This tells us if we're an instance or specialization of some template.
+    definition_template *instance_of;
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
