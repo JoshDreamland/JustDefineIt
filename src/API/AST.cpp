@@ -497,8 +497,11 @@ namespace jdi
                 token_t &tk = lb.push(get_next_token());
                 if (tk.type == TT_RIGHTPARENTH) {
                     if (!--depth) { token = tk; break; }
-                } else if (tk.type == TT_LEFTPARENTH) ++depth;
-                else if (tk.type == TT_ENDOFCODE) break;
+                }
+                else if (tk.type == TT_LEFTPARENTH)
+                  ++depth;
+                else if (tk.type == TT_ENDOFCODE)
+                  break;
                 else if (tk.type != TT_OPERATOR or tk.content.len != 1
                      or (*tk.content.str != '*' and *tk.content.str != '&'))
                   is_cast = false;
