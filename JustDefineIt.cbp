@@ -116,6 +116,7 @@
 		<Unit filename="src/Parser/handlers/handle_class.cpp" />
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />
 		<Unit filename="src/Parser/handlers/handle_enum.cpp" />
+		<Unit filename="src/Parser/handlers/handle_friend.cpp" />
 		<Unit filename="src/Parser/handlers/handle_function_impl.cpp" />
 		<Unit filename="src/Parser/handlers/handle_function_impl.h" />
 		<Unit filename="src/Parser/handlers/handle_hypothetical.cpp" />

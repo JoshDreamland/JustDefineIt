@@ -398,9 +398,23 @@ namespace jdip {
       
       @param default_protection  The default protection level for inherited classes; eg, DEF_PUBLIC or DEF_PRIVATE.
       
-      @return  Zero if no error occurred.
+      @return  Zero if and only if no error occurred.
     **/
     int handle_class_inheritance(definition_scope *scope, token_t& token, definition_class *recipient, unsigned default_protection);
+    
+    /**
+      Parse a friend directive.
+      @param  scope    The scope in which declarations will be stored. [in-out]
+      @param  token    The token that was read before this function was invoked.
+                       At the start of this call, the type of this token must be
+                       either TT_CLASS or TT_STRUCT. Upon termination, the type
+                       of this token will be TT_DECLARATOR with extra info set to
+                       the new definition unless an error occurs. [in-out]
+      @param recipient The default protection level for inherited classes; eg,
+                       DEF_PUBLIC or DEF_PRIVATE.
+      @return Zero if and only if successful.
+    */
+    int handle_friend(definition_scope *scope, token_t& token, definition_class *recipient);
     
     /**
       Parse a union definition.

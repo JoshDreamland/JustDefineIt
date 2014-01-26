@@ -993,8 +993,10 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
     keywords["private"] = TT_PRIVATE;
     keywords["protected"] = TT_PROTECTED;
     keywords["public"] = TT_PUBLIC;
+    keywords["friend"] = TT_FRIEND;
     keywords["sizeof"] = TT_SIZEOF;
     keywords["__is_empty"] = TT_ISEMPTY;
+    keywords["__is_pod"] = TT_ISEMPTY; // FIXME: yeah, this is a hack
     keywords["struct"] = TT_STRUCT;
     keywords["template"] = TT_TEMPLATE;
     keywords["typedef"] = TT_TYPEDEF;

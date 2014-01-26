@@ -12,20 +12,7 @@
 #include <AL/al.h>
 #include <zlib.h>
 #include <png.h>
-
 /* */
-
-// In progress
-//#include <bits/stl_algobase.h>  // std::copy, std::fill_n
-
-// Down the road
-// #include <bits/char_traits.h>
-/*
-// Way down the road
-#include <string>
-
-// The north pole
-#include <iostream>
 
 /* */
 #include <cassert>
@@ -59,31 +46,29 @@
 #include <list>
 #include <deque>
 #include <vector>
-/* */
-
-/* * /
 #include <stack>
 #include <queue>
 #include <set>
 #include <map>
-#include <string>
+/* */
+
+/* * /
+#include <limits>
+#include <iosfwd>
 #include <stdexcept>
+#include <string>
 #include <bitset>
-#include <complex>
-#include <fstream>
-#include <hash_set>
 #include <iomanip>
 #include <ios>
-#include <iosfwd>
+#include <hash_set>
+#include <fstream>
+#include <complex>
 #include <iostream>
 #include <istream>
 #include <iterator>
-#include <limits>
 #include <locale>
 #include <ostream>
 #include <sstream>
 #include <streambuf>
 #include <strstream>
 /* */
-
-

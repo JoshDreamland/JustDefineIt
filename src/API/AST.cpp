@@ -290,7 +290,7 @@ namespace jdi
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
       case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
-      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: 
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
       #include <User/token_cases.h>
         token.report_errorf(herr, "Expected expression before %s");
         return NULL;
@@ -615,7 +615,7 @@ namespace jdi
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left_node;
       
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
-      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED:
+      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
       
       case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
       case TT_NEW: case TT_DELETE:

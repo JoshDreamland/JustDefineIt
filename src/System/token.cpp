@@ -84,6 +84,7 @@ static struct token_info_c {
       case TT_PUBLIC: name[TT_PUBLIC] = "`public' token";
       case TT_PRIVATE: name[TT_PRIVATE] = "`private' token";
       case TT_PROTECTED: name[TT_PROTECTED] = "`protected' token";
+      case TT_FRIEND: name[TT_FRIEND] = "`friend' token";
       case TT_COLON: name[TT_COLON] = "`:' token";
       case TT_SCOPE: name[TT_SCOPE] = "`::' token";
       case TT_MEMBEROF: name[TT_MEMBEROF] = "member specifier (class::*)";

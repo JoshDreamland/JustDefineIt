@@ -341,7 +341,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
             return 0;
           }
           token.report_errorf(herr, "Expected semicolon following template member definition before %s");
-          FATAL_RETURN(1);
+          FATAL_RETURN((void(delete temp), 1));
         }
         delete temp; // We're done with temp.
         return 0;
@@ -429,6 +429,17 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     handle_template(temp, token, inherited_flags);
     delete temp;
     return 0;
+  }
+  else if (token.type == TT_FRIEND) {
+    if (scope->flags & DEF_CLASS) {
+      handle_friend(temp, token, (definition_class*)scope);
+      delete temp;
+    }
+    else {
+      token.report_error(herr, "Unexpected `friend' statement: not in a class");
+      delete temp;
+      return 1;
+    }
   }
   else {
     token.report_errorf(herr, "Expected class or function declaration following template clause before %s");

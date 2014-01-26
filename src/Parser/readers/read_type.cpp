@@ -391,6 +391,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
          
       case TT_OPERATORKW: {
           refs.name = read_operatorkw_name(lex, token, scope, herr);
+          refs.ndef = scope->look_up(refs.name);
           ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
           refs.append_c(appme); return res;
       } break;
@@ -415,7 +416,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
           token.report_error(herr, "`...' not allowed as general modifier");
         goto default_;
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
-      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC:
+      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
@@ -489,7 +490,7 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
         return 1;
       
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
-      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_DEFINITION: 
+      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND: case TT_DEFINITION: 
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE: case TT_OPERATORKW:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:

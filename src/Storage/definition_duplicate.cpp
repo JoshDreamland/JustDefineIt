@@ -277,6 +277,14 @@ namespace jdi {
         an.def = (definition_class*)ex->second;
       }
     }
+    for (set<definition*>::iterator fiter = friends.begin(); fiter != friends.end(); ) {
+      definition *rep = filter(*fiter, n);
+      if (rep != *fiter) {
+        friends.erase(fiter++);
+        friends.insert(rep);
+      }
+      else ++fiter;
+    }
   }
   
   void definition_enum::remap(remap_set& n) {

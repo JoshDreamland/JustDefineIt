@@ -178,6 +178,24 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         if ((token = read_next_token(scope)).type != TT_COLON)
           token.report_error(herr, "Colon expected following `protected' token"); break;
       
+      case TT_FRIEND:
+          if (!(scope->flags & DEF_CLASS)) {
+            token.report_error(herr, "`friend' statement may only appear in a class or structure");
+            FATAL_RETURN(1);
+            while ((token = read_next_token(scope)).type != TT_SEMICOLON && token.type != TT_RIGHTBRACE && token.type != TT_ENDOFCODE);
+          }
+          else {
+            if (handle_friend(scope, token, (definition_class*)scope))
+              FATAL_RETURN(1);
+            if (token.type == TT_SEMICOLON)
+              token = read_next_token(scope);
+            else {
+              token.report_errorf(herr, "Expected semicolon before %s");
+              FATAL_RETURN(1);
+            }
+          }
+        continue;
+      
       case TT_USING:
           token = read_next_token(scope);
           if (token.type == TT_NAMESPACE) {

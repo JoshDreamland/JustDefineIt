@@ -41,7 +41,8 @@ not thoroughly describe the data in a file.
   </tr>
   <tr><td>TT_PUBLIC</td>        <td>&mdash;</td> <td>&mdash;</td> </tr>
   <tr><td>TT_PRIVATE</td>       <td>&mdash;</td> <td>&mdash;</td> </tr>
-  <tr><td>TT_PROTECTED</td>     <td>&mdash;</td> <td>&mdash;</td>
+  <tr><td>TT_PROTECTED</td>     <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_FRIEND</td>        <td>&mdash;</td> <td>&mdash;</td>
   </tr>                                        
   <tr><td>TT_COLON</td>         <td>The literal ":"</td> <td>&mdash;</td> </tr>
   <tr><td>TT_SCOPE</td>         <td>The literal "::"</td> <td>&mdash;</td>

@@ -55,6 +55,7 @@ namespace jdip {
     TT_PUBLIC,     ///< The `public' keyword.
     TT_PRIVATE,    ///< The `private' keyword.
     TT_PROTECTED,  ///< The `protected' keyword.
+    TT_FRIEND,     ///< The `friend' keyword.
     
     TT_COLON,      ///< A simple colon, which should always mark a label.
     TT_SCOPE,      ///< The scope accessor `::' symbol.

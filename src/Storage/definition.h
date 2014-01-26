@@ -29,11 +29,13 @@
 #include "definition_forward.h"
 
 #include <map>
+#include <set>
 #include <string>
 #include <cstddef>
 #include <vector>
 #include <deque>
 using std::map;
+using std::set;
 using std::vector;
 using std::deque;
 using std::pair;
@@ -427,6 +429,9 @@ namespace jdi {
     vector<ancestor> ancestors;
     /// This tells us if we're an instance or specialization of some template.
     definition_template *instance_of;
+    
+    /// A collection of all our friends.
+    set<definition*> friends;
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
