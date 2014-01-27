@@ -386,7 +386,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       }
       
       case TT_MEMBEROF:
-        token.report_error(herr, "Member pointer (class::*) not presently supported...");
+          token.report_error(herr, "Member pointer (class::*) not presently supported...");
         return 1;
          
       case TT_OPERATORKW: {
@@ -396,6 +396,9 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
           refs.append_c(appme); return res;
       } break;
       
+      case TT_ALIGNAS:
+      case TT_NOEXCEPT:
+        return read_referencers_post(refs, lex, token, scope, cp, herr);
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
         if ((token.content.str[0] == '&' or token.content.str[0] == '*') and token.content.len == 1) {
@@ -418,9 +421,11 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE: case TT_TYPEID:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
-      case TT_NEW: case TT_DELETE: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
+      case TT_NEW: case TT_DELETE: case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
+      case TT_ALIGNOF: case TT_CONSTEXPR: case TT_AUTO: case TT_STATIC_ASSERT:
+      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
       #include <User/token_cases.h>
         return 0;
     }
@@ -478,6 +483,14 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
           }
         } goto default_;
       
+      case TT_ALIGNAS:
+          token.report_error(herr, "Unimplemented: `alignas'");
+        return 1;
+      
+      case TT_NOEXCEPT:
+          token.report_error(herr, "Unimplemented: `noexcept'");
+        return 1;
+      
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
         goto default_;
@@ -492,9 +505,11 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND: case TT_DEFINITION: 
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE: case TT_OPERATORKW:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF:
+      case TT_DECLTYPE: case TT_TYPEID: case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
-      case TT_NEW: case TT_DELETE: case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
+      case TT_NEW: case TT_DELETE: case TT_STATIC_ASSERT: case TT_CONSTEXPR: case TT_AUTO:
+      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
       #include <User/token_cases.h>
         return 0;
     }

@@ -193,7 +193,17 @@ namespace jdi {
     };
     /// Child of AST_Node_Unary specifically for sizeof
     struct AST_Node_Cast: AST_Node_Unary {
+      /// Enumerates C++ casting modes, which depend on the keyword used for the cast.
+      enum cast_modes {
+        CM_CSTYLE,     ///< A C-style cast.
+        CM_CONST,      ///< The `const_cast' operator.
+        CM_STATIC,     ///< The `static_cast' operator.
+        CM_DYNAMIC,    ///< The `dynamic_cast' operator.
+        CM_REINTERPRET ///< The `reinterpret_cast' operator.
+      };
+      
       full_type cast_type; ///< The type this cast represents.
+      cast_modes cast_mode; ///< The mode of this cast; C-style, const, static, dynamic, reinterpret.
       
       virtual value eval() const; ///< Performs a cast, as it is able.
       virtual full_type coerce() const; ///< Returns \c cast_type.
@@ -207,8 +217,10 @@ namespace jdi {
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
       virtual int own_height(); ///< Returns the height in pixels of this node as it will render. This does not include its children.
       
-      AST_Node_Cast(AST_Node* param, const full_type &ft);
-      AST_Node_Cast(AST_Node* param, full_type &ft);
+      /// Construct without consuming a full_type
+      AST_Node_Cast(AST_Node* param, const full_type &ft, cast_modes cmode = CM_CSTYLE);
+      /// Construct consuming a full_type
+      AST_Node_Cast(AST_Node* param, full_type &ft, cast_modes cmode = CM_CSTYLE);
       AST_Node_Cast(AST_Node* param);
     };
     /// Child of AST_Node for tokens with an attached \c definition.

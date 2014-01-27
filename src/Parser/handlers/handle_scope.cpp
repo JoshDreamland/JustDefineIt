@@ -246,6 +246,16 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           token.report_error(herr, "Unexpected (scope::*) reference");
         return 1;
       
+      case TT_STATIC_ASSERT:
+          token.report_error(herr, "Unimplemented: static assert");
+        break;
+      case TT_AUTO:
+          token.report_error(herr, "Unimplemented: `auto' type inference");
+        break;
+      case TT_CONSTEXPR:
+          token.report_error(herr, "Unimplemented: const expressions outside enum");
+        break;
+      
       case TT_DEFINITION: {
         if (token.def->flags & DEF_NAMESPACE) {
           definition_scope* dscope = (definition_scope*)token.def;
@@ -296,10 +306,12 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           goto handled_declarator_block;
       } break;
       
-      case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY:
+      case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_ALIGNAS:
       case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
       case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_STRINGLITERAL: case TT_CHARLITERAL:
       case TT_NEW: case TT_DELETE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
+      case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
+      case TT_NOEXCEPT: case TT_TYPEID:
       #include <User/token_cases.h>
       default:
         token.report_errorf(herr, "Unexpected %s in this scope");

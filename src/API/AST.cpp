@@ -261,8 +261,15 @@ namespace jdi
       case TT_DECLTYPE:
           cerr << "Unimplemented: `decltype'." << endl;
         return NULL;
+      case TT_TYPEID:
+          cerr << "Unimplemented: `typeid'." << endl;
+        return NULL;
       
-      {
+      case TT_NOEXCEPT:
+          cerr << "Unimplemented: `noexcept'." << endl;
+        return NULL;
+      
+      /* ISEMPTY and SIZEOF */ {
           bool not_result;
           if (true) {
             case TT_ISEMPTY: not_result = true; track(string("isempty"));
@@ -286,11 +293,51 @@ namespace jdi
           read_next = true;
       } break;
       
+      /* Mixed cast types */ {
+        AST_Node_Cast::cast_modes mode;
+        while (false) {
+          case TT_CONST_CAST:        mode = AST_Node_Cast::CM_CONST; break;
+          case TT_STATIC_CAST:       mode = AST_Node_Cast::CM_STATIC; break;
+          case TT_DYNAMIC_CAST:      mode = AST_Node_Cast::CM_DYNAMIC; break;
+          case TT_REINTERPRET_CAST:  mode = AST_Node_Cast::CM_REINTERPRET; break;
+        }
+        token = get_next_token();
+        if (token.type != TT_LESSTHAN) {
+          token.report_error(herr, "Expected `< type-id >' following cast mode specifier");
+          return NULL;
+        }
+        token = get_next_token();
+        full_type casttype = read_type(lex, token, search_scope, NULL, herr);
+        if (!casttype.def) return NULL;
+        if (token.type != TT_GREATERTHAN){
+          token.report_errorf(herr, "Expected closing triangle bracket to cast type before %s");
+          return NULL;
+        }
+        token = get_next_token();
+        if (token.type != TT_LEFTPARENTH) {
+          token.report_errorf(herr, "Expected opening parenthesis for cast expression before %s");
+          return NULL;
+        }
+        token = get_next_token();
+        myroot = new AST_Node_Cast(parse_expression(token, 0), casttype, mode);
+        if (token.type != TT_RIGHTPARENTH) {
+          token.report_errorf(herr, "Expected closing parenthesis for cast expression before %s");
+          delete myroot;
+          return NULL;
+        }
+        break;
+      }
+      
+      case TT_ALIGNOF:
+          cerr << "Unimplemented: `alignof'." << endl;
+        return NULL;
+      
       case TT_ELLIPSIS:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
       case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
+      case TT_ALIGNAS: case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
       #include <User/token_cases.h>
         token.report_errorf(herr, "Expected expression before %s");
         return NULL;
@@ -619,9 +666,12 @@ namespace jdi
       
       case TT_TEMPLATE: case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
+      case TT_ALIGNAS: case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
       
-      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE:
+      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_DECLTYPE: case TT_TYPEID:
+      case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_NEW: case TT_DELETE:
+      case TT_NOEXCEPT:
       #include <User/token_cases.h>
       return left_node;
       
@@ -1071,8 +1121,8 @@ namespace jdi
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre, AST_TYPE tp): AST_Node(ct, tp), operand(r), prefix(pre) {}
   AST::AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct, pre? AT_UNARY_PREFIX : AT_UNARY_POSTFIX), operand(r), prefix(pre) {}
   AST::AST_Node_sizeof::AST_Node_sizeof(AST_Node* param, bool n): AST_Node_Unary(param, str_sizeof, AT_SIZEOF), negate(n) {}
-  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft): AST_Node_Unary(param, str_cast, AT_CAST) { cast_type.copy(ft); }
-  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft): AST_Node_Unary(param, str_cast, AT_CAST) { cast_type.swap(ft); }
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft, cast_modes cmode): AST_Node_Unary(param, str_cast, AT_CAST), cast_mode(cmode) { cast_type.copy(ft); }
+  AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft, cast_modes cmode): AST_Node_Unary(param, str_cast, AT_CAST), cast_mode(cmode) { cast_type.swap(ft); }
   AST::AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, AT_CAST) {}
   AST::AST_Node_Binary::AST_Node_Binary(AST_TYPE tp, AST_Node* l, AST_Node* r): AST_Node(tp), left(l), right(r) { type = AT_BINARYOP; }
   AST::AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op, AST_TYPE tp): AST_Node(op, tp), left(l), right(r) { type = tp; }

@@ -986,6 +986,7 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
     keywords["__asm__"] = TT_ASM;
     keywords["class"] = TT_CLASS;
     keywords["decltype"] = TT_DECLTYPE;
+    keywords["typeid"] = TT_TYPEID;
     keywords["enum"] = TT_ENUM;
     keywords["extern"] = TT_EXTERN;
     keywords["namespace"] = TT_NAMESPACE;
@@ -1005,6 +1006,18 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
     keywords["using"] = TT_USING;
     keywords["new"] = TT_NEW;
     keywords["delete"] = TT_DELETE;
+    
+    keywords["const_cast"] = TT_CONST_CAST;
+    keywords["static_cast"] = TT_STATIC_CAST;
+    keywords["dynamic_cast"] = TT_DYNAMIC_CAST;
+    keywords["reinterpret_cast"] = TT_REINTERPRET_CAST;
+    
+    keywords["auto"] = TT_AUTO;
+    keywords["alignas"] = TT_ALIGNAS;
+    keywords["alignof"] = TT_ALIGNOF;
+    keywords["constexpr"] = TT_CONSTEXPR;
+    keywords["noexcept"] = TT_NOEXCEPT;
+    keywords["static_assert"] = TT_STATIC_ASSERT;
     
     // GNU Extensions
     keywords["__attribute__"] = TT_INVALID;
