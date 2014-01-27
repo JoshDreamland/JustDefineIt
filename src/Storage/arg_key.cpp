@@ -91,16 +91,20 @@ namespace jdi {
   void arg_key::put_final_type(size_t argnum, const full_type &type) { new (&values[argnum].data) full_type(); values[argnum].ft().copy(type); values[argnum].type = AKT_FULLTYPE; }
   void arg_key::swap_final_type(size_t argnum, full_type &type)      { new (&values[argnum].data) full_type(); values[argnum].ft().swap(type); values[argnum].type = AKT_FULLTYPE; }
   void arg_key::put_type(size_t argnum, const full_type &type) {
-    if (type.def and type.def->flags & DEF_TYPED and ((definition_typed*)type.def)->type) {
-      // Copy the type we were given
-      full_type ft; ft.refs.copy(type.refs);
-      // Copy the referencers that our type has of its own; not ref_stack::referencers, but ref_stack::def->referencers.
-      ft.refs.prepend(((definition_typed*)type.def)->referencers);
-      // Tack on the modifiers
-      ft.flags |= ((definition_typed*)type.def)->modifiers;
-      // Change out the type
-      ft.def = ((definition_typed*)type.def)->type;
-      return swap_type(argnum, ft);
+    if (type.def) {
+      if (type.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+        return put_final_type(argnum, abstract);
+      if (type.def->flags & DEF_TYPED and ((definition_typed*)type.def)->type) {
+        // Copy the type we were given
+        full_type ft; ft.refs.copy(type.refs);
+        // Copy the referencers that our type has of its own; not ref_stack::referencers, but ref_stack::def->referencers.
+        ft.refs.prepend(((definition_typed*)type.def)->referencers);
+        // Tack on the modifiers
+        ft.flags |= ((definition_typed*)type.def)->modifiers;
+        // Change out the type
+        ft.def = ((definition_typed*)type.def)->type;
+        return swap_type(argnum, ft);
+      }
     }
     return put_final_type(argnum, type);
   }
@@ -122,16 +126,31 @@ namespace jdi {
   }
   
   bool arg_key::is_abstract() const {
-    for (node* n = values; n != endv; ++n)
+    for (const node* n = values; n != endv; ++n)
       if (n->is_abstract()) return true;
     return false;
   }
   bool arg_key::is_dependent() const {
-    for (node* n = values; n != endv; ++n) {
+    for (const node* n = values; n != endv; ++n)
       if (n->is_abstract()) return true;
-      if (n->type == AKT_FULLTYPE && (!n->ft().def || (n->ft().def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL)))) return true;
-    }
     return false;
+  }
+  int arg_key::conflicts_with(const arg_key &k) const {
+    int confs = 0;
+    for (const node *n1 = values, *n2 = k.values; n1 != endv and n2 != k.endv; ++n1, ++n2) {
+      if (n1->is_abstract() || n2->is_abstract()) continue;
+      if (n1->type != n2->type) { ++confs; continue; }
+      if (n1->type == AKT_FULLTYPE && n1->ft().def != n2->ft().def) ++confs;
+    }
+    return confs;
+  }
+  bool arg_key::matches(const arg_key &k) const {
+    for (const node *n1 = values, *n2 = k.values; n1 != endv and n2 != k.endv; ++n1, ++n2) {
+      if (n1->is_abstract()) continue;
+      if (n1->type != n2->type) return false;
+      if (n1->type == AKT_FULLTYPE && n1->ft().def != n2->ft().def) return false;
+    }
+    return true;
   }
   
   /// Default constructor; mark values NULL.
@@ -166,6 +185,16 @@ namespace jdi {
       *i = *j;
     endv = i;
   }
+  /// Just copy.
+  arg_key &arg_key::operator=(const arg_key& other) {
+    delete[] values;
+    values = new node[other.endv-other.values];
+    node *i = values;
+    for (node *j = other.values; j != other.endv; ++i, ++j)
+      *i = *j;
+    endv = i;
+    return *this;
+  }
   /// Destruct, freeing items.
   arg_key::~arg_key() { delete[] values; }
   
@@ -177,8 +206,19 @@ namespace jdi {
       new(&data) aug_value(other.av());
     return *this;
   }
-  bool arg_key::node::is_abstract() const { return type == AKT_FULLTYPE? ft().def == abstract : val().type == VT_DEPENDENT; }
-  arg_key::node::~node() { if (type == AKT_FULLTYPE) ((full_type*)&data)->~full_type(); else if (type == AKT_VALUE) ((aug_value*)&data)->~aug_value(); }
+  
+  bool arg_key::node::is_abstract() const {
+    return type == AKT_FULLTYPE?
+      ft().def == abstract || !ft().def || (ft().def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+    : val().type == VT_DEPENDENT;
+  }
+  
+  arg_key::node::~node() {
+    if (type == AKT_FULLTYPE)
+      ((full_type*)&data)->~full_type();
+    else if (type == AKT_VALUE)
+      ((aug_value*)&data)->~aug_value();
+  }
   
   bool arg_key::node::operator!=(const node &n) const {
     if (type != n.type) return true;

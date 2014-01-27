@@ -1030,6 +1030,9 @@ namespace jdi
     definition_template *tplate = (definition_template*)tpd.def;
     arg_key k(tplate->params.size());
     k.mirror_types(tplate);
+    if (tplate->params.size() < params.size())
+      return full_type();
+    
     for (size_t i = 0; i < params.size(); ++i) {
       if (tplate->params[i]->flags & DEF_TYPENAME) {
         full_type t = params[i]->coerce();

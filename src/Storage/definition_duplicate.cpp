@@ -165,8 +165,7 @@ namespace jdi {
       res->params.push_back((definition_tempparam*)(*it)->duplicate(n));
     
     for (speciter it = res->specializations.begin(); it != res->specializations.end(); ++it)
-      for (speclist::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2)
-        (*it2)->spec_temp = (definition_template*)(*it2)->spec_temp->duplicate(n);
+      (*it)->spec_temp = (definition_template*)(*it)->spec_temp->duplicate(n);
     
     for (institer it = res->instantiations.begin(); it != res->instantiations.end(); ++it) {
       definition *nd = it->second->def->duplicate(n);

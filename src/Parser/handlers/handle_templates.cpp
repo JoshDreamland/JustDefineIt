@@ -217,6 +217,11 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         
         if (token.type == TT_COMMA) continue;
         
+        if (args_given >= basetemp->params.size()) {
+          token.report_error(herr, "Too many parameters for template `" + basetemp->name + "'");
+          delete temp; return 1;
+        }
+        
         if ((argk[args_given].type == arg_key::AKT_VALUE)
         and (token.type == TT_DEFINITION or token.type == TT_DECLARATOR) and token.def->flags & DEF_TEMPPARAM)
         {
@@ -262,7 +267,8 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       }
       
       // cout << "Specialization key: " << argk.toString() << endl;
-      definition_template::speclist &slist = basetemp->specializations[argk];
+      spec->filter = argk;
+      definition_template::speclist &slist = basetemp->specializations;
       
       for (definition_template::speclist::iterator it = slist.begin(); it != slist.end(); ++it)
         if ((*it)->key.same_as(spec->key))

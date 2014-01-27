@@ -515,11 +515,12 @@ namespace jdi {
     /// specializations which is mapped by arg_key fitting.
     struct specialization {
       spec_key key;
+      arg_key filter;
       definition_template *spec_temp;
       //specialization(definition_template *stemp, const arg_key &specialization_key):
       //  key(stemp, specialization_key), spec_temp(stemp) {}
       specialization(size_t big_count, size_t small_count, definition_template* spect):
-        key(big_count, small_count), spec_temp(spect) {}
+        key(big_count, small_count), filter(), spec_temp(spect) {}
       specialization(const specialization&);
       ~specialization();
     };
@@ -530,9 +531,8 @@ namespace jdi {
     specialization *find_specialization(const arg_key &key) const;
     
     typedef vector<specialization*> speclist; ///< List of specializations fitting a certain abstracted arg_key
-    typedef map<arg_key, speclist> specmap; ///< Multimap type for specializations
-    typedef specmap::iterator speciter; ///< Map iterator type for specializations
-    typedef specmap::const_iterator speciter_c; ///< Constant map iterator type for specializations
+    typedef speclist::iterator speciter; ///< Map iterator type for specializations
+    typedef speclist::const_iterator speciter_c; ///< Constant map iterator type for specializations
     
     struct instantiation {
       definition* def;
@@ -556,7 +556,7 @@ namespace jdi {
     };
     
     /** A map of all specializations **/
-    specmap specializations;
+    speclist specializations;
     /** A map of all existing instantiations **/
     instmap instantiations;
     /** A map of all dependent members of our template parameters */

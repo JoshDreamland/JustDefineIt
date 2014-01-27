@@ -299,8 +299,7 @@ namespace jdi {
     for (size_t i = 0; i < params.size(); ++i)
       delete params[i];
     for (speciter i = specializations.begin(); i != specializations.end(); ++i)
-      for (speclist::iterator j = i->second.begin(); j != i->second.end(); ++j)
-        delete *j;
+      delete *i;
     for (depiter i = dependents.begin(); i != dependents.end(); ++i)
       delete *i;
     for (institer i = instantiations.begin(); i != instantiations.end(); ++i)
@@ -342,6 +341,7 @@ namespace jdi {
     
     pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation*>(key, NULL));
     if (ins.second) {
+      //cout << "Instantiating new " << name << "<" << key.toString() << "> (abstract: " << key.is_abstract() << ")" << endl;
       remap_set n;
       size_t ind = 0;
       definition *ntemp = def->duplicate(n);
@@ -372,23 +372,20 @@ namespace jdi {
   
   definition_template::specialization *definition_template::find_specialization(const arg_key &key) const
   {
-    speciter_c spi = specializations.find(key);
-    //cout << "Find specialization candidates for <" << key.toString() << ">..." << endl;
-    if (spi != specializations.end()) {
-      specialization *spec = NULL;
-      int merit = 0;
-      
-      for (speclist::const_iterator i = spi->second.begin(); i != spi->second.end(); ++i) {
-        int m = (*i)->key.merit(key);
-        if (m > merit) {
-          spec = *i;
-          merit = m;
-        }
+    specialization *spec = NULL;
+    int merit = 0;
+    
+    for (speclist::const_iterator i = specializations.begin(); i != specializations.end(); ++i) {
+      if (!(*i)->filter.matches(key))
+        continue;
+      int m = (*i)->key.merit(key);
+      if (m > merit) {
+        spec = *i;
+        merit = m;
       }
-      
-      return spec;
     }
-    return NULL;
+    
+    return spec;
   }
   
   arg_key spec_key::get_key(const arg_key &src_key)
@@ -399,16 +396,20 @@ namespace jdi {
     return res;
   }
   
-  int spec_key::merit(const arg_key &k) {
-    size_t maxm = 1;
-    for (size_t i = 0; i < ind_count; ++i) {
-      if (maxm < *arg_inds[i])
-        maxm = *arg_inds[i];
+  int spec_key::merit(const arg_key &k)
+  {
+    size_t tmerit = 1;
+    for (size_t i = 0; i < ind_count; ++i)
+    {
+      int matchc = *arg_inds[i]; // The number of arguments this is matching
       int o = arg_inds[i][1];
       for (size_t j = 1; j <= *arg_inds[i]; ++j)
-        if (k[arg_inds[i][j]] != k[o]) return 0;
+        if (k[arg_inds[i][j]] != k[o])
+          return 0;
+      if (matchc > 1)
+        tmerit += matchc;
     }
-    return maxm;
+    return tmerit;
   }
   
   bool spec_key::same_as(const spec_key &) {

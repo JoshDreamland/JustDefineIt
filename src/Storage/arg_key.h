@@ -116,9 +116,16 @@ namespace jdi {
       bool is_abstract() const;
       /// Return whether we contain any abstract arguments or dependent arguments (DEF_TEMPPARAM or DEF_HYPOTHETICAL)
       bool is_dependent() const;
+      /// Returns whether a key conflicts with another; that is, whether a non-abstract parameter of two keys differ. Returns the number of such conflicts, which may be zero.
+      int conflicts_with(const arg_key& k) const;
+      /// Returns whether a key is matched by this key; that is, whether all non-abstract parameters of this key are equal in the given key.
+      bool matches(const arg_key& k) const;
       
       /// Return a string version of this key's argument list. You'll need to wrap in () or <> yourself.
       string toString() const;
+      
+      /// Copy from another arg_key.
+      arg_key& operator=(const arg_key& other);
       
       /// Default constructor; mark values NULL.
       arg_key();
