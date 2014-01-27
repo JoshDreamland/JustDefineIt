@@ -190,6 +190,12 @@ namespace jdi {
       return it->second;
     if ((it = using_general.find(sname)) != using_general.end())
       return it->second;
+    bool a = false;
+    if (a) {
+      cout << name << "::using {" << endl;
+      for (it = using_general.begin(); it != using_general.end(); ++it) cout << "  " << it->first << " => " << it->second->name << endl;
+      cout << "}" << endl;
+    }
     definition *res;
     for (using_node* n = using_front; n; n = n->next)
       if ((res = n->use->find_local(sname)))

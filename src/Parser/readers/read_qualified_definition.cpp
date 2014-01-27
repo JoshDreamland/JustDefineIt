@@ -27,21 +27,37 @@ using namespace jdip;
 definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope, token_t &token, context_parser *cp, error_handler *herr)
 {
   definition *res;
-  if (token.type == TT_SCOPE) {
-    token = lex->get_token_in_scope(scope);
-    res = token.def = cp->get_global();
+  if (token.type == TT_SCOPE)
+  {
+    res = cp->get_global();
+    token = lex->get_token(herr);
+    if (token.type == TT_IDENTIFIER)
+    {
+      res = ((definition_scope*)res)->get_local(token.content.toString());
+      if (!res) {
+        token.report_error(herr, "No `" + token.content.toString() + "' found in global scope");
+        return NULL;
+      }
+      if (!(res->flags & DEF_SCOPE)) {
+        token = lex->get_token_in_scope(scope, herr);
+        return res;
+      }
+      token.def = res;
+    }
   }
-  if (token.type == TT_IDENTIFIER) {
-    token.report_error(herr, "Expeceted qualified-id here; `" + token.content.toString() + "' is not declared");
-    return NULL;
+  else {
+    if (token.type == TT_IDENTIFIER) {
+      token.report_error(herr, "Expeceted qualified-id here; `" + token.content.toString() + "' is not declared");
+      return NULL;
+    }
+    #ifdef DEBUG_MODE
+    if (!token.def) {
+      std::cerr << "This function was invoked improperly." << std::endl;
+      abort();
+    }
+    #endif
+    res = token.def;
   }
-  #ifdef DEBUG_MODE
-  if (!token.def) {
-    std::cerr << "This function was invoked improperly." << std::endl;
-    abort();
-  }
-  #endif
-  res = token.def;
   for (;;) {
     #ifdef DEBUG_MODE
     if (!token.def) {
