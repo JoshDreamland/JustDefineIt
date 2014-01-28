@@ -24,25 +24,25 @@
 #include <API/compile_settings.h>
 #include <cstdio>
 
-int jdip::read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr) {
+int jdip::context_parser::read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, token_t &token, definition_scope *scope) {
   if (argnum < temp->params.size() and temp->params[argnum]->flags & DEF_TYPENAME) {
-    full_type ft = read_fulltype(lex, token, scope, cp, herr);
+    full_type ft = read_fulltype(token, scope);
     if (ft.def)
       argk[argnum].ft().swap(ft);
   }
   else
   {
-    AST a;
+    AST a(this);
     a.set_use_for_templates(true);
     static int iv = 0; ++iv;
-    a.parse_expression(token, lex, scope, precedence::comma+1, herr);
+    a.parse_expression(token, scope, precedence::comma+1);
     if (argnum < temp->params.size())
     {
       argk.put_value(argnum, a.eval());
       if (argk[argnum].val().type != VT_INTEGER) {
         if (argk[argnum].val().type == VT_DEPENDENT) {
           argk[argnum].val() = VT_DEPENDENT;
-          AST *ah = new AST();
+          AST *ah = new AST(this);
           ah->swap(a);
           argk[argnum].av().ast = ah;
         }
@@ -113,7 +113,7 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
   return 0;
 }
 
-int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+int jdip::context_parser::read_template_parameters(arg_key &argk, definition_template *temp, token_t &token, definition_scope *scope)
 {
   argk.mirror_types(temp);
   size_t args_given = 0;
@@ -129,7 +129,7 @@ int jdip::read_template_parameters(arg_key &argk, definition_template *temp, lex
     
     if (token.type == TT_COMMA) continue;
     
-    if (read_template_parameter(argk, args_given, temp, lex, token, scope, cp, herr))
+    if (read_template_parameter(argk, args_given, temp, token, scope))
       return 1;
     
     if (token.type == TT_GREATERTHAN) {

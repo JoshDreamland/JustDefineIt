@@ -39,27 +39,27 @@ namespace jdip {
     return h;
   }
   
-  definition* handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags, error_handler *herr) {
+  definition* context_parser::handle_dependent_tempinst(definition_scope *scope, token_t& token, definition_template *temp, const arg_key &key, unsigned flags) {
     if (scope->flags & DEF_TEMPLATE) {
       definition_template::specialization *spec = temp->find_specialization(key);
       if (spec && spec->spec_temp && spec->spec_temp->def) return spec->spec_temp->def;
       return temp->def;
     }
-    AST *a = AST::create_from_instantiation(temp, key);
+    AST *a = AST::create_from_instantiation(this, temp, key);
     if (temp->def && (temp->def->flags & (DEF_CLASS | DEF_TYPENAME)))
       flags |= DEF_TYPENAME;
     return handle_hypothetical_ast(a, scope, token, flags, herr);
   }
   
-  definition_hypothetical* handle_hypothetical_access(definition_hypothetical *scope, string id) {
-    AST *a = AST::create_from_access(scope, id, "::");
+  definition_hypothetical* context_parser::handle_hypothetical_access(definition_hypothetical *scope, string id) {
+    AST *a = AST::create_from_access(this, scope, id, "::");
     token_t dummy_token;
     return handle_hypothetical_ast(a, scope->parent, dummy_token, scope->flags, def_error_handler); // XXX: scope->flags, that & DEF_PRIVATE/whaever, or 0?
   }
   
-  definition_hypothetical* handle_hypothetical(lexer *lex, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
-    AST *a = new AST();
-    if (a->parse_expression(token, lex, scope, precedence::scope, herr))
+  definition_hypothetical* context_parser::handle_hypothetical(definition_scope *scope, token_t& token, unsigned flags) {
+    AST *a = new AST(this);
+    if (a->parse_expression(token, scope, precedence::scope))
       { FATAL_RETURN(1); }
     
     return handle_hypothetical_ast(a, scope, token, flags, herr);

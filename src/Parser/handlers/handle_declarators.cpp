@@ -46,7 +46,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   // Outsource to read_fulltype, which will take care of the hard work for us.
   // When this function finishes, per its specification, our token will be set to the next relevant, non-referencer symbol.
   // This means an identifier if the syntax is correct.
-  full_type tp = read_fulltype(lex, token, scope, this, herr);
+  full_type tp = read_fulltype(token, scope);
   if (dtor) {
     if (tp.refs.name.empty() and tp.def == scope and !tp.flags and tp.refs.size() == 1 and tp.refs.top().type == ref_stack::RT_FUNCTION) {
         tp.refs.name = "~" + scope->name;
@@ -62,7 +62,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   if (!tp.def) {
     if (token.type == TT_TILDE) {
       token = read_next_token(scope);
-      full_type tp2 = read_fulltype(lex, token, scope, this, herr);
+      full_type tp2 = read_fulltype(token, scope);
       if (!tp2.refs.name.empty() or tp2.def != scope or tp2.flags or tp2.refs.size() != 1 or tp2.refs.top().type != ref_stack::RT_FUNCTION) {
         token.report_error(herr, "Junk destructor; remove tilde?");
         FATAL_RETURN(1);
@@ -73,7 +73,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       tp.swap(tp2);
     }
     else if (token.type == TT_OPERATORKW) {
-      full_type ft = read_operatorkw_cast_type(lex, token, scope, this, herr);
+      full_type ft = read_operatorkw_cast_type(token, scope);
       if (!ft.def)
         return 1;
       res = scope->overload_function("(cast)", ft, inherited_flags, token, herr);
@@ -135,7 +135,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
         if (token.type == TT_LESSTHAN and d->flags & DEF_TEMPLATE) {
           definition_template* temp = (definition_template*)d;
           arg_key k(temp->params.size());
-          if (read_template_parameters(k, temp, lex, token, scope, this, herr))
+          if (read_template_parameters(k, temp,token, scope))
             return 1;
           d = temp->instantiate(k, herr);
           if (!d) return 1;
@@ -144,9 +144,9 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
         }
       }
       if (d and (d->flags & DEF_FUNCTION))
-        read_referencers_post(tp.refs, lex, token, d->parent, this, herr);
+        read_referencers_post(tp.refs, token, d->parent);
       else
-        read_referencers_post(tp.refs, lex, token, scope, this, herr);
+        read_referencers_post(tp.refs, token, scope);
       res = d; goto extra_loop;
     }
     else if (token.type == TT_COMMA) {
@@ -233,9 +233,9 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             return 5;
           }
           else {
-            AST ast;
+            AST ast(this);
             token = read_next_token(scope);
-            ast.parse_expression(token, lex, scope, precedence::comma, herr);
+            ast.parse_expression(token, scope, precedence::comma);
             // TODO: Store AST
           }
         break;
@@ -244,7 +244,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           token = read_next_token(scope);
           
           // Read a new type
-          read_referencers(tp.refs, tp, lex, token, scope, this, herr);
+          read_referencers(tp.refs, tp, token, scope);
           
           // Just hop into the error checking above and pass through the definition addition again.
         return handle_declarators(scope, token, tp, inherited_flags, res);
@@ -256,8 +256,8 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             token.report_error(herr,"Attempt to assign bit count in non-integer declaration");
             FATAL_RETURN(1);
           }
-          AST bitcountexp;
-          bitcountexp.parse_expression(token = read_next_token(scope), lex, scope, precedence::comma+1, herr);
+          AST bitcountexp(this);
+          bitcountexp.parse_expression(token = read_next_token(scope), scope, precedence::comma+1);
           value bc = bitcountexp.eval();
           if (bc.type != VT_INTEGER) {
             token.report_error(herr,"Bit count is not an integer");

@@ -33,14 +33,14 @@
 using namespace jdip;
 using namespace jdi;
 
-full_type jdip::read_fulltype(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr) {
-  full_type ft = read_type(lex, token, scope, cp, herr);
+full_type jdip::context_parser::read_fulltype(token_t &token, definition_scope *scope) {
+  full_type ft = read_type(token, scope);
   if (ft.def)
-    jdip::read_referencers(ft.refs, ft, lex, token, scope, cp, herr);
+    read_referencers(ft.refs, ft, token, scope);
   return ft;
 }
 
-full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+full_type jdip::context_parser::read_type(token_t &token, definition_scope *scope)
 {
   definition* inferred_type = NULL; // This is the type we will use if absolutely no other type is given
   definition* overridable_type = NULL;
@@ -52,18 +52,12 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   if (token.type != TT_DECLARATOR) {
     if (token.type != TT_DECFLAG) {
       if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_ENUM or token.type == TT_UNION) {
-        if (cp)
-          rdef = token.type == TT_ENUM? (definition*)cp->handle_enum(scope,token,0): 
-            token.type == TT_UNION? (definition*)cp->handle_union(scope,token,0) : (definition*)cp->handle_class(scope,token,0);
-        else {
-          token = lex->get_token_in_scope(scope, herr);
-          if (token.type != TT_DECLARATOR)
-            token.report_error(herr, "Existing class name must follow class/struct token at this point");
-        }
+        rdef = token.type == TT_ENUM?  (definition*)handle_enum(scope,token,0): 
+               token.type == TT_UNION? (definition*)handle_union(scope,token,0) : (definition*)handle_class(scope,token,0);
       }
       else if (token.type == TT_DEFINITION)
       {
-        rdef = read_qualified_definition(lex, scope, token, cp, herr);
+        rdef = read_qualified_definition(token, scope);
         if (!rdef) {
           token.report_errorf(herr, "Expected type name here before %s");
           return NULL;
@@ -118,7 +112,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
       }
       else if (token.type == TT_TYPENAME) {
         token = lex->get_token_in_scope(scope, herr);
-        if (not(rdef = handle_hypothetical(lex, scope, token, DEF_TYPENAME, herr)))
+        if (not(rdef = handle_hypothetical(scope, token, DEF_TYPENAME)))
           return full_type();
       }
       else {
@@ -144,10 +138,10 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
     }
   }
   else
-    rdef = read_qualified_definition(lex, scope, token, cp, herr);
+    rdef = read_qualified_definition(token, scope);
   
   // Read any additional type info
-  typeloop: while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
+  while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
   {
     if (token.type == TT_DECLARATOR) {
       if (rdef) {
@@ -156,7 +150,7 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
         token.report_error(herr,"Two types named in expression");
         FATAL_RETURN(full_type());
       }
-      rdef = read_qualified_definition(lex, scope, token, cp, herr);
+      rdef = read_qualified_definition(token, scope);
       rflags |= swif;
     }
     else {
@@ -182,21 +176,16 @@ full_type jdip::read_type(lexer *lex, token_t &token, definition_scope *scope, c
   if (rdef == NULL) {
     if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM)
     {
-      if (cp) // FIXME: I don't have any inherited flags to pass here. Is that OK?
-        rdef = (token.type == TT_UNION? (definition*)cp->handle_union(scope,token,0) :
-                token.type == TT_ENUM?  (definition*)cp->handle_enum(scope,token,0)  :  (definition*)cp->handle_class(scope,token,0));
-      else {
-        token = lex->get_token_in_scope(scope, herr);
-        goto typeloop;
-      }
+      rdef = (token.type == TT_UNION? (definition*)handle_union(scope,token,0) :
+              token.type == TT_ENUM?  (definition*)handle_enum(scope,token,0)  :  (definition*)handle_class(scope,token,0));
     }
     else if (token.type == TT_DEFINITION and token.def->flags & (DEF_SCOPE | DEF_TEMPLATE)) {
-      rdef = read_qualified_definition(lex, scope, token, cp, herr);
+      rdef = read_qualified_definition(token, scope);
     }
     else if (token.type == TT_TYPENAME) {
       //if (!cp) { token.report_error(herr, "Cannot use dependent type in this context"); return full_type(); }
       token = lex->get_token_in_scope(scope);
-      rdef = handle_hypothetical(lex, scope, token, DEF_TYPENAME, herr);
+      rdef = handle_hypothetical(scope, token, DEF_TYPENAME);
     }
     if (rdef == NULL)
     {
@@ -235,7 +224,7 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
         seen_type = true;
       }
       else if (token.type == TT_DEFINITION) {
-        definition* bd = read_qualified_definition(lex, scope, token, cp, herr);
+        definition* bd = cp->read_qualified_definition(token, scope);
         if (bd and (backt->def = bd)->flags & DEF_TYPENAME)
           seen_type = true;
         else if (bd->flags & DEF_TEMPLATE && bd->name == scope->name)
@@ -289,7 +278,7 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
   }
 }
 
-int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft, token_t &token, definition_scope *scope)
 {
   #ifdef DEBUG_MODE
   static int number_of_times_GDB_dropped_its_ass = 0;
@@ -301,11 +290,11 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
     switch (token.type)
     {
       case TT_LEFTBRACKET:
-        return read_referencers_post(refs, lex, token, scope, cp, herr);
+        return read_referencers_post(refs, token, scope);
       
       case TT_LEFTPARENTH: { // Either a function or a grouping, or, potentially, a constructor call.
         lex_buffer lb(lex);
-        bool is_func = parenths_type(lex, scope, lb, token, cp, herr) == PT_FUNCTION;
+        bool is_func = parenths_type(lex, scope, lb, token, this, herr) == PT_FUNCTION;
         
         lb.reset();
         lex = &lb;
@@ -313,18 +302,18 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         
         if (is_func)
         {
-          bool error = read_function_params(refs, lex, token, scope, cp, herr);
+          bool error = read_function_params(refs, token, scope);
           lex = lb.fallback_lexer;
           if (error)
             return 1;
           ref_stack appme;
-          int res = read_referencers_post(appme, lex, token, scope, cp, herr);
+          int res = read_referencers_post(appme, token, scope);
           refs.append_c(appme);
           return res;
         }
         
         ref_stack nestedrefs;
-        read_referencers(nestedrefs, ft, lex, token, scope, cp, herr); // It's safe to recycle ft because we already know we're not a constructor at this point.
+        read_referencers(nestedrefs, ft, token, scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
         
         lex = lb.fallback_lexer;
         
@@ -333,7 +322,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
           FATAL_RETURN(1);
         }
         token = lex->get_token_in_scope(scope, herr);
-        ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
+        ref_stack appme; int res = read_referencers_post(appme, token, scope);
         refs.append_c(appme); refs.append_nest_c(nestedrefs);
         return res;
       }
@@ -341,7 +330,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
       case TT_DEFINITION:
       case TT_DECLARATOR: {
         definition *pd = token.def;
-        definition *d = read_qualified_definition(lex, scope, token, cp, herr);
+        definition *d = read_qualified_definition(token, scope);
         if (!d) return 1;
         
         if (token.type == TT_MEMBEROF) {
@@ -368,20 +357,20 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         {
           if (scope->flags & DEF_TEMPLATE) {
             definition_scope *dp = d->parent, *sp = scope->parent; d->parent = scope; scope->parent = dp;
-            res = read_referencers_post(appme, lex, token, scope, cp, herr);
+            res = read_referencers_post(appme, token, scope);
             d->parent = dp; scope->parent = sp;
           }
           else
-            res = read_referencers_post(appme, lex, token, scope, cp, herr);
+            res = read_referencers_post(appme, token, scope);
         }
         else
-          res = read_referencers_post(appme, lex, token, scope, cp, herr);
+          res = read_referencers_post(appme, token, scope);
         refs.append_c(appme); return res;
       }
       case TT_IDENTIFIER: {// The name associated with this type
         refs.name = token.content.toString();
         token = lex->get_token_in_scope(scope);
-        ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
+        ref_stack appme; int res = read_referencers_post(appme, token, scope);
         refs.append_c(appme); return res;
       }
       
@@ -390,15 +379,15 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
         return 1;
          
       case TT_OPERATORKW: {
-          refs.name = read_operatorkw_name(lex, token, scope, herr);
+          refs.name = read_operatorkw_name(token, scope);
           refs.ndef = scope->look_up(refs.name);
-          ref_stack appme; int res = read_referencers_post(appme, lex, token, scope, cp, herr);
+          ref_stack appme; int res = read_referencers_post(appme, token, scope);
           refs.append_c(appme); return res;
       } break;
       
       case TT_ALIGNAS:
       case TT_NOEXCEPT:
-        return read_referencers_post(refs, lex, token, scope, cp, herr);
+        return read_referencers_post(refs, token, scope);
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
         if ((token.content.str[0] == '&' or token.content.str[0] == '*') and token.content.len == 1) {
@@ -433,7 +422,7 @@ int jdip::read_referencers(ref_stack &refs, const full_type& ft, lexer *lex, tok
   }
 }
   
-int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token, definition_scope *scope)
 {
   #ifdef DEBUG_MODE
   static int number_of_times_GDB_dropped_its_ass = 0;
@@ -445,10 +434,10 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
     switch (token.type)
     {
       case TT_LEFTBRACKET: { // Array bound indicator
-        AST ast;
+        AST ast(this);
         token = lex->get_token_in_scope(scope, herr);
         if (token.type != TT_RIGHTBRACKET) {
-          if (ast.parse_expression(token,lex,scope,precedence::comma+1,herr))
+          if (ast.parse_expression(token,scope,precedence::comma+1))
             return 1; // This error has already been reported, just return empty.
           if (token.type != TT_RIGHTBRACKET) {
             token.report_errorf(herr,"Expected closing square bracket here before %s");
@@ -465,7 +454,7 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
       
       case TT_LEFTPARENTH: // Function parameters
         token = lex->get_token_in_scope(scope, herr);
-        read_function_params(refs, lex, token, scope, cp, herr);
+        read_function_params(refs, token, scope);
       continue;
       
       case TT_OPERATOR: // Could be an asterisk or ampersand
@@ -517,7 +506,7 @@ int jdip::read_referencers_post(ref_stack &refs, lexer *lex, token_t &token, def
   }
 }
 
-int jdip::read_function_params(ref_stack &refs, lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+int jdip::context_parser::read_function_params(ref_stack &refs, token_t &token, definition_scope *scope)
 {
   ref_stack::parameter_ct params;
   
@@ -526,23 +515,23 @@ int jdip::read_function_params(ref_stack &refs, lexer *lex, token_t &token, defi
   {
     if (token.type == TT_ENDOFCODE)
       return 1;
-    full_type a = read_fulltype(lex,token,scope,cp,herr);
+    full_type a = read_fulltype(token, scope);
     if (!a.def) {
       token.report_errorf(herr, "Expected type-id for function parameters before %s");
       FATAL_RETURN(1);
     }
     ref_stack::parameter param; // Instantiate a parameter
     param.swap_in(a); // Give it our read-in full type (including ref stack, which is costly to copy)
-    param.variadic = cp? cp->variadics.find(param.def) != cp->variadics.end() : false;
+    param.variadic = variadics.find(param.def) != variadics.end();
     if (token.type == TT_OPERATOR) {
       if (token.content.len != 1 or *token.content.str != '=') {
         token.report_errorf(herr, "Unexpected operator at this point; expected '=' or ')' before %s");
         FATAL_RETURN(1);
       }
       else {
-        param.default_value = new AST;
+        param.default_value = new AST(this);
         token = lex->get_token_in_scope(scope, herr);
-        param.default_value->parse_expression(token, lex, scope, precedence::comma+1, herr);
+        param.default_value->parse_expression(token, scope, precedence::comma+1);
       }
     }
     params.throw_on(param);
@@ -573,7 +562,7 @@ int jdip::read_function_params(ref_stack &refs, lexer *lex, token_t &token, defi
       if (token.type == TT_LEFTPARENTH) {
         token = lex->get_token_in_scope(scope, herr);
         if (token.type != TT_RIGHTPARENTH) {
-          if (!read_fulltype(lex, token, scope, cp, herr).def) {
+          if (!read_fulltype(token, scope).def) {
             token.report_error(herr, "Expected type to throw() statement");
             FATAL_RETURN(1);
           }

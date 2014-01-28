@@ -38,10 +38,10 @@
 
 using namespace jdip;
 
-full_type jdip::read_operatorkw_cast_type(lexer *lex, token_t &token, definition_scope *scope, context_parser *cp, error_handler *herr)
+full_type context_parser::read_operatorkw_cast_type(token_t &token, definition_scope *scope)
 {
   token = lex->get_token_in_scope(scope);
-  full_type ft = read_fulltype(lex, token, scope, cp, herr);
+  full_type ft = read_fulltype(token, scope);
   if (!ft.def) {
     token.report_errorf(herr, "Cast type needed before %s");
     return full_type();

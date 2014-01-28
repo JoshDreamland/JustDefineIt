@@ -34,7 +34,7 @@ int jdip::context_parser::handle_friend(definition_scope *scope, token_t& token,
     token.report_errorf(herr, "Expected friend identifier before %s");
     return 1;
   }
-  full_type ft = read_fulltype(lex, token, scope, this, herr);
+  full_type ft = read_fulltype(token, scope);
   definition *rd = friendclass? ft.def : ft.refs.ndef;
   if (!rd) {
     token.report_error(herr, "Cannot friend " + (ft.refs.name.empty()? "anonymous type" : "`" + ft.refs.name + "'") + ": no affiliated definition");

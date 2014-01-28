@@ -24,12 +24,12 @@
 #include <iostream>
 
 using namespace jdip;
-definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope, token_t &token, context_parser *cp, error_handler *herr)
+definition* jdip::context_parser::read_qualified_definition(token_t &token, definition_scope* scope)
 {
   definition *res;
   if (token.type == TT_SCOPE)
   {
-    res = cp->get_global();
+    res = get_global();
     token = lex->get_token(herr);
     if (token.type == TT_IDENTIFIER)
     {
@@ -79,10 +79,10 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
         if (token.type == TT_LESSTHAN)
         {
           arg_key k(dt->params.size());
-          if (read_template_parameters(k, dt, lex, token, scope, cp, herr))
+          if (read_template_parameters(k, dt, token, scope))
             return FATAL_TERNARY(NULL,res);
           if (k.is_dependent())
-            res = handle_dependent_tempinst(scope, token, dt, k, 0, herr);
+            res = handle_dependent_tempinst(scope, token, dt, k, 0);
           else
             res =  dt->instantiate(k, herr);
           if (token.type != TT_GREATERTHAN)
@@ -105,7 +105,7 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
       token = lex->get_token(herr);
       if (token.type != TT_IDENTIFIER) {
         if (token.type == TT_OPERATORKW) {
-          res = token.def = as->look_up(read_operatorkw_name(lex, token, scope, herr));
+          res = token.def = as->look_up(read_operatorkw_name(token, scope));
           if (!token.def)
             return FATAL_TERNARY(NULL,res);
           if (token.type != TT_SCOPE)
@@ -141,7 +141,7 @@ definition* jdip::read_qualified_definition(lexer *lex, definition_scope* scope,
       token = lex->get_token(herr);
       if (token.type != TT_IDENTIFIER) {
         if (token.type == TT_OPERATORKW) {
-          string dname = read_operatorkw_name(lex, token, scope, herr);
+          string dname = read_operatorkw_name(token, scope);
           return ((definition_scope*)res)->get_local(dname);
         }
         if (token.type == TT_TILDE) {

@@ -443,7 +443,7 @@ namespace jdi {
   }
   
   AST* AST::duplicate() const {
-    return new AST(root->duplicate());
+    return new AST(cparse, root->duplicate());
   }
   
   //========================================================================================================

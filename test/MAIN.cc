@@ -256,10 +256,11 @@ void do_cli(context &ct) {
         cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr(buf, strlen(buf));
-        AST a;
         lexer_cpp c_lex(llr, undamageable, "User expression");
+        ct.change_lexer(&c_lex);
+        AST a(&ct);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
-        if (!a.parse_expression(dummy, &c_lex, ct.get_global(), precedence::all, def_error_handler)) {
+        if (!a.parse_expression(dummy, ct.get_global(), precedence::all)) {
           if (render) {
             cout << "Filename to render to:" << endl;
             cin.getline(buf, 4096);
@@ -309,17 +310,19 @@ void do_cli(context &ct) {
 void test_expression_evaluator() {
   putcap("Test expression evaluator");
   
-  AST ast;
   debug_lexer dlex;
+  context ct(&dlex, def_error_handler);
+  AST ast(&ct);
+  
   dlex << create_token_dec_literal("10",2);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   value v = ast.eval();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_00.svg");
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   v = ast.eval();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_01.svg");
   cout << v.val.i << endl;
@@ -328,7 +331,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("20",2);
   dlex << create_token_operator("+",1);
   dlex << create_token_dec_literal("10",2);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   v = ast.eval();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_02.svg");
   cout << v.val.i << endl;
@@ -339,7 +342,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("10",2);
   dlex << create_token_operator("+",1);
   dlex << create_token_dec_literal("10",2);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_03.svg");
   v = ast.eval();
   cout << v.val.i << endl;
@@ -350,7 +353,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("40",2);
   dlex << create_token_operator("-",1);
   dlex << create_token_dec_literal("10",2);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_04.svg");
   v = ast.eval(); dlex.clear();
   cout << v.val.i << endl;
@@ -364,7 +367,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator("<<",2);
   dlex << create_token_dec_literal("1",1);
   token_t token;
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_05.svg");
   v = ast.eval();
   cout << v.val.i << endl;
@@ -403,7 +406,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("2",1);
   dlex << create_token_operator("+",1);
   dlex << create_token_dec_literal("1",1);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_06.svg");
   v = ast.eval();
   cout << v.val.i << endl;
@@ -428,7 +431,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("2",1);
   dlex << create_token_operator("+",1);
   dlex << create_token_dec_literal("1",1);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_07.svg");
   v = ast.eval();
   cout << v.val.i << endl;
@@ -455,7 +458,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("3",1);
   dlex << create_token_operator("+",1);
   dlex << create_token_dec_literal("4",1);
-  ast.parse_expression(&dlex);
+  ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_08.svg");
   v = ast.eval();
   cout << v.val.i << endl;

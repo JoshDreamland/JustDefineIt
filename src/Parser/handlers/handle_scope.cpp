@@ -201,7 +201,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           if (token.type == TT_NAMESPACE) {
             token = lex->get_token_in_scope(scope, herr);
             if (token.type == TT_DEFINITION) {
-              definition *d = read_qualified_definition(lex, scope, token, this, herr);
+              definition *d = read_qualified_definition(token, scope);
               if (!d) {
                 token.report_errorf(herr, "Expected namespace-name following `namespace' token");
                 FATAL_RETURN(1);
@@ -225,7 +225,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
             }
           }
           else {
-            definition *usedef = read_qualified_definition(lex, scope, token, this, herr);
+            definition *usedef = read_qualified_definition(token, scope);
             if (usedef)
               scope->use_general(usedef->name, usedef);
             else {
@@ -282,7 +282,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
             full_type ft;
             ft.def = scope;
             token = read_next_token(scope);
-            read_function_params(ft.refs, lex, token, scope, this, herr);
+            read_function_params(ft.refs, token, scope);
             if (handle_declarators(scope,token,ft,inherited_flags | DEF_TYPENAME,decl))
               FATAL_RETURN(1);
             goto handled_declarator_block;
@@ -298,7 +298,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         break;
       
       case TT_OPERATORKW: {
-          full_type ft = read_operatorkw_cast_type(lex, token, scope, this, herr);
+          full_type ft = read_operatorkw_cast_type(token, scope);
           if (!ft.def)
             return 1;
           if (!(decl = scope->overload_function("(cast)", ft, inherited_flags, token, herr)))

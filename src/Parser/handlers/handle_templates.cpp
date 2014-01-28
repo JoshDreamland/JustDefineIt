@@ -66,7 +66,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       dtpflags |= DEF_TYPENAME;
     }
     else if (token.type == TT_DECFLAG || token.type == TT_DECLARATOR || token.type == TT_DECLTYPE) {
-      full_type fts = read_fulltype(lex, token, temp, this, herr);
+      full_type fts = read_fulltype(token, temp);
       pname = fts.refs.name;
     }
     else {
@@ -83,9 +83,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         FATAL_RETURN((void(delete temp),1));
       }
       token = read_next_token(temp);
-      ast = new AST();
+      ast = new AST(this);
       ast->set_use_for_templates(true);
-      ast->parse_expression(token, lex, temp, precedence::comma+1, herr);
+      ast->parse_expression(token, temp, precedence::comma+1);
     }
     dtn = new definition_tempparam(pname, temp, ast, dtpflags);
     
@@ -237,7 +237,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           }
         }
         
-        if (read_template_parameter(argk, args_given, basetemp, lex, token, temp, this, herr)) {
+        if (read_template_parameter(argk, args_given, basetemp, token, temp)) {
           delete temp; // XXX: is this needed?
           return 1;
         }
@@ -313,7 +313,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   int funcflags = 0;
   if (token.type == TT_DECLARATOR || token.type == TT_DECFLAG || token.type == TT_DECLTYPE || token.type == TT_DEFINITION || token.type == TT_TYPENAME)
   {
-    full_type funcrefs = read_fulltype(lex, token, temp, this, herr);
+    full_type funcrefs = read_fulltype(token, temp);
     if (!funcrefs.def) {
       if (token.type == TT_OPERATORKW) {
         funcflags = funcrefs.flags;
@@ -330,15 +330,15 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     
     if (funcrefs.refs.empty() || funcrefs.refs.top().type != ref_stack::RT_FUNCTION) {
       if (token.type == TT_DEFINITION && in_template(token.def)) {
-        read_qualified_definition(lex, scope, token, this, herr); // We don't need to know the definition, just skip it. If we were a compiler, we'd need to know this. :P
+        read_qualified_definition(token, scope); // We don't need to know the definition, just skip it. If we were a compiler, we'd need to know this. :P
         if (token.type == TT_OPERATOR && token.content.len == 1 && *token.content.str == '=') { // We don't need to know the value, either; we just need to skip it.
           token = read_next_token(scope),
-          AST().parse_expression(token, lex, scope, precedence::comma, herr); // Read and discard; kind of a hack, but it's safe.
+          AST(this).parse_expression(token, scope, precedence::comma); // Read and discard; kind of a hack, but it's safe.
         }
         if (token.type != TT_SEMICOLON) {
           if (token.type == TT_LEFTPARENTH) // We're implementing a template function within a different class
           {
-            read_referencers_post(funcrefs.refs, lex, token, temp, this, herr);
+            read_referencers_post(funcrefs.refs, token, temp);
             if (token.type == TT_LEFTBRACE)
               delete_function_implementation(handle_function_implementation(lex, token, temp, herr));
             else
@@ -418,7 +418,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   }
   else if (token.type == TT_OPERATORKW) {
     template_cast_operator:
-    full_type ft = read_operatorkw_cast_type(lex, token, temp, this, herr);
+    full_type ft = read_operatorkw_cast_type(token, temp);
     definition_overload *ovr = new definition_overload("(cast)", scope, ft.def, ft.refs, ft.flags, DEF_FUNCTION | inherited_flags | funcflags);
     if (!ovr)
       return 1;

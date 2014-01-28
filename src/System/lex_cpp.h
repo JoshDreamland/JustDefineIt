@@ -94,6 +94,7 @@ namespace jdip {
     /** Sole constructor; consumes an llreader and attaches a new \c lex_macro.
         @param input    The file from which to read definitions. This file will be manipulated by the system.
         @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
+        @param fname    The name of the file that was first opened.
     **/
     lexer_cpp(llreader& input, macro_map &pmacros, const char *fname = "stdcall/file.cpp");
     /** Destructor; free the attached macro lexer. **/
@@ -169,6 +170,7 @@ namespace jdip {
     static string _flatten(string param, const macro_map& macros, const token_t &errep, error_handler *herr);
     quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested `\#if*`)
     lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
+    context mctex; ///< A context used for constructing ASTs from preprocessor expressions.
   };
   
   /**

@@ -553,8 +553,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         if (conditionals.empty() or conditionals.top().is_true) {
           mlex->update();
           
-          AST a;
-          if (a.parse_expression(mlex, herr) or !a.eval()) {
+          AST a(&mctex);
+          if (a.parse_expression() or !a.eval()) {
             token_t res;
             render_ast(a, "if_directives");
             conditionals.push(condition(0,1));
@@ -977,7 +977,7 @@ bool lexer_cpp::pop_file() {
 
 macro_map lexer_cpp::kludge_map;
 lexer_cpp::keyword_map lexer_cpp::keywords;
-lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): macros(pmacros), filename(fname), line(1), lpos(0), open_macro_count(0), mlex(new lexer_macro(this))
+lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): macros(pmacros), filename(fname), line(1), lpos(0), open_macro_count(0), mlex(new lexer_macro(this)), mctex(mlex, def_error_handler)
 {
   consume(input); // We are also an llreader. Consume the given one using the inherited method.
   if (keywords.empty()) {

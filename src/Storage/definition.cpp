@@ -239,7 +239,7 @@ namespace jdi {
   }
   definition *definition_hypothetical::get_local(string sname) {
     required_flags |= DEF_CLASS;
-    return jdip::handle_hypothetical_access(this, sname);
+    return def? ((jdip::context_parser*)def->get_context())->handle_hypothetical_access(this, sname) : NULL;
   }
   
   definition_scope::using_node *definition_scope::use_namespace(definition_scope *ns) {

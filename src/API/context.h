@@ -80,9 +80,11 @@ namespace jdi
   class context
   {
     bool parse_open; ///< True if we're already parsing something
+    friend class jdi::AST;
     
     protected: // Make sure our method-packing child can use these.
     lexer *lex; ///< The lexer which all methods and all calls therefrom will poll for tokens.
+    lexer *_lex; ///< The lexer we allocated to handle a given stream.
     error_handler *herr; ///< The error handler to which errors and warnings will be reported.
     
     macro_map macros; ///< A map of macros defined in this context.
@@ -149,6 +151,9 @@ namespace jdi
     **/
     void load_gnu_builtins();
     
+    /// Change the lexer and error handler, if it is valid to do so now.
+    bool change_lexer(lexer *nlex, error_handler *nherr = NULL);
+    
     void output_types(ostream &out = cout); ///< Print a list of scoped-in types.
     void output_macro(string macroname, ostream &out = cout); ///< Print a single macro to a given stream.
     void output_macros(ostream &out = cout); ///< Print a list of scoped-in macros.
@@ -183,7 +188,7 @@ namespace jdi
     **/
     context();
     
-    /** Integer constructor. This constructor circumvents the copy process. It has
+    /** Construct with lexer and error handler. This constructor circumvents the copy process. It has
         no purpose other than and is not to be used except in allocating the builtin scope.
         While it is not necessary under common circumstances to avoid copying from the
         global scope into itself on construct, should the scope ever be populated before
@@ -195,7 +200,7 @@ namespace jdi
         
         @param disregarded  Disregarded. The parameter is there only to distinguish this constructor.
     **/
-    context(int disregarded);
+    context(lexer *lex, error_handler *herr);
     
     /** Copy constructor.
         Overrides the C++ default copy constructor with a version meant to simplify

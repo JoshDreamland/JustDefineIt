@@ -49,7 +49,7 @@ int jdip::context_parser::handle_class_inheritance(definition_scope *scope, toke
       token.report_error(herr, err);
       return 1;
     }
-    full_type ft = read_type(lex, token, scope, this, herr);
+    full_type ft = read_type(token, scope);
     if (!ft.def) {
       token.report_errorf(herr, "Expected class name to inherit before %s");
       return 1;

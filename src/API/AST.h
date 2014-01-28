@@ -38,6 +38,7 @@
 #include <API/lexer_interface.h>
 #include <API/error_reporting.h>
 #include <Storage/definition.h>
+#include <API/context.h>
 
 namespace jdi {
   struct ASTOperator;
@@ -50,6 +51,7 @@ namespace jdi {
   class AST
   { 
   protected:
+    typedef jdip::context_parser context_parser;
     
     /** Enum declaring basic node types for this AST. These include the three types of
         operators and the four types of data.
@@ -428,8 +430,7 @@ namespace jdi {
     };
     
     AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
-    error_handler *herr; ///< The error handler which will receive any error messages.
-    lexer *lex; ///< The lexer from which tokens will be read.
+    context_parser *cparse; ///< A context parser to poll for tokens and handle error checking
     definition_scope *search_scope; ///< The scope from which token values will be harvested.
     
     /// Private method to fetch the next token from the lexer, with or without a scope.
@@ -485,41 +486,33 @@ namespace jdi {
     #endif
     
     /** Parse in an expression, building an AST.
-        @param lex    The lexer which will be polled for tokens.
-        @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(lexer *lex, error_handler *herr = def_error_handler);
+    int parse_expression();
     
     /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
         the sister overload which does not utilize the passed token.
         
         @param token  The first token to handle. Will be overwritten with the first unhandled token. [in-out]
-        @param lex    The lexer which will be polled for tokens.
         @param prec   The lower-bound precedence.
-        @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
     int parse_expression(jdip::token_t& token, lexer *lex, int prec, error_handler *herr = def_error_handler);
     
     /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
         the sister overload which utilizes the passed token.
-        @param lex    The lexer which will be polled for tokens.
         @param token  A buffer for the first unhandled token. [out]
         @param prec   The lower-bound precedence.
-        @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(lexer *lex, jdip::token_t& token, int prec, error_handler *herr = def_error_handler);
+    private: int parse_expression(lexer *lex, jdip::token_t& token, int prec, error_handler *herr = def_error_handler); public:
     /** Parse in an expression, building an AST, with scope information, starting with the given token.
-        @param lex    The lexer which will be polled for tokens.
         @param token  A buffer for the first unhandled token. [out]
         @param scope  The scope from which values of definitions will be read. [in]
         @param prec   The lower-bound precedence.
-        @param herr   The error handler which will receive any warning or error messages.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(jdip::token_t &token, lexer *lex, definition_scope *scope, int prec, error_handler *uherr);
+    int parse_expression(jdip::token_t &token, definition_scope *scope, int prec);
     
     /// Filter this AST through a definition remap_set, to update references to old definitions.
     void remap(const remap_set &n);
@@ -550,13 +543,18 @@ namespace jdi {
     /// Use this AST for template parameters
     inline void set_use_for_templates(bool use) { tt_greater_is_op = !use; }
     
+    /// Get this AST's context
+    inline context *get_context() const { return (context*)cparse; }
+    
     /// Swap roots with another AST, for efficient transfer
     void swap(AST &ast);
     
     /// Default constructor. Zeroes some stuff.
-    AST();
+    /// @param ctex  The context in which this AST exists.
+    AST(context *ctex);
     /// Construct with a single node
-    AST(definition* def);
+    /// @param ctex  The context in which this AST exists.
+    AST(context *ctex, definition* def);
     
     
     // Non-constructor AST factory methods
@@ -564,26 +562,26 @@ namespace jdi {
     /// Construct with a single template instantiation node (by key)
     /// @param temp  The template to be instantiated.
     /// @param key   The arg_key with which to instantiate the template, after some remapping.
-    static AST* create_from_instantiation(definition_template* temp, const arg_key& key);
+    static AST* create_from_instantiation(context_parser *ctex, definition_template* temp, const arg_key& key);
     
     /// Construct with a single template instantiation node (by key)
     /// @param temp      The scope from which the access will occur, after some remapping.
     /// @param key       The identifier which is to be accessed in the scope.
     /// @param scope_op  The scope resolution operator, probably "::", but "." and "->" are also permitted.
-    static AST* create_from_access(definition_scope* scope, string id, string scope_op);
+    static AST* create_from_access(context_parser *ctex, definition_scope* scope, string id, string scope_op);
     
     /// Default destructor. Deletes the AST.
     ~AST();
     
     private:
-      /// Copy constructor; highly expensive. Not implemented. Use duplicate().
+      /// Copy constructor; highly expensive. Not implemented. Use duplicate(), sparingly.
       AST(const AST& ast);
       
       /// Construct with a root node; this will invariably be called internally.
-      AST(AST_Node* root);
+      AST(context_parser *cp, AST_Node* root);
       
       /// Construct with a root node and search_scope; this will invariably be called internally.
-      AST(AST_Node* root, definition_scope *search_scope);
+      AST(context_parser *cp, AST_Node* root, definition_scope *search_scope);
   };
 }
 

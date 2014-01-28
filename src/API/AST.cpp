@@ -60,7 +60,7 @@ namespace jdi
     switch (token.type)
     {
       case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
-          full_type ft = read_type(lex, token, search_scope, NULL, herr); // Read the full set of declarators
+          full_type ft = cparse->read_type(token, search_scope); // Read the full set of declarators
           track(ft.toString());
           myroot = new AST_Node_Type(ft);
           token_basics(
@@ -96,7 +96,7 @@ namespace jdi
         } break;
       
       case TT_OPERATORKW:
-        token.report_error(herr,"Please refer to operators in their binary format; explicit use of operator functions not presently supported.");
+        token.report_error(cparse->herr,"Please refer to operators in their binary format; explicit use of operator functions not presently supported.");
         break;
       
       case TT_TYPENAME:
@@ -106,7 +106,7 @@ namespace jdi
       case TT_TEMPLATE:
         token = get_next_token();
         if (token.type != TT_DEFINITION and token.type != TT_IDENTIFIER) {
-          token.report_errorf(herr, "Expected identifier to treat as template before %s");
+          token.report_errorf(cparse->herr, "Expected identifier to treat as template before %s");
           return NULL;
         }
         myroot = new AST_Node(token.content.toString(), at = AT_TEMPID);
@@ -116,7 +116,7 @@ namespace jdi
         ct = token.content.toString();
         symbol& op = symbols[ct];
         if (not(op.type & ST_UNARY_PRE)) {
-          token.report_error(herr,"Operator cannot be used as unary prefix");
+          token.report_error(cparse->herr,"Operator cannot be used as unary prefix");
           return NULL;
         }
         track(ct);
@@ -126,7 +126,7 @@ namespace jdi
       } break;
       
       case TT_GREATERTHAN: case TT_LESSTHAN: case TT_COLON:
-        token.report_error(herr, tt_greater_is_op? "Expected expression here before greater-than operator" : "Expected expression here before closing triangle bracket");
+        token.report_error(cparse->herr, tt_greater_is_op? "Expected expression here before greater-than operator" : "Expected expression here before closing triangle bracket");
         return NULL;
       
       case TT_SCOPE:
@@ -142,7 +142,7 @@ namespace jdi
         myroot = parse_expression(token, 0);
         if (myroot == NULL) return NULL;
         if (token.type != TT_RIGHTPARENTH) {
-          token.report_errorf(herr, "Expected closing parenthesis here before %s");
+          token.report_errorf(cparse->herr, "Expected closing parenthesis here before %s");
           delete myroot;
           return NULL;
         }
@@ -172,13 +172,13 @@ namespace jdi
         while (token.type != TT_RIGHTBRACE and token.type != TT_SEMICOLON and token.type != TT_ENDOFCODE) {
           AST_Node* n = parse_expression(token, precedence::comma + 1);
           if (!n) {
-            token.report_error(herr, "Expected expression for array element");
+            token.report_error(cparse->herr, "Expected expression for array element");
             FATAL_RETURN(array);
           }
           array->elements.push_back(n);
           if (token.type != TT_COMMA) {
             if (token.type == TT_RIGHTBRACE) break;
-            token.report_errorf(herr, "Expected comma to separate array elements before %s");
+            token.report_errorf(cparse->herr, "Expected comma to separate array elements before %s");
             FATAL_RETURN(array); break;
           }
           else token = get_next_token();
@@ -196,13 +196,13 @@ namespace jdi
           ann->position = parse_expression(token, 0);
           if (ann->position == NULL) return NULL;
           if (token.type != TT_RIGHTPARENTH) {
-            token.report_errorf(herr, "Expected closing parenthesis for placement new here before %s");
+            token.report_errorf(cparse->herr, "Expected closing parenthesis for placement new here before %s");
             delete ann; return NULL;
           }
           track(string(")"));
           token = get_next_token();
         }
-        ann->alloc_type = read_type(lex, token, search_scope, NULL, herr);
+        ann->alloc_type = cparse->read_type(token, search_scope);
         
         bool stillgoing = true;
         while (token.type == TT_OPERATOR) {
@@ -220,7 +220,7 @@ namespace jdi
           ann->bound = parse_expression(token, 0);
           if (ann->bound == NULL) return NULL;
           if (token.type != TT_RIGHTBRACKET) {
-            token.report_errorf(herr, "Expected closing parenthesis for placement new here before %s");
+            token.report_errorf(cparse->herr, "Expected closing parenthesis for placement new here before %s");
             delete ann; return NULL;
           }
           track(string("]"));
@@ -235,7 +235,7 @@ namespace jdi
         bool is_array = token.type == TT_LEFTBRACKET;
         if (is_array) {
           if ((token = get_next_token()).type != TT_RIGHTBRACKET) {
-            token.report_errorf(herr, "Brackets to operator delete[] should be empty; expected right bracket before %s");
+            token.report_errorf(cparse->herr, "Brackets to operator delete[] should be empty; expected right bracket before %s");
             return NULL;
           }
         }
@@ -244,7 +244,7 @@ namespace jdi
       
       case TT_COMMA:
       case TT_SEMICOLON:
-        token.report_errorf(herr, "Expected expression before %s");
+        token.report_errorf(cparse->herr, "Expected expression before %s");
         return NULL;
       
       case TT_STRINGLITERAL:
@@ -280,10 +280,10 @@ namespace jdi
           token = get_next_token();
           if (token.type == TT_LEFTPARENTH) {
               token = get_next_token(); track(string("(")); 
-              full_type ft = read_fulltype(lex, token, search_scope, NULL, herr);
+              full_type ft = cparse->read_fulltype(token, search_scope);
               myroot = new AST_Node_sizeof(new AST_Node_Type(ft), not_result);
               if (token.type != TT_RIGHTPARENTH)
-                token.report_errorf(herr, "Expected closing parenthesis to sizeof before %s");
+                token.report_errorf(cparse->herr, "Expected closing parenthesis to sizeof before %s");
               else { track(string(")")); }
               token = get_next_token();
           }
@@ -303,25 +303,25 @@ namespace jdi
         }
         token = get_next_token();
         if (token.type != TT_LESSTHAN) {
-          token.report_error(herr, "Expected `< type-id >' following cast mode specifier");
+          token.report_error(cparse->herr, "Expected `< type-id >' following cast mode specifier");
           return NULL;
         }
         token = get_next_token();
-        full_type casttype = read_type(lex, token, search_scope, NULL, herr);
+        full_type casttype = cparse->read_type(token, search_scope);
         if (!casttype.def) return NULL;
         if (token.type != TT_GREATERTHAN){
-          token.report_errorf(herr, "Expected closing triangle bracket to cast type before %s");
+          token.report_errorf(cparse->herr, "Expected closing triangle bracket to cast type before %s");
           return NULL;
         }
         token = get_next_token();
         if (token.type != TT_LEFTPARENTH) {
-          token.report_errorf(herr, "Expected opening parenthesis for cast expression before %s");
+          token.report_errorf(cparse->herr, "Expected opening parenthesis for cast expression before %s");
           return NULL;
         }
         token = get_next_token();
         myroot = new AST_Node_Cast(parse_expression(token, 0), casttype, mode);
         if (token.type != TT_RIGHTPARENTH) {
-          token.report_errorf(herr, "Expected closing parenthesis for cast expression before %s");
+          token.report_errorf(cparse->herr, "Expected closing parenthesis for cast expression before %s");
           delete myroot;
           return NULL;
         }
@@ -339,12 +339,12 @@ namespace jdi
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
       case TT_ALIGNAS: case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
       #include <User/token_cases.h>
-        token.report_errorf(herr, "Expected expression before %s");
+        token.report_errorf(cparse->herr, "Expected expression before %s");
         return NULL;
       
-      case TTM_CONCAT: case TTM_TOSTRING: token.report_error(herr, "Illogical token type returned!");
+      case TTM_CONCAT: case TTM_TOSTRING: token.report_error(cparse->herr, "Illogical token type returned!");
         return NULL;
-      case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
+      case TT_INVALID: default: token.report_error(cparse->herr, "Invalid token type returned!");
         return NULL;
     }
     if (!handled_basics)
@@ -371,7 +371,7 @@ namespace jdi
         return left_node;
       
       case TT_TYPENAME:
-        token.report_error(herr, "Unimplemented: typename.");
+        token.report_error(cparse->herr, "Unimplemented: typename.");
         delete left_node;
         return NULL;
       
@@ -388,7 +388,7 @@ namespace jdi
         token = get_next_token();
         AST_Node *right = parse_expression(token, precedence::scope + 1);
         if (!right) {
-          token.report_error(herr, "Expected qualified-id for scope access");
+          token.report_error(cparse->herr, "Expected qualified-id for scope access");
           return left_node;
         }
         left_node = new AST_Node_Scope(left_node,right,"::");
@@ -396,7 +396,7 @@ namespace jdi
       }
       case TT_MEMBEROF:
         track(string("::*"));
-        token.report_error(herr, "Not handled: (class::*) pointers");
+        token.report_error(cparse->herr, "Not handled: (class::*) pointers");
         delete left_node;
         return NULL;
         
@@ -423,7 +423,7 @@ namespace jdi
               { token = get_next_token(); break; }
               if (token.type == TT_COMMA)
               { token = get_next_token(); continue; }
-              token.report_errorf(herr, "Expected closing triangle bracket before %s");
+              token.report_errorf(cparse->herr, "Expected closing triangle bracket before %s");
               break;
             }
             track(string(">"));
@@ -438,7 +438,7 @@ namespace jdi
           string op(token.content.toString());
           map<string,symbol>::iterator b = symbols.find(op);
           if (b == symbols.end()) {
-            token.report_error(herr, "Operator `" + token.content.toString() + "' not defined");
+            token.report_error(cparse->herr, "Operator `" + token.content.toString() + "' not defined");
             delete left_node;
             return NULL;
           }
@@ -463,7 +463,7 @@ namespace jdi
                 break;
               }
             }
-            token.report_error(herr, "Cannot operate on type `" + ((AST_Node_Type*)left_node)->dec_type.toString() + "'");
+            token.report_error(cparse->herr, "Cannot operate on type `" + ((AST_Node_Type*)left_node)->dec_type.toString() + "'");
             delete left_node;
             return NULL;
           }
@@ -475,7 +475,7 @@ namespace jdi
             track(op);
             AST_Node *right = parse_expression(token, s.prec_binary + !(s.type & ST_RTL_PARSED));
             if (!right) {
-              token.report_error(herr, "Expected secondary expression after binary operator " + op);
+              token.report_error(cparse->herr, "Expected secondary expression after binary operator " + op);
               return left_node;
             }
             left_node = new AST_Node_Binary(left_node,right,op);
@@ -494,7 +494,7 @@ namespace jdi
               return NULL;
             }
             if (token.type != TT_COLON) {
-              token.report_error(herr, "Colon expected to separate ternary operands");
+              token.report_error(cparse->herr, "Colon expected to separate ternary operands");
               delete left_node;
               delete exptrue;
               return NULL;
@@ -535,7 +535,7 @@ namespace jdi
                 ant = NULL, ft_annoying = &ft_stacked;
               full_type &ft = *ft_annoying;
               
-              lex_buffer lb(lex);
+              lex_buffer lb(cparse->lex);
               bool is_cast = true; // True if the contents of these parentheses are part of the cast;
               // For example, in bool(*)(), the (*) is part of the cast. In bool(10), (10) is not part of the cast.
               
@@ -554,16 +554,16 @@ namespace jdi
                   is_cast = false;
               }
               if (token.type != TT_RIGHTPARENTH) {
-                token.report_errorf(herr, "Expected closing parenthesis to cast here before %s");
+                token.report_errorf(cparse->herr, "Expected closing parenthesis to cast here before %s");
                 delete left_node;
                 return NULL;
               }
               
               lb.reset();
-              lex = &lb;
+              cparse->lex = &lb;
                 token = get_next_token();
                 if (is_cast) {
-                  read_referencers(ft.refs, ft, lex, token, search_scope, NULL, herr); // Read all referencers
+                  cparse->read_referencers(ft.refs, ft, token, search_scope); // Read all referencers
                   track(ft.refs.toString());
                   if (!ant) {
                     delete left_node;
@@ -584,7 +584,7 @@ namespace jdi
                   token = get_next_token();
                   AST_Node_Cast* nr = new AST_Node_Cast(parse_expression(token, 0), ft);
                   if (token.type != TT_RIGHTPARENTH)
-                    token.report_errorf(herr, "Expected closing parenthesis before %s");
+                    token.report_errorf(cparse->herr, "Expected closing parenthesis before %s");
                   else token = get_next_token();
                   nr->content = nr->cast_type.toString();
                   delete left_node;
@@ -597,7 +597,7 @@ namespace jdi
                   );
                   track(string(")"));
                 }
-              lex = lb.fallback_lexer;
+              cparse->lex = lb.fallback_lexer;
               break;
             }
             track(string("("));
@@ -607,11 +607,11 @@ namespace jdi
             AST_Node *params = parse_expression(token, precedence::all);
             tt_greater_is_op = gtio;
             if (!params) {
-              token.report_error(herr, "Expected secondary expression after binary operator");
+              token.report_error(cparse->herr, "Expected secondary expression after binary operator");
               return left_node;
             }
             if (token.type != TT_RIGHTPARENTH) {
-              token.report_errorf(herr, "Expected closing parenthesis here before %s");
+              token.report_errorf(cparse->herr, "Expected closing parenthesis here before %s");
               FATAL_RETURN(left_node);
             }
             left_node = new AST_Node_Binary(left_node,params,"");
@@ -628,7 +628,7 @@ namespace jdi
           string op(","); track(op);
           AST_Node *right = parse_expression(token, precedence::comma);
           if (!right) {
-            token.report_error(herr, "Expected secondary expression after comma");
+            token.report_error(cparse->herr, "Expected secondary expression after comma");
             return left_node;
           }
           left_node = new AST_Node_Binary(left_node,right,op);
@@ -641,12 +641,12 @@ namespace jdi
           string op("["); track(op);
           AST_Node *indx = parse_expression(token, precedence::comma);
           if (!indx) {
-            token.report_error(herr, "Expected index for array subscript");
+            token.report_error(cparse->herr, "Expected index for array subscript");
             return left_node;
           }
           left_node = new AST_Node_Subscript(left_node, indx);
           if (token.type != TT_RIGHTBRACKET) {
-            token.report_errorf(herr, "Expected closing bracket to array subscript before %s");
+            token.report_errorf(cparse->herr, "Expected closing bracket to array subscript before %s");
             return left_node;
           } track(string("]"));
           token = get_next_token();
@@ -681,7 +681,7 @@ namespace jdi
   }
   
   token_t AST::get_next_token() {
-    return search_scope? lex->get_token_in_scope(search_scope,herr) : lex->get_token(herr);
+    return search_scope? cparse->lex->get_token_in_scope(search_scope,cparse->herr) : cparse->lex->get_token(cparse->herr);
   }
   
   
@@ -689,28 +689,26 @@ namespace jdi
   //=: Public API :============================================================================================================
   //===========================================================================================================================
   
-  int AST::parse_expression(lexer *ulex, error_handler *uherr) {
-    lex = ulex, herr = uherr;
-    token_t token = lex->get_token();
+  int AST::parse_expression() {
+    token_t token = cparse->lex->get_token();
     if ((root = parse_expression(token, 0)))
       return 0;
     return 1;
   }
   
   int AST::parse_expression(lexer *ulex, token_t &token, int precedence, error_handler *uherr) {
-    lex = ulex, herr = uherr;
+    cparse->lex = ulex, cparse->herr = uherr;
     token = get_next_token();
     return !((root = parse_expression(token, precedence)));
   }
   
   int AST::parse_expression(token_t &token, lexer *ulex, int precedence, error_handler *uherr) {
-    lex = ulex, herr = uherr;
+    cparse->lex = ulex, cparse->herr = uherr;
     return !(root = parse_expression(token, precedence));
   }
   
-  int AST::parse_expression(token_t &token, lexer *ulex, definition_scope *scope, int precedence, error_handler *uherr) {
+  int AST::parse_expression(token_t &token, definition_scope *scope, int precedence) {
     search_scope = scope;
-    lex = ulex, herr = uherr;
     return !(root = parse_expression(token, precedence));
   }
   
@@ -1214,14 +1212,15 @@ namespace jdi
     root = r;
   }
   
-  AST::AST(): root(NULL), search_scope(NULL), tt_greater_is_op(true) {}
-  AST::AST(AST_Node* r): root(r), search_scope(NULL), tt_greater_is_op(true) {}
-  AST::AST(AST_Node* r, definition_scope *ss): root(r), search_scope(ss), tt_greater_is_op(true) {}
-  AST::AST(definition* d): root(new AST_Node_Definition(d, d->name)), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(context *ctex): root(NULL), cparse((context_parser*)ctex), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(context_parser *cp, AST_Node* r): root(r), cparse(cp), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(context_parser *cp, AST_Node* r, definition_scope *ss): root(r), cparse(cp), search_scope(ss), tt_greater_is_op(true) {}
+  AST::AST(context *ctex, definition* d): root(new AST_Node_Definition(d, d->name)), cparse((context_parser*)ctex), search_scope(NULL), tt_greater_is_op(true) {}
   
-  AST* AST::create_from_instantiation(definition_template* temp, const arg_key &key) { return new AST(new AST_Node_TempKeyInst(temp, key), NULL); }
-  AST* AST::create_from_access(definition_scope* scope, string id, string scope_op) {
+  AST* AST::create_from_instantiation(context_parser *cp, definition_template* temp, const arg_key &key) { return new AST(cp, new AST_Node_TempKeyInst(temp, key), NULL); }
+  AST* AST::create_from_access(context_parser *cp, definition_scope* scope, string id, string scope_op) {
     return new AST(
+      cp,
       new AST_Node_Scope(
         new AST_Node_Definition(
           scope,

@@ -63,7 +63,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     incomplete = 0;
      
     token = read_next_token(scope);
-    full_type ft = read_fulltype(lex, token, scope, this, herr); // TODO: Check type for errors.
+    full_type ft = read_fulltype(token, scope); // TODO: Check type for errors.
     nenum->type = ft.def;
     nenum->modifiers = ft.flags;
   }
@@ -100,8 +100,8 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
         token.report_error(herr, "Expected assignment operator `=' here before secondary operator");
       }
       token = read_next_token(scope);
-      ast = new AST();
-      if (ast->parse_expression(token, lex, scope, precedence::comma + 1, herr)) {
+      ast = new AST(this);
+      if (ast->parse_expression(token, scope, precedence::comma + 1)) {
         token.report_error(herr, "Expected const expression here");
         continue;
       }
