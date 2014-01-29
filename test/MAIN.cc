@@ -267,11 +267,11 @@ void do_cli(context &ct) {
             a.writeSVG(buf);
           }
           if (eval) {
-            value v = a.eval();
+            value v = a.eval(error_context(def_error_handler, dummy));
             cout << "Value returned: " << v.toString() << endl;
           }
           if (coerce) {
-            full_type t = a.coerce();
+            full_type t = a.coerce(error_context(def_error_handler, dummy));
             cout << "Type of expression: " << t.toString() << endl;
             cout << (t.def? t.def->toString() : "NULL") << endl;
           }
@@ -313,17 +313,18 @@ void test_expression_evaluator() {
   debug_lexer dlex;
   context ct(&dlex, def_error_handler);
   AST ast(&ct);
+  error_context dec(def_error_handler, "Test AST", 0, 0);
   
   dlex << create_token_dec_literal("10",2);
   ast.parse_expression();
-  value v = ast.eval();
+  value v = ast.eval(dec);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_00.svg");
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   ast.parse_expression();
-  v = ast.eval();
+  v = ast.eval(dec);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_01.svg");
   cout << v.val.i << endl;
   
@@ -332,7 +333,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator("+",1);
   dlex << create_token_dec_literal("10",2);
   ast.parse_expression();
-  v = ast.eval();
+  v = ast.eval(dec);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_02.svg");
   cout << v.val.i << endl;
   
@@ -344,7 +345,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("10",2);
   ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_03.svg");
-  v = ast.eval();
+  v = ast.eval(dec);
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
@@ -355,7 +356,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("10",2);
   ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_04.svg");
-  v = ast.eval(); dlex.clear();
+  v = ast.eval(dec); dlex.clear();
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
@@ -369,7 +370,7 @@ void test_expression_evaluator() {
   token_t token;
   ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_05.svg");
-  v = ast.eval();
+  v = ast.eval(dec);
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
@@ -408,7 +409,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("1",1);
   ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_06.svg");
-  v = ast.eval();
+  v = ast.eval(dec);
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
@@ -433,7 +434,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("1",1);
   ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_07.svg");
-  v = ast.eval();
+  v = ast.eval(dec);
   cout << v.val.i << endl;
   
   ast.clear();
@@ -460,6 +461,6 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("4",1);
   ast.parse_expression();
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_08.svg");
-  v = ast.eval();
+  v = ast.eval(dec);
   cout << v.val.i << endl;
 }

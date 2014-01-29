@@ -135,7 +135,7 @@ void context::copy(const context &ct)
 {
   remap_set n;
   ct.global->copy(global, n);
-  ct.global->remap(n);
+  ct.global->remap(n, error_context(def_error_handler, "Internal Copy Operation", 0, 0));
   
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));

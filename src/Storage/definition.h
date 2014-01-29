@@ -41,6 +41,7 @@ using std::deque;
 using std::pair;
 
 #include <Storage/arg_key.h>
+#include <API/error_context.h>
 
 namespace jdi {
   /**
@@ -71,10 +72,10 @@ namespace jdi {
         contained in this definition or its descendents will be replaced with a
         double. This can be used to eliminate references to a particular definition
         before free, or to instantiate templates without hassle. **/
-    virtual void remap(remap_set& n);
+    virtual void remap(remap_set &n, const error_context &errc);
     
     /** Return the size of this definition. **/
-    virtual size_t size_of();
+    virtual size_t size_of(const error_context &errc);
     
     /** Compare two definitions, returning a comparison sign.
         @param d1  The first definition to compare.
@@ -117,6 +118,7 @@ namespace jdi {
 #include <Storage/full_type.h>
 #include <Storage/references.h>
 #include <API/error_reporting.h>
+#include <API/error_context.h>
 #include <API/AST.h>
 
 namespace jdi {
@@ -133,8 +135,8 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     definition_typed(string name, definition* p, definition* tp, unsigned int typeflags, int flags = DEF_TYPED);
@@ -202,7 +204,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
+    virtual void remap(remap_set &n, const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     definition_overload(string name, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION);
@@ -222,8 +224,8 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     /** Function to add the given definition as an overload if no such overload
@@ -385,8 +387,8 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     /** Default constructor. Only to be used for global! **/
@@ -435,8 +437,8 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     virtual definition* look_up(string name); ///< Look up a definition in this class (including its ancestors).
@@ -461,8 +463,8 @@ namespace jdi {
   struct definition_union: definition_scope {
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     definition_union(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_UNION | DEF_TYPENAME);
@@ -486,8 +488,8 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     definition *type; ///< The type of the constants in this enum; a cast to this type is valid but not favored (in overload resolution).
@@ -564,13 +566,14 @@ namespace jdi {
     
     /** Instantiate this template with the values given in the passed key.
         If this template has been instantiated previously, that instantiation is given.
-        @param key  The \c arg_key structure containing the template parameter values to use. **/
-    definition *instantiate(const arg_key& key, error_handler *herr);
+        @param key   The \c arg_key structure containing the template parameter values to use.
+        @param errc  The \c error_context to which any problems will be reported. **/
+    definition *instantiate(const arg_key& key, const error_context &errc);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     
     /** Construct with name, parent, and flags **/
@@ -610,7 +613,7 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
+    virtual void remap(remap_set &n, const error_context &errc);
     
     virtual definition* look_up(string name); ///< Look up a definition in the parent of this scope (skip this scope). This function will never be used by the system.
     virtual decpair declare(string name, definition* def = NULL); ///< Declare a definition by the given name in this scope. The definition will be marked HYPOTHETICAL, and the \c must_be_class flag will be set.
@@ -627,8 +630,8 @@ namespace jdi {
     definition* duplicate(remap_set &n);
     
     string kind() const;
-    void remap(remap_set &n);
-    size_t size_of();
+    void remap(remap_set &n, const error_context &errc);
+    size_t size_of(const error_context &errc);
     string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     size_t sz;
     definition_atomic(string n,definition* p,unsigned int f, size_t size);
@@ -645,8 +648,8 @@ namespace jdi {
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
-    virtual void remap(remap_set &n);
-    virtual size_t size_of();
+    virtual void remap(remap_set &n, const error_context &errc);
+    virtual size_t size_of(const error_context &errc);
     virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
     virtual definition* get_local(string name);
     

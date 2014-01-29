@@ -106,7 +106,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
         continue;
       }
       render_ast(*ast, "enum_values");
-      value v = ast->eval();
+      value v = ast->eval(error_context(herr, token));
       if (v.type != VT_INTEGER && v.type != VT_DEPENDENT) {
         #ifdef DEBUG_MODE
           token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast->expression + ")");

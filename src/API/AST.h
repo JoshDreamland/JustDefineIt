@@ -37,6 +37,7 @@
 #include <Storage/value.h>
 #include <API/lexer_interface.h>
 #include <API/error_reporting.h>
+#include <API/error_context.h>
 #include <Storage/definition.h>
 #include <API/context.h>
 
@@ -105,9 +106,9 @@ namespace jdi {
       #endif
       
       /// Evaluates this node recursively, returning a value containing its result.
-      virtual value eval() const;
+      virtual value eval(const error_context &errc) const;
       /// Coerces this node recursively for type, returning a full_type representing it.
-      virtual full_type coerce() const;
+      virtual full_type coerce(const error_context &errc) const;
       
       AST_Node(AST_TYPE type); ///< Default constructor.
       AST_Node(string ct, AST_TYPE type); ///< Constructor, with content string.
@@ -130,9 +131,9 @@ namespace jdi {
       bool prefix; ///< True if we are a unary prefix, false otherwise.
       
       /// Evaluates this node recursively, returning a value containing its result.
-      virtual value eval() const;
+      virtual value eval(const error_context &errc) const;
       /// Coerces this node recursively for type, returning a full_type representing it.
-      virtual full_type coerce() const;
+      virtual full_type coerce(const error_context &errc) const;
       
       AST_Node_Unary(AST_TYPE type, AST_Node* r = NULL); ///< Construct arbitrarily, with a type.
       AST_Node_Unary(AST_Node* r, string ct, bool pre, AST_TYPE type); ///< Complete constructor, with child node, operator string, prefix bool, and type.
@@ -158,8 +159,8 @@ namespace jdi {
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
-      virtual value eval() const; ///< Behaves funny for sizeof; coerces instead, then takes size of result type.
-      virtual full_type coerce() const; ///< Behaves funny for sizeof; returns unsigned long every time.
+      virtual value eval(const error_context &errc) const; ///< Behaves funny for sizeof; coerces instead, then takes size of result type.
+      virtual full_type coerce(const error_context &errc) const; ///< Behaves funny for sizeof; returns unsigned long every time.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       AST_Node_sizeof(AST_Node* param, bool negate);
     };
@@ -173,8 +174,8 @@ namespace jdi {
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
-      virtual value eval() const; ///< Throw out a bad value.
-      virtual full_type coerce() const; ///< Returns the contained type, with another pointer on the ref stack.
+      virtual value eval(const error_context &errc) const; ///< Throw out a bad value.
+      virtual full_type coerce(const error_context &errc) const; ///< Returns the contained type, with another pointer on the ref stack.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       
       AST_Node_new(const full_type &type, AST_Node *position, AST_Node *bound);
@@ -188,8 +189,8 @@ namespace jdi {
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
-      virtual value eval() const; ///< Throw out a bad value.
-      virtual full_type coerce() const; ///< The type returned by the delete operator is void.
+      virtual value eval(const error_context &errc) const; ///< Throw out a bad value.
+      virtual full_type coerce(const error_context &errc) const; ///< The type returned by the delete operator is void.
       virtual void toSVG(int x, int y, SVGrenderInfo* svg); ///< Renders this node and its children as an SVG.
       AST_Node_delete(AST_Node* param, bool array);
     };
@@ -207,8 +208,8 @@ namespace jdi {
       full_type cast_type; ///< The type this cast represents.
       cast_modes cast_mode; ///< The mode of this cast; C-style, const, static, dynamic, reinterpret.
       
-      virtual value eval() const; ///< Performs a cast, as it is able.
-      virtual full_type coerce() const; ///< Returns \c cast_type.
+      virtual value eval(const error_context &errc) const; ///< Performs a cast, as it is able.
+      virtual full_type coerce(const error_context &errc) const; ///< Returns \c cast_type.
       
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
@@ -231,8 +232,8 @@ namespace jdi {
       
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
-      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
-      virtual full_type coerce() const; ///< Returns the type of the given definition, if it has one.
+      virtual value eval(const error_context &errc) const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(const error_context &errc) const; ///< Returns the type of the given definition, if it has one.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
       virtual void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
       virtual string toString() const; ///< Renders this node and its children as a string, recursively.
@@ -246,8 +247,8 @@ namespace jdi {
     struct AST_Node_Type: AST_Node {
       full_type dec_type; ///< The \c full_type read into this node.
       
-      virtual value eval() const; ///< Returns zero; output should never be queried.
-      virtual full_type coerce() const; ///< Returns the type contained, \c dec_type.
+      virtual value eval(const error_context &errc) const; ///< Returns zero; output should never be queried.
+      virtual full_type coerce(const error_context &errc) const; ///< Returns the type contained, \c dec_type.
       
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
@@ -266,9 +267,9 @@ namespace jdi {
                *right; ///< The right-hand side of the expression.
       
       /// Evaluates this node recursively, returning a value containing its result.
-      virtual value eval() const;
+      virtual value eval(const error_context &errc) const;
       /// Coerces this node recursively for type, returning a full_type representing it.
-      virtual full_type coerce() const;
+      virtual full_type coerce(const error_context &errc) const;
       
       AST_Node_Binary(AST_TYPE type = AT_BINARYOP, AST_Node* left=NULL, AST_Node* right=NULL); ///< Construct arbitrarily.
       AST_Node_Binary(AST_Node* left, AST_Node* right, string op, AST_TYPE type = AT_BINARYOP); ///< Full constructor.
@@ -285,8 +286,8 @@ namespace jdi {
     };
     /// Child of AST_Node for the scope resolution operator, ::.
     struct AST_Node_Scope: AST_Node_Binary {
-      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
-      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual value eval(const error_context &errc) const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(const error_context &errc) const; ///< Coerces this node recursively for type, returning a full_type representing it.
       
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
@@ -302,8 +303,8 @@ namespace jdi {
       AST_Node *left; ///< The left-hand (true) result.
       AST_Node *right; ///< The right-hand (false) result.
       
-      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
-      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual value eval(const error_context &errc) const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(const error_context &errc) const; ///< Coerces this node recursively for type, returning a full_type representing it.
       
       AST_Node_Ternary(AST_Node *expression = NULL, AST_Node *exp_true = NULL, AST_Node *exp_false = NULL); ///< Default constructor. Sets children to NULL.
       AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false, string ct); ///< Complete constructor, with children and a content string.
@@ -324,9 +325,9 @@ namespace jdi {
       AST_Node *index;
       
       /// Evaluates this node recursively, returning a value containing its result.
-      virtual value eval() const;
+      virtual value eval(const error_context &errc) const;
       /// Coerces this node recursively for type, returning a full_type representing it.
-      virtual full_type coerce() const;
+      virtual full_type coerce(const error_context &errc) const;
       
       AST_Node_Subscript(); ///< Default constructor. Sets children to NULL.
       AST_Node_Subscript(AST_Node *l, AST_Node *ind); ///< Default constructor. Sets children to NULL.
@@ -349,8 +350,8 @@ namespace jdi {
     struct AST_Node_Array: AST_Node {
       vector<AST_Node*> elements; ///< Vector of our array elements.
       
-      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
-      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual value eval(const error_context &errc) const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(const error_context &errc) const; ///< Coerces this node recursively for type, returning a full_type representing it.
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
@@ -368,8 +369,8 @@ namespace jdi {
       AST_Node* temp; ///< The expression giving the template to be instantiated.
       vector<AST_Node*> params; ///< Vector of our template parameters.
       
-      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
-      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual value eval(const error_context &errc) const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(const error_context &errc) const; ///< Coerces this node recursively for type, returning a full_type representing it.
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
@@ -388,8 +389,8 @@ namespace jdi {
       definition_template* temp; ///< The template to be instantiated.
       arg_key key; ///< The \c arg_key which will be used to instantiate \c temp, after some remapping.
       
-      virtual value eval() const; ///< Evaluates this node recursively, returning a value containing its result.
-      virtual full_type coerce() const; ///< Coerces this node recursively for type, returning a full_type representing it.
+      virtual value eval(const error_context &errc) const; ///< Evaluates this node recursively, returning a value containing its result.
+      virtual full_type coerce(const error_context &errc) const; ///< Coerces this node recursively for type, returning a full_type representing it.
       virtual AST_Node* duplicate() const; ///< Duplicate this AST node, returning a new pointer to a copy.
       virtual void remap(const remap_set &n); ///< If you hold any references to definitions in this map, update them.
       virtual void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
@@ -409,9 +410,9 @@ namespace jdi {
       vector<AST_Node*> params;
       
       /// Evaluates this node recursively, returning a value containing its result.
-      virtual value eval() const;
+      virtual value eval(const error_context &errc) const;
       /// Coerces this node recursively for type, returning a full_type representing it.
-      virtual full_type coerce() const;
+      virtual full_type coerce(const error_context &errc) const;
       
       AST_Node_Parameters(); ///< Default constructor. Sets children to NULL.
       ~AST_Node_Parameters(); ///< Default destructor. Frees children recursively.
@@ -518,10 +519,10 @@ namespace jdi {
     void remap(const remap_set &n);
     
     /// Evaluate the current AST, returning its \c value.
-    value eval() const;
+    value eval(const error_context &errc) const;
     
     /// Coerce the current AST for the type of its result.
-    full_type coerce() const;
+    full_type coerce(const error_context &errc) const;
     
     /// Clear the AST out, effectively creating a new instance of this class
     void clear();

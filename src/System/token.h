@@ -121,10 +121,11 @@ namespace jdip {
 //===: Implementation carries extended dependencies:=======================================================
 //=========================================================================================================
 
-#include <Storage/definition.h>
-#include <API/context.h>
+#include <API/error_reporting.h>
+#include <Storage/definition_forward.h>
 
 namespace jdip {
+  using std::string;
   using namespace jdi; // If you are in the private namespace, you probably intend access to the regular namespace as well.
   
   /**

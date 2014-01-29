@@ -137,7 +137,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           arg_key k(temp->params.size());
           if (read_template_parameters(k, temp,token, scope))
             return 1;
-          d = temp->instantiate(k, herr);
+          d = temp->instantiate(k, error_context(herr, token));
           if (!d) return 1;
           token = read_next_token(scope);
           goto rescope;
@@ -258,7 +258,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           }
           AST bitcountexp(this);
           bitcountexp.parse_expression(token = read_next_token(scope), scope, precedence::comma+1);
-          value bc = bitcountexp.eval();
+          value bc = bitcountexp.eval(error_context(herr, token));
           if (bc.type != VT_INTEGER) {
             token.report_error(herr,"Bit count is not an integer");
             FATAL_RETURN(1);

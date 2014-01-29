@@ -38,7 +38,7 @@ int jdip::context_parser::read_template_parameter(arg_key &argk, size_t argnum, 
     a.parse_expression(token, scope, precedence::comma+1);
     if (argnum < temp->params.size())
     {
-      argk.put_value(argnum, a.eval());
+      argk.put_value(argnum, a.eval(error_context(herr, token)));
       if (argk[argnum].val().type != VT_INTEGER) {
         if (argk[argnum].val().type == VT_DEPENDENT) {
           argk[argnum].val() = VT_DEPENDENT;
@@ -79,9 +79,9 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
         AST* nast = temp->params[i]->default_assignment->duplicate();
         nast->remap(n);
         if (temp->params[i]->flags & DEF_TYPENAME)
-          argk.put_type(i, nast->coerce());
+          argk.put_type(i, nast->coerce(error_context(herr, token)));
         else
-          argk.put_value(i, nast->eval());
+          argk.put_value(i, nast->eval(error_context(herr, token)));
         delete nast;
       }
       else token.report_error(herr, "Parameter " + value((long)i).toString() + " is not defaulted");

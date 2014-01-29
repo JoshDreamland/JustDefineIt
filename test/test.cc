@@ -53,7 +53,7 @@
 #include <limits>
 /* */
 
-/* * /
+/* */
 #include <string>     // 40
 #include <stdexcept>  // 40
 #include <bitset>     // 45

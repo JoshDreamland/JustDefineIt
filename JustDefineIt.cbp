@@ -91,6 +91,7 @@
 		<Unit filename="src/API/compile_settings.h" />
 		<Unit filename="src/API/context.cpp" />
 		<Unit filename="src/API/context.h" />
+		<Unit filename="src/API/error_context.h" />
 		<Unit filename="src/API/error_reporting.cpp" />
 		<Unit filename="src/API/error_reporting.h" />
 		<Unit filename="src/API/jdi.cpp" />
@@ -161,9 +162,15 @@
 		<Unit filename="src/System/token.cpp" />
 		<Unit filename="src/System/token.h" />
 		<Unit filename="src/System/type_usage_flags.h" />
-		<Unit filename="test/MAIN.cc" />
-		<Unit filename="test/debug_lexer.cpp" />
-		<Unit filename="test/debug_lexer.h" />
+		<Unit filename="test/MAIN.cc">
+			<Option virtualFolder="test/" />
+		</Unit>
+		<Unit filename="test/debug_lexer.cpp">
+			<Option virtualFolder="test/" />
+		</Unit>
+		<Unit filename="test/debug_lexer.h">
+			<Option virtualFolder="test/" />
+		</Unit>
 		<Unit filename="test/modifiers.txt">
 			<Option virtualFolder="test/" />
 		</Unit>

@@ -228,12 +228,12 @@ namespace jdi {
     return it == remap.end()? x : (dc*)it->second;
   }
   
-  void definition::remap(remap_set &n) {
+  void definition::remap(remap_set &n, const error_context &) {
     parent = filter(parent, n);
   }
   
-  void definition_scope::remap(remap_set &n) {
-    definition::remap(n);
+  void definition_scope::remap(remap_set &n, const error_context &errc) {
+    definition::remap(n, errc);
     // cout << "Scope `" << name << "' has " << dec_order.size() << " ordered members" << endl;
     for (orditer it = dec_order.begin(); it != dec_order.end(); ++it) {
       definition *def = (*it)->def();
@@ -241,7 +241,7 @@ namespace jdi {
       if (ex != n.end())
         dec_order.erase(it);
       else
-        def->remap(n);
+        def->remap(n, errc);
     }
     for (defiter it = members.begin(); it != members.end(); ++it) {
       remap_set::const_iterator ex = n.find(it->second);
@@ -262,8 +262,8 @@ namespace jdi {
     }
   }
   
-  void definition_class::remap(remap_set &n) {
-    definition_scope::remap(n);
+  void definition_class::remap(remap_set &n, const error_context &errc) {
+    definition_scope::remap(n, errc);
     for (vector<ancestor>::iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
       ancestor& an = *it;
       remap_set::const_iterator ex = n.find(an.def);
@@ -286,10 +286,10 @@ namespace jdi {
     }
   }
   
-  void definition_enum::remap(remap_set& n) {
+  void definition_enum::remap(remap_set& n, const error_context &errc) {
     #ifdef DEBUG_MODE
     if (n.find(type) != n.end()) {
-      cerr << "Why are you replacing `" << type->name << "'?" << endl;
+      errc.report_warning("Why are you replacing `" + type->name + "'?");
     }
     #endif
     type = filter(type, n);
@@ -297,19 +297,18 @@ namespace jdi {
     for (vector<const_pair>::iterator it = constants.begin(); it != constants.end(); ++it) {
       definition_valued *d = filter(it->def, n);
       if (it->def == d) {
-        it->def->remap(n);
+        it->def->remap(n, errc);
         if (it->ast) { // FIXME: This doesn't keep counting after a successful remap!
           value cache = it->def->value_of;
           it->ast->remap(n);
-          it->def->value_of = it->ast->eval();
+          it->def->value_of = it->ast->eval(errc);
           if (it->def->value_of.type == VT_DEPENDENT)
-            cerr << "SHIT!" << endl;
+            errc.report_warning("Enumeration value still dependent after remap");
           else {
             cout << "Refactored " << it->ast->toString() << ": " << cache.toString() << " → " << it->def->value_of.toString() << endl;
             delete it->ast;
             it->ast = NULL;
           }
-          // cout << "Remap called on enum: new value of `" << it->def->name << "': " << cache.toString() << " => " << it->def->value_of.toString() << endl;
         }
       }
       else {
@@ -319,48 +318,50 @@ namespace jdi {
     }
   }
   
-  void definition_function::remap(remap_set& n) {
-    definition::remap(n);
+  void definition_function::remap(remap_set& n, const error_context &errc) {
+    definition::remap(n, errc);
     for (overload_iter it = overloads.begin(); it != overloads.end(); ++it) {
       remap_citer rit = n.find(it->second);
       if (rit != n.end())
         it->second = (definition_overload*)rit->second;
       else
-        it->second->remap(n);
+        it->second->remap(n, errc);
     }
   }
   
-  void definition_overload::remap(remap_set& n) {
-    definition_typed::remap(n);
+  void definition_overload::remap(remap_set& n, const error_context &errc) {
+    definition_typed::remap(n, errc);
     // TODO: remap_function_implementation();
   }
   
-  void definition_template::remap(remap_set &n) {
+  void definition_template::remap(remap_set &n, const error_context &errc) {
     if (def)
-      def->remap(n);
+      def->remap(n, errc);
   }
   
-  void definition_tempparam::remap(remap_set &n) {
+  void definition_tempparam::remap(remap_set &n, const error_context &errc) {
     // TODO: Implement
+    errc.report_warning("Not implemented: tempparam::remap");
     (void)n;
   }
   
-  void definition_typed::remap(remap_set &n) {
+  void definition_typed::remap(remap_set &n, const error_context &errc) {
     remap_set::const_iterator ex = n.find(type);
     if (ex != n.end())
       type = ex->second;
+    definition::remap(n, errc);
   }
   
-  void definition_union::remap(remap_set &) {
-    
+  void definition_union::remap(remap_set &n, const error_context &errc) {
+    definition_scope::remap(n, errc);
   }
   
-  void definition_atomic::remap(remap_set &) {}
+  void definition_atomic::remap(remap_set &n, const error_context &errc) { definition::remap(n, errc); }
   
-  void definition_hypothetical::remap(remap_set &n) {
+  void definition_hypothetical::remap(remap_set &n, const error_context &errc) {
     AST *nast = def->duplicate();
     nast->remap(n);
-    full_type ft = nast->coerce();
+    full_type ft = nast->coerce(errc);
     
     if (ft.def && ft.def != arg_key::abstract) {
       #ifdef DEBUG_MODE
@@ -373,7 +374,7 @@ namespace jdi {
     delete nast;
   }
   
-  void arg_key::remap(const remap_set &r) {
+  void arg_key::remap(const remap_set &r, const error_context &errc) {
     for (node* n = values; n != endv; ++n)
       if (n->type == AKT_FULLTYPE) {
         n->ft().def = filter(n->ft().def, r);
@@ -383,16 +384,16 @@ namespace jdi {
         AST *ao = n  -> av().ast;
         AST *a  = ao -> duplicate();
         a->remap(r);
-        value v = a->eval();
+        value v = a->eval(errc);
         if (v.type != VT_DEPENDENT) {
           n->av().ast = NULL;
           n->val() = v;
           delete ao;
         }
         else {
-          cerr << "No dice in unrolling template expression" << endl;
-          cerr << "original expression: " << ao->toString() << endl;
-          cerr << "evaluated expression: " << a->toString() << endl;
+          errc.report_error("No dice in unrolling template expression\n"
+                            "original expression: " + ao->toString() + "\n"
+                            "evaluated expression: " + a->toString());
         }
         delete a;
       }
@@ -451,9 +452,11 @@ namespace jdi {
   //========================================================================================================
   
   template<class c> void nremap(c *x, const remap_set &n) {
-    if (x) x->remap(n); else
+    if (x)
+      x->remap(n);
+    else
       cerr << "Why is this null?" << endl;
-    }
+  }
   
   void AST::AST_Node            ::remap(const remap_set&)   {  }
   void AST::AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n);  }
@@ -480,7 +483,7 @@ namespace jdi {
   }
   void AST::AST_Node_TempKeyInst::remap(const remap_set& n) {
     temp = filter(temp, n);
-    key.remap(n);
+    key.remap(n, error_context(def_error_handler, "Internal Remapping Operation", 0, 0));
   }
   void AST::AST_Node_Array      ::remap(const remap_set& n) {
     for (vector<AST_Node*>::iterator e = elements.begin(); e != elements.end(); ++e)

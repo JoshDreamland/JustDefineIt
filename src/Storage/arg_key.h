@@ -28,6 +28,7 @@ namespace jdi { class arg_key; }
 #include <Storage/definition_forward.h>
 #include <Storage/full_type.h>
 #include <Storage/value.h>
+#include <API/error_context.h>
 
 namespace jdi {
   /** Structure containing template arguments; can be used as the key in an std::map. **/
@@ -111,7 +112,7 @@ namespace jdi {
       inline bool empty() const { return !size(); }
       
       /// Re-map all types and default values in this key
-      void remap(const remap_set &n);
+      void remap(const remap_set &n, const error_context &errc);
       /// Return whether we contain any abstract arguments
       bool is_abstract() const;
       /// Return whether we contain any abstract arguments or dependent arguments (DEF_TEMPPARAM or DEF_HYPOTHETICAL)

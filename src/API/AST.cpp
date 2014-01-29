@@ -130,10 +130,10 @@ namespace jdi
         return NULL;
       
       case TT_SCOPE:
-          cerr << "Unimplemented: '::'" << endl;
+          token.report_error(cparse->herr, "Unimplemented: global access '::'");
         return NULL;
       case TT_MEMBEROF:
-          cerr << "Unhandled (class::*) pointer" << endl;
+          token.report_error(cparse->herr, "Unhandled (class::*) pointer");
         return NULL;
       
       case TT_LEFTPARENTH:
@@ -259,14 +259,14 @@ namespace jdi
                           track(myroot->content); break;
       
       case TT_DECLTYPE:
-          cerr << "Unimplemented: `decltype'." << endl;
+          token.report_error(cparse->herr, "Unimplemented: `decltype'.");
         return NULL;
       case TT_TYPEID:
-          cerr << "Unimplemented: `typeid'." << endl;
+          token.report_error(cparse->herr, "Unimplemented: `typeid'.");
         return NULL;
       
       case TT_NOEXCEPT:
-          cerr << "Unimplemented: `noexcept'." << endl;
+          token.report_error(cparse->herr, "Unimplemented: `noexcept'.");
         return NULL;
       
       /* ISEMPTY and SIZEOF */ {
@@ -329,7 +329,7 @@ namespace jdi
       }
       
       case TT_ALIGNOF:
-          cerr << "Unimplemented: `alignof'." << endl;
+          token.report_error(cparse->herr, "Unimplemented: `alignof'.");
         return NULL;
       
       case TT_ELLIPSIS:
@@ -405,7 +405,7 @@ namespace jdi
         {
           if (precedence::scope < prec_min)
             return left_node;
-          definition *def = left_node->coerce().def;
+          definition *def = left_node->coerce(error_context(cparse->herr, token)).def;
           if ((def && (def->flags & DEF_TEMPLATE)) || (left_node->type == AT_TEMPID)
           ||  (left_node->type == AT_SCOPE && ((AST_Node_Scope*)left_node)->right && ((AST_Node_Scope*)left_node)->right->type == AT_TEMPID))
           {
@@ -524,7 +524,7 @@ namespace jdi
       
       case TT_LEFTPARENTH:
           if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE or left_node->type == AT_SCOPE) {
-            full_type ltype = left_node->coerce();
+            full_type ltype = left_node->coerce(error_context(cparse->herr, token));
             if (ltype.def and ltype.def->flags & DEF_TYPENAME)
             {
               AST_Node_Type *ant;
@@ -578,7 +578,7 @@ namespace jdi
                 else {
                   #if defined(DEBUG_MODE) && DEBUG_MODE
                     if (token.type != TT_LEFTPARENTH)
-                      cerr << "INTERNAL ERROR: Token is not a left parenthesis. This should not happen." << endl;
+                      token.report_error(cparse->herr, "INTERNAL ERROR: Token is not a left parenthesis. This should not happen.");
                   #endif
                   track(string("("));
                   token = get_next_token();
@@ -720,12 +720,12 @@ namespace jdi
   //=: Evaluators :============================================================================================================
   //===========================================================================================================================
   
-  value AST::eval() const {
+  value AST::eval(const error_context &errc) const {
     if (!root) return value();
-    return root->eval();
+    return root->eval(errc);
   }
   
-  value AST::AST_Node::eval() const {
+  value AST::AST_Node::eval(const error_context &errc) const {
     if (type == AT_DECLITERAL) {
       dec_literal:
       if (is_letter(content[content.length() - 1])) {
@@ -778,34 +778,39 @@ namespace jdi
         return value(content.substr(1, content.length() - 2));
       }
     }
+    errc.report_error("Evaluating unknown node type");
     return value();
   }
-  value AST::AST_Node_Definition::eval() const {
+  value AST::AST_Node_Definition::eval(const error_context &errc) const {
     if (def) {
       if (def->flags & DEF_VALUED)
         return ((definition_valued*)def)->value_of;
       if (def->flags & DEF_TEMPPARAM)
         return value(VT_DEPENDENT);
     }
+    errc.report_error("Evaluating null definition");
     return value();
   }
-  value AST::AST_Node_Ternary::eval() const {
+  value AST::AST_Node_Ternary::eval(const error_context &errc) const {
     if (!exp) return value();
-    value e = exp->eval();
-    return value_boolean(e)? (left?left->eval():value()) : (right?right->eval():value());
+    value e = exp->eval(errc);
+    return value_boolean(e)? (left?left->eval(errc):value()) : (right?right->eval(errc):value());
   }
-  value AST::AST_Node_Binary::eval() const {
-    if (!left or !right) return value();
+  value AST::AST_Node_Binary::eval(const error_context &errc) const {
+    if (!left or !right) {
+      errc.report_error("Invalid (null) operands");
+      return value();
+    }
     symbol_iter si = symbols.find(content);
     if (si == symbols.end()) return value();
     symbol &s = si->second;
     if (!s.operate) return value();
-    value l = left->eval(), r = right->eval();
+    value l = left->eval(errc), r = right->eval(errc);
     value res = s.operate(l, r);
     return res;
   }
-  value AST::AST_Node_Scope::eval() const {
-    full_type res = left->coerce();
+  value AST::AST_Node_Scope::eval(const error_context &errc) const {
+    full_type res = left->coerce(errc);
     if (!res.def or !(res.def->flags & DEF_SCOPE))
       return res.def == arg_key::abstract? value(VT_DEPENDENT) : value();
     if (res.def == arg_key::abstract)
@@ -815,80 +820,101 @@ namespace jdi
     if (!d or not(d->flags & DEF_VALUED)) {
       if (res.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
         return value(VT_DEPENDENT);
-      #ifdef DEBUG_MODE
-        cerr << "AST evaluation failure: No `" << right->content << "' found in " << res.def->kind() << " `" << res.def->name << "'" << endl;
-      #endif
+      errc.report_error("AST evaluation failure: No `" + right->content + "' found in " + res.def->kind() + " `" + res.def->name + "'");
       return value(long(0));
     }
     return ((definition_valued*)d)->value_of;
   }
-  value AST::AST_Node_Unary::eval() const {
-    if (!operand) { cerr << "No operand to unary (operator" << content << ")!" << endl; return value(); }
+  value AST::AST_Node_Unary::eval(const error_context &errc) const {
+    if (!operand) {
+      errc.report_error("No operand to unary (operator" + content + ")!");
+      return value();
+    }
     if (prefix) {
-      if (!symbols[content].operate_unary_pre) { cerr << "No method to unary (operator" << content << ")!" << endl; return value(); }
-      value b4 = operand->eval(), after = symbols[content].operate_unary_pre(b4);
+      if (!symbols[content].operate_unary_pre) {
+        errc.report_error("No method to unary (operator" + content + ")!");
+        return value();
+      }
+      value b4 = operand->eval(errc), after = symbols[content].operate_unary_pre(b4);
       return after;
     }
     else {
-      if (!symbols[content].operate_unary_post) { cerr << "No method to unary (operator" << content << ")!" << endl; return value(); }
-      value b4 = operand->eval(), after = symbols[content].operate_unary_post(b4);
+      if (!symbols[content].operate_unary_post) {
+        errc.report_error("No method to unary (operator" + content + ")!");
+        return value();
+      }
+      value b4 = operand->eval(errc), after = symbols[content].operate_unary_post(b4);
       return after;
     }
   }
   /*value AST::AST_Node_Group::eval() {
-    return root?root->eval():value();
+    return root?root->eval(errc):value();
   }*/
-  value AST::AST_Node_Parameters::eval() const {
+  value AST::AST_Node_Parameters::eval(const error_context &errc) const {
+    errc.report_error("Evaluating a function call is not supported.");
     return value(); // We can't evaluate a function call ;_;
   }
-  value AST::AST_Node_Type::eval() const {
-    return 0L;
+  value AST::AST_Node_Type::eval(const error_context &errc) const {
+    errc.report_error("Evaluating a type for value");
+    return value();
   }
-  value AST::AST_Node_sizeof::eval() const {
-    if (!operand)
+  value AST::AST_Node_sizeof::eval(const error_context &errc) const {
+    if (!operand) {
+      errc.report_error("Computing size of invalid type");
       return 0L;
-    definition *cd = operand->coerce().def;
-    return cd? (long)cd->size_of() : 0;
+    }
+    definition *cd = operand->coerce(errc).def;
+    return cd? (long)cd->size_of(errc) : 0;
   }
-  value AST::AST_Node_Cast::eval() const {
-    if (!operand || !cast_type.def) return value();
+  value AST::AST_Node_Cast::eval(const error_context &errc) const {
+    if (!operand || !cast_type.def) {
+      errc.report_error("Invalid cast type");
+      return value();
+    }
     if (cast_type.def == builtin_type__int)
       if (cast_type.flags & builtin_flag__long)
         if (cast_type.flags & builtin_flag__unsigned)
-          return value((long)operand->eval());
+          return value((long)operand->eval(errc));
         else
-          return value((long)(int)operand->eval());
+          return value((long)(int)operand->eval(errc));
       else if (cast_type.flags & builtin_flag__short)
         if (cast_type.flags & builtin_flag__unsigned)
-          return value((long)operand->eval());
+          return value((long)operand->eval(errc));
         else
-          return value((long)(short)(long)operand->eval());
+          return value((long)(short)(long)operand->eval(errc));
       else
         if (cast_type.flags & builtin_flag__unsigned)
-          return value((long)(unsigned int)(long)operand->eval());
+          return value((long)(unsigned int)(long)operand->eval(errc));
         else
-          return value((long)(int)(long)operand->eval());
+          return value((long)(int)(long)operand->eval(errc));
     else if (cast_type.def == builtin_type__float)
-      return value((double)(float)(double)operand->eval());
+      return value((double)(float)(double)operand->eval(errc));
     else if (cast_type.def == builtin_type__double)
-      return value((double)operand->eval());
+      return value((double)operand->eval(errc));
+    else if (cast_type.def == builtin_type__char)
+      return value((long)(char)(long)operand->eval(errc));
     else if (cast_type.def == builtin_type__bool)
-      return value((long)(bool)operand->eval());
-    cerr << "Attempt to cast to `" << cast_type.def->name << "'" << endl;
+      return value((long)(bool)operand->eval(errc));
+    errc.report_error("Attempt to cast to `" + cast_type.def->name + "'");
     return value();
   }
-  value AST::AST_Node_Array::eval() const {
-    return elements.size()? elements.front()->eval() : value(0l);
+  value AST::AST_Node_Array::eval(const error_context &errc) const {
+    return elements.size()? elements.front()->eval(errc) : value(0l);
   }
-  value AST::AST_Node_new::eval() const {
-    return position? position->eval() : value(0l);
+  value AST::AST_Node_new::eval(const error_context &errc) const {
+    if (!position) {
+      errc.report_error("Cannot perform allocation in AST evaluation: not safe");
+      return value();
+    }
+    return position->eval(errc);
   }
-  value AST::AST_Node_delete::eval() const {
+  value AST::AST_Node_delete::eval(const error_context &errc) const {
+    errc.report_error("Cannot delete pointers in AST evaluation: unsafe");
     return value();
   }
-  value AST::AST_Node_Subscript::eval() const
+  value AST::AST_Node_Subscript::eval(const error_context &errc) const
   {
-    value iv = index->eval();
+    value iv = index->eval(errc);
     if (iv.type != VT_INTEGER)
       return value();
     size_t ivl = (size_t)(long)iv;
@@ -896,13 +922,16 @@ namespace jdi
     if (left->type == AT_ARRAY)
     {
       AST_Node_Array* la = (AST_Node_Array*)left;
-      if (ivl >= la->elements.size())
+      if (ivl >= la->elements.size()) {
+        errc.report_error("Out of bounds read: accessing element " + value(long(ivl)).toString()
+                        + " of array of size " + value(long(la->elements.size())).toString());
         return value();
-      return la->elements[ivl]->eval();
+      }
+      return la->elements[ivl]->eval(errc);
     }
     else
     {
-      value av = left->eval();
+      value av = left->eval(errc);
       if (av.type == VT_NONE)
         return av;
       if (av.type != VT_STRING)
@@ -915,10 +944,12 @@ namespace jdi
       return value(long(str[ivl]));
     }
   }
-  value AST::AST_Node_TempInst::eval() const {
+  value AST::AST_Node_TempInst::eval(const error_context &errc) const {
+    errc.report_error("Attempting to evaluate a template instantiation.");
     return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
   }
-  value AST::AST_Node_TempKeyInst::eval() const {
+  value AST::AST_Node_TempKeyInst::eval(const error_context &errc) const {
+    errc.report_error("Attempting to evaluate a template instantiation.");
     return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
   }
   
@@ -926,11 +957,11 @@ namespace jdi
   //=: Coercers :==============================================================================================================
   //===========================================================================================================================
   
-  full_type AST::coerce() const {
-    return root? root->coerce() : full_type();
+  full_type AST::coerce(const error_context &errc) const {
+    return root? root->coerce(errc) : full_type();
   }
   
-  full_type AST::AST_Node::coerce() const {
+  full_type AST::AST_Node::coerce(const error_context &) const {
     full_type res;
     res.def = builtin_type__int;
     res.flags = 0;
@@ -948,13 +979,13 @@ namespace jdi
     return res;
   }
   
-  full_type AST::AST_Node_Binary::coerce() const {
+  full_type AST::AST_Node_Binary::coerce(const error_context &errc) const {
     //TODO: Implement using operator() functions.
-    return left->coerce();
+    return left->coerce(errc);
   }
   
-  full_type AST::AST_Node_Scope::coerce() const {
-    full_type res = left->coerce();
+  full_type AST::AST_Node_Scope::coerce(const error_context &errc) const {
+    full_type res = left->coerce(errc);
     if (!res.def or !(res.def->flags & DEF_SCOPE))
       return full_type();
     if (res.def == arg_key::abstract) return arg_key::abstract;
@@ -962,11 +993,11 @@ namespace jdi
     return res;
   }
   
-  full_type AST::AST_Node_Cast::coerce() const {
-    return cast_type.def; // FIXME: Replace with cast_type (fulltype)
+  full_type AST::AST_Node_Cast::coerce(const error_context &) const {
+    return cast_type;
   }
   
-  full_type AST::AST_Node_Definition::coerce() const {
+  full_type AST::AST_Node_Definition::coerce(const error_context &) const {
     full_type res;
     if (def->flags & DEF_TYPED) {
       res.def = ((definition_typed*)def)->type;
@@ -978,17 +1009,17 @@ namespace jdi
     return res;
   }
   
-  full_type AST::AST_Node_Parameters::coerce() const {
+  full_type AST::AST_Node_Parameters::coerce(const error_context &errc) const {
     #ifdef DEBUG_MODE
       if (func->type != AT_DEFINITION or !((AST_Node_Definition*)func)->def or !(((AST_Node_Definition*)func)->def->flags & DEF_FUNCTION)) {
-        cerr << "Left-hand of parameter list not a function";
+        errc.report_error("Left-hand of parameter list not a function");
         return full_type();
       }
     #endif
     vector<full_type> param_types;
     param_types.reserve(params.size());
     for (vector<AST_Node*>::const_iterator it = params.begin(); it != params.end(); ++it)
-      param_types.push_back((*it)->coerce());
+      param_types.push_back((*it)->coerce(errc));
     //definition_function* df = (definition_function*)((AST_Node_Definition*)func)->def;
     // TODO: Overload resolution
     // FIXME: Overload resolution!
@@ -1000,45 +1031,44 @@ namespace jdi
     return res;
   }
   
-  full_type AST::AST_Node_sizeof::coerce() const {
+  full_type AST::AST_Node_sizeof::coerce(const error_context &) const {
     full_type res;
     res.def = builtin_type__long;
     res.flags = builtin_flag__unsigned;
     return res;
   }
   
-  full_type AST::AST_Node_Ternary::coerce() const {
-    full_type t1 = left->coerce();
-    #ifdef DEBUG_MODE
-      if (t1 != right->coerce()) cerr << "ERROR: Operands to ternary operator differ in type." << endl;
-    #endif
+  full_type AST::AST_Node_Ternary::coerce(const error_context &errc) const {
+    full_type t1 = left->coerce(errc), t2 = right->coerce(errc);
+    // FIXME: introduce common type resolution here using whatever casts_to() is used in overload resolution
+    if (t1 != t2)
+      errc.report_error("ERROR: Operands to ternary operator differ in type.");
     return t1;
   }
   
-  full_type AST::AST_Node_Type::coerce() const {
-    full_type ret; ret.copy(dec_type);
+  full_type AST::AST_Node_Type::coerce(const error_context &) const {
+    full_type ret;
+    ret.copy(dec_type);
     return ret;
   }
   
-  full_type AST::AST_Node_Unary::coerce() const {
+  full_type AST::AST_Node_Unary::coerce(const error_context &errc) const {
     switch (content[0]) {
       case '+':
       case '-':
-      case '~': return operand->coerce();
-      case '*': { full_type res = operand->coerce(); res.refs.pop(); return res; }
-      case '&': { full_type res = operand->coerce(); res.refs.push(ref_stack::RT_POINTERTO); return res; }
+      case '~': return operand->coerce(errc);
+      case '*': { full_type res = operand->coerce(errc); res.refs.pop(); return res; }
+      case '&': { full_type res = operand->coerce(errc); res.refs.push(ref_stack::RT_POINTERTO); return res; }
       case '!': return builtin_type__bool;
       default:
-        #ifdef DEBUG_MODE
-          cerr << "ERROR: Unknown coercion pattern for ternary operator `" << content << "'" << endl;
-        #endif
-        return operand->coerce();
+        errc.report_error("ERROR: Unknown coercion pattern for ternary operator `" + content + "'");
+        return operand->coerce(errc);
     }
   }
   
-  full_type AST::AST_Node_Array::coerce() const {
+  full_type AST::AST_Node_Array::coerce(const error_context &errc) const {
     if (elements.size()) {
-      full_type res = elements[0]->coerce();
+      full_type res = elements[0]->coerce(errc);
       res.refs.push_array(elements.size());
       return res;
     }
@@ -1047,28 +1077,38 @@ namespace jdi
     return res;
   }
   
-  full_type AST::AST_Node_new::coerce() const {
+  full_type AST::AST_Node_new::coerce(const error_context &errc) const {
     full_type res = alloc_type;
-    res.refs.push_array(bound? (long)bound->eval() : 0);
+    res.refs.push_array(bound? (long)bound->eval(errc) : 0);
     return res;
   }
   
-  full_type AST::AST_Node_delete::coerce() const {
+  full_type AST::AST_Node_delete::coerce(const error_context &errc) const {
+    errc.report_warning("Type of delete expression not ignored");
     return builtin_type__void;
   }
   
-  full_type AST::AST_Node_Subscript::coerce() const {
-    full_type res = left->coerce();
+  full_type AST::AST_Node_Subscript::coerce(const error_context &errc) const {
+    if (!left || !index) {
+      errc.report_error("Invalid operands to []");
+      return full_type();
+    }
+    full_type res = left->coerce(errc);
     if (!res.refs.size()) {
-      return full_type(); // FIXME: Look up operator type
+      // FIXME: Look up operator[] here; check for return type
+      if (index->type != AT_ARRAY) {
+        errc.report_error("Left operand of array indices is not an array");
+        return full_type();
+      }
+      res = index->coerce(errc);
     }
     res.refs.pop(); // Dereference that bitch
     return res;
   }
   
-  full_type AST::AST_Node_TempInst::coerce() const
+  full_type AST::AST_Node_TempInst::coerce(const error_context &errc) const
   {
-    full_type tpd = temp->coerce();
+    full_type tpd = temp->coerce(errc);
     
     if (tpd.def == arg_key::abstract)
       return arg_key::abstract;
@@ -1083,24 +1123,25 @@ namespace jdi
     
     for (size_t i = 0; i < params.size(); ++i) {
       if (tplate->params[i]->flags & DEF_TYPENAME) {
-        full_type t = params[i]->coerce();
+        full_type t = params[i]->coerce(errc);
         if (t.def == arg_key::abstract || t.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
           return arg_key::abstract;
         k.put_type(i, t);
       }
       else {
-        value v = params[i]->eval();
+        value v = params[i]->eval(errc);
         if (v.type == VT_DEPENDENT) // Bail out returning void if we have dependent parameters
           return arg_key::abstract;
         k.put_value(i, v);
       }
     }
-    check_read_template_parameters(k, params.size(), tplate, token_t(), def_error_handler);
-    return full_type(tplate->instantiate(k, def_error_handler));
+    check_read_template_parameters(k, params.size(), tplate, errc.get_token(), errc.get_herr());
+    return full_type(tplate->instantiate(k, errc));
   }
-  full_type AST::AST_Node_TempKeyInst::coerce() const {
-    if (key.is_abstract()) return arg_key::abstract;
-    return full_type(temp->instantiate(key, def_error_handler));
+  full_type AST::AST_Node_TempKeyInst::coerce(const error_context &errc) const {
+    if (key.is_abstract())
+      return arg_key::abstract;
+    return full_type(temp->instantiate(key, errc));
   }
   
   //===========================================================================================================================

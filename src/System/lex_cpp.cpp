@@ -554,7 +554,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           mlex->update();
           
           AST a(&mctex);
-          if (a.parse_expression() or !a.eval()) {
+          if (a.parse_expression() or !a.eval(error_context(herr, filename, line, pos-lpos))) {
             token_t res;
             render_ast(a, "if_directives");
             conditionals.push(condition(0,1));

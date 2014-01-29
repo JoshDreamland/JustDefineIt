@@ -330,7 +330,7 @@ namespace jdi {
   
   static int nest_count = 0;
   struct nest_ { nest_() { ++nest_count; } ~nest_() { --nest_count; } };
-  definition* definition_template::instantiate(const arg_key& key, error_handler *herr) {
+  definition* definition_template::instantiate(const arg_key& key, const error_context &errc) {
     if (nest_count >= 128) {
       cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
       return NULL;
@@ -342,7 +342,7 @@ namespace jdi {
     specialization *spec = find_specialization(key);
     if (spec) {
       arg_key speckey = spec->key.get_key(key);
-      return spec->spec_temp->instantiate(speckey, herr);
+      return spec->spec_temp->instantiate(speckey, errc);
     }
     
     pair<institer, bool> ins = instantiations.insert(pair<arg_key, instantiation*>(key, NULL));
@@ -365,11 +365,11 @@ namespace jdi {
       }
       size_t keyc = key.size();
       if (keyc != params.size()) {
-        herr->error("Attempt to instantiate template with an incorrect number of parameters; passed " + value(long(key.end() - key.begin())).toString() + ", required " + value(long(params.size())).toString());
+        errc.report_error("Attempt to instantiate template with an incorrect number of parameters; passed " + value(long(key.end() - key.begin())).toString() + ", required " + value(long(params.size())).toString());
         FATAL_RETURN(NULL);
       }
       
-      ntemp->remap(n);
+      ntemp->remap(n, errc);
     }
     
     definition *d = ins.first->second->def;
@@ -489,13 +489,16 @@ namespace jdi {
   //======: Sizeof functions :==============================================================================
   //========================================================================================================
   
-  size_t definition::size_of() { return 0; }
+  size_t definition::size_of(const error_context &errc) {
+    errc.report_warning("Taking size of bare definition");
+    return 0;
+  }
 
-  size_t definition_class::size_of() {
+  size_t definition_class::size_of(const error_context &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME)) {
-        size_t as = it->second->size_of();
+        size_t as = it->second->size_of(errc);
         if (!as) return 0;
         sz += as - 1;
         sz /= as; sz *= as;
@@ -504,45 +507,46 @@ namespace jdi {
     return sz;
   }
 
-  size_t definition_enum::size_of() {
-    return type->size_of();
+  size_t definition_enum::size_of(const error_context &errc) {
+    return type->size_of(errc);
   }
 
-  size_t definition_function::size_of() {
+  size_t definition_function::size_of(const error_context &errc) {
+    errc.report_error("Computing size of function");
     return 0;
   }
 
-  size_t definition_scope::size_of() {
+  size_t definition_scope::size_of(const error_context &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME))
-        sz += it->second->size_of();
+        sz += it->second->size_of(errc);
     return sz;
   }
 
-  size_t definition_template::size_of() {
-    cerr << "Attempt to take size of template `" << name << "'" << endl;
+  size_t definition_template::size_of(const error_context &errc) {
+    errc.report_error("Attempt to take size of template `" + name + "'");
     return 0;
   }
 
-  size_t definition_typed::size_of() {
-    return type? type->size_of() : 0;
+  size_t definition_typed::size_of(const error_context &errc) {
+    return type? type->size_of(errc) : 0;
   }
 
-  size_t definition_union::size_of() {
+  size_t definition_union::size_of(const error_context &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME))
-        sz = max(sz, it->second->size_of());
+        sz = max(sz, it->second->size_of(errc));
     return sz;
   }
   
-  size_t definition_atomic::size_of() {
+  size_t definition_atomic::size_of(const error_context &) {
     return sz;
   }
   
-  size_t definition_hypothetical::size_of() {
-    cerr << "ERROR: sizeof() performed on dependent (hypothetical) type" << endl;
+  size_t definition_hypothetical::size_of(const error_context &errc) {
+    errc.report_error("ERROR: sizeof() performed on dependent (hypothetical) type `" + name + "'");
     return 0;
   }
   
