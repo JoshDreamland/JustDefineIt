@@ -489,65 +489,78 @@ namespace jdi {
   //======: Sizeof functions :==============================================================================
   //========================================================================================================
   
-  size_t definition::size_of(const error_context &errc) {
+  value definition::size_of(const error_context &errc) {
     errc.report_warning("Taking size of bare definition");
-    return 0;
+    return 0L;
   }
 
-  size_t definition_class::size_of(const error_context &errc) {
-    size_t sz = 0;
+  value definition_class::size_of(const error_context &errc) {
+    value sz = 0L;
     for (defiter it = members.begin(); it != members.end(); ++it)
-      if (not(it->second->flags & DEF_TYPENAME)) {
-        size_t as = it->second->size_of(errc);
-        if (!as) return 0;
-        sz += as - 1;
-        sz /= as; sz *= as;
-        sz += as;
+      if (not(it->second->flags & DEF_TYPENAME))
+      {
+        value as = it->second->size_of(errc);
+        if (as.type == VT_INTEGER && as) // TODO: FIXME: This entire size thing is beans; an alignof() is needed.
+        {
+          size_t addsize, padsize;
+          addsize = (long)as;
+          padsize = (long)sz;
+          padsize += addsize - 1;
+          padsize /= addsize; padsize *= addsize;
+          padsize += addsize;
+          sz = (long)padsize;
+        }
+        else
+          return VT_DEPENDENT;
       }
+    if (!sz)
+      sz = 1L;
     return sz;
   }
 
-  size_t definition_enum::size_of(const error_context &errc) {
+  value definition_enum::size_of(const error_context &errc) {
     return type->size_of(errc);
   }
 
-  size_t definition_function::size_of(const error_context &errc) {
+  value definition_function::size_of(const error_context &errc) {
     errc.report_error("Computing size of function");
-    return 0;
+    return 0L;
   }
 
-  size_t definition_scope::size_of(const error_context &errc) {
+  value definition_scope::size_of(const error_context &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
-      if (not(it->second->flags & DEF_TYPENAME))
-        sz += it->second->size_of(errc);
-    return sz;
+      if (not(it->second->flags & DEF_TYPENAME)) {
+        value szadd = it->second->size_of(errc);
+        if (szadd.type == VT_INTEGER)
+          sz += (long)szadd;
+      }
+    return (long)sz;
   }
 
-  size_t definition_template::size_of(const error_context &errc) {
+  value definition_template::size_of(const error_context &errc) {
     errc.report_error("Attempt to take size of template `" + name + "'");
-    return 0;
+    return 0L;
   }
 
-  size_t definition_typed::size_of(const error_context &errc) {
-    return type? type->size_of(errc) : 0;
+  value definition_typed::size_of(const error_context &errc) {
+    return type? type->size_of(errc) : value(0L);
   }
 
-  size_t definition_union::size_of(const error_context &errc) {
+  value definition_union::size_of(const error_context &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME))
-        sz = max(sz, it->second->size_of(errc));
-    return sz;
+        sz = max((long)sz, (long)it->second->size_of(errc));
+    return (long)sz;
   }
   
-  size_t definition_atomic::size_of(const error_context &) {
-    return sz;
+  value definition_atomic::size_of(const error_context &) {
+    return (long)sz;
   }
   
-  size_t definition_hypothetical::size_of(const error_context &errc) {
-    errc.report_error("ERROR: sizeof() performed on dependent (hypothetical) type `" + name + "'");
-    return 0;
+  value definition_hypothetical::size_of(const error_context &) {
+    return VT_DEPENDENT;
   }
   
   //========================================================================================================

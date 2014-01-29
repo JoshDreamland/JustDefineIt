@@ -278,6 +278,29 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
   }
 }
 
+class fix_scope {
+  definition *d;
+  definition_scope *s, *spp;
+  bool chp;
+public:
+  definition_scope *scope;
+  fix_scope(definition *dd, definition_scope *sd): d(dd), s(sd), spp(), chp(false) {
+    if (d and d->parent != s)
+    {
+      if (s->flags & DEF_TEMPLATE) {
+        spp = s->parent;
+        s->parent = d->parent, chp = true;
+        scope = s;
+      }
+      else
+        scope = d->parent;
+    }
+    else
+      scope = s;
+  }
+  ~fix_scope() { if (chp) s->parent = spp; }
+};
+
 int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft, token_t &token, definition_scope *scope)
 {
   #ifdef DEBUG_MODE
@@ -293,8 +316,10 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         return read_referencers_post(refs, token, scope);
       
       case TT_LEFTPARENTH: { // Either a function or a grouping, or, potentially, a constructor call.
+        fix_scope fs(ft.refs.ndef, scope);
+        
         lex_buffer lb(lex);
-        bool is_func = parenths_type(lex, scope, lb, token, this, herr) == PT_FUNCTION;
+        bool is_func = parenths_type(lex, fs.scope, lb, token, this, herr) == PT_FUNCTION;
         
         lb.reset();
         lex = &lb;
@@ -302,18 +327,18 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         
         if (is_func)
         {
-          bool error = read_function_params(refs, token, scope);
+          bool error = read_function_params(refs, token, fs.scope);
           lex = lb.fallback_lexer;
           if (error)
             return 1;
           ref_stack appme;
-          int res = read_referencers_post(appme, token, scope);
+          int res = read_referencers_post(appme, token, fs.scope);
           refs.append_c(appme);
           return res;
         }
         
         ref_stack nestedrefs;
-        read_referencers(nestedrefs, ft, token, scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
+        read_referencers(nestedrefs, ft, token, fs.scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
         
         lex = lb.fallback_lexer;
         
@@ -356,12 +381,12 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         if (pd != d)
         {
           if (scope->flags & DEF_TEMPLATE) {
-            definition_scope *dp = d->parent, *sp = scope->parent; d->parent = scope; scope->parent = dp;
+            definition_scope *sp = scope->parent; scope->parent = d->parent;
             res = read_referencers_post(appme, token, scope);
-            d->parent = dp; scope->parent = sp;
+            scope->parent = sp;
           }
           else
-            res = read_referencers_post(appme, token, scope);
+            res = read_referencers_post(appme, token, pd->parent);
         }
         else
           res = read_referencers_post(appme, token, scope);
