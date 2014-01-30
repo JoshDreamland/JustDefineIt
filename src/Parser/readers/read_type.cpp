@@ -35,8 +35,7 @@ using namespace jdi;
 
 full_type jdip::context_parser::read_fulltype(token_t &token, definition_scope *scope) {
   full_type ft = read_type(token, scope);
-  if (ft.def)
-    read_referencers(ft.refs, ft, token, scope);
+  read_referencers(ft.refs, ft, token, scope);
   return ft;
 }
 
@@ -63,34 +62,7 @@ full_type jdip::context_parser::read_type(token_t &token, definition_scope *scop
           return NULL;
         }
         if (!(rdef->flags & DEF_TYPENAME)) {
-          if (rdef->flags & DEF_TEMPLATE) {
-            if ((scope->flags & DEF_CLASS) and scope->name == rdef->name)
-              rdef = scope;
-            else if ((scope->flags & DEF_TEMPLATE) && scope->parent && (scope->parent->flags & DEF_CLASS) and scope->parent->name == rdef->name)
-              rdef = scope->parent;
-            else if (rdef->flags & DEF_HYPOTHETICAL) {
-              token.report_warning(herr, "Template definition should be qualified using `typename'");
-              ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
-              rdef->flags |= DEF_TYPENAME;
-            }
-            else {
-              bool found = 0;
-              for (definition_scope *scp = scope; scp; scp = scp->parent)
-                if (scp->flags & DEF_CLASS) {
-                  definition_class* dsc = (definition_class*)scp;
-                  if (dsc->instance_of && dsc->instance_of->name == rdef->name) {
-                    rdef = dsc;
-                    found = true;
-                    break;
-                  }
-                }
-              if (!found) {
-                token.report_error(herr, "Invalid use of template `" + rdef->name + "'");
-                return NULL;
-              }
-            }
-          }
-          else if (rdef->flags & DEF_HYPOTHETICAL)
+          if (rdef->flags & DEF_HYPOTHETICAL)
             ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
           else if (rdef->flags & DEF_TEMPPARAM)
             ((definition_tempparam*)rdef)->must_be_class = true;
@@ -181,6 +153,12 @@ full_type jdip::context_parser::read_type(token_t &token, definition_scope *scop
     }
     else if (token.type == TT_DEFINITION and token.def->flags & (DEF_SCOPE | DEF_TEMPLATE)) {
       rdef = read_qualified_definition(token, scope);
+      if (rdef and !(rdef->flags & DEF_TYPENAME))
+      {
+        full_type res(overridable_type? overridable_type : inferred_type, rrefs, rflags);
+        res.refs.ndef = rdef;
+        return res;
+      }
     }
     else if (token.type == TT_TYPENAME) {
       //if (!cp) { token.report_error(herr, "Cannot use dependent type in this context"); return full_type(); }

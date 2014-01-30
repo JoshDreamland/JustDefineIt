@@ -89,6 +89,11 @@ definition* jdip::context_parser::read_qualified_definition(token_t &token, defi
             token.report_errorf(herr, "Expected closing triangle bracket before %s");
           token = lex->get_token_in_scope(scope,herr);
         }
+        else {
+          for (definition_scope* dsi = scope; dsi; dsi = dsi->parent)
+          if (dt->def == dsi || ((dsi->flags & DEF_CLASS) && ((definition_class*)dsi)->instance_of == dt))
+            res = dsi;
+        }
       }
       else {
         token.report_error(herr, "Template `" + token.def->name + "' cannot be used as a type");
