@@ -15,7 +15,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2013 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -50,7 +50,6 @@ namespace jdip {
 #include <System/type_usage_flags.h>
 #include <Storage/definition.h>
 #include <General/llreader.h>
-#include <Parser/parse_context.h>
 #include <API/error_reporting.h>
 #include <API/lexer_interface.h>
 

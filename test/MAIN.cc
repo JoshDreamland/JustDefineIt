@@ -41,6 +41,7 @@ using namespace jdi;
 using namespace jdip;
 
 void test_expression_evaluator();
+void name_type(string type, context &ct);
 
 static void putcap(string cap) {
   cout << endl << endl << endl << endl;
@@ -127,6 +128,14 @@ int main() {
   else
     cout << "ERROR: Could not open GCC macro file for parse!" << endl;
   
+  putcap("Text type reading");
+  name_type("int", *builtin);
+  name_type("int*", *builtin);
+  name_type("int&", *builtin);
+  name_type("int&\n#pragma DEBUG_ENTRY_POINT\n()", *builtin);
+  name_type("int(*)()", *builtin);
+  name_type("int&(*)()", *builtin);
+  
   putcap("Test parser");
   llreader f("test/test.cc");
   if (f.is_open())
@@ -163,9 +172,17 @@ int main() {
   return 0;
 }
 
-#ifdef __linux__d
-#include <ncurses>
-#else
+#include <Parser/bodies.h>
+void name_type(string type, context &ct) {
+  llreader llr(type, type.length());
+  macro_map undamageable = ct.get_macros();
+  lexer_cpp c_lex(llr, undamageable, "User expression");
+  ct.change_lexer(&c_lex);
+  token_t tk = c_lex.get_token_in_scope(ct.get_global());
+  full_type ft = ((context_parser*)&ct)->read_fulltype(tk, ct.get_global());
+  cout << ft.toString() << ": " << ft.toEnglish() << endl;
+}
+
 static char getch() {
   int c = fgetc(stdin);
   int ignore = c;
@@ -173,7 +190,6 @@ static char getch() {
     ignore = fgetc(stdin);
   return c;
 }
-#endif
 
 #include <cstring>
 #include <System/lex_cpp.h>

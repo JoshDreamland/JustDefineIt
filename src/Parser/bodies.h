@@ -60,7 +60,6 @@
 #include <API/lexer_interface.h>
 #include <Storage/definition.h>
 #include <Storage/value.h>
-#include "parse_context.h"
 
 namespace jdip {
   /// Never use this pointer; it gets written to frequently and is never set to NULL.

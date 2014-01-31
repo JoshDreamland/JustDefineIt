@@ -53,10 +53,12 @@ full_type context_parser::read_operatorkw_cast_type(token_t &token, definition_s
   }
   
   ft.refs.pop();
+  ref_stack nfunc;
   ref_stack::parameter_ct funcparams;
   ref_stack::parameter oneparam(ft, NULL);
   funcparams.throw_on(oneparam);
-  ft.refs.push_func(funcparams);
+  nfunc.push_func(funcparams);
+  ft.refs.append_c(nfunc);
   
   return ft;
 }

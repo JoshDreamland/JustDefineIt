@@ -26,7 +26,6 @@
 #include <API/error_reporting.h>
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
-#include <Parser/parse_context.h>
 #include <Parser/is_potential_constructor.h>
 #include <System/builtins.h>
 #include <cstdio>
@@ -305,11 +304,11 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         
         if (is_func)
         {
-          bool error = read_function_params(refs, token, fs.scope);
+          ref_stack appme;
+          bool error = read_function_params(appme, token, fs.scope);
           lex = lb.fallback_lexer;
           if (error)
             return 1;
-          ref_stack appme;
           int res = read_referencers_post(appme, token, fs.scope);
           refs.append_c(appme);
           return res;

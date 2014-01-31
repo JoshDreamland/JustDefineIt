@@ -85,6 +85,10 @@ namespace jdi {
     return res;
   }
   
+  string full_type::toEnglish() const {
+    return refs.toEnglish() + typeflags_string(def, flags);
+  }
+  
   full_type &full_type::reduce() {
     definition *type = def; definition_typed *typed;
     if (!type)

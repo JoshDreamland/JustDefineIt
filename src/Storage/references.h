@@ -150,6 +150,8 @@ namespace jdi {
     string toStringLHS() const;
     /// Represent the right-hand side of this set of referencers as a string (the part after the name).
     string toStringRHS() const;
+    /// Represent this set of referencers as a string in plain English.
+    string toEnglish() const;
     
     /// Get the top node.
     node &top();

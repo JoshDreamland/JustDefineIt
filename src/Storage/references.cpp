@@ -250,8 +250,16 @@ namespace jdi {
     while (it)
     {
       while (it and (it->type == RT_ARRAYBOUND || it->type == RT_FUNCTION)) ++it;
-      while (it and (it->type == RT_POINTERTO  || it->type == RT_REFERENCE))
-        res = (it->type == ref_stack::RT_POINTERTO? '*' : '&') + res, ++it;
+      while (it) {
+        if (it->type == RT_POINTERTO)
+          res = '*' + res;
+        else if (it->type == RT_REFERENCE)
+          res = '&' + res;
+        else if (it->type == RT_MEMBER_POINTER)
+          res = ((node_memptr*)(*it))->member_of->toString(0,0) + "::*" + res;
+        else break;
+        ++it;
+      }
       if (it) res = '(' + res;
     }
     return res;
@@ -283,7 +291,7 @@ namespace jdi {
         }
         ++it;
       }
-      while (it and (it->type == RT_POINTERTO || it->type == RT_REFERENCE)) ++it;
+      while (it and (it->type == RT_POINTERTO || it->type == RT_REFERENCE || it->type == RT_MEMBER_POINTER)) ++it;
       if (it) res += ')';
     }
     return res;
@@ -291,6 +299,23 @@ namespace jdi {
 
   string ref_stack::toString() const {
     return toStringLHS() + name + toStringRHS();
+  }
+  
+  string ref_stack::toEnglish() const {
+    string res = name.empty()? name : name + ": ";
+    bool pl = false;
+    
+    for (iterator it = begin(); it; ++it)
+    switch (it->type) {
+      case RT_ARRAYBOUND:     res += pl?           "arrays of ":           "array of "; pl = true;  break;
+      case RT_FUNCTION:       res += pl? "functions returning ": "function returning "; pl = false; break;
+      case RT_MEMBER_POINTER: res += pl?  "member pointers to ":  "member pointer to "; break;
+      case RT_POINTERTO:      res += pl?         "pointers to ":         "pointer to "; break;
+      case RT_REFERENCE:      res += pl?       "references to ":       "reference to "; break;
+      default: res += "{error}"; break;
+    }
+    
+    return res;
   }
   
   //================================================================================

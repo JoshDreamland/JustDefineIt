@@ -31,7 +31,7 @@
 
 #define constructor_name "(construct)"
 inline bool ipc(jdi::definition_scope *scope, std::string dname) {
-  if (scope->flags & jdi::DEF_CLASS) {
+  if (scope->flags & (jdi::DEF_CLASS | jdi::DEF_UNION)) {
     if (dname == scope->name)
       return true;
     

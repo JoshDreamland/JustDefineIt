@@ -27,7 +27,6 @@
 #include <API/context.h>
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
-#include <Parser/parse_context.h>
 #include <System/builtins.h>
 #include <API/compile_settings.h>
 #include <API/AST.h>
