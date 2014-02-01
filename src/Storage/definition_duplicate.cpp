@@ -268,12 +268,31 @@ namespace jdi {
       ancestor& an = *it;
       remap_set::const_iterator ex = n.find(an.def);
       if (ex != n.end()) {
-        #ifdef DEBUG_MODE
-          if (not(ex->second->flags & DEF_CLASS))
-            cerr << "ERROR! Replacing `" << an.def->name << "' at " << ((void*)an.def)
-                 << " with non-class `" << ex->second->name << "' at " << ((void*)ex->second) << endl;
-        #endif
-        an.def = (definition_class*)ex->second;
+        definition *ancc = ex->second;
+        for (;;)
+          if ((ancc->flags & (DEF_TYPED | DEF_TYPENAME)) == (DEF_TYPED | DEF_TYPENAME)) {
+            full_type r = ancc; r.reduce();
+            ancc = r.def;
+          }
+          else if (ancc->flags & DEF_HYPOTHETICAL) {
+            ex = n.find(ancc);
+            if (ex != n.end())
+              ancc = ex->second;
+            else if ((ancc->remap(n, errc), ex = n.find(ancc)) != n.end())
+              ancc = ex->second;
+            else {
+              errc.report_warning("Can't fully evaluate ancestor for class `" + name + "': no resolution for " + ancc->toString());
+              break;
+            }
+          }
+          else break;
+        
+        if (!ancc)
+          errc.report_error("ERROR! Replacing ancestor `" + an.def->name + "' with bad typedef!");
+        else if (not(ancc->flags & DEF_CLASS))
+          errc.report_error("ERROR! Replacing ancestor `" + an.def->name + "' with non-class `" + ancc->name + "' (" + flagnames(ancc->flags) + ")");
+        else
+          an.def = (definition_class*)ancc;
       }
     }
     for (set<definition*>::iterator fiter = friends.begin(); fiter != friends.end(); ) {

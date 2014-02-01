@@ -132,7 +132,7 @@ int main() {
   name_type("int", *builtin);
   name_type("int*", *builtin);
   name_type("int&", *builtin);
-  name_type("int&\n#pragma DEBUG_ENTRY_POINT\n()", *builtin);
+  name_type("int&()", *builtin);
   name_type("int(*)()", *builtin);
   name_type("int&(*)()", *builtin);
   

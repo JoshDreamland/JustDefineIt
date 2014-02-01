@@ -721,7 +721,10 @@ namespace jdi
   //===========================================================================================================================
   
   value AST::eval(const error_context &errc) const {
-    if (!root) return value();
+    if (!root) {
+      errc.report_error("Evaluating a broken expression");
+      return value();
+    }
     return root->eval(errc);
   }
   
@@ -774,9 +777,8 @@ namespace jdi
         }
         return value(long(content[1]));
       }
-      else {
+      else
         return value(content.substr(1, content.length() - 2));
-      }
     }
     errc.report_error("Evaluating unknown node type");
     return value();
@@ -792,9 +794,14 @@ namespace jdi
     return value();
   }
   value AST::AST_Node_Ternary::eval(const error_context &errc) const {
-    if (!exp) return value();
+    if (!exp) {
+      errc.report_error("Bad ternary expression: cannot be evaluated");
+      return value();
+    }
     value e = exp->eval(errc);
-    return value_boolean(e)? (left?left->eval(errc):value()) : (right?right->eval(errc):value());
+    return value_boolean(e)?
+      (left?left->eval(errc):   (errc.report_error("Bad ternary left operand: cannot be evaluated"), value())):
+      (right?right->eval(errc): (errc.report_error("Bad ternary right operand: cannot be evaluated"), value()));
   }
   value AST::AST_Node_Binary::eval(const error_context &errc) const {
     if (!left or !right) {
@@ -802,20 +809,28 @@ namespace jdi
       return value();
     }
     symbol_iter si = symbols.find(content);
-    if (si == symbols.end()) return value();
+    if (si == symbols.end()) {
+      errc.report_error("Internal error! Operator not found!");
+      return value();
+    }
     symbol &s = si->second;
-    if (!s.operate) return value();
+    if (!s.operate) {
+      errc.report_error("Internal error: Operator has no definition");
+      return value();
+    }
     value l = left->eval(errc), r = right->eval(errc);
     value res = s.operate(l, r);
     return res;
   }
   value AST::AST_Node_Scope::eval(const error_context &errc) const {
     full_type res = left->coerce(errc);
-    if (!res.def or !(res.def->flags & DEF_SCOPE))
-      return res.def == arg_key::abstract? value(VT_DEPENDENT) : value();
     if (res.def == arg_key::abstract)
       return value(VT_DEPENDENT);
-    // cout << "Evaluating :: operator: " << res.def->name << "::" << right->content << endl;
+    if (!res.def or !(res.def->flags & DEF_SCOPE)) {
+      errc.report_error("Invalid scope " + (res.def? "`" + res.def->name + "'" : "(NULL)"));
+      return value();
+    }
+    
     definition* d = ((definition_scope*)res.def)->find_local(right->content);
     if (!d or not(d->flags & DEF_VALUED)) {
       if (res.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
@@ -1061,7 +1076,7 @@ namespace jdi
       case '&': { full_type res = operand->coerce(errc); res.refs.push(ref_stack::RT_POINTERTO); return res; }
       case '!': return builtin_type__bool;
       default:
-        errc.report_error("ERROR: Unknown coercion pattern for ternary operator `" + content + "'");
+        errc.report_error("ERROR: Unknown coercion pattern for unary operator `" + content + "'");
         return operand->coerce(errc);
     }
   }
@@ -1112,14 +1127,20 @@ namespace jdi
     
     if (tpd.def == arg_key::abstract)
       return arg_key::abstract;
-    if (!tpd.def or not(tpd.def->flags & DEF_TEMPLATE))
+    if (!tpd.def or not(tpd.def->flags & DEF_TEMPLATE)) {
+      errc.report_error("Bad template type " + (tpd.def? tpd.def->name : "(NULL)"));
       return full_type();
+    }
     
     definition_template *tplate = (definition_template*)tpd.def;
     arg_key k(tplate->params.size());
     k.mirror_types(tplate);
-    if (tplate->params.size() < params.size())
+    if (tplate->params.size() < params.size()) {
+      errc.report_error("Too many parameters to template instantiation; `"
+                        + temp->toString() + "' accepts " + value(long(tplate->params.size())).toString()
+                        + " parameters, but " + value(long(params.size())).toString() + " were given");
       return full_type();
+    }
     
     for (size_t i = 0; i < params.size(); ++i) {
       if (tplate->params[i]->flags & DEF_TYPENAME) {
