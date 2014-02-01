@@ -208,30 +208,12 @@ void do_cli(context &ct) {
         if (false) { case 'o': justorder = true; justflags = false; }
         cout << "Enter the item to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
-        size_t start, e = 0;
-        while (is_useless(buf[e]) or buf[e] == ':') ++e;
-        definition* def = ct.get_global();
-        while (buf[e] and def) {
-          if (!is_letter(buf[e])) { cout << "Unexpected symbol '" << buf[e] << "'" << endl; break; }
-          start = e;
-          while (is_letterd(buf[++e]));
-          if (def->flags & DEF_SCOPE) {
-            string name(buf+start, e-start);
-            definition *defo = def;
-            def = ((definition_scope*)def)->find_local(name);
-            if (!def) {
-              cout << "No `" << name << "' found in scope `" << defo->name << "'" << endl;
-              break;
-            }
-          }
-          else {
-            cout << "Definition `" << def->name << "' is not a scope" << endl;
-            def = NULL;
-            break;
-          }
-          while (is_useless(buf[e]) or buf[e] == ':') ++e;
-        }
-        if (def and e) {
+        llreader llr(buf, strlen(buf));
+        lexer_cpp c_lex(llr, undamageable, "User expression");
+        ct.change_lexer(&c_lex);
+        token_t dummy = c_lex.get_token_in_scope(ct.get_global());
+        definition *def = ((context_parser*)&ct)->read_qualified_definition(dummy, ct.get_global());
+        if (def) {
           if (justflags) {
             cout << flagnames(def->flags) << endl;
           }
