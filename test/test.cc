@@ -72,3 +72,25 @@
 #include <complex>    // 434
 /* */
 
+// These are getting missed:
+
+template<typename x> class isint {
+  typedef double t;
+};
+template<> class isint<int> {
+  typedef int t;
+};
+
+template<typename x> class X {
+  template<typename y> class Y {
+    typedef x ff;
+    typedef typename isint<y>::t fff;
+  };
+};
+
+template<typename z> class Z {
+  typedef typename X<z>::template Y<z>::ff  one;
+  typedef typename X<z>::template Y<z>::fff two;
+};
+
+Z<int> d;

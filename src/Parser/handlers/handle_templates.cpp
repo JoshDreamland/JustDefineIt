@@ -54,7 +54,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   
   for (;;) {
     string pname; // The name given to this parameter
-    unsigned dtpflags = DEF_TEMPPARAM;
+    unsigned dtpflags = DEF_TEMPPARAM | DEF_DEPENDENT;
     
     definition_tempparam* dtn;
     if (token.type == TT_TYPENAME || token.type == TT_CLASS || token.type == TT_STRUCT) {
@@ -223,7 +223,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         }
         
         if ((argk[args_given].type == arg_key::AKT_VALUE)
-        and (token.type == TT_DEFINITION or token.type == TT_DECLARATOR) and token.def->flags & DEF_TEMPPARAM)
+        and (token.type == TT_DEFINITION or token.type == TT_DECLARATOR) and (token.def->flags & DEF_TEMPPARAM))
         {
           for (size_t i = 0; i < temp->params.size(); ++i) if (temp->params[i] == token.def) {
             if (~temp->params[i]->flags & DEF_TYPENAME) {

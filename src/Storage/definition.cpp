@@ -42,10 +42,18 @@ namespace jdi {
     return d1 - d2;
   }
   
-  definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {}
-  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack *rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(*rf), modifiers(typeflags) {}
-  definition_typed::definition_typed(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {}
-  definition_typed::definition_typed(string n, definition* p, const full_type &tp, int flgs): definition(n,p,flgs), type(tp.def), referencers(tp.refs), modifiers(tp.flags) {}
+  definition_typed::definition_typed(string n, definition* p, definition* tp, unsigned int typeflags, int flgs): definition(n,p,flgs | DEF_TYPED), type(tp), referencers(), modifiers(typeflags) {
+    if (type and type->flags & DEF_DEPENDENT) flags |= DEF_DEPENDENT; 
+  }
+  definition_typed::definition_typed(string n, definition* p, definition* tp, ref_stack *rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(*rf), modifiers(typeflags) {
+    if (type and type->flags & DEF_DEPENDENT) flags |= DEF_DEPENDENT; 
+  }
+  definition_typed::definition_typed(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): definition(n,p,flgs), type(tp), referencers(rf), modifiers(typeflags) {
+    if (type and type->flags & DEF_DEPENDENT) flags |= DEF_DEPENDENT; 
+  }
+  definition_typed::definition_typed(string n, definition* p, const full_type &tp, int flgs): definition(n,p,flgs), type(tp.def), referencers(tp.refs), modifiers(tp.flags) {
+    if (type and type->flags & DEF_DEPENDENT) flags |= DEF_DEPENDENT; 
+  }
   definition_typed::~definition_typed() {}
   
   string definition::qualified_id() const {
@@ -324,8 +332,8 @@ namespace jdi {
   definition_template::specialization::specialization(const specialization &x): key(x.key, false), spec_temp(x.spec_temp) {}
   definition_template::specialization::~specialization() { delete spec_temp; }
   
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_assignment(NULL) {}
-  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM), default_assignment(defval) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_DEPENDENT), default_assignment(NULL) {}
+  definition_tempparam::definition_tempparam(string p_name, definition_scope* p_parent, AST* defval, unsigned p_flags): definition_class(p_name, p_parent, p_flags | DEF_TEMPPARAM | DEF_DEPENDENT), default_assignment(defval) {}
   definition_tempparam::~definition_tempparam() { delete default_assignment; }
   
   static int nest_count = 0;
@@ -462,8 +470,8 @@ namespace jdi {
   
   definition_atomic::definition_atomic(string n, definition* p, unsigned int f, size_t size): definition_scope(n,p,f), sz(size) {}
   
-  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f, AST* d): definition_class(n,p,f|DEF_HYPOTHETICAL), def(d) {}
-  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, AST* d): definition_class(n,p,DEF_HYPOTHETICAL), def(d) {}
+  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, unsigned f, AST* d): definition_class(n,p,f | DEF_HYPOTHETICAL | DEF_DEPENDENT), def(d) {}
+  definition_hypothetical::definition_hypothetical(string n, definition_scope *p, AST* d): definition_class(n, p, DEF_HYPOTHETICAL | DEF_DEPENDENT), def(d) {}
   definition_hypothetical::~definition_hypothetical() { delete def; }
   
   
@@ -720,6 +728,7 @@ namespace jdi {
         case DEF_TEMPLATE:     flagnamemap[DEF_TEMPLATE]     = "DEF_TEMPLATE";
         case DEF_TEMPPARAM:    flagnamemap[DEF_TEMPPARAM]    = "DEF_TEMPPARAM";
         case DEF_HYPOTHETICAL: flagnamemap[DEF_HYPOTHETICAL] = "DEF_HYPOTHETICAL";
+        case DEF_DEPENDENT:    flagnamemap[DEF_DEPENDENT]    = "DEF_DEPENDENT";
         case DEF_PRIVATE:      flagnamemap[DEF_PRIVATE]      = "DEF_PRIVATE";
         case DEF_PROTECTED:    flagnamemap[DEF_PROTECTED]    = "DEF_PROTECTED";
         case DEF_INCOMPLETE:   flagnamemap[DEF_INCOMPLETE]   = "DEF_INCOMPLETE";
@@ -731,7 +740,7 @@ namespace jdi {
     bool hadone = false;
     for (int i = 1; i < (1 << 30); i <<= 1)
       if (flags & i)
-        res += (hadone? " | " : "  ") + flagnamemap[i], hadone = true;
+        res += (hadone? " | " : "") + flagnamemap[i], hadone = true;
     return res;
   }
 }

@@ -274,7 +274,7 @@ namespace jdi {
             full_type r = ancc; r.reduce();
             ancc = r.def;
           }
-          else if (ancc->flags & DEF_HYPOTHETICAL) {
+          else if (ancc->flags & DEF_DEPENDENT) {
             ex = n.find(ancc);
             if (ex != n.end())
               ancc = ex->second;
@@ -368,6 +368,13 @@ namespace jdi {
     remap_set::const_iterator ex = n.find(type);
     if (ex != n.end())
       type = ex->second;
+    /*else {
+      type->remap(n, errc);
+      if ((ex = n.find(type)) != n.end())
+        type = ex->second;
+    }*/
+    if (!(type->flags & DEF_DEPENDENT))
+      flags &= ~DEF_DEPENDENT;
     definition::remap(n, errc);
   }
   

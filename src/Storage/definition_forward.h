@@ -46,6 +46,7 @@ namespace jdi {
     DEF_TEMPLATE =     1 << 11, ///< This definition has template parameters attached.
     DEF_TEMPPARAM =    1 << 12, ///< This definition belongs to a list of template parameters, and is therefore abstract.
     DEF_HYPOTHETICAL = 1 << 13, ///< This definition is a purely hypothetical template type, eg, template_param::typename type;
+    DEF_DEPENDENT =    1 << 14, ///< This definition is dependent; maybe it's 
     DEF_PRIVATE =      1 << 15, ///< This definition was declared as a private member.
     DEF_PROTECTED =    1 << 16, ///< This definition was declared as a protected member.
     DEF_INCOMPLETE =   1 << 17, ///< This definition was declared but not implemented.

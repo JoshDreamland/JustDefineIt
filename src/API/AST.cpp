@@ -833,7 +833,7 @@ namespace jdi
     
     definition* d = ((definition_scope*)res.def)->find_local(right->content);
     if (!d or not(d->flags & DEF_VALUED)) {
-      if (res.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+      if (res.def->flags & DEF_DEPENDENT)
         return value(VT_DEPENDENT);
       errc.report_error("AST evaluation failure: No `" + right->content + "' found in " + res.def->kind() + " `" + res.def->name + "'");
       return value(long(0));
@@ -1001,10 +1001,26 @@ namespace jdi
   
   full_type AST::AST_Node_Scope::coerce(const error_context &errc) const {
     full_type res = left->coerce(errc);
-    if (!res.def or !(res.def->flags & DEF_SCOPE))
-      return full_type();
-    if (res.def == arg_key::abstract) return arg_key::abstract;
-    res.def = ((definition_scope*)res.def)->look_up(right->content);
+    if (!res.def)
+      return errc.report_error("Scope to access is NULL!"), full_type();
+    if (res.def == arg_key::abstract)
+      return res.def;
+    if (!(res.def->flags & DEF_SCOPE)) {
+      res.reduce();
+      if (!res.def)
+        return errc.report_error("Scope is typedef to NULL!"), full_type();
+      if (!(res.def->flags & DEF_SCOPE))
+        return errc.report_error("Bad scope `" + res.def->name + "' (" + flagnames(res.def->flags) + ")"), full_type();
+    }
+    if (res.def == arg_key::abstract)
+      return arg_key::abstract;
+    definition_scope *scp = (definition_scope*)res.def;
+    res.def = scp->look_up(right->content);
+    if (!res.def) {
+      if (scp->flags & DEF_DEPENDENT)
+        return arg_key::abstract;
+      errc.report_error("Scope `" + left->toString() + "' has no member `" + right->content + "'");
+    }
     return res;
   }
   
@@ -1145,7 +1161,7 @@ namespace jdi
     for (size_t i = 0; i < params.size(); ++i) {
       if (tplate->params[i]->flags & DEF_TYPENAME) {
         full_type t = params[i]->coerce(errc);
-        if (t.def == arg_key::abstract || t.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+        if (t.def == arg_key::abstract || t.def->flags & DEF_DEPENDENT)
           return arg_key::abstract;
         k.put_type(i, t);
       }

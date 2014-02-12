@@ -115,7 +115,7 @@ namespace jdi {
       void remap(const remap_set &n, const error_context &errc);
       /// Return whether we contain any abstract arguments
       bool is_abstract() const;
-      /// Return whether we contain any abstract arguments or dependent arguments (DEF_TEMPPARAM or DEF_HYPOTHETICAL)
+      /// Return whether we contain any abstract arguments or dependent arguments
       bool is_dependent() const;
       /// Returns whether a key conflicts with another; that is, whether a non-abstract parameter of two keys differ. Returns the number of such conflicts, which may be zero.
       int conflicts_with(const arg_key& k) const;

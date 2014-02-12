@@ -596,20 +596,20 @@ namespace jdi {
       @param name   Some unique key name for this scope.
       @param parent The scope above this one.
       @param flags  The additional flag data about this scope. */
-    definition_tempparam(string name, definition_scope* parent, unsigned flags = DEF_TEMPPARAM);
+    definition_tempparam(string name, definition_scope* parent, unsigned flags = DEF_TEMPPARAM | DEF_DEPENDENT);
     /** Construct with default information.
       @param name   Some unique key name for this scope.
       @param parent The scope above this one.
       @param defval The default value given to this parameter, read in as an AST to enable it to depend on other parameters.
       @param flags  The additional flag data about this scope. */
-    definition_tempparam(string name, definition_scope* parent, AST* defval, unsigned flags = DEF_TEMPPARAM);
+    definition_tempparam(string name, definition_scope* parent, AST* defval, unsigned flags = DEF_TEMPPARAM | DEF_DEPENDENT);
     /** Construct with default information.
       @param name    Some unique key name for this scope.
       @param parent  The scope above this one.
       @param inttype The integer type used if this template parameter is instead a numeric constant.
       @param defval  The default value given to this parameter, read in as an AST to enable it to depend on other parameters.
       @param flags   The additional flag data about this scope. */
-    definition_tempparam(string name, definition_scope* parent, full_type &inttype, AST* defval = NULL, unsigned flags = DEF_TEMPPARAM);
+    definition_tempparam(string name, definition_scope* parent, full_type &inttype, AST* defval = NULL, unsigned flags = DEF_TEMPPARAM | DEF_DEPENDENT);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;

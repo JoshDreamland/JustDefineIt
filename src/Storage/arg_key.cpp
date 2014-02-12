@@ -92,7 +92,7 @@ namespace jdi {
   void arg_key::swap_final_type(size_t argnum, full_type &type)      { new (&values[argnum].data) full_type(); values[argnum].ft().swap(type); values[argnum].type = AKT_FULLTYPE; }
   void arg_key::put_type(size_t argnum, const full_type &type) {
     if (type.def) {
-      if (type.def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+      if (type.def->flags & DEF_DEPENDENT)
         return put_final_type(argnum, abstract);
       if (type.def->flags & DEF_TYPED and ((definition_typed*)type.def)->type) {
         // Copy the type we were given
@@ -209,7 +209,7 @@ namespace jdi {
   
   bool arg_key::node::is_abstract() const {
     return type == AKT_FULLTYPE?
-      ft().def == abstract || !ft().def || (ft().def->flags & (DEF_TEMPPARAM | DEF_HYPOTHETICAL))
+      ft().def == abstract || !ft().def || (ft().def->flags & DEF_DEPENDENT)
     : val().type == VT_DEPENDENT;
   }
   
