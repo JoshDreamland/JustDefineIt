@@ -46,11 +46,11 @@ namespace jdi {
   }
   value::~value() { if (type == VT_STRING) delete[] val.s; }
   
-  std::string value::toString() {
+  std::string value::toString() const {
     char buf[128];
     switch (type) {
       case VT_DOUBLE:    sprintf(buf, "%.32g", val.d); return buf;
-      case VT_INTEGER:   sprintf(buf, "%ld", val.i); return buf;
+      case VT_INTEGER:   sprintf(buf, "%ld", val.i);   return buf;
       case VT_STRING:    return val.s;
       case VT_DEPENDENT: return "(<dependent value>)";
       case VT_NONE:      return "<nothing>";

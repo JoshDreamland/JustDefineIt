@@ -90,7 +90,7 @@ namespace jdi {
         @param indent  The indent, in spaces, to place before each line printed.
         @return Returns a string representation of everything in this definition.
     **/
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     /// Return the qualified ID of this definition, eg, ::std::string.
     string qualified_id() const;
@@ -137,7 +137,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     definition_typed(string name, definition* p, definition* tp, unsigned int typeflags, int flags = DEF_TYPED);
     /// Construct with all information. Consumes the given \c ref_stack.
@@ -205,7 +205,7 @@ namespace jdi {
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     definition_overload(string name, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flags = DEF_FUNCTION);
   };
@@ -218,6 +218,7 @@ namespace jdi {
   struct definition_function: definition {
     typedef map<arg_key, definition_overload*> overload_map; ///< The map type used for storing overloads.
     typedef overload_map::iterator overload_iter; ///< An iterator type for \c overload_map.
+    typedef overload_map::const_iterator overload_citer; ///< An iterator type for \c overload_map.
     
     overload_map overloads; ///< Standard overloads, checked before template overloads.
     vector<definition_template*> template_overloads; ///< Array of reference stacks for each overload of this function.
@@ -226,7 +227,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     /** Function to add the given definition as an overload if no such overload
         exists, or to merge it in (handling any errors) otherwise.
@@ -261,7 +262,7 @@ namespace jdi {
     definition_valued(); ///< Default constructor; invalidates value.
     
     virtual string kind() const;
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     virtual definition* duplicate(remap_set &n) const;
     
     definition_valued(string vname, definition *parnt, definition* type, unsigned int modifiers, unsigned int flags, const value &val); ///< Construct with a value and type.
@@ -389,7 +390,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     /** Default constructor. Only to be used for global! **/
     definition_scope();
@@ -439,7 +440,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     virtual definition* look_up(string name); ///< Look up a definition in this class (including its ancestors).
     virtual definition* find_local(string name);
@@ -465,7 +466,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     definition_union(string classname, definition_scope* parent, unsigned flags = DEF_CLASS | DEF_UNION | DEF_TYPENAME);
   };
@@ -490,7 +491,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     definition *type; ///< The type of the constants in this enum; a cast to this type is valid but not favored (in overload resolution).
     unsigned modifiers; ///< Modifiers to our type, namely, unsigned.
@@ -574,7 +575,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     
     /** Construct with name, parent, and flags **/
     definition_template(string name, definition *parent, unsigned flags);
@@ -632,7 +633,7 @@ namespace jdi {
     string kind() const;
     void remap(remap_set &n, const error_context &errc);
     value size_of(const error_context &errc);
-    string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     size_t sz;
     definition_atomic(string n,definition* p,unsigned int f, size_t size);
   };
@@ -650,7 +651,7 @@ namespace jdi {
     virtual definition* duplicate(remap_set &n) const;
     virtual void remap(remap_set &n, const error_context &errc);
     virtual value size_of(const error_context &errc);
-    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0);
+    virtual string toString(unsigned levels = unsigned(-1), unsigned indent = 0) const;
     virtual definition* get_local(string name);
     
     /// Construct with basic definition info.

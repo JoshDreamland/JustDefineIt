@@ -14,7 +14,7 @@
 #include <png.h>
 /* */
 
-/* */
+/* * /
 #include <cassert>
 #include <cctype>
 #include <cerrno>
@@ -58,39 +58,18 @@
 
 /* * /
 #include <iomanip>    // 13
-#include <streambuf>  // 58
-#include <ios>        // 196
-#include <ostream>    // 220
-#include <locale>     // 242
-#include <iterator>   // 278
-#include <hash_set>   // 278
-#include <istream>    // 278
-#include <iostream>   // 278
-#include <fstream>    // 288
-#include <sstream>    // 292
-#include <strstream>  // 295
-#include <complex>    // 434
+#include <streambuf>  // 53
+#include <ios>        // 145
+#include <ostream>    // 169
+#include <locale>     // 191
+#include <iterator>   // 227
+#include <hash_set>   // 227
+#include <istream>    // 227
+#include <iostream>   // 227
+#include <fstream>    // 237
+#include <sstream>    // 241
+#include <strstream>  // 249
+#include <complex>    // 385
 /* */
 
-// These are getting missed:
-
-template<typename x> class isint {
-  typedef double t;
-};
-template<> class isint<int> {
-  typedef int t;
-};
-
-template<typename x> class X {
-  template<typename y> class Y {
-    typedef x ff;
-    typedef typename isint<y>::t fff;
-  };
-};
-
-template<typename z> class Z {
-  typedef typename X<z>::template Y<z>::ff  one;
-  typedef typename X<z>::template Y<z>::fff two;
-};
-
-Z<int> d;
+//#include "SHELLmain.cpp"

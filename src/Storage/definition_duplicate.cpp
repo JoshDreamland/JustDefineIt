@@ -354,6 +354,13 @@ namespace jdi {
   }
   
   void definition_template::remap(remap_set &n, const error_context &errc) {
+    for (vector<definition_tempparam*>::iterator it = params.begin(); it != params.end(); ++it)
+      if ((*it)->default_assignment)
+        (*it)->default_assignment->remap(n);
+    for (institer it = instantiations.begin(); it != instantiations.end(); ++it)
+      it->second->def->remap(n, errc);
+    for (speciter it = specializations.begin(); it != specializations.end(); ++it)
+      (*it)->spec_temp->remap(n, errc);
     if (def)
       def->remap(n, errc);
   }
@@ -385,9 +392,8 @@ namespace jdi {
   void definition_atomic::remap(remap_set &n, const error_context &errc) { definition::remap(n, errc); }
   
   void definition_hypothetical::remap(remap_set &n, const error_context &errc) {
-    AST *nast = def->duplicate();
-    nast->remap(n);
-    full_type ft = nast->coerce(errc);
+    def->remap(n);
+    full_type ft = def->coerce(errc);
     
     if (ft.def && ft.def != arg_key::abstract) {
       #ifdef DEBUG_MODE
@@ -397,7 +403,6 @@ namespace jdi {
       #endif
       n[(definition*)this] = ft.def;
     }
-    delete nast;
   }
   
   void arg_key::remap(const remap_set &r, const error_context &errc) {

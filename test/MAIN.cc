@@ -118,6 +118,7 @@ int main() {
       builtin->add_search_directory("/usr/include/x86_64-linux-gnu");
       builtin->add_search_directory("/usr/include");
       builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
+      builtin->add_search_directory("/home/josh/.enigma/");
       
       llreader macro_reader("test/defines_linux.txt");
     #endif

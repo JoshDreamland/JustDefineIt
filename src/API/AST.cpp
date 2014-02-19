@@ -28,6 +28,7 @@
 #include <System/lex_buffer.h>
 #include <Parser/bodies.h>
 #include <API/compile_settings.h>
+#include <iostream>
 
 #ifndef __APPLE__
 #include <malloc.h>
@@ -99,10 +100,18 @@ namespace jdi
         token.report_error(cparse->herr,"Please refer to operators in their binary format; explicit use of operator functions not presently supported.");
         break;
       
-      case TT_TYPENAME:
-        //XXX: Is it safe to just ignore a typename directive in this system?
+      case TT_TYPENAME: {
         token = get_next_token();
-        return parse_expression(token, precedence::scope);
+        AST_Node* an = parse_expression(token, precedence::scope);
+        if (!an or (an->type != AT_DEFINITION && an->type != AT_SCOPE && an->type != AT_TYPE)) {
+          token.report_error(cparse->herr, "Expected qualified identifier for type after `typename' token");
+          delete an; return NULL;
+        }
+        // TODO: this token needs marked as a type, somehow. Probably by creating a child
+        // of AST_Node_Type which stores an ast, and sets tp.def to arg_key::abstract.
+        return an;
+      }
+      
       case TT_TEMPLATE:
         token = get_next_token();
         if (token.type != TT_DEFINITION and token.type != TT_IDENTIFIER) {
@@ -713,6 +722,11 @@ namespace jdi
   }
   
   void AST::remap(const remap_set& n) {
+    bool f;
+    f = false;
+    if (f)
+      for (remap_citer i = n.begin(); i != n.end(); ++i)
+        cout << i->first->toString(0,0) << " => " << i->second->toString(0,0) << endl;
     root->remap(n);
   }
   
@@ -1015,11 +1029,12 @@ namespace jdi
     if (res.def == arg_key::abstract)
       return arg_key::abstract;
     definition_scope *scp = (definition_scope*)res.def;
-    res.def = scp->look_up(right->content);
+    res.def = scp->find_local(right->content);
     if (!res.def) {
       if (scp->flags & DEF_DEPENDENT)
         return arg_key::abstract;
-      errc.report_error("Scope `" + left->toString() + "' has no member `" + right->content + "'");
+      errc.report_error("Scope `" + scp->name + "' (`" + left->toString() + "') has no member `" + right->content + "'");
+      scp->find_local(right->content);
     }
     return res;
   }
@@ -1161,6 +1176,8 @@ namespace jdi
     for (size_t i = 0; i < params.size(); ++i) {
       if (tplate->params[i]->flags & DEF_TYPENAME) {
         full_type t = params[i]->coerce(errc);
+        if (!t.def)
+          return full_type();
         if (t.def == arg_key::abstract || t.def->flags & DEF_DEPENDENT)
           return arg_key::abstract;
         k.put_type(i, t);

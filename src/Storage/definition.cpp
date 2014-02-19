@@ -578,18 +578,18 @@ namespace jdi {
   inline string tostr(int x) { char buf[16]; sprintf(buf, "%d", x); return buf; }
   inline unsigned dl(unsigned l) { return l == unsigned(-1)? l:l-1; }
   
-  string definition::toString(unsigned, unsigned indent) {
+  string definition::toString(unsigned, unsigned indent) const {
     return string(indent, ' ') + "void " + name + ";";
   }
-  string definition_atomic::toString(unsigned, unsigned indent) {
+  string definition_atomic::toString(unsigned, unsigned indent) const {
     return string(indent, ' ') + "typedef __atom__[" + tostr(sz) + "] " + name + ";";
   }
-  string definition_class::toString(unsigned levels, unsigned indent) {
+  string definition_class::toString(unsigned levels, unsigned indent) const {
     const string inds(indent, ' ');
     string res = inds + "class " + name;
     if (!ancestors.empty()) {
       res += ": ";
-      for (vector<ancestor>::iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
+      for (vector<ancestor>::const_iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
         res += ((it->protection == DEF_PRIVATE)? "private " : (it->protection == DEF_PROTECTED)? "protected " : "public ");
         res += it->def->name + " ";
       }
@@ -598,14 +598,14 @@ namespace jdi {
       res += "\n", res += definition_scope::toString(dl(levels), indent);
     return res;
   }
-  string definition_enum::toString(unsigned levels, unsigned indent) {
+  string definition_enum::toString(unsigned levels, unsigned indent) const {
     const string inds(indent, ' ');
     string res = inds + "enum " + name + ": " + (type? type->name + " " : "");
     if (levels) {
       res += "{\n";
       string sinds(indent+2, ' ');
       bool first = true;
-      for (vector<const_pair>::iterator it = constants.begin(); it != constants.end(); ++it) {
+      for (vector<const_pair>::const_iterator it = constants.begin(); it != constants.end(); ++it) {
         if (!first) res += ",\n";
         res += sinds + it->def->name + " = " + it->def->value_of.toString();
         first = false;
@@ -615,28 +615,28 @@ namespace jdi {
     else res += "{ ... }";  
     return res;
   }
-  string definition_overload::toString(unsigned levels, unsigned indent) {
+  string definition_overload::toString(unsigned levels, unsigned indent) const {
     return definition_typed::toString(levels, indent);
   }
-  string definition_function::toString(unsigned levels, unsigned indent) {
+  string definition_function::toString(unsigned levels, unsigned indent) const {
     string res;
-    for (overload_iter it = overloads.begin(); it != overloads.end(); ++it) {
+    for (overload_citer it = overloads.begin(); it != overloads.end(); ++it) {
       if (res.size()) res += "\n";
       res += it->second->toString(levels, indent);
     }
-    for (vector<definition_template*>::iterator it = template_overloads.begin(); it != template_overloads.end(); ++it) {
+    for (vector<definition_template*>::const_iterator it = template_overloads.begin(); it != template_overloads.end(); ++it) {
       if (res.size()) res += "\n";
       res += (*it)->toString(levels, indent);
     }
     return res;
   }
-  string definition_scope::toString(unsigned levels, unsigned indent) {
+  string definition_scope::toString(unsigned levels, unsigned indent) const {
     string inds(indent, ' '), res = inds;
     if (flags & DEF_NAMESPACE)
       res += name.empty()? "namespace " : "namespace " + name + " ";
     if (levels) {
       res += "{\n";
-      for (defiter it = members.begin(); it != members.end(); ++it)
+      for (defiter_c it = members.begin(); it != members.end(); ++it)
         res += it->second->toString(levels-1, indent+2) + "\n";
       res += inds + "}";
     }
@@ -649,11 +649,11 @@ namespace jdi {
     if (r == string::npos) return "";
     return x.substr(r);
   }
-  string definition_template::toString(unsigned levels, unsigned indent) {
+  string definition_template::toString(unsigned levels, unsigned indent) const {
     string res(indent, ' ');
     res += "template<";
     bool first = true;
-    for (piterator it = params.begin(); it != params.end(); ++it) {
+    for (pciterator it = params.begin(); it != params.end(); ++it) {
       definition_tempparam *d = *it;
       if (!first) res += ", ";
       if (d->flags & DEF_TYPENAME) {
@@ -672,7 +672,7 @@ namespace jdi {
     res += def? trimhead(def->toString(levels, indent)): "<null>";
     return res;
   }
-  string definition_typed::toString(unsigned levels, unsigned indent) {
+  string definition_typed::toString(unsigned levels, unsigned indent) const {
     string res(indent, ' ');
     if (flags & DEF_TYPENAME) res += "typedef ";
     res += type? typeflags_string(type, modifiers) : "<NULL>";
@@ -683,15 +683,15 @@ namespace jdi {
     else res += ";";
     return res;
   }
-  string definition_union::toString(unsigned levels, unsigned indent) {
+  string definition_union::toString(unsigned levels, unsigned indent) const {
     string res = "union " + name + definition_scope::toString(levels,indent);
     return res;
   }
-  string definition_valued::toString(unsigned, unsigned indent) {
+  string definition_valued::toString(unsigned, unsigned indent) const {
     return string(indent, ' ') + referencers.toStringLHS() + name + referencers.toStringRHS() + " = " + value_of.toString();
   }
-  string definition_hypothetical::toString(unsigned, unsigned indent) {
-    return string(indent, ' ') + "template<typename " + parent->name + "> " + parent->name + "::" + name;
+  string definition_hypothetical::toString(unsigned, unsigned indent) const {
+    return string(indent, ' ') + "template<...> " + parent->toString(0, 0) + "::" + name;
   }
   
   string definition::kind() const { return "definition"; }
