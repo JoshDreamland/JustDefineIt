@@ -12,3 +12,4 @@ src/User/token_cases.h
 gmon.out
 profiling/
 test/dump-win32.cpp
+test/dump-mymachine.cpp

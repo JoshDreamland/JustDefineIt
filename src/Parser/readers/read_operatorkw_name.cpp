@@ -53,6 +53,10 @@ string jdip::context_parser::read_operatorkw_name(token_t &token, definition_sco
     else
       token = lex->get_token_in_scope(scope, herr);
   }
+  else if (token.type == TT_COMMA) {
+    res = "operator,";
+    token = lex->get_token_in_scope(scope, herr);
+  }
   else if (token.type == TT_NEW) {
     token = lex->get_token_in_scope(scope, herr);
     if (token.type == TT_LEFTBRACKET) {

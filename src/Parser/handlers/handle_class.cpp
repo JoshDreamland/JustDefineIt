@@ -28,11 +28,15 @@ using namespace jdip;
 #define def_kind class
 #define DEF_FLAG DEF_CLASS
 #include <Parser/cclass_base.h>
+#include <System/builtins.h>
 
 int jdip::context_parser::handle_class_inheritance(definition_scope *scope, token_t& token, definition_class *recipient, unsigned default_protection) {
   do {
-    unsigned iprotection = default_protection;
+    unsigned iprotection = default_protection; //, ivirtuality = 0; TODO: mark inheritance as virtual
     token = read_next_token(scope);
+    if (token.type == TT_DECFLAG && ((typeflag*)token.def)->flagbit == builtin_flag__virtual) {
+      token = read_next_token(scope);
+    }
     if (token.type == TT_PUBLIC)
       iprotection = 0,
       token = read_next_token(scope);
