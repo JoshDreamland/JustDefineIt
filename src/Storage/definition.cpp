@@ -694,7 +694,7 @@ namespace jdi {
     return string(indent, ' ') + "template<...> " + parent->toString(0, 0) + "::" + name;
   }
   
-  string definition::kind() const { return "definition"; }
+  string definition::kind() const           { return "definition"; }
   string definition_atomic::kind() const    { return "primitive"; }
   string definition_class::kind() const     { return "class"; }
   string definition_enum::kind() const      { return "enum"; }

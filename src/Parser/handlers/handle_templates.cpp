@@ -438,7 +438,21 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   }
   else if (token.type == TT_FRIEND) {
     if (scope->flags & DEF_CLASS) {
-      handle_friend(temp, token, (definition_class*)scope);
+      token = read_next_token(scope);
+      if (token.type == TT_CLASS) {
+        read_qualified_definition(token, temp);
+        delete temp;
+        if (token.type != TT_SEMICOLON)
+          token.report_errorf(herr, "Expected semicolon to close friend statement before %s");
+        return 0; // TODO: store this friend somewhere
+      }
+      else {
+        read_fulltype(token, temp);
+        delete temp;
+        if (token.type != TT_SEMICOLON)
+          token.report_errorf(herr, "Expected semicolon to close friend statement before %s");
+        return 0; // TODO: store this friend somewhere
+      }
       delete temp;
     }
     else {

@@ -104,7 +104,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           }
           else if (token.type == TT_TEMPLATE) {
             token = read_next_token(scope);
-            if (token.type != TT_CLASS and token.type != TT_STRUCT and token.type != TT_DECLARATOR and token.type != TT_DEFINITION) {
+            if (token.type != TT_CLASS and token.type != TT_STRUCT and token.type != TT_DECLARATOR and token.type != TT_DECFLAG and token.type != TT_DEFINITION) {
               token.report_errorf(herr, "Expected template specialization following `extern template' directive; %s unhandled");
               FATAL_RETURN(1);
             }
