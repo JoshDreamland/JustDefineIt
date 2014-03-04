@@ -200,10 +200,6 @@ void context::output_definitions(ostream &out) {
   out << global->toString();
 }
 
-definition_scope* context::get_global() {
-  return global;
-}
-
 context::context(): parse_open(false), lex(NULL), _lex(NULL), herr(def_error_handler), global(new definition_scope()) {
   copy(*builtin);
 }

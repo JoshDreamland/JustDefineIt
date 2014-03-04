@@ -51,6 +51,10 @@ using namespace jdip;
 
 namespace jdi
 {
+  void AST::report_error(const jdip::token_t &token, string err) { token.report_error(cparse->herr, err); }
+  void AST::report_errorf(const jdip::token_t &token, string err) { token.report_errorf(cparse->herr, err); }
+  void AST::report_warning(const jdip::token_t &token, string err) { token.report_warning(cparse->herr, err); }
+  
   AST::AST_Node* AST::parse_expression(token_t &token, int prec_min) {
     string ct;
     AST_Node *myroot = NULL;

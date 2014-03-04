@@ -79,7 +79,8 @@ namespace jdi {
       AT_NEW,         ///< This node is a new, new[], new(), or new()[] operator.
       AT_DELETE,      ///< This node is a delete or delete[] operator.
       AT_INSTANTIATE, ///< This node is a template instantiation.
-      AT_INSTBYKEY    ///< This node is a template instantiation with an arg_key.
+      AT_INSTBYKEY,   ///< This node is a template instantiation with an arg_key.
+      AT_USERBEGIN    ///< This is the first user-defined token index.
     };
     
     /// Structure containing info for use when rendering SVGs.
@@ -88,6 +89,10 @@ namespace jdi {
     
     friend struct jdi::ASTOperator;
     friend struct jdi::ConstASTOperator;
+    
+    void report_error(const jdip::token_t &token, string err);
+    void report_errorf(const jdip::token_t &token, string err);
+    void report_warning(const jdip::token_t &token, string err);
     
     /** Private storage mechanism designed to hold token information and any linkages.
         In general, a node has no linkages, and so we use AST_Node as the base class for
@@ -555,6 +560,7 @@ namespace jdi {
     AST(context *ctex);
     /// Construct with a single node
     /// @param ctex  The context in which this AST exists.
+    /// @param def   The definition from which to construct a node.
     AST(context *ctex, definition* def);
     
     

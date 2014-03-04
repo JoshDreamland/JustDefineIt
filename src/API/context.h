@@ -93,7 +93,10 @@ namespace jdi
   public:
     set<definition*> variadics; ///< Set of variadic types.
     
-    definition_scope* get_global(); ///< Return the global scope.
+    /// Return the global scope.
+    inline definition_scope* get_global() { return global; }
+    /// Return the error handler.
+    inline error_handler* get_herr() { return herr; }
     
     size_t search_dir_count(); ///< Return the number of search directories
     string search_dir(size_t index); ///< Return the search directory with the given index, in [0, search_dir_count).

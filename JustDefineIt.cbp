@@ -114,6 +114,7 @@
 		<Unit filename="src/General/svg_simple.h" />
 		<Unit filename="src/Parser/base.cpp" />
 		<Unit filename="src/Parser/bodies.h" />
+		<Unit filename="src/Parser/cclass_base.h" />
 		<Unit filename="src/Parser/handlers/handle_class.cpp" />
 		<Unit filename="src/Parser/handlers/handle_declarators.cpp" />
 		<Unit filename="src/Parser/handlers/handle_enum.cpp" />
