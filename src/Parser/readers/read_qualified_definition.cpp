@@ -29,7 +29,7 @@ definition* jdip::context_parser::read_qualified_definition(token_t &token, defi
   definition *res;
   if (token.type == TT_SCOPE)
   {
-    res = get_global();
+    res = ctex->get_global();
     token = lex->get_token(herr);
     if (token.type == TT_IDENTIFIER)
     {
@@ -44,6 +44,7 @@ definition* jdip::context_parser::read_qualified_definition(token_t &token, defi
       }
       token.def = res;
     }
+    else return res;
   }
   else {
     if (token.type == TT_IDENTIFIER) {

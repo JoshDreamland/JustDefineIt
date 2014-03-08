@@ -51,10 +51,6 @@ using namespace jdip;
 
 namespace jdi
 {
-  void AST::report_error(const jdip::token_t &token, string err) { token.report_error(cparse->herr, err); }
-  void AST::report_errorf(const jdip::token_t &token, string err) { token.report_errorf(cparse->herr, err); }
-  void AST::report_warning(const jdip::token_t &token, string err) { token.report_warning(cparse->herr, err); }
-  
   AST::AST_Node* AST::parse_expression(token_t &token, int prec_min) {
     string ct;
     AST_Node *myroot = NULL;
@@ -702,22 +698,11 @@ namespace jdi
   //=: Public API :============================================================================================================
   //===========================================================================================================================
   
-  int AST::parse_expression() {
-    token_t token = cparse->lex->get_token();
-    if ((root = parse_expression(token, 0)))
+  int AST::parse_expression(int prec) {
+    token_t token = get_next_token();
+    if ((root = parse_expression(token, prec)))
       return 0;
     return 1;
-  }
-  
-  int AST::parse_expression(lexer *ulex, token_t &token, int precedence, error_handler *uherr) {
-    cparse->lex = ulex, cparse->herr = uherr;
-    token = get_next_token();
-    return !((root = parse_expression(token, precedence)));
-  }
-  
-  int AST::parse_expression(token_t &token, lexer *ulex, int precedence, error_handler *uherr) {
-    cparse->lex = ulex, cparse->herr = uherr;
-    return !(root = parse_expression(token, precedence));
   }
   
   int AST::parse_expression(token_t &token, definition_scope *scope, int precedence) {
@@ -726,12 +711,8 @@ namespace jdi
   }
   
   void AST::remap(const remap_set& n) {
-    bool f;
-    f = false;
-    if (f)
-      for (remap_citer i = n.begin(); i != n.end(); ++i)
-        cout << i->first->toString(0,0) << " => " << i->second->toString(0,0) << endl;
-    root->remap(n);
+    if (root)
+      root->remap(n);
   }
   
   //===========================================================================================================================
@@ -1311,10 +1292,11 @@ namespace jdi
     root = r;
   }
   
-  AST::AST(context *ctex): root(NULL), cparse((context_parser*)ctex), search_scope(NULL), tt_greater_is_op(true) {}
-  AST::AST(context_parser *cp, AST_Node* r): root(r), cparse(cp), search_scope(NULL), tt_greater_is_op(true) {}
-  AST::AST(context_parser *cp, AST_Node* r, definition_scope *ss): root(r), cparse(cp), search_scope(ss), tt_greater_is_op(true) {}
-  AST::AST(context *ctex, definition* d): root(new AST_Node_Definition(d, d->name)), cparse((context_parser*)ctex), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(context *ctex, lexer *lex_i, error_handler *herr_i):    cparse_alloc(new context_parser(ctex, lex_i, herr_i)), root(NULL), cparse(cparse_alloc), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(context_parser *cp):                                    cparse_alloc(NULL), root(NULL), cparse(cp), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(context_parser *cp, AST_Node* r, definition_scope *ss): cparse_alloc(NULL), root(r), cparse(cp), search_scope(ss), tt_greater_is_op(true) {}
+  AST::AST(context_parser *cp, AST_Node* r):                       cparse_alloc(NULL), root(r), cparse(cp), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(definition* d):                                         cparse_alloc(NULL), root(new AST_Node_Definition(d, d->name)), cparse(NULL), search_scope(NULL), tt_greater_is_op(true) {}
   
   AST* AST::create_from_instantiation(context_parser *cp, definition_template* temp, const arg_key &key) { return new AST(cp, new AST_Node_TempKeyInst(temp, key), NULL); }
   AST* AST::create_from_access(context_parser *cp, definition_scope* scope, string id, string scope_op) {
@@ -1335,6 +1317,7 @@ namespace jdi
   }
     
   AST::~AST() {
+    delete cparse_alloc;
     delete root;
   }
 }

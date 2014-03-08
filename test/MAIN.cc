@@ -174,13 +174,14 @@ int main() {
 }
 
 #include <Parser/bodies.h>
+
 void name_type(string type, context &ct) {
   llreader llr(type, type.length());
   macro_map undamageable = ct.get_macros();
   lexer_cpp c_lex(llr, undamageable, "User expression");
-  ct.change_lexer(&c_lex);
+  context_parser cp(&ct, &c_lex, def_error_handler);
   token_t tk = c_lex.get_token_in_scope(ct.get_global());
-  full_type ft = ((context_parser*)&ct)->read_fulltype(tk, ct.get_global());
+  full_type ft = cp.read_fulltype(tk, ct.get_global());
   cout << ft.toString() << ": " << ft.toEnglish() << endl;
 }
 
@@ -197,6 +198,7 @@ static char getch() {
 #include <General/parse_basics.h>
 
 void do_cli(context &ct) {
+  
   putcap("Command Line Interface");
   char c = ' ';
   macro_map undamageable = ct.get_macros();
@@ -211,9 +213,9 @@ void do_cli(context &ct) {
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr(buf, strlen(buf));
         lexer_cpp c_lex(llr, undamageable, "User expression");
-        ct.change_lexer(&c_lex);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
-        definition *def = ((context_parser*)&ct)->read_qualified_definition(dummy, ct.get_global());
+        context_parser cp(&ct, &c_lex, def_error_handler);
+        definition *def = cp.read_qualified_definition(dummy, ct.get_global());
         if (def) {
           if (justflags) {
             cout << flagnames(def->flags) << endl;
@@ -256,8 +258,7 @@ void do_cli(context &ct) {
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr(buf, strlen(buf));
         lexer_cpp c_lex(llr, undamageable, "User expression");
-        ct.change_lexer(&c_lex);
-        AST a(&ct);
+        AST a(&ct, &c_lex, def_error_handler);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
         if (!a.parse_expression(dummy, ct.get_global(), precedence::all)) {
           if (render) {
@@ -310,8 +311,8 @@ void test_expression_evaluator() {
   putcap("Test expression evaluator");
   
   debug_lexer dlex;
-  context ct(&dlex, def_error_handler);
-  AST ast(&ct);
+  context ct;//(&dlex, def_error_handler);
+  AST ast(&ct, &dlex, def_error_handler);
   error_context dec(def_error_handler, "Test AST", 0, 0);
   
   dlex << create_token_dec_literal("10",2);

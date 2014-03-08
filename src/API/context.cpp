@@ -200,14 +200,10 @@ void context::output_definitions(ostream &out) {
   out << global->toString();
 }
 
-context::context(): parse_open(false), lex(NULL), _lex(NULL), herr(def_error_handler), global(new definition_scope()) {
+context::context(): parse_open(false), global(new definition_scope()) {
   copy(*builtin);
 }
-
-const macro_map& context::get_macros() { return macros; }
-
-context::context(lexer *l, error_handler *eh): parse_open(false), lex(l), _lex(NULL), herr(eh), global(new definition_scope()) { }
-bool context::change_lexer(lexer *l, error_handler *h) { if (parse_open) return false; lex = l; if (h) herr = h; return true; }
+context::context(int): parse_open(false), global(new definition_scope()) { }
 
 size_t context::search_dir_count() { return search_directories.size(); }
 string context::search_dir(size_t index) { return search_directories[index]; }
@@ -220,6 +216,5 @@ void context::dump_macros() {
 
 context::~context() {
   delete global;
-  delete _lex;
   dump_macros();
 }

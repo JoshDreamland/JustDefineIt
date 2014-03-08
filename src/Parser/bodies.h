@@ -84,8 +84,24 @@ namespace jdip {
     Since context_parser contains no members and context is not virtual, a cast to jdip::context_parser
     from an allocated jdi::context is valid.
   **/
-  struct context_parser: jdi::context
+  class context_parser
   {
+    context *ctex; ///< The original context we are parsing into.
+    lexer *lex; ///< The lexer which all methods and all calls therefrom will poll for tokens.
+    error_handler *herr; ///< The error handler to which errors and warnings will be reported.
+    friend class jdi::AST;
+    
+    public:
+    inline lexer *get_lex() const { return lex; }
+    inline error_handler *get_herr() const { return herr; }
+    
+    /// Constructs, temporarily consuming a context. Do not use the context while this is active.
+    context_parser(context* ctex, lexer* lex, error_handler* herr);
+    /// Construct without copying
+    context_parser(lexer* lex, error_handler* herr);
+    /// Destructs, returning data to the original context.
+    ~context_parser();
+    
     /**
       Read a complete type from the given input stream.
       

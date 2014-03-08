@@ -524,7 +524,7 @@ int jdip::context_parser::read_function_params(ref_stack &refs, token_t &token, 
     }
     ref_stack::parameter param; // Instantiate a parameter
     param.swap_in(a); // Give it our read-in full type (including ref stack, which is costly to copy)
-    param.variadic = variadics.find(param.def) != variadics.end();
+    param.variadic = ctex->variadics.find(param.def) != ctex->variadics.end();
     if (token.type == TT_OPERATOR) {
       if (token.content.len != 1 or *token.content.str != '=') {
         token.report_errorf(herr, "Unexpected operator at this point; expected '=' or ')' before %s");

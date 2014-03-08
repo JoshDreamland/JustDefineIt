@@ -240,7 +240,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         continue;
       
       case TT_SCOPE:
-          token = read_next_token(global);
+          token = read_next_token(ctex->get_global());
         continue;
       case TT_MEMBEROF:
           token.report_error(herr, "Unexpected (scope::*) reference");

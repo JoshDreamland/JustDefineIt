@@ -80,23 +80,15 @@ namespace jdi
   {
     bool parse_open; ///< True if we're already parsing something
     friend class jdi::AST;
+    friend class jdip::context_parser;
     
     protected: // Make sure our method-packing child can use these.
-    lexer *lex; ///< The lexer which all methods and all calls therefrom will poll for tokens.
-    lexer *_lex; ///< The lexer we allocated to handle a given stream.
-    error_handler *herr; ///< The error handler to which errors and warnings will be reported.
-    
     macro_map macros; ///< A map of macros defined in this context.
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.
     
   public:
     set<definition*> variadics; ///< Set of variadic types.
-    
-    /// Return the global scope.
-    inline definition_scope* get_global() { return global; }
-    /// Return the error handler.
-    inline error_handler* get_herr() { return herr; }
     
     size_t search_dir_count(); ///< Return the number of search directories
     string search_dir(size_t index); ///< Return the search directory with the given index, in [0, search_dir_count).
@@ -153,9 +145,6 @@ namespace jdi
     **/
     void load_gnu_builtins();
     
-    /// Change the lexer and error handler, if it is valid to do so now.
-    bool change_lexer(lexer *nlex, error_handler *nherr = NULL);
-    
     void output_types(ostream &out = cout); ///< Print a list of scoped-in types.
     void output_macro(string macroname, ostream &out = cout); ///< Print a single macro to a given stream.
     void output_macros(ostream &out = cout); ///< Print a list of scoped-in macros.
@@ -165,7 +154,9 @@ namespace jdi
     void dump_macros();
     
     /// Get a reference to the macro map
-    const macro_map& get_macros();
+    inline const macro_map& get_macros() const { return macros; }
+    /// Get our global scope
+    inline definition_scope* get_global() const { return global; }
     
     /// Get a non-const reference to the global macro set.
     static macro_map &global_macros();
@@ -183,26 +174,26 @@ namespace jdi
         @param errhandl   An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
                           If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
-    int parse_stream(lexer *lang_lexer = NULL, error_handler *errhandl = NULL);
+    int parse_stream(lexer *lang_lexer, error_handler *errhandl = NULL);
     
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.
     **/
     context();
     
-    /** Construct with lexer and error handler. This constructor circumvents the copy process. It has
+    /** Construct with essentially nothing. This constructor circumvents the copy process. It has
         no purpose other than and is not to be used except in allocating the builtin scope.
         While it is not necessary under common circumstances to avoid copying from the
         global scope into itself on construct, should the scope ever be populated before
         the ctor body due to one change or another, it could potentially cause issues.
         
-        As the issues are as unlikely as the scenario, this mehtod may eventually be removed.
+        As the issues are as unlikely as the scenario, this method may eventually be removed.
         For the time being, we may as well keep a distinction between the constructors of the
         normal scopes and of the builtin scope.
         
         @param disregarded  Disregarded. The parameter is there only to distinguish this constructor.
     **/
-    context(lexer *lex, error_handler *herr);
+    context(int disregarded);
     
     /** Copy constructor.
         Overrides the C++ default copy constructor with a version meant to simplify

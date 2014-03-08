@@ -50,7 +50,9 @@ namespace jdi {
       The generated AST can then be evaluated for a \c value or coerced for a resultant type as a \c definition.
   **/
   class AST
-  { 
+  {
+    jdip::context_parser *cparse_alloc;
+    
   protected:
     typedef jdip::context_parser context_parser;
     
@@ -492,26 +494,11 @@ namespace jdi {
     #endif
     
     /** Parse in an expression, building an AST.
+        @param prec  The lower-bound precedence; default is 0 (precedence::all)
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression();
+    int parse_expression(int prec = 0);
     
-    /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
-        the sister overload which does not utilize the passed token.
-        
-        @param token  The first token to handle. Will be overwritten with the first unhandled token. [in-out]
-        @param prec   The lower-bound precedence.
-        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
-    **/
-    int parse_expression(jdip::token_t& token, lexer *lex, int prec, error_handler *herr = def_error_handler);
-    
-    /** Parse in an expression, building an AST, returning a token as well; DO NOT confuse with
-        the sister overload which utilizes the passed token.
-        @param token  A buffer for the first unhandled token. [out]
-        @param prec   The lower-bound precedence.
-        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
-    **/
-    private: int parse_expression(lexer *lex, jdip::token_t& token, int prec, error_handler *herr = def_error_handler); public:
     /** Parse in an expression, building an AST, with scope information, starting with the given token.
         @param token  A buffer for the first unhandled token. [out]
         @param scope  The scope from which values of definitions will be read. [in]
@@ -556,12 +543,17 @@ namespace jdi {
     void swap(AST &ast);
     
     /// Default constructor. Zeroes some stuff.
+    /// @param ctexparse  The context_parser in which this AST exists, and will parse code.
+    AST(context_parser *ctexparse);
+    /// Default constructor. Zeroes some stuff.
     /// @param ctex  The context in which this AST exists.
-    AST(context *ctex);
+    /// @param lex   A lexer which can be polled for tokens.
+    /// @param herr  An error_handler to which errors and warnings are reported.
+    AST(context *ctex, lexer *lex, error_handler *herr);
     /// Construct with a single node
     /// @param ctex  The context in which this AST exists.
     /// @param def   The definition from which to construct a node.
-    AST(context *ctex, definition* def);
+    AST(definition* def);
     
     
     // Non-constructor AST factory methods

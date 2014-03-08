@@ -170,7 +170,7 @@ namespace jdip {
     static string _flatten(string param, const macro_map& macros, const token_t &errep, error_handler *herr);
     quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested `\#if*`)
     lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
-    context mctex; ///< A context used for constructing ASTs from preprocessor expressions.
+    context_parser *mctex; ///< A context used for constructing ASTs from preprocessor expressions.
   };
   
   /**
