@@ -19,7 +19,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <Parser/bodies.h>
+#include <Parser/context_parser.h>
 #include <API/AST.h>
 #include <API/compile_settings.h>
 #include <Parser/handlers/handle_function_impl.h>

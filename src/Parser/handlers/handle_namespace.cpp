@@ -19,7 +19,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <Parser/bodies.h>
+#include <Parser/context_parser.h>
 
 int jdip::context_parser::handle_namespace(definition_scope *scope, token_t& token)
 {

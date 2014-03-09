@@ -1,5 +1,5 @@
 /**
- * @file  bodies.h
+ * @file  context_parser.h
  * @brief A header declaring all token handler functions for use by the parser.
  * 
  * The class named in this file is meant to extend \c context, giving it a full

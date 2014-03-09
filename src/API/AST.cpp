@@ -26,7 +26,7 @@
 #include <System/builtins.h>
 #include <System/symbols.h>
 #include <System/lex_buffer.h>
-#include <Parser/bodies.h>
+#include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 #include <iostream>
 

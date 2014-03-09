@@ -21,7 +21,7 @@
 
 #include <cstdio>
 #include <API/AST.h>
-#include <Parser/bodies.h>
+#include <Parser/context_parser.h>
 #include <System/builtins.h>
 #include <General/debug_macros.h>
 #include <API/compile_settings.h>

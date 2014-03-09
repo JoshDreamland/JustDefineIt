@@ -22,7 +22,7 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <Parser/bodies.h>
+#include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 
 int jdip::context_parser::handle_friend(definition_scope *scope, token_t& token, definition_class *recipient) {

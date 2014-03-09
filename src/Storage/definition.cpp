@@ -29,7 +29,7 @@
 #include <System/builtins.h>
 #include <Parser/handlers/handle_function_impl.h>
 #include <API/compile_settings.h>
-#include <Parser/bodies.h>
+#include <Parser/context_parser.h>
 #include <Parser/is_potential_constructor.h>
 using namespace std;
 
