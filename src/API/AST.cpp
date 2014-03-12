@@ -49,6 +49,47 @@ using namespace jdip;
 
 #include "AST_operator.h"
 
+static inline string unescape(volatile const char* str, size_t len) {
+  string res;
+  int pad = len && (*str == '"' || *str == '\'');
+  len -= pad;
+  //res.reserve(len);
+  for (size_t i = pad; i < len; ++i) {
+    if (str[i] == '\\')
+      switch (str[++i]) {
+        case '\\': res.append(1, '\\'); break;
+        case '\"': res.append(1, '\"'); break;
+        case '\'': res.append(1, '\''); break;
+        case 'r':  res.append(1, '\r'); break;
+        case 'n':  res.append(1, '\n'); break;
+        case 't':  res.append(1, '\t'); break;
+        
+        unsigned char accum;
+        case '0': case '1':
+        case '2': case '3': case '4': case '5': case '6': case '7':
+          for (accum = 0; str[i] >= '0' && str[i] <= '7' && accum < 040; ++i) {
+            accum <<= 3;
+            accum += str[i] - '0';
+          }
+          res.append(1, (char)accum);
+          break;
+        
+        case '\n': break;
+        case '\r': if (str[++i] != '\n') --i; break;
+        default:   res.append(1, '\\');  --i; break;
+      }
+    else
+      res.append(1, str[i]);
+  }
+  return res;
+}
+inline long parselong(string s) {
+  long res = 0;
+  for (size_t i = 0; i < s.length(); ++i)
+    res <<= 8, res |= s[i];
+  return res;
+}
+
 namespace jdi
 {
   AST::AST_Node* AST::parse_expression(token_t &token, int prec_min) {
@@ -256,9 +297,10 @@ namespace jdi
         token.report_errorf(cparse->herr, "Expected expression before %s");
         return NULL;
       
-      case TT_STRINGLITERAL:
-      case TT_CHARLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_CHRLITERAL);
-                           track(myroot->content); break;
+      case TT_STRINGLITERAL: myroot = new AST_Node(unescape(token.content.str, token.content.len), at = AT_STRLITERAL);
+                             track(token.content.toString()); break;
+      case TT_CHARLITERAL:   myroot = new AST_Node(unescape(token.content.str, token.content.len), at = AT_CHRLITERAL);
+                             track(token.content.toString()); break;
       
       case TT_DECLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_DECLITERAL);
                           track(myroot->content); break;
@@ -757,28 +799,12 @@ namespace jdi
         goto dec_literal; // A single octal digit is no different from a decimal digit
       return value(strtol(content.c_str(),NULL,8));
     }
-    if (type == AT_HEXLITERAL) {
-      if (content.length() == 1)
-        goto dec_literal; // A single octal digit is no different from a decimal digit
+    if (type == AT_HEXLITERAL)
       return value(strtol(content.c_str(),NULL,16));
-    }
-    if (type == AT_CHRLITERAL) {
-      if (content[0] == '\'') {
-        if (content[1] == '\\')
-        switch (content[2]) {
-          case 'n': return value(long('\n'));
-          case 'r': return value(long('\r'));
-          case 't': return value(long('\t'));
-          case '\'': return value(long('\''));
-          case '\"': return value(long('\"'));
-          case '\\': return value(long('\\'));
-          default: return 0L;
-        }
-        return value(long(content[1]));
-      }
-      else
-        return value(content.substr(1, content.length() - 2));
-    }
+    if (type == AT_STRLITERAL)
+      return value(content);
+    if (type == AT_CHRLITERAL)
+      return value(parselong(content));
     errc.report_error("Evaluating unknown node type");
     return value();
   }
@@ -1297,6 +1323,9 @@ namespace jdi
   AST::AST(context_parser *cp, AST_Node* r, definition_scope *ss): cparse_alloc(NULL), root(r), cparse(cp), search_scope(ss), tt_greater_is_op(true) {}
   AST::AST(context_parser *cp, AST_Node* r):                       cparse_alloc(NULL), root(r), cparse(cp), search_scope(NULL), tt_greater_is_op(true) {}
   AST::AST(definition* d):                                         cparse_alloc(NULL), root(new AST_Node_Definition(d, d->name)), cparse(NULL), search_scope(NULL), tt_greater_is_op(true) {}
+  AST::AST(value v):                                               cparse_alloc(NULL), cparse(NULL), search_scope(NULL), tt_greater_is_op(true) {
+    root = new AST_Node(v.toString(), v.type == VT_STRING? AT_STRLITERAL : AT_DECLITERAL);
+  }
   
   AST* AST::create_from_instantiation(context_parser *cp, definition_template* temp, const arg_key &key) { return new AST(cp, new AST_Node_TempKeyInst(temp, key), NULL); }
   AST* AST::create_from_access(context_parser *cp, definition_scope* scope, string id, string scope_op) {

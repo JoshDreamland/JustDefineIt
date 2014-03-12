@@ -32,9 +32,10 @@ namespace jdi {
   value::value(long v):   type(VT_INTEGER) { val.i = v; }
   value::value(const char* v): type(VT_STRING) { val.s = v; }
   value::value(std::string v): type(VT_STRING) {
-    char* s = new char[v.length()];
+    char* s = new char[v.length() + 1];
     for (size_t i = 0; i < v.length(); i++)
       s[i] = v[i];
+    s[v.length()] = 0;
     val.s = s;
   }
   value::value(const value& v): val(v.val), type(v.type) {

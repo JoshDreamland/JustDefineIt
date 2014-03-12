@@ -928,7 +928,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
       
       case '\'': {
         --pos; skip_string(herr);
-        return token_t(token_basics(TT_STRINGLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
+        return token_t(token_basics(TT_CHARLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
       }
       
       default: {

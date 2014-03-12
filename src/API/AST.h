@@ -68,6 +68,7 @@ namespace jdi {
       AT_HEXLITERAL,  ///< This node is a hexadecimal literal, such as 0x539
       AT_OCTLITERAL,  ///< This node is an octal literal, such as 2471.
       AT_CHRLITERAL,  ///< This node is a character literal, such as 'a'.
+      AT_STRLITERAL,  ///< This node is a string literal, such as "abc".
       AT_IDENTIFIER,  ///< This node is an identifier that could not be looked up.
       AT_TEMPID,      ///< This node is an identifier that is specified to be a template.
       AT_DEFINITION,  ///< This node is a definition; an identifier that has been looked up.
@@ -551,9 +552,11 @@ namespace jdi {
     /// @param herr  An error_handler to which errors and warnings are reported.
     AST(context *ctex, lexer *lex, error_handler *herr);
     /// Construct with a single node
-    /// @param ctex  The context in which this AST exists.
     /// @param def   The definition from which to construct a node.
     AST(definition* def);
+    /// Construct with a single node
+    /// @param val   The value from which to construct a node.
+    AST(value v);
     
     
     // Non-constructor AST factory methods
