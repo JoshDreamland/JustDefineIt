@@ -60,6 +60,7 @@ namespace jdi {
   struct definition_valued;
   struct definition_scope;
   struct definition_class;
+  struct definition_union;
   struct definition_enum;
   struct definition_template;
   struct definition_tempparam;

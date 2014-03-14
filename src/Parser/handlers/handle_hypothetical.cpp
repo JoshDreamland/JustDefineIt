@@ -45,21 +45,21 @@ namespace jdip {
       if (spec && spec->spec_temp && spec->spec_temp->def) return spec->spec_temp->def;
       return temp->def;
     }
-    AST *a = AST::create_from_instantiation(this, temp, key);
+    AST *a = AST::create_from_instantiation(temp, key);
     if (temp->def && (temp->def->flags & (DEF_CLASS | DEF_TYPENAME)))
       flags |= DEF_TYPENAME;
     return handle_hypothetical_ast(a, scope, token, flags, herr);
   }
   
   definition_hypothetical* context_parser::handle_hypothetical_access(definition_hypothetical *scope, string id) {
-    AST *a = AST::create_from_access(this, scope, id, "::");
+    AST *a = AST::create_from_access(scope, id, "::");
     token_t dummy_token;
     return handle_hypothetical_ast(a, scope->parent, dummy_token, scope->flags, def_error_handler); // XXX: scope->flags, that & DEF_PRIVATE/whaever, or 0?
   }
   
   definition_hypothetical* context_parser::handle_hypothetical(definition_scope *scope, token_t& token, unsigned flags) {
-    AST *a = new AST(this);
-    if (a->parse_expression(token, scope, precedence::scope))
+    AST *a = new AST;
+    if (astbuilder->parse_expression(a, token, scope, precedence::scope))
       { FATAL_RETURN(1); }
     
     return handle_hypothetical_ast(a, scope, token, flags, herr);

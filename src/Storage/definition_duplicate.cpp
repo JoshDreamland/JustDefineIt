@@ -431,24 +431,31 @@ namespace jdi {
   }
   
   
+  
   //========================================================================================================
   //======: AST Node Duplicate Functions :==================================================================
   //========================================================================================================
   
-  AST::AST_Node *AST::AST_Node            ::duplicate() const { return new AST_Node(content, type);                         }
-  AST::AST_Node *AST::AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);  }
-  AST::AST_Node *AST::AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
-  AST::AST_Node *AST::AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(dup(operand), negate);           }
-  AST::AST_Node *AST::AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def, content);               }
-  AST::AST_Node *AST::AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt);       }
-  AST::AST_Node *AST::AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(dup(operand), cast_type);          }
-  AST::AST_Node *AST::AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content); }
-  AST::AST_Node *AST::AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(dup(exp), dup(left), dup(right), content); }
-  AST::AST_Node *AST::AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound);       }
-  AST::AST_Node *AST::AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array);            }
-  AST::AST_Node *AST::AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index));       }
+  AST* AST::duplicate() const {
+    return new AST(root->duplicate());
+  }
+
+} namespace jdip {
   
-  AST::AST_Node *AST::AST_Node_Parameters ::duplicate() const {
+  AST_Node *AST_Node            ::duplicate() const { return new AST_Node(content, type);                         }
+  AST_Node *AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);  }
+  AST_Node *AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
+  AST_Node *AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(dup(operand), negate);           }
+  AST_Node *AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def, content);               }
+  AST_Node *AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt);       }
+  AST_Node *AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(dup(operand), cast_type);          }
+  AST_Node *AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content); }
+  AST_Node *AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(dup(exp), dup(left), dup(right), content); }
+  AST_Node *AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound);       }
+  AST_Node *AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array);            }
+  AST_Node *AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index));       }
+  
+  AST_Node *AST_Node_Parameters ::duplicate() const {
     AST_Node_Parameters *res = new AST_Node_Parameters();
     res->func = dup(func);
     res->params.reserve(params.size());
@@ -456,26 +463,22 @@ namespace jdi {
       res->params.push_back(dup(*p));
     return res;
   }
-  AST::AST_Node *AST::AST_Node_TempInst   ::duplicate() const {
+  AST_Node *AST_Node_TempInst   ::duplicate() const {
     AST_Node_TempInst *res = new AST_Node_TempInst(temp->duplicate(), content);
     res->params.reserve(params.size());
     for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
       res->params.push_back(dup(*p));
     return res;
   }
-  AST::AST_Node *AST::AST_Node_TempKeyInst::duplicate() const {
+  AST_Node *AST_Node_TempKeyInst::duplicate() const {
     return new AST_Node_TempKeyInst(temp, key);
   }
-  AST::AST_Node *AST::AST_Node_Array      ::duplicate() const {
+  AST_Node *AST_Node_Array      ::duplicate() const {
     AST_Node_Array *res = new AST_Node_Array();
     res->elements.reserve(elements.size());
     for (vector<AST_Node*>::const_iterator e = elements.begin(); e != elements.end(); ++e)
       res->elements.push_back(dup(*e));
     return res;
-  }
-  
-  AST* AST::duplicate() const {
-    return new AST(cparse, root->duplicate());
   }
   
   //========================================================================================================
@@ -489,34 +492,34 @@ namespace jdi {
       cerr << "Why is this null?" << endl;
   }
   
-  void AST::AST_Node            ::remap(const remap_set&)   {  }
-  void AST::AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n);  }
-  void AST::AST_Node_Unary      ::remap(const remap_set& n) { nremap(operand, n);         }
-  void AST::AST_Node_sizeof     ::remap(const remap_set& n) { nremap(operand, n);         }
-  void AST::AST_Node_Definition ::remap(const remap_set& n) { def = filter(def, n);       }
-  void AST::AST_Node_Type       ::remap(const remap_set& n) { dec_type.def  = filter(dec_type.def,  n); }
-  void AST::AST_Node_Cast       ::remap(const remap_set& n) { cast_type.def = filter(cast_type.def, n); }
-  void AST::AST_Node_Binary     ::remap(const remap_set& n) { nremap(left, n); nremap(right, n);        }
-  void AST::AST_Node_Ternary    ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); nremap(exp, n); }
-  void AST::AST_Node_new        ::remap(const remap_set& n) { alloc_type.def = filter(alloc_type.def, n); nremap(position, n); nremap(bound, n); }
-  void AST::AST_Node_delete     ::remap(const remap_set& n) { AST_Node_Unary::remap(n);          }
-  void AST::AST_Node_Subscript  ::remap(const remap_set& n) { nremap(left, n); nremap(index, n); }
+  void AST_Node            ::remap(const remap_set&)   {  }
+  void AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n);  }
+  void AST_Node_Unary      ::remap(const remap_set& n) { nremap(operand, n);         }
+  void AST_Node_sizeof     ::remap(const remap_set& n) { nremap(operand, n);         }
+  void AST_Node_Definition ::remap(const remap_set& n) { def = filter(def, n);       }
+  void AST_Node_Type       ::remap(const remap_set& n) { dec_type.def  = filter(dec_type.def,  n); }
+  void AST_Node_Cast       ::remap(const remap_set& n) { cast_type.def = filter(cast_type.def, n); }
+  void AST_Node_Binary     ::remap(const remap_set& n) { nremap(left, n); nremap(right, n);        }
+  void AST_Node_Ternary    ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); nremap(exp, n); }
+  void AST_Node_new        ::remap(const remap_set& n) { alloc_type.def = filter(alloc_type.def, n); nremap(position, n); nremap(bound, n); }
+  void AST_Node_delete     ::remap(const remap_set& n) { AST_Node_Unary::remap(n);          }
+  void AST_Node_Subscript  ::remap(const remap_set& n) { nremap(left, n); nremap(index, n); }
   
-  void AST::AST_Node_Parameters ::remap(const remap_set& n) {
+  void AST_Node_Parameters ::remap(const remap_set& n) {
     nremap(func, n);
     for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
       (*p)->remap(n);
   }
-  void AST::AST_Node_TempInst   ::remap(const remap_set& n) {
+  void AST_Node_TempInst   ::remap(const remap_set& n) {
     temp->remap(n);
     for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
       (*p)->remap(n);
   }
-  void AST::AST_Node_TempKeyInst::remap(const remap_set& n) {
+  void AST_Node_TempKeyInst::remap(const remap_set& n) {
     temp = filter(temp, n);
     key.remap(n, error_context(def_error_handler, "Internal Remapping Operation", 0, 0));
   }
-  void AST::AST_Node_Array      ::remap(const remap_set& n) {
+  void AST_Node_Array      ::remap(const remap_set& n) {
     for (vector<AST_Node*>::iterator e = elements.begin(); e != elements.end(); ++e)
       (*e)->remap(n);
   }

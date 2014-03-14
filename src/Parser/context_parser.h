@@ -56,6 +56,7 @@
 #define _PARSE_BODIES__H
 
 #include <API/context.h>
+#include <API/AST_forward.h>
 #include <System/token.h>
 #include <API/lexer_interface.h>
 #include <Storage/definition.h>
@@ -86,13 +87,17 @@ namespace jdip {
   **/
   class context_parser
   {
+    context *ctex_alloc; ///< Used to collect any context we allocated
+    
     context *ctex; ///< The original context we are parsing into.
     lexer *lex; ///< The lexer which all methods and all calls therefrom will poll for tokens.
     error_handler *herr; ///< The error handler to which errors and warnings will be reported.
-    friend class jdi::AST;
+    AST_Builder *astbuilder; ///< Used to build ASTs at any time during parse.
+    friend class jdip::AST_Builder;
     
     public:
     inline lexer *get_lex() const { return lex; }
+    inline AST_Builder *get_AST_builder() const { return astbuilder; }
     inline error_handler *get_herr() const { return herr; }
     
     /// Constructs, temporarily consuming a context. Do not use the context while this is active.

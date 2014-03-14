@@ -41,21 +41,13 @@
 #include <Storage/definition.h>
 #include <API/context.h>
 
-namespace jdi {
-  struct ASTOperator;
-  struct ConstASTOperator;
+namespace jdip
+{
+  using namespace jdi;
+  /// Structure containing info for use when rendering SVGs.
+  /// This class can export SVG files. Some info needs tossed around to do so.
+  struct SVGrenderInfo;
   
-  /** @class jdi::AST
-      General-purpose class designed to take in a series of tokens and generate an abstract syntax tree.
-      The generated AST can then be evaluated for a \c value or coerced for a resultant type as a \c definition.
-  **/
-  class AST
-  {
-    jdip::context_parser *cparse_alloc;
-    
-  protected:
-    typedef jdip::context_parser context_parser;
-    
     /** Enum declaring basic node types for this AST. These include the three types of
         operators and the four types of data.
     **/
@@ -85,17 +77,6 @@ namespace jdi {
       AT_INSTBYKEY,   ///< This node is a template instantiation with an arg_key.
       AT_USERBEGIN    ///< This is the first user-defined token index.
     };
-    
-    /// Structure containing info for use when rendering SVGs.
-    /// This class can export SVG files. Some info needs tossed around to do so.
-    struct SVGrenderInfo;
-    
-    friend struct jdi::ASTOperator;
-    friend struct jdi::ConstASTOperator;
-    
-    void report_error(const jdip::token_t &token, string err);
-    void report_errorf(const jdip::token_t &token, string err);
-    void report_warning(const jdip::token_t &token, string err);
     
     /** Private storage mechanism designed to hold token information and any linkages.
         In general, a node has no linkages, and so we use AST_Node as the base class for
@@ -437,44 +418,29 @@ namespace jdi {
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
     };
+}
+
+namespace jdi {
+  /** @class jdi::AST
+      General-purpose class designed to take in a series of tokens and generate an abstract syntax tree.
+      The generated AST can then be evaluated for a \c value or coerced for a resultant type as a \c definition.
+  **/
+  class AST
+  {
+  protected:
+    friend struct jdip::ASTOperator;
+    friend struct jdip::ConstASTOperator;
+    friend class jdip::AST_Builder;
     
-    AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
-    context_parser *cparse; ///< A context parser to poll for tokens and handle error checking
-    definition_scope *search_scope; ///< The scope from which token values will be harvested.
+    void report_error(const jdip::token_t &token, string err);
+    void report_errorf(const jdip::token_t &token, string err);
+    void report_warning(const jdip::token_t &token, string err);
     
-    /// Private method to fetch the next token from the lexer, with or without a scope.
-    jdip::token_t get_next_token();
+    jdip::AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
     
     // State flags
     bool tt_greater_is_op; ///< True if the greater-than symbol is to be interpreted as an operator.
     
-    /** Handle a whole expression, stopping at the first unexpected token or when an
-        operator is encountered which has a precendence lower than the one specified.
-        I.E., passing a precedence of 0 will handle all operators.
-        @param  token       The first token to be handled. Will be set to the first unhandled token. [in-out]
-        @param  precedence  The lowest precedence of any operators to be handled.
-    **/
-    AST_Node* parse_expression(jdip::token_t &token, int precedence = 0);
-    /** Handle anything you'd expect to see after a literal is given.
-        
-        This includes binary and ternary operators (to which the literal or enclosing tree
-        will be used as the left-hand side, and the right will be read fresh), or a unary
-        postfix (which will apply to the latest-read literal or expression).
-        
-        @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
-        @param  left_node  The latest-read literal or expression.
-        @param  prec_min   The minimum precedence of operators to handle.
-        @return Returns the node of the operator of lowest precedence (ie, the root
-                node), or NULL if an error occurs.
-    **/
-    AST_Node* parse_binary_or_unary_post(jdip::token_t &token, AST_Node *left_node, int prec_min);
-    /** Handle anything you'd expect to see at the start of an expression, being a
-        unary prefix operator or a literal.
-        @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
-        @return Returns the node of the operator of lowest precedence (ie, the root
-                node), or NULL if an error occurs.
-    **/
-    AST_Node* parse_unary_pre_or_literal(jdip::token_t& token);
     /* * Handle a binary operator. Errors if the operator represented by the token cannot
         be used as a binary operator.
         @param  precedence  The precedence which will be given to this operator.
@@ -493,20 +459,6 @@ namespace jdi {
     #ifdef DEBUG_MODE
     string expression; ///< The string representation of the expression fed in, for debug purposes.
     #endif
-    
-    /** Parse in an expression, building an AST.
-        @param prec  The lower-bound precedence; default is 0 (precedence::all)
-        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
-    **/
-    int parse_expression(int prec = 0);
-    
-    /** Parse in an expression, building an AST, with scope information, starting with the given token.
-        @param token  A buffer for the first unhandled token. [out]
-        @param scope  The scope from which values of definitions will be read. [in]
-        @param prec   The lower-bound precedence.
-        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
-    **/
-    int parse_expression(jdip::token_t &token, definition_scope *scope, int prec);
     
     /// Filter this AST through a definition remap_set, to update references to old definitions.
     void remap(const remap_set &n);
@@ -528,8 +480,8 @@ namespace jdi {
     
     /// Render the AST as a string: This is a relatively costly operation.
     string toString() const; ///< Renders this node and its children as a string, recursively.
-    void operate(ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
-    void operate(ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
+    void operate(jdip::ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
+    void operate(jdip::ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
     
     /// Render the AST to an SVG file.
     void writeSVG(const char* filename);
@@ -537,20 +489,11 @@ namespace jdi {
     /// Use this AST for template parameters
     inline void set_use_for_templates(bool use) { tt_greater_is_op = !use; }
     
-    /// Get this AST's context
-    inline context *get_context() const { return (context*)cparse; }
-    
     /// Swap roots with another AST, for efficient transfer
     void swap(AST &ast);
     
     /// Default constructor. Zeroes some stuff.
-    /// @param ctexparse  The context_parser in which this AST exists, and will parse code.
-    AST(context_parser *ctexparse);
-    /// Default constructor. Zeroes some stuff.
-    /// @param ctex  The context in which this AST exists.
-    /// @param lex   A lexer which can be polled for tokens.
-    /// @param herr  An error_handler to which errors and warnings are reported.
-    AST(context *ctex, lexer *lex, error_handler *herr);
+    AST();
     /// Construct with a single node
     /// @param def   The definition from which to construct a node.
     AST(definition* def);
@@ -564,26 +507,87 @@ namespace jdi {
     /// Construct with a single template instantiation node (by key)
     /// @param temp  The template to be instantiated.
     /// @param key   The arg_key with which to instantiate the template, after some remapping.
-    static AST* create_from_instantiation(context_parser *ctex, definition_template* temp, const arg_key& key);
+    static AST* create_from_instantiation(definition_template* temp, const arg_key& key);
     
     /// Construct with a single template instantiation node (by key)
-    /// @param temp      The scope from which the access will occur, after some remapping.
-    /// @param key       The identifier which is to be accessed in the scope.
+    /// @param scope     The scope from which the access will occur, after some remapping.
+    /// @param id        The identifier which is to be accessed in the scope.
     /// @param scope_op  The scope resolution operator, probably "::", but "." and "->" are also permitted.
-    static AST* create_from_access(context_parser *ctex, definition_scope* scope, string id, string scope_op);
+    static AST* create_from_access(definition_scope* scope, string id, string scope_op);
     
     /// Default destructor. Deletes the AST.
     ~AST();
     
+    protected:
+      /// Construct with a root node; this will invariably be called internally.
+      AST(jdip::AST_Node* root);
+    
     private:
       /// Copy constructor; highly expensive. Not implemented. Use duplicate(), sparingly.
       AST(const AST& ast);
-      
-      /// Construct with a root node; this will invariably be called internally.
-      AST(context_parser *cp, AST_Node* root);
-      
-      /// Construct with a root node and search_scope; this will invariably be called internally.
-      AST(context_parser *cp, AST_Node* root, definition_scope *search_scope);
+  };
+}
+
+namespace jdip
+{
+  class AST_Builder
+  {
+  protected:
+    context_parser *cparse; ///< A context parser to poll for tokens and handle error checking
+    inline context_parser *get_context() const { return cparse; } /// Get this AST builder's context
+    
+    definition_scope *search_scope; ///< The scope from which token values will be harvested.
+    
+    /// Private method to fetch the next token from the lexer, with or without a scope.
+    token_t get_next_token();
+    
+    /** Handle a whole expression, stopping at the first unexpected token or when an
+        operator is encountered which has a precendence lower than the one specified.
+        I.E., passing a precedence of 0 will handle all operators.
+        @param  token       The first token to be handled. Will be set to the first unhandled token. [in-out]
+        @param  precedence  The lowest precedence of any operators to be handled.
+    **/
+    AST_Node* parse_expression(AST* ast, jdip::token_t &token, int precedence = 0);
+    /** Handle anything you'd expect to see after a literal is given.
+        
+        This includes binary and ternary operators (to which the literal or enclosing tree
+        will be used as the left-hand side, and the right will be read fresh), or a unary
+        postfix (which will apply to the latest-read literal or expression).
+        
+        @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
+        @param  left_node  The latest-read literal or expression.
+        @param  prec_min   The minimum precedence of operators to handle.
+        @return Returns the node of the operator of lowest precedence (ie, the root
+                node), or NULL if an error occurs.
+    **/
+    AST_Node* parse_binary_or_unary_post(AST* ast, jdip::token_t &token, AST_Node *left_node, int prec_min);
+    /** Handle anything you'd expect to see at the start of an expression, being a
+        unary prefix operator or a literal.
+        @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
+        @return Returns the node of the operator of lowest precedence (ie, the root
+                node), or NULL if an error occurs.
+    **/
+    AST_Node* parse_unary_pre_or_literal(AST* ast, jdip::token_t& token);
+    
+    public:
+    /** Parse in an expression, building an AST.
+        @param prec  The lower-bound precedence; default is 0 (precedence::all)
+        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
+    **/
+    int parse_expression(AST* ast, int prec = 0);
+    
+    /** Parse in an expression, building an AST, with scope information, starting with the given token.
+        @param token  A buffer for the first unhandled token. [out]
+        @param scope  The scope from which values of definitions will be read. [in]
+        @param prec   The lower-bound precedence.
+        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
+    **/
+    int parse_expression(AST* ast, jdip::token_t &token, definition_scope *scope, int prec);
+    
+    /// Construct with a context, lexer, and error reporter.
+    /// @param ctp   The context parser that will be used to parse out typenames, etc.
+    /// @param lex   A lexer which can be polled for tokens.
+    AST_Builder(context_parser *ctp);
   };
 }
 

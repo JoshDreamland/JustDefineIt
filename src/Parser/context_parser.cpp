@@ -20,11 +20,13 @@
 **/
 
 #include "context_parser.h"
+#include <API/AST.h>
+
 #include <iostream>
 using std::cerr; using std::endl;
 
 namespace jdip {
-  context_parser::context_parser(context *ctex_i, lexer *lex_i, error_handler *herr_i): ctex(ctex_i), lex(lex_i), herr(herr_i) {
+  context_parser::context_parser(context *ctex_i, lexer *lex_i, error_handler *herr_i): ctex_alloc(NULL), ctex(ctex_i), lex(lex_i), herr(herr_i), astbuilder(new AST_Builder(this)) {
     if (ctex->parse_open) {
       cerr << "Another parser is already active on this context." << endl;
       abort();
@@ -32,9 +34,11 @@ namespace jdip {
     else
       ctex->parse_open = true;
   }
-  context_parser::context_parser(lexer *lex_i, error_handler *herr_i): ctex(new context(0)), lex(lex_i), herr(herr_i) {
+  context_parser::context_parser(lexer *lex_i, error_handler *herr_i): ctex_alloc(new context(0)), ctex(ctex_alloc), lex(lex_i), herr(herr_i), astbuilder(new AST_Builder(this)) {
+    ctex->parse_open = true;
   }
   context_parser::~context_parser() {
+    delete astbuilder;
     if (ctex) {
       if (ctex->parse_open)
         ctex->parse_open = false;
@@ -43,5 +47,6 @@ namespace jdip {
         abort();
       }
     }
+    delete ctex_alloc;
   }
 }

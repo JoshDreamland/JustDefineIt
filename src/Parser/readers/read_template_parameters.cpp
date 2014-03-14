@@ -32,17 +32,17 @@ int jdip::context_parser::read_template_parameter(arg_key &argk, size_t argnum, 
   }
   else
   {
-    AST a(this);
+    AST a;
     a.set_use_for_templates(true);
     static int iv = 0; ++iv;
-    a.parse_expression(token, scope, precedence::comma+1);
+    astbuilder->parse_expression(&a, token, scope, precedence::comma+1);
     if (argnum < temp->params.size())
     {
       argk.put_value(argnum, a.eval(error_context(herr, token)));
       if (argk[argnum].val().type != VT_INTEGER) {
         if (argk[argnum].val().type == VT_DEPENDENT) {
           argk[argnum].val() = VT_DEPENDENT;
-          AST *ah = new AST(this);
+          AST *ah = new AST();
           ah->swap(a);
           argk[argnum].av().ast = ah;
         }

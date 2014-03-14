@@ -100,8 +100,8 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
         token.report_error(herr, "Expected assignment operator `=' here before secondary operator");
       }
       token = read_next_token(scope);
-      ast = new AST(this);
-      if (ast->parse_expression(token, scope, precedence::comma + 1)) {
+      ast = new AST();
+      if (astbuilder->parse_expression(ast, token, scope, precedence::comma + 1)) {
         token.report_error(herr, "Expected const expression here");
         continue;
       }

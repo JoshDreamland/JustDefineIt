@@ -436,10 +436,10 @@ int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token,
     switch (token.type)
     {
       case TT_LEFTBRACKET: { // Array bound indicator
-        AST ast(this);
+        AST ast;
         token = lex->get_token_in_scope(scope, herr);
         if (token.type != TT_RIGHTBRACKET) {
-          if (ast.parse_expression(token,scope,precedence::comma+1))
+          if (astbuilder->parse_expression(&ast, token,scope,precedence::comma+1))
             return 1; // This error has already been reported, just return empty.
           if (token.type != TT_RIGHTBRACKET) {
             token.report_errorf(herr,"Expected closing square bracket here before %s");
@@ -531,9 +531,9 @@ int jdip::context_parser::read_function_params(ref_stack &refs, token_t &token, 
         FATAL_RETURN(1);
       }
       else {
-        param.default_value = new AST(this);
+        param.default_value = new AST();
         token = lex->get_token_in_scope(scope, herr);
-        param.default_value->parse_expression(token, scope, precedence::comma+1);
+        astbuilder->parse_expression(param.default_value, token, scope, precedence::comma+1);
       }
     }
     params.throw_on(param);

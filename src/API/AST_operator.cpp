@@ -22,7 +22,7 @@
 
 #include "AST_operator.h"
 
-namespace jdi {
+namespace jdip {
   ASTOperator::~ASTOperator() {}
   ConstASTOperator::~ConstASTOperator() {}
 }

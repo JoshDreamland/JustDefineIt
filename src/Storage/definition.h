@@ -117,6 +117,7 @@ namespace jdi {
 #include <Storage/value.h>
 #include <Storage/full_type.h>
 #include <Storage/references.h>
+#include <Parser/context_parser.h>
 #include <API/error_reporting.h>
 #include <API/error_context.h>
 #include <API/AST.h>
@@ -644,7 +645,8 @@ namespace jdi {
     depends on an abstract parent or scope.
   */
   struct definition_hypothetical: definition_class {
-    AST *def;
+    AST *def; ///< The expression this definition represents.
+    jdip::context_parser *context_p; ///< A context/parser in which this definition exists, and will exist.
     unsigned int required_flags; ///< Set of flags required of any type provided to this template parameter
     
     virtual string kind() const;

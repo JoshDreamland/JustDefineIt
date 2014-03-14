@@ -25,44 +25,44 @@
 
 #include "AST.h"
 
-namespace jdi {
+namespace jdip {
   struct ASTOperator {
-    virtual void operate(AST::AST_Node* x, void *param) = 0;
-    virtual void operate_Definition(AST::AST_Node_Definition* x, void *param) = 0;
-    virtual void operate_Scope(AST::AST_Node_Scope* x, void *param) = 0;
-    virtual void operate_Type(AST::AST_Node_Type* x, void *param) = 0;
-    virtual void operate_Unary(AST::AST_Node_Unary* x, void *param) = 0;
-    virtual void operate_sizeof(AST::AST_Node_sizeof* x, void *param) = 0;
-    virtual void operate_Cast(AST::AST_Node_Cast* x, void *param) = 0;
-    virtual void operate_Binary(AST::AST_Node_Binary* x, void *param) = 0;
-    virtual void operate_Ternary(AST::AST_Node_Ternary* x, void *param) = 0;
-    virtual void operate_Parameters(AST::AST_Node_Parameters* x, void *param) = 0;
-    virtual void operate_Array(AST::AST_Node_Array* x, void *param) = 0;
-    virtual void operate_new(AST::AST_Node_new* x, void *param) = 0;
-    virtual void operate_delete(AST::AST_Node_delete* x, void *param) = 0;
-    virtual void operate_Subscript(AST::AST_Node_Subscript* x, void *param) = 0;
-    virtual void operate_TempInst(AST::AST_Node_TempInst* x, void *param) = 0;
-    virtual void operate_TempKeyInst(AST::AST_Node_TempKeyInst* x, void *param) = 0;
+    virtual void operate(AST_Node* x, void *param) = 0;
+    virtual void operate_Definition(AST_Node_Definition* x, void *param) = 0;
+    virtual void operate_Scope(AST_Node_Scope* x, void *param) = 0;
+    virtual void operate_Type(AST_Node_Type* x, void *param) = 0;
+    virtual void operate_Unary(AST_Node_Unary* x, void *param) = 0;
+    virtual void operate_sizeof(AST_Node_sizeof* x, void *param) = 0;
+    virtual void operate_Cast(AST_Node_Cast* x, void *param) = 0;
+    virtual void operate_Binary(AST_Node_Binary* x, void *param) = 0;
+    virtual void operate_Ternary(AST_Node_Ternary* x, void *param) = 0;
+    virtual void operate_Parameters(AST_Node_Parameters* x, void *param) = 0;
+    virtual void operate_Array(AST_Node_Array* x, void *param) = 0;
+    virtual void operate_new(AST_Node_new* x, void *param) = 0;
+    virtual void operate_delete(AST_Node_delete* x, void *param) = 0;
+    virtual void operate_Subscript(AST_Node_Subscript* x, void *param) = 0;
+    virtual void operate_TempInst(AST_Node_TempInst* x, void *param) = 0;
+    virtual void operate_TempKeyInst(AST_Node_TempKeyInst* x, void *param) = 0;
     virtual ~ASTOperator();
   };
 
   struct ConstASTOperator {
-    virtual void operate(const AST::AST_Node* x, void *param) = 0;
-    virtual void operate_Definition(const AST::AST_Node_Definition* x, void *param) = 0;
-    virtual void operate_Scope(const AST::AST_Node_Scope* x, void *param) = 0;
-    virtual void operate_Type(const AST::AST_Node_Type* x, void *param) = 0;
-    virtual void operate_Unary(const AST::AST_Node_Unary* x, void *param) = 0;
-    virtual void operate_sizeof(const AST::AST_Node_sizeof* x, void *param) = 0;
-    virtual void operate_Cast(const AST::AST_Node_Cast* x, void *param) = 0;
-    virtual void operate_Binary(const AST::AST_Node_Binary* x, void *param) = 0;
-    virtual void operate_Ternary(const AST::AST_Node_Ternary* x, void *param) = 0;
-    virtual void operate_Parameters(const AST::AST_Node_Parameters* x, void *param) = 0;
-    virtual void operate_Array(const AST::AST_Node_Array* x, void *param) = 0;
-    virtual void operate_new(const AST::AST_Node_new* x, void *param) = 0;
-    virtual void operate_delete(const AST::AST_Node_delete* x, void *param) = 0;
-    virtual void operate_Subscript(const AST::AST_Node_Subscript* x, void *param) = 0;
-    virtual void operate_TempInst(const AST::AST_Node_TempInst* x, void *param) = 0;
-    virtual void operate_TempKeyInst(const AST::AST_Node_TempKeyInst* x, void *param) = 0;
+    virtual void operate(const AST_Node* x, void *param) = 0;
+    virtual void operate_Definition(const AST_Node_Definition* x, void *param) = 0;
+    virtual void operate_Scope(const AST_Node_Scope* x, void *param) = 0;
+    virtual void operate_Type(const AST_Node_Type* x, void *param) = 0;
+    virtual void operate_Unary(const AST_Node_Unary* x, void *param) = 0;
+    virtual void operate_sizeof(const AST_Node_sizeof* x, void *param) = 0;
+    virtual void operate_Cast(const AST_Node_Cast* x, void *param) = 0;
+    virtual void operate_Binary(const AST_Node_Binary* x, void *param) = 0;
+    virtual void operate_Ternary(const AST_Node_Ternary* x, void *param) = 0;
+    virtual void operate_Parameters(const AST_Node_Parameters* x, void *param) = 0;
+    virtual void operate_Array(const AST_Node_Array* x, void *param) = 0;
+    virtual void operate_new(const AST_Node_new* x, void *param) = 0;
+    virtual void operate_delete(const AST_Node_delete* x, void *param) = 0;
+    virtual void operate_Subscript(const AST_Node_Subscript* x, void *param) = 0;
+    virtual void operate_TempInst(const AST_Node_TempInst* x, void *param) = 0;
+    virtual void operate_TempKeyInst(const AST_Node_TempKeyInst* x, void *param) = 0;
     virtual ~ConstASTOperator();
   };
 }

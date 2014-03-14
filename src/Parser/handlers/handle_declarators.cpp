@@ -232,9 +232,9 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             return 5;
           }
           else {
-            AST ast(this);
+            AST ast;
             token = read_next_token(scope);
-            ast.parse_expression(token, scope, precedence::comma);
+            astbuilder->parse_expression(&ast, token, scope, precedence::comma);
             // TODO: Store AST
           }
         break;
@@ -255,8 +255,8 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             token.report_error(herr,"Attempt to assign bit count in non-integer declaration");
             FATAL_RETURN(1);
           }
-          AST bitcountexp(this);
-          bitcountexp.parse_expression(token = read_next_token(scope), scope, precedence::comma+1);
+          AST bitcountexp;
+          astbuilder->parse_expression(&bitcountexp, token = read_next_token(scope), scope, precedence::comma+1);
           value bc = bitcountexp.eval(error_context(herr, token));
           if (bc.type != VT_INTEGER) {
             token.report_error(herr,"Bit count is not an integer");

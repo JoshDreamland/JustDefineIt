@@ -553,8 +553,8 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         if (conditionals.empty() or conditionals.top().is_true) {
           mlex->update();
           
-          AST a(mctex);
-          if (a.parse_expression() or !a.eval(error_context(herr, filename, line, pos-lpos))) {
+          AST a;
+          if (mctex->get_AST_builder()->parse_expression(&a) or !a.eval(error_context(herr, filename, line, pos-lpos))) {
             token_t res;
             render_ast(a, "if_directives");
             conditionals.push(condition(0,1));
@@ -1048,6 +1048,7 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): ma
 }
 lexer_cpp::~lexer_cpp() {
   delete mlex;
+  delete mctex;
 }
 
 void lexer_cpp::cleanup() {

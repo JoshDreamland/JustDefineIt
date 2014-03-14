@@ -83,9 +83,9 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
         FATAL_RETURN((void(delete temp),1));
       }
       token = read_next_token(temp);
-      ast = new AST(this);
+      ast = new AST();
       ast->set_use_for_templates(true);
-      ast->parse_expression(token, temp, precedence::comma+1);
+      astbuilder->parse_expression(ast, token, temp, precedence::comma+1);
     }
     dtn = new definition_tempparam(pname, temp, ast, dtpflags);
     
@@ -332,8 +332,8 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       if (token.type == TT_DEFINITION && in_template(token.def)) {
         read_qualified_definition(token, scope); // We don't need to know the definition, just skip it. If we were a compiler, we'd need to know this. :P
         if (token.type == TT_OPERATOR && token.content.len == 1 && *token.content.str == '=') { // We don't need to know the value, either; we just need to skip it.
-          token = read_next_token(scope),
-          AST(this).parse_expression(token, scope, precedence::comma); // Read and discard; kind of a hack, but it's safe.
+          token = read_next_token(scope);
+          AST a; astbuilder->parse_expression(&a, token, scope, precedence::comma); // Read and discard; kind of a hack, but it's safe.
         }
         if (token.type != TT_SEMICOLON) {
           if (token.type == TT_LEFTPARENTH) // We're implementing a template function within a different class
