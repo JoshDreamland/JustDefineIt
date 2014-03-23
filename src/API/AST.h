@@ -494,12 +494,15 @@ namespace jdi {
     
     /// Default constructor. Zeroes some stuff.
     AST();
-    /// Construct with a single node
+    /// Construct with a single node: a definition.
     /// @param def   The definition from which to construct a node.
     AST(definition* def);
-    /// Construct with a single node
+    /// Construct with a single node: a value.
     /// @param val   The value from which to construct a node.
     AST(value v);
+    /// Construct with a single node: a value. Disambiguates pointer/value ctors.
+    /// @param val   The integer value from which to construct a node.
+    AST(long v);
     
     
     // Non-constructor AST factory methods

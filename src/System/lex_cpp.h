@@ -65,12 +65,15 @@ namespace jdip {
   };
   
   /**
-    @brief An implementation of \c jdi::lexer for lexing C++. Handles preprocessing
-           seamlessly, returning only relevant tokens.
+    An implementation of \c jdi::lexer for handling macro expressions.
+    Unrolls macros automatically. Treats non-macro identifiers as zero.
+    Replaces `defined x` with 0 or 1, depending on whether x is defined.
   **/
-  struct lexer_cpp: lexer, llreader {
-    virtual token_t get_token(error_handler *herr = def_error_handler);
-    quick::stack<openfile> files; ///< The files we have open, in the order we included them.
+  struct lexer_cpp_base: llreader
+  {
+    quick::stack<openfile> files; ///< The macros we are nested in and files we have open, in the order we entered them.
+    unsigned open_macro_count; ///< Count of macros we are currently nested in; cached to prevent recursion.
+    
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
     
     const char* filename; ///< The name of the open file.
@@ -78,7 +81,51 @@ namespace jdip {
     size_t line; ///< The current line number in the file
     size_t lpos; ///< The index in the file of the most recent line break.
     
-    unsigned open_macro_count;
+    /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
+    template<bool newline_eof> inline token_t read_raw(error_handler *herr);
+    lexer_cpp_base(llreader &input, macro_map &pmacros, const char *fname);
+    
+    /// Enter a scalar macro, if it has any content.
+    /// @param ms   The macro scalar to enter.
+    void enter_macro(macro_scalar *ms);
+    /// Parse for parameters to a given macro function, if there are any, then evaluate
+    /// the macro function and set the open file to reflect the change.
+    /// This call should be made while the position is just after the macro name.
+    /// @param mf   The macro function to parse
+    /// @param herr An error handler in case of parameter mismatch or non-terminated literals
+    /// @return Returns whether parameters were encountered and parsed.
+    bool parse_macro_function(const macro_function* mf, error_handler *herr);
+    /// Parse for parameters to a given macro function, if there are any.
+    /// This call should be made while the position is just after the macro name.
+    /// @param mf    The macro function to parse.
+    /// @param dest  The vector to receive the individual parameters [out].
+    /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
+    /// @return Returns whether parameters were encountered and parsed.
+    bool parse_macro_params(const macro_function* mf, vector<string>& dest, error_handler *herr);
+    
+    /// Utility function to skip a single-line comment; invoke with pos indicating one of the slashes.
+    inline void skip_comment();
+    /// Utility function to skip a multi-line comment; invoke with pos indicating the starting slash.
+    inline void skip_multiline_comment();
+    /// Utility function to skip a string; invoke with pos indicating the quotation mark. Terminates indicating match.
+    inline void skip_string(error_handler *herr);
+    /// Skip anything that cannot be interpreted as code in any way.
+    inline void skip_whitespace();
+    
+    /// Pop the currently open file or active macro.
+    /// @return Returns whether the end of all input has been reached.
+    bool pop_file();
+  };
+  
+  struct lexer_macro;
+  
+  /**
+    @brief An implementation of \c jdi::lexer for lexing C++. Handles preprocessing
+           seamlessly, returning only relevant tokens.
+  **/
+  struct lexer_cpp: lexer, lexer_cpp_base
+  {
+    virtual token_t get_token(error_handler *herr = def_error_handler);
     
     /// Map of string to token type; a map-of-keywords type.
     typedef map<string,TOKEN_TYPE> keyword_map;
@@ -110,54 +157,14 @@ namespace jdip {
     **/
     void handle_preprocessor(error_handler *herr);
     
-    /// Utility function to skip a single-line comment; invoke with pos indicating one of the slashes.
-    void skip_comment();
-    /// Utility function to skip a multi-line comment; invoke with pos indicating the starting slash.
-    void skip_multiline_comment();
-    /// Utility function to skip a string; invoke with pos indicating the quotation mark. Terminates indicating match.
-    void skip_string(error_handler *herr);
-    /// Skip anything that cannot be interpreted as code in any way.
-    inline void skip_whitespace();
     /// Function used by the preprocessor to read in macro parameters in compliance with ISO.
     string read_preprocessor_args(error_handler *herr);
     /** Second-order utility function to skip lines until a preprocessor
         directive is encountered, then invoke the handler on the directive it found. **/
     void skip_to_macro(error_handler *herr);
     
-    /// Enter a scalar macro, if it has any content.
-    /// @param ms   The macro scalar to enter.
-    void enter_macro(macro_scalar *ms);
-    /// Parse for parameters to a given macro function, if there are any, then evaluate
-    /// the macro function and set the open file to reflect the change.
-    /// This call should be made while the position is just after the macro name.
-    /// @param mf   The macro function to parse
-    /// @param herr An error handler in case of parameter mismatch or non-terminated literals
-    /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_function(const macro_function* mf, error_handler *herr);
-    /// Parse for parameters to a given macro function, if there are any.
-    /// This call should be made while the position is just after the macro name.
-    /// @param mf    The macro function to parse.
-    /// @param dest  The vector to receive the individual parameters [out].
-    /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
-    /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_params(const macro_function* mf, vector<string>& dest, error_handler *herr);
-    /// Parse for parameters to a given macro function, if there are any.
-    /// This call should be made while the position is just after the macro name.
-    /// @param mf    The macro function to parse.
-    /// @param cfile The buffer to read from.
-    /// @param pos   The position in the buffer to read; modified as used [in-out].
-    /// @param len   The length of the given buffer.
-    /// @param dest  The vector to receive the individual parameters [out].
-    /// @param errep A token to use to report errors [in].
-    /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
-    /// @return Returns whether parameters were encountered and parsed.
-    static bool parse_macro_params(const macro_function* mf, const macro_map &macros, const char* cfile, size_t &pos, size_t length, vector<string>& dest, const token_t &errep, error_handler *herr);
-    
-    /// Pop the currently open file or active macro.
-    /// @return Returns whether the end of all input has been reached.
-    bool pop_file();
-    
     set<string> visited_files; ///< For record and reporting purposes only.
+    
   protected:
     /// Storage mechanism for conditionals, such as <code>\#if</code>, <code>\#ifdef</code>, and <code>\#ifndef</code>.
     struct condition {
@@ -166,25 +173,16 @@ namespace jdip {
       condition(bool,bool); ///< Convenience constructor.
       condition(); ///< Default constructor.
     };
-    /// FLatten a macro parameter, evaluating nested macro functions.
-    static string _flatten(string param, const macro_map& macros, const token_t &errep, error_handler *herr);
+    
     quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested `\#if*`)
     lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
     context_parser *mctex; ///< A context used for constructing ASTs from preprocessor expressions.
   };
   
-  /**
-    An implementation of \c jdi::lexer for handling macro expressions.
-    Unrolls macros automatically. Treats non-macro identifiers as zero.
-    Replaces `defined x` with 0 or 1, depending on whether x is defined.
-  **/
   struct lexer_macro: lexer {
-    const char* cfile;
-    size_t &pos, length;
-    lexer_cpp *lcpp;
-    token_t get_token(error_handler *herr = def_error_handler);
-    lexer_macro(lexer_cpp*);
-    void update();
+    lexer_cpp_base *lex_base;
+    virtual token_t get_token(error_handler *herr = def_error_handler);
+    lexer_macro(lexer_cpp_base* b): lex_base(b) {}
   };
 }
 

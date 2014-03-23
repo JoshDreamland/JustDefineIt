@@ -1337,6 +1337,9 @@ namespace jdi
   AST::AST(value v):       tt_greater_is_op(true) {
     root = new AST_Node(v.toString(), v.type == VT_STRING? AT_STRLITERAL : AT_DECLITERAL);
   }
+  AST::AST(long v):       tt_greater_is_op(true) {
+    root = new AST_Node(value(v).toString(), AT_DECLITERAL);
+  }
   
   AST* AST::create_from_instantiation(definition_template* temp, const arg_key &key) {
     return new AST(new AST_Node_TempKeyInst(temp, key));

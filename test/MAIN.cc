@@ -52,6 +52,89 @@ static void putcap(string cap) {
 
 void do_cli(context &ct);
 
+
+#include <fstream>
+const char* tname[TT_INVALID + 1];
+static void populate_tnames() {
+  TOKEN_TYPE tt = (TOKEN_TYPE)-1;
+  switch (tt) { default:
+    case TT_ALIGNAS:          tname[TT_ALIGNAS]            = "TT_ALIGNAS";       
+    case TT_ALIGNOF:          tname[TT_ALIGNOF]            = "TT_ALIGNOF";       
+    case TT_ASM:              tname[TT_ASM]                = "TT_ASM";           
+    case TT_AUTO:             tname[TT_AUTO]               = "TT_AUTO";          
+    case TT_CHARLITERAL:      tname[TT_CHARLITERAL]        = "TT_CHARLITERAL";   
+    case TT_CLASS:            tname[TT_CLASS]              = "TT_CLASS";         
+    case TT_COLON:            tname[TT_COLON]              = "TT_COLON";         
+    case TT_COMMA:            tname[TT_COMMA]              = "TT_COMMA";         
+    case TT_CONSTEXPR:        tname[TT_CONSTEXPR]          = "TT_CONSTEXPR";     
+    case TT_CONST_CAST:       tname[TT_CONST_CAST]         = "TT_CONST_CAST";    
+    case TT_DECFLAG:          tname[TT_DECFLAG]            = "TT_DECFLAG";       
+    case TT_DECLARATOR:       tname[TT_DECLARATOR]         = "TT_DECLARATOR";    
+    case TT_DECLITERAL:       tname[TT_DECLITERAL]         = "TT_DECLITERAL";    
+    case TT_DECLTYPE:         tname[TT_DECLTYPE]           = "TT_DECLTYPE";      
+    case TT_DEFINITION:       tname[TT_DEFINITION]         = "TT_DEFINITION";    
+    case TT_DELETE:           tname[TT_DELETE]             = "TT_DELETE";        
+    case TT_DYNAMIC_CAST:     tname[TT_DYNAMIC_CAST]       = "TT_DYNAMIC_CAST";  
+    case TT_ELLIPSIS:         tname[TT_ELLIPSIS]           = "TT_ELLIPSIS";      
+    case TT_ENDOFCODE:        tname[TT_ENDOFCODE]          = "TT_ENDOFCODE";     
+    case TT_ENUM:             tname[TT_ENUM]               = "TT_ENUM";          
+    case TT_EXTERN:           tname[TT_EXTERN]             = "TT_EXTERN";        
+    case TT_FRIEND:           tname[TT_FRIEND]             = "TT_FRIEND";        
+    case TT_GREATERTHAN:      tname[TT_GREATERTHAN]        = "TT_GREATERTHAN";   
+    case TT_HEXLITERAL:       tname[TT_HEXLITERAL]         = "TT_HEXLITERAL";    
+    case TT_IDENTIFIER:       tname[TT_IDENTIFIER]         = "TT_IDENTIFIER";    
+    case TT_INVALID:          tname[TT_INVALID]            = "TT_INVALID";       
+    case TT_ISEMPTY:          tname[TT_ISEMPTY]            = "TT_ISEMPTY";       
+    case TT_LEFTBRACE:        tname[TT_LEFTBRACE]          = "TT_LEFTBRACE";     
+    case TT_LEFTBRACKET:      tname[TT_LEFTBRACKET]        = "TT_LEFTBRACKET";   
+    case TT_LEFTPARENTH:      tname[TT_LEFTPARENTH]        = "TT_LEFTPARENTH";   
+    case TT_LESSTHAN:         tname[TT_LESSTHAN]           = "TT_LESSTHAN";      
+    case TT_MEMBEROF:         tname[TT_MEMBEROF]           = "TT_MEMBEROF";      
+    case TT_NAMESPACE:        tname[TT_NAMESPACE]          = "TT_NAMESPACE";     
+    case TT_NEW:              tname[TT_NEW]                = "TT_NEW";           
+    case TT_NOEXCEPT:         tname[TT_NOEXCEPT]           = "TT_NOEXCEPT";      
+    case TT_OCTLITERAL:       tname[TT_OCTLITERAL]         = "TT_OCTLITERAL";    
+    case TT_OPERATOR:         tname[TT_OPERATOR]           = "TT_OPERATOR";      
+    case TT_OPERATORKW:       tname[TT_OPERATORKW]         = "TT_OPERATORKW";    
+    case TT_PRIVATE:          tname[TT_PRIVATE]            = "TT_PRIVATE";       
+    case TT_PROTECTED:        tname[TT_PROTECTED]          = "TT_PROTECTED";     
+    case TT_PUBLIC:           tname[TT_PUBLIC]             = "TT_PUBLIC";        
+    case TT_REINTERPRET_CAST: tname[TT_REINTERPRET_CAST]   = "TT_REINTERPRET_CAST";
+    case TT_RIGHTBRACE:       tname[TT_RIGHTBRACE]         = "TT_RIGHTBRACE";    
+    case TT_RIGHTBRACKET:     tname[TT_RIGHTBRACKET]       = "TT_RIGHTBRACKET";  
+    case TT_RIGHTPARENTH:     tname[TT_RIGHTPARENTH]       = "TT_RIGHTPARENTH";  
+    case TT_SCOPE:            tname[TT_SCOPE]              = "TT_SCOPE";         
+    case TT_SEMICOLON:        tname[TT_SEMICOLON]          = "TT_SEMICOLON";     
+    case TT_SIZEOF:           tname[TT_SIZEOF]             = "TT_SIZEOF";        
+    case TT_STATIC_ASSERT:    tname[TT_STATIC_ASSERT]      = "TT_STATIC_ASSERT"; 
+    case TT_STATIC_CAST:      tname[TT_STATIC_CAST]        = "TT_STATIC_CAST";   
+    case TT_STRINGLITERAL:    tname[TT_STRINGLITERAL]      = "TT_STRINGLITERAL"; 
+    case TT_STRUCT:           tname[TT_STRUCT]             = "TT_STRUCT";        
+    case TT_TEMPLATE:         tname[TT_TEMPLATE]           = "TT_TEMPLATE";      
+    case TT_TILDE:            tname[TT_TILDE]              = "TT_TILDE";         
+    case TT_TYPEDEF:          tname[TT_TYPEDEF]            = "TT_TYPEDEF";       
+    case TT_TYPEID:           tname[TT_TYPEID]             = "TT_TYPEID";        
+    case TT_TYPENAME:         tname[TT_TYPENAME]           = "TT_TYPENAME";      
+    case TT_UNION:            tname[TT_UNION]              = "TT_UNION";         
+    case TT_USING:            tname[TT_USING]              = "TT_USING";         
+    case TTM_CONCAT:          tname[TTM_CONCAT]            = "TTM_CONCAT";         
+    case TTM_TOSTRING:        tname[TTM_TOSTRING]          = "TTM_TOSTRING";         
+  }
+}
+
+static void write_tokens() {
+  populate_tnames();
+  context ct;
+  llreader llr("test/test.cc");
+  macro_map undamageable = ct.get_macros();
+  lexer_cpp c_lex(llr, undamageable, "User expression");
+  ofstream f("/home/josh/Desktop/tokensnew.txt");
+  for (token_t tk = c_lex.get_token(); tk.type != TT_ENDOFCODE; tk = c_lex.get_token())
+    f << tname[tk.type] << "(" << tk.linenum << "), ";
+  f << "END OF STREAM" << endl;
+  f.close();
+}
+
 int main() {
   initialize();
   cout << endl << endl;
@@ -137,6 +220,8 @@ int main() {
   name_type("int(*)()", *builtin);
   name_type("int&(*)()", *builtin);
   
+  write_tokens();
+  
   putcap("Test parser");
   llreader f("test/test.cc");
   if (f.is_open())
@@ -214,6 +299,10 @@ void do_cli(context &ct)
         llreader llr(buf, strlen(buf));
         lexer_cpp c_lex(llr, undamageable, "User expression");
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
+        if (dummy.type != TT_DEFINITION && dummy.type != TT_DECLARATOR && dummy.type != TT_SCOPE) {
+          dummy.report_errorf(def_error_handler, "Expected definition; encountered %s. Perhaps your term is a macro?");
+          break;
+        }
         context_parser cp(&ct, &c_lex, def_error_handler);
         definition *def = cp.read_qualified_definition(dummy, ct.get_global());
         if (def) {
@@ -239,7 +328,7 @@ void do_cli(context &ct)
         char buf[4096]; cin.getline(buf, 4096);
         macro_iter_c mi = ct.get_macros().find(buf);
         if (mi != ct.get_macros().end())
-          cout << mi->second->toString();
+          cout << mi->second->toString() << endl;
         else
           cout << "Not found." << endl;
       } break;
