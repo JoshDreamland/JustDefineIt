@@ -10,7 +10,7 @@
  * 
  * @section License
  * 
- * Copyright (C) 2011-2012 Josh Ventura
+ * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
  * 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
@@ -82,7 +82,7 @@ namespace jdip {
     size_t lpos; ///< The index in the file of the most recent line break.
     
     /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
-    template<bool newline_eof> inline token_t read_raw(error_handler *herr);
+    template<bool newline_eof> token_t read_raw(error_handler *herr, bool &ident, string &idout);
     lexer_cpp_base(llreader &input, macro_map &pmacros, const char *fname);
     
     /// Enter a scalar macro, if it has any content.

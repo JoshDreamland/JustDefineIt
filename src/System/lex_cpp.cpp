@@ -65,10 +65,11 @@ void lexer_cpp_base::skip_comment()
 
 inline void lexer_cpp_base::skip_multiline_comment()
 {
+  char pchr = 0;
   pos += 2; // Skip two chars so we don't break on /*/
   do if (pos >= length) return;
     else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
-    while (cfile[pos++] != '*' or cfile[pos] != '/');
+    while ((pchr = cfile[pos++]) != '*' or cfile[pos] != '/');
   ++pos;
 }
 
@@ -103,7 +104,7 @@ static inline void skip_string(const char* cfile, size_t &pos, size_t length)
 void lexer_cpp_base::skip_whitespace()
 {
   while (pos < length) {
-    while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return;
+    while (is_spacer(cfile[pos])) if (++pos >= length) return;
     if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos++; continue; }
     if (cfile[pos] == '/') {
       if (cfile[++pos] == '/') { skip_comment(); continue; }
@@ -188,7 +189,7 @@ bool lexer_cpp_base::parse_macro_function(const macro_function* mf, error_handle
     files.pop();
     return true;
   }
-  cout << "====================== NEW BUFFER =======================" << endl << buf << endl << endl;
+  
   this->consume(buf, bufe-buf);
   filename = mf->name.c_str();
   lpos = line = 0;
@@ -536,8 +537,13 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
           incfile.open((incfn = path + fnfind).c_str());
         for (size_t i = 0; i < builtin->search_dir_count(); ++i) {
           if (incfile.is_open()) break;
-          if (!incnext)
+          if (!incnext) {
+            cout << "fnfind:" << endl;
+            cout << "  [" << fnfind.length() << "]\"" << fnfind << '"' << endl;
+            cout << "  [" << builtin->search_dir(i).length() << "]\"" << builtin->search_dir(i) << '"' << endl;
+            cout << "  cat: " << flush << (builtin->search_dir(i) + fnfind) << endl;
             incfile.open((incfn = (fdir = builtin->search_dir(i)) + fnfind).c_str());
+          }
           else
             incnext = sdir != builtin->search_dir(i);
         }
@@ -618,7 +624,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
 }
 
 #include <cstdio>
-template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
+template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr, bool &is_id, string &idout)
 {
   top:
   #ifdef DEBUG_MODE
@@ -650,24 +656,28 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
     //====: Check for and handle comments. :======================================================
     //============================================================================================
     
-    if (cfile[pos] == '/') {
-      if (cfile[++pos] == '*') { skip_multiline_comment(); continue; }
-      if (cfile[pos] == '/')   { skip_comment(); continue; }
-      if (cfile[pos] == '=') {
-        ++pos;
-        return  token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-2, 2);
-      }
+    const size_t spos = pos;
+    switch (cfile[pos++])
+    {
+    // Skip all whitespace
+    
+     case '/': {
+      if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
+      if (cfile[pos] == '/') { skip_comment(); continue; }
+      if (cfile[pos] == '=')
+        return ++pos, token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-2, 2);
       return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1,1);
     }
-    
+      
+      
+    default:
     //============================================================================================
     //====: Not at a comment. See if we're at an identifier. :====================================
     //============================================================================================
     
-    if (is_letter(cfile[pos])) // Check if we're at an identifier or keyword.
+    if (is_letter(cfile[spos])) // Check if we're at an identifier or keyword.
     {
-      const size_t spos = pos; // Record where we are
-      while (++pos < length and is_letterd(cfile[pos]));
+      while (pos < length and is_letterd(cfile[pos])) ++pos;
       if (cfile[spos] == 'L' and pos - spos == 1 and cfile[pos] == '\'') {
         skip_string(herr);
         return token_t(token_basics(TT_CHARLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
@@ -694,32 +704,38 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
         }
       }
       
+      is_id = true;
+      idout = fn;
       return token_t(token_basics(TT_IDENTIFIER,filename,line,spos-lpos), cfile + spos, fn.length());
     }
+    
+    goto unknown;
     
     //============================================================================================
     //====: Not at an identifier. Maybe at a number? :============================================
     //============================================================================================
     
-    if (is_digit(cfile[pos])) {
-      if (cfile[pos] == '0') { // Check if the number is hexadecimal or octal.
-        if (cfile[++pos] == 'x') { // Check if the number is hexadecimal.
-          // Yes, it is hexadecimal.
-          const size_t sp = pos;
-          while (++pos < length and is_hexdigit(cfile[pos]));
-          while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-          return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);  
-        }
-        // Turns out, it's octal.
-        const size_t sp = --pos;
+    case '0': { // Check if the number is hexadecimal or octal.
+      if (cfile[pos] == 'x') { // Check if the number is hexadecimal.
+        // Yes, it is hexadecimal.
+        const size_t sp = pos;
         while (++pos < length and is_hexdigit(cfile[pos]));
         while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-        return token_t(token_basics(TT_OCTLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
+        return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);  
       }
+      // Turns out, it's octal.
+      const size_t sp = --pos;
+      while (++pos < length and is_hexdigit(cfile[pos]));
+      while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
+      return token_t(token_basics(TT_OCTLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
+    }
+    
+    case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8':
+    case '9': {
       // Turns out, it's decimal.
       handle_decimal:
-      const size_t sp = pos;
-      while (++pos < length and is_digit(cfile[pos]));
+      while (pos < length and is_digit(cfile[pos])) ++pos;
       if (cfile[pos] == '.')
         while (++pos < length and is_digit(cfile[pos]));
       if (cfile[pos] == 'e' or cfile[pos] == 'E') { // Accept exponents
@@ -727,16 +743,13 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
         while (pos < length and is_digit(cfile[pos])) ++pos;
       }
       while (pos < length and is_letter(cfile[pos])) ++pos; // Include the flags, like ull
-      return token_t(token_basics(TT_DECLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
+      return token_t(token_basics(TT_DECLITERAL,filename,line,pos-lpos), cfile+spos, pos-spos);
     }
     
     //============================================================================================
     //====: Not at a number. Find out where we are. :=============================================
     //============================================================================================
     
-    const size_t spos = pos;
-    switch (cfile[pos++])
-    {
       case ';':
         return token_t(token_basics(TT_SEMICOLON,filename,line,spos-lpos));
       case ',':
@@ -754,7 +767,7 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, ++pos-spos);
         return token_t(token_basics(TT_TILDE,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '%': case '*': case '/': case '^':
+      case '%': case '*': case '^': /*  case '/': */
         if (cfile[pos] == '=')
           return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, ++pos-spos);
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
@@ -774,7 +787,7 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
             if (cfile[++pos] == '.')
               return token_t(token_basics(TT_ELLIPSIS,filename,line,spos-lpos), cfile+spos, pos++ - spos);
             else
-              pos -= 2;
+              --pos;
           }
           pos += cfile[pos] == '*';
         return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
@@ -819,7 +832,7 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
         return token_t(token_basics(TT_CHARLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
       }
       
-      default: {
+      unknown: {
         char errbuf[320];
         sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'", (int)cfile[spos], cfile[spos]);
         herr->error(errbuf);
@@ -840,17 +853,18 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr)
     ++sz;
   if (newline_eof)
     if (open_macro_count)
-      return read_raw<false>(herr);
+      return read_raw<false>(herr, is_id, idout);
   goto top;
 }
 
 token_t lexer_cpp::get_token(error_handler *herr)
 {
+  string fn;
   top:
-  token_t res = read_raw<false>(herr);
-  if (res.type == TT_IDENTIFIER)
+  bool is_id = false;
+  token_t res = read_raw<false>(herr, is_id, fn);
+  if (is_id)
   {
-    string fn = res.content.toString();
     keyword_map::iterator kwit = keywords.find(fn);
     if (kwit != keywords.end()) {
       if (kwit->second == TT_INVALID) {
@@ -878,11 +892,11 @@ token_t lexer_cpp::get_token(error_handler *herr)
       return res;
     }
   }
-  if (res.type == TTM_CONCAT) {
+  else if (res.type == TTM_CONCAT) {
     res.report_error(herr, "Extraneous # ignored");
     goto pp_anyway;
   }
-  if (res.type == TTM_TOSTRING) {
+  else if (res.type == TTM_TOSTRING) {
     pp_anyway:
     handle_preprocessor(herr);
     goto top;
@@ -893,8 +907,10 @@ token_t lexer_cpp::get_token(error_handler *herr)
 
 token_t lexer_macro::get_token(error_handler *herr)
 {
-  token_t res = lex_base->read_raw<true>(herr);
-  if (res.type == TT_IDENTIFIER) // Identifiers and keywords stop here.
+  bool is_id = false;
+  string idout;
+  token_t res = lex_base->read_raw<true>(herr, is_id, idout);
+  if (is_id) // Identifiers and keywords stop here.
   {
     static const char zero[] = "0", one[] = "1";
     if (res.content.len == 7 && !strncmp((const char*)res.content.str, "defined", 7)) // magic number: strlen("defined") == 7; this is unlikely to change

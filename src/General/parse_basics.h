@@ -82,7 +82,7 @@ namespace parse_bacics {
     
     /// Returns whether the given character is white, but not a newline.
     /// In other words, returns if the character is a space or tab.
-    inline bool is_useless_macros(char x) {
+    inline bool is_spacer(char x) {
       return is.whatever[(unsigned char) x] & is.SPACER;
     }
     

@@ -151,7 +151,7 @@ inline void jdip::macro_function::preparse(string val, error_handler *herr)
       }
       if (--i > push_from) // If we've covered any ground since our last value push,
         value.push_back(mv_chunk(val.c_str(), push_from, i-push_from)); // Push it onto our value
-      while (is_useless_macros(val[++i]));
+      while (is_spacer(val[++i]));
       push_from = i; // Store current position just in case something stupid happens
       if (!is_letter(val[i])) { herr->error("Expected parameter name following '#' token; `" + val + "'[" + ::toString(i) + "] is not a valid identifier character"); continue; }
       const size_t asi = i;
