@@ -714,25 +714,25 @@ namespace jdi {
     if (flagnamemap.empty()) {
       unsigned d = DEF_TYPENAME;
       switch (d) {
-        case DEF_TYPENAME:     flagnamemap[DEF_TYPENAME]     = "DEF_TYPENAME";
-        case DEF_NAMESPACE:    flagnamemap[DEF_NAMESPACE]    = "DEF_NAMESPACE";
-        case DEF_CLASS:        flagnamemap[DEF_CLASS]        = "DEF_CLASS";
-        case DEF_ENUM:         flagnamemap[DEF_ENUM]         = "DEF_ENUM";
-        case DEF_UNION:        flagnamemap[DEF_UNION]        = "DEF_UNION";
-        case DEF_SCOPE:        flagnamemap[DEF_SCOPE]        = "DEF_SCOPE";
-        case DEF_TYPED:        flagnamemap[DEF_TYPED]        = "DEF_TYPED";
-        case DEF_FUNCTION:     flagnamemap[DEF_FUNCTION]     = "DEF_FUNCTION";
-        case DEF_OVERLOAD:     flagnamemap[DEF_OVERLOAD]     = "DEF_OVERLOAD";
-        case DEF_VALUED:       flagnamemap[DEF_VALUED]       = "DEF_VALUED";
-        case DEF_EXTERN:       flagnamemap[DEF_EXTERN]       = "DEF_EXTERN";
-        case DEF_TEMPLATE:     flagnamemap[DEF_TEMPLATE]     = "DEF_TEMPLATE";
-        case DEF_TEMPPARAM:    flagnamemap[DEF_TEMPPARAM]    = "DEF_TEMPPARAM";
-        case DEF_HYPOTHETICAL: flagnamemap[DEF_HYPOTHETICAL] = "DEF_HYPOTHETICAL";
-        case DEF_DEPENDENT:    flagnamemap[DEF_DEPENDENT]    = "DEF_DEPENDENT";
-        case DEF_PRIVATE:      flagnamemap[DEF_PRIVATE]      = "DEF_PRIVATE";
-        case DEF_PROTECTED:    flagnamemap[DEF_PROTECTED]    = "DEF_PROTECTED";
-        case DEF_INCOMPLETE:   flagnamemap[DEF_INCOMPLETE]   = "DEF_INCOMPLETE";
-        case DEF_ATOMIC:       flagnamemap[DEF_ATOMIC]       = "DEF_ATOMIC";
+        case DEF_TYPENAME:     flagnamemap[DEF_TYPENAME]     = "DEF_TYPENAME";     // Fallthrough
+        case DEF_NAMESPACE:    flagnamemap[DEF_NAMESPACE]    = "DEF_NAMESPACE";    // Fallthrough
+        case DEF_CLASS:        flagnamemap[DEF_CLASS]        = "DEF_CLASS";        // Fallthrough
+        case DEF_ENUM:         flagnamemap[DEF_ENUM]         = "DEF_ENUM";         // Fallthrough
+        case DEF_UNION:        flagnamemap[DEF_UNION]        = "DEF_UNION";        // Fallthrough
+        case DEF_SCOPE:        flagnamemap[DEF_SCOPE]        = "DEF_SCOPE";        // Fallthrough
+        case DEF_TYPED:        flagnamemap[DEF_TYPED]        = "DEF_TYPED";        // Fallthrough
+        case DEF_FUNCTION:     flagnamemap[DEF_FUNCTION]     = "DEF_FUNCTION";     // Fallthrough
+        case DEF_OVERLOAD:     flagnamemap[DEF_OVERLOAD]     = "DEF_OVERLOAD";     // Fallthrough
+        case DEF_VALUED:       flagnamemap[DEF_VALUED]       = "DEF_VALUED";       // Fallthrough
+        case DEF_EXTERN:       flagnamemap[DEF_EXTERN]       = "DEF_EXTERN";       // Fallthrough
+        case DEF_TEMPLATE:     flagnamemap[DEF_TEMPLATE]     = "DEF_TEMPLATE";     // Fallthrough
+        case DEF_TEMPPARAM:    flagnamemap[DEF_TEMPPARAM]    = "DEF_TEMPPARAM";    // Fallthrough
+        case DEF_HYPOTHETICAL: flagnamemap[DEF_HYPOTHETICAL] = "DEF_HYPOTHETICAL"; // Fallthrough
+        case DEF_DEPENDENT:    flagnamemap[DEF_DEPENDENT]    = "DEF_DEPENDENT";    // Fallthrough
+        case DEF_PRIVATE:      flagnamemap[DEF_PRIVATE]      = "DEF_PRIVATE";      // Fallthrough
+        case DEF_PROTECTED:    flagnamemap[DEF_PROTECTED]    = "DEF_PROTECTED";    // Fallthrough
+        case DEF_INCOMPLETE:   flagnamemap[DEF_INCOMPLETE]   = "DEF_INCOMPLETE";   // Fallthrough
+        case DEF_ATOMIC:       flagnamemap[DEF_ATOMIC]       = "DEF_ATOMIC";       // Fallthrough
         default: ;
       }
     }

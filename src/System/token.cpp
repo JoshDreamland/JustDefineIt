@@ -61,81 +61,81 @@ static struct token_info_c {
     TOKEN_TYPE a(TT_INVALID);
     switch (a) {
       default:
-      case TT_INVALID: name[TT_INVALID] = "invalid token";
+      case TT_INVALID: name[TT_INVALID] = "invalid token"; // Fallthrough
       
-      case TT_DECLARATOR:name[TT_DECLARATOR] = "declarator";
-      case TT_DECFLAG: name[TT_DECFLAG] = "declarator";
-      case TT_CLASS: name[TT_CLASS] = "`class' token";
-      case TT_STRUCT: name[TT_STRUCT] = "`struct' token";
-      case TT_ENUM: name[TT_ENUM] = "`enum' token";
-      case TT_UNION: name[TT_UNION] = "`union' token";
-      case TT_NAMESPACE: name[TT_NAMESPACE] = "`namespace' token";
-      case TT_EXTERN: name[TT_EXTERN] = "`extern' token";
+      case TT_DECLARATOR:name[TT_DECLARATOR] = "declarator"; // Fallthrough
+      case TT_DECFLAG: name[TT_DECFLAG] = "declarator"; // Fallthrough
+      case TT_CLASS: name[TT_CLASS] = "`class' token"; // Fallthrough
+      case TT_STRUCT: name[TT_STRUCT] = "`struct' token"; // Fallthrough
+      case TT_ENUM: name[TT_ENUM] = "`enum' token"; // Fallthrough
+      case TT_UNION: name[TT_UNION] = "`union' token"; // Fallthrough
+      case TT_NAMESPACE: name[TT_NAMESPACE] = "`namespace' token"; // Fallthrough
+      case TT_EXTERN: name[TT_EXTERN] = "`extern' token"; // Fallthrough
       
-      case TT_ASM: name[TT_ASM] = "`asm' token";
-      case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token";
-      case TT_SIZEOF: name[TT_SIZEOF] = "`sizeof' token";
-      case TT_ISEMPTY: name[TT_ISEMPTY] = "`is_empty' token";
-      case TT_DECLTYPE: name[TT_DECLTYPE] = "`decltype' token";
-      case TT_TYPEID: name[TT_TYPEID] = "`typeid' token";
+      case TT_ASM: name[TT_ASM] = "`asm' token"; // Fallthrough
+      case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token"; // Fallthrough
+      case TT_SIZEOF: name[TT_SIZEOF] = "`sizeof' token"; // Fallthrough
+      case TT_ISEMPTY: name[TT_ISEMPTY] = "`is_empty' token"; // Fallthrough
+      case TT_DECLTYPE: name[TT_DECLTYPE] = "`decltype' token"; // Fallthrough
+      case TT_TYPEID: name[TT_TYPEID] = "`typeid' token"; // Fallthrough
       
-      case TT_ALIGNAS: name[TT_ALIGNAS] = "`alignas' token";
-      case TT_ALIGNOF: name[TT_ALIGNOF] = "`alignof' token";
-      case TT_AUTO: name[TT_AUTO] = "`autp' token";
-      case TT_CONSTEXPR: name[TT_CONSTEXPR] = "`constexpr' token";
-      case TT_NOEXCEPT: name[TT_NOEXCEPT] = "`noexcept' token";
-      case TT_STATIC_ASSERT: name[TT_STATIC_ASSERT] = "`static_assert' token";
+      case TT_ALIGNAS: name[TT_ALIGNAS] = "`alignas' token"; // Fallthrough
+      case TT_ALIGNOF: name[TT_ALIGNOF] = "`alignof' token"; // Fallthrough
+      case TT_AUTO: name[TT_AUTO] = "`autp' token"; // Fallthrough
+      case TT_CONSTEXPR: name[TT_CONSTEXPR] = "`constexpr' token"; // Fallthrough
+      case TT_NOEXCEPT: name[TT_NOEXCEPT] = "`noexcept' token"; // Fallthrough
+      case TT_STATIC_ASSERT: name[TT_STATIC_ASSERT] = "`static_assert' token"; // Fallthrough
       
-      case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier";
-      case TT_DEFINITION: name[TT_DEFINITION] = "identifier";
+      case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier"; // Fallthrough
+      case TT_DEFINITION: name[TT_DEFINITION] = "identifier"; // Fallthrough
       
-      case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token";
-      case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token";
+      case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token"; // Fallthrough
+      case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token"; // Fallthrough
       
-      case TT_TYPEDEF: name[TT_TYPEDEF] = "`typedef' token";
-      case TT_USING: name[TT_USING] = "`using' token";
+      case TT_TYPEDEF: name[TT_TYPEDEF] = "`typedef' token"; // Fallthrough
+      case TT_USING: name[TT_USING] = "`using' token"; // Fallthrough
       
-      case TT_PUBLIC: name[TT_PUBLIC] = "`public' token";
-      case TT_PRIVATE: name[TT_PRIVATE] = "`private' token";
-      case TT_PROTECTED: name[TT_PROTECTED] = "`protected' token";
-      case TT_FRIEND: name[TT_FRIEND] = "`friend' token";
+      case TT_PUBLIC: name[TT_PUBLIC] = "`public' token"; // Fallthrough
+      case TT_PRIVATE: name[TT_PRIVATE] = "`private' token"; // Fallthrough
+      case TT_PROTECTED: name[TT_PROTECTED] = "`protected' token"; // Fallthrough
+      case TT_FRIEND: name[TT_FRIEND] = "`friend' token"; // Fallthrough
       
-      case TT_COLON: name[TT_COLON] = "`:' token";
-      case TT_SCOPE: name[TT_SCOPE] = "`::' token";
-      case TT_MEMBEROF: name[TT_MEMBEROF] = "member specifier (class::*)";
+      case TT_COLON: name[TT_COLON] = "`:' token"; // Fallthrough
+      case TT_SCOPE: name[TT_SCOPE] = "`::' token"; // Fallthrough
+      case TT_MEMBEROF: name[TT_MEMBEROF] = "member specifier (class::*)"; // Fallthrough
       
-      case TT_LEFTPARENTH: name[TT_LEFTPARENTH] = "'(' token";
-      case TT_RIGHTPARENTH: name[TT_RIGHTPARENTH] = "')' token";
-      case TT_LEFTBRACKET: name[TT_LEFTBRACKET] = "'[' token";
-      case TT_RIGHTBRACKET: name[TT_RIGHTBRACKET] = "']' token";
-      case TT_LEFTBRACE: name[TT_LEFTBRACE] = "'{' token";
-      case TT_RIGHTBRACE: name[TT_RIGHTBRACE] = "'}' token";
-      case TT_LESSTHAN: name[TT_LESSTHAN] = "'<' token";
-      case TT_GREATERTHAN: name[TT_GREATERTHAN] = "'>' token";
+      case TT_LEFTPARENTH: name[TT_LEFTPARENTH] = "'(' token"; // Fallthrough
+      case TT_RIGHTPARENTH: name[TT_RIGHTPARENTH] = "')' token"; // Fallthrough
+      case TT_LEFTBRACKET: name[TT_LEFTBRACKET] = "'[' token"; // Fallthrough
+      case TT_RIGHTBRACKET: name[TT_RIGHTBRACKET] = "']' token"; // Fallthrough
+      case TT_LEFTBRACE: name[TT_LEFTBRACE] = "'{' token"; // Fallthrough
+      case TT_RIGHTBRACE: name[TT_RIGHTBRACE] = "'}' token"; // Fallthrough
+      case TT_LESSTHAN: name[TT_LESSTHAN] = "'<' token"; // Fallthrough
+      case TT_GREATERTHAN: name[TT_GREATERTHAN] = "'>' token"; // Fallthrough
       
-      case TT_TILDE: name[TT_TILDE] = "'~' token";
-      case TT_ELLIPSIS: name[TT_ELLIPSIS] = "`...' token";
-      case TT_OPERATOR: name[TT_OPERATOR] = "`%s' operator";
+      case TT_TILDE: name[TT_TILDE] = "'~' token"; // Fallthrough
+      case TT_ELLIPSIS: name[TT_ELLIPSIS] = "`...' token"; // Fallthrough
+      case TT_OPERATOR: name[TT_OPERATOR] = "`%s' operator"; // Fallthrough
       
-      case TT_COMMA: name[TT_COMMA] = "',' token";
-      case TT_SEMICOLON: name[TT_SEMICOLON] = "';' token";
+      case TT_COMMA: name[TT_COMMA] = "',' token"; // Fallthrough
+      case TT_SEMICOLON: name[TT_SEMICOLON] = "';' token"; // Fallthrough
       
-      case TT_STRINGLITERAL: name[TT_STRINGLITERAL] = "string literal";
-      case TT_CHARLITERAL: name[TT_CHARLITERAL] = "character literal";
-      case TT_DECLITERAL: name[TT_DECLITERAL] = "decimal literal";
-      case TT_HEXLITERAL: name[TT_HEXLITERAL] = "hexadecimal literal";
-      case TT_OCTLITERAL: name[TT_OCTLITERAL] = "octal literal";
+      case TT_STRINGLITERAL: name[TT_STRINGLITERAL] = "string literal"; // Fallthrough
+      case TT_CHARLITERAL: name[TT_CHARLITERAL] = "character literal"; // Fallthrough
+      case TT_DECLITERAL: name[TT_DECLITERAL] = "decimal literal"; // Fallthrough
+      case TT_HEXLITERAL: name[TT_HEXLITERAL] = "hexadecimal literal"; // Fallthrough
+      case TT_OCTLITERAL: name[TT_OCTLITERAL] = "octal literal"; // Fallthrough
       
-      case TTM_CONCAT:   name[TTM_CONCAT] = "`##' token";
-      case TTM_TOSTRING: name[TTM_TOSTRING] = "`#' token";
+      case TTM_CONCAT:   name[TTM_CONCAT] = "`##' token"; // Fallthrough
+      case TTM_TOSTRING: name[TTM_TOSTRING] = "`#' token"; // Fallthrough
       
-      case TT_NEW: name[TT_NEW] = "`new' keyword";
-      case TT_DELETE: name[TT_DELETE] = "`delete' keyword";
+      case TT_NEW: name[TT_NEW] = "`new' keyword"; // Fallthrough
+      case TT_DELETE: name[TT_DELETE] = "`delete' keyword"; // Fallthrough
       
-      case TT_CONST_CAST: name[TT_CONST_CAST] = "`const_cast' keyword";
-      case TT_STATIC_CAST: name[TT_STATIC_CAST] = "`static_cast' keyword";
-      case TT_DYNAMIC_CAST: name[TT_DYNAMIC_CAST] = "`dynamic_cast' keyword";
-      case TT_REINTERPRET_CAST: name[TT_REINTERPRET_CAST] = "`reinterpret_cast' keyword";
+      case TT_CONST_CAST: name[TT_CONST_CAST] = "`const_cast' keyword"; // Fallthrough
+      case TT_STATIC_CAST: name[TT_STATIC_CAST] = "`static_cast' keyword"; // Fallthrough
+      case TT_DYNAMIC_CAST: name[TT_DYNAMIC_CAST] = "`dynamic_cast' keyword"; // Fallthrough
+      case TT_REINTERPRET_CAST: name[TT_REINTERPRET_CAST] = "`reinterpret_cast' keyword"; // Fallthrough
       
       case TT_ENDOFCODE: name[TT_ENDOFCODE] = "end of code";
       #define handle_user_token(tname, desc) case tname: name[tname] = desc;

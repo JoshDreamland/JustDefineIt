@@ -485,7 +485,7 @@ namespace jdip
             break;
           }
         }
-          // Continue to next case
+        // Fallthrough
           
       case TT_OPERATOR: case_TT_OPERATOR: {
           string op(token.content.toString());
@@ -1230,10 +1230,10 @@ namespace jdip {
   AST_Node_Unary::AST_Node_Unary(AST_TYPE tp, AST_Node* r): AST_Node(tp), operand(r) {}
   AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre, AST_TYPE tp): AST_Node(ct, tp), operand(r), prefix(pre) {}
   AST_Node_Unary::AST_Node_Unary(AST_Node* r, string ct, bool pre): AST_Node(ct, pre? AT_UNARY_PREFIX : AT_UNARY_POSTFIX), operand(r), prefix(pre) {}
-  AST_Node_sizeof::AST_Node_sizeof(AST_Node* param, bool n): AST_Node_Unary(param, str_sizeof, AT_SIZEOF), negate(n) {}
-  AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft, cast_modes cmode): AST_Node_Unary(param, str_cast, AT_CAST), cast_mode(cmode) { cast_type.copy(ft); }
-  AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft, cast_modes cmode): AST_Node_Unary(param, str_cast, AT_CAST), cast_mode(cmode) { cast_type.swap(ft); }
-  AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, AT_CAST) {}
+  AST_Node_sizeof::AST_Node_sizeof(AST_Node* param, bool n): AST_Node_Unary(param, str_sizeof, true, AT_SIZEOF), negate(n) {}
+  AST_Node_Cast::AST_Node_Cast(AST_Node* param, const full_type& ft, cast_modes cmode): AST_Node_Unary(param, str_cast, true, AT_CAST), cast_mode(cmode) { cast_type.copy(ft); }
+  AST_Node_Cast::AST_Node_Cast(AST_Node* param, full_type& ft, cast_modes cmode): AST_Node_Unary(param, str_cast, true, AT_CAST), cast_mode(cmode) { cast_type.swap(ft); }
+  AST_Node_Cast::AST_Node_Cast(AST_Node* param): AST_Node_Unary(param, str_cast, true, AT_CAST) {}
   AST_Node_Binary::AST_Node_Binary(AST_TYPE tp, AST_Node* l, AST_Node* r): AST_Node(tp), left(l), right(r) { type = AT_BINARYOP; }
   AST_Node_Binary::AST_Node_Binary(AST_Node* l, AST_Node* r, string op, AST_TYPE tp): AST_Node(op, tp), left(l), right(r) { type = tp; }
   AST_Node_Ternary::AST_Node_Ternary(AST_Node *expression, AST_Node *exp_true, AST_Node *exp_false): AST_Node(AT_TERNARYOP), exp(expression), left(exp_true), right(exp_false) { type = AT_TERNARYOP; }
@@ -1241,7 +1241,7 @@ namespace jdip {
   AST_Node_Parameters::AST_Node_Parameters(): AST_Node(AT_PARAMLIST), func(NULL) {}
   AST_Node_new::AST_Node_new(const full_type &t, AST_Node *p, AST_Node *b): AST_Node(AT_NEW), alloc_type(t), position(p), bound(b) {}
   AST_Node_new::AST_Node_new(): AST_Node(AT_NEW), alloc_type(), position(NULL), bound(NULL) {}
-  AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param, arr? "delete" : "delete[]", AT_DELETE), array(arr) {}
+  AST_Node_delete::AST_Node_delete(AST_Node* param, bool arr): AST_Node_Unary(param, arr? "delete" : "delete[]", true, AT_DELETE), array(arr) {}
   AST_Node_Subscript::AST_Node_Subscript(AST_Node* l, AST_Node *ind): AST_Node(AT_SUBSCRIPT), left(l), index(ind) {}
   AST_Node_Subscript::AST_Node_Subscript(): AST_Node(AT_SUBSCRIPT), left(NULL), index(NULL) {}
   AST_Node_TempInst::AST_Node_TempInst(definition_template* d): AST_Node(d->name, AT_INSTANTIATE), temp(new AST_Node_Definition(d, d->name)) {}

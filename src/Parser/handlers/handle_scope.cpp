@@ -166,17 +166,20 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); }
         else token.report_error(herr, "Unexpected `public' token outside class scope.");
         if ((token = read_next_token(scope)).type != TT_COLON)
-          token.report_error(herr, "Colon expected following `public' token"); break;
+          token.report_error(herr, "Colon expected following `public' token");
+        break;
       case TT_PRIVATE:
         if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); inherited_flags |= DEF_PRIVATE; }
         else token.report_error(herr, "Unexpected `private' token outside class scope.");
         if ((token = read_next_token(scope)).type != TT_COLON)
-          token.report_error(herr, "Colon expected following `private' token"); break;
+          token.report_error(herr, "Colon expected following `private' token");
+        break;
       case TT_PROTECTED:
         if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); inherited_flags |= DEF_PROTECTED; }
         else token.report_error(herr, "Unexpected `protected' token outside class scope.");
         if ((token = read_next_token(scope)).type != TT_COLON)
-          token.report_error(herr, "Colon expected following `protected' token"); break;
+          token.report_error(herr, "Colon expected following `protected' token");
+        break;
       
       case TT_FRIEND:
           if (!(scope->flags & DEF_CLASS)) {
@@ -269,7 +272,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
         }
         if (token.def->flags & DEF_TEMPLATE)
           goto case_TT_DECLARATOR;
-      }
+      } // Fallthrough
       case TT_IDENTIFIER: {
           string tname(token.content.toString());
           if (tname == scope->name and (scope->flags & DEF_CLASS)) {

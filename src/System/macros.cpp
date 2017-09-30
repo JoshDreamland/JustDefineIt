@@ -225,7 +225,8 @@ bool macro_function::parse(vector<string> &arg_list, char* &dest, char* &destend
     if (value[i].is_arg)
     {
       if (last_was_arg) {
-        while (bufat > buf and is_useless(*--bufat)); ++bufat;
+        while (bufat > buf and is_useless(*--bufat));
+        ++bufat;
         const string &ts = arg_list[value[i].metric];
         register const char* argname = ts.c_str();
         register size_t sz = ts.length();

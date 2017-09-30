@@ -58,67 +58,67 @@ const char* tname[TT_INVALID + 1];
 static void populate_tnames() {
   TOKEN_TYPE tt = (TOKEN_TYPE)-1;
   switch (tt) { default:
-    case TT_ALIGNAS:          tname[TT_ALIGNAS]            = "TT_ALIGNAS";       
-    case TT_ALIGNOF:          tname[TT_ALIGNOF]            = "TT_ALIGNOF";       
-    case TT_ASM:              tname[TT_ASM]                = "TT_ASM";           
-    case TT_AUTO:             tname[TT_AUTO]               = "TT_AUTO";          
-    case TT_CHARLITERAL:      tname[TT_CHARLITERAL]        = "TT_CHARLITERAL";   
-    case TT_CLASS:            tname[TT_CLASS]              = "TT_CLASS";         
-    case TT_COLON:            tname[TT_COLON]              = "TT_COLON";         
-    case TT_COMMA:            tname[TT_COMMA]              = "TT_COMMA";         
-    case TT_CONSTEXPR:        tname[TT_CONSTEXPR]          = "TT_CONSTEXPR";     
-    case TT_CONST_CAST:       tname[TT_CONST_CAST]         = "TT_CONST_CAST";    
-    case TT_DECFLAG:          tname[TT_DECFLAG]            = "TT_DECFLAG";       
-    case TT_DECLARATOR:       tname[TT_DECLARATOR]         = "TT_DECLARATOR";    
-    case TT_DECLITERAL:       tname[TT_DECLITERAL]         = "TT_DECLITERAL";    
-    case TT_DECLTYPE:         tname[TT_DECLTYPE]           = "TT_DECLTYPE";      
-    case TT_DEFINITION:       tname[TT_DEFINITION]         = "TT_DEFINITION";    
-    case TT_DELETE:           tname[TT_DELETE]             = "TT_DELETE";        
-    case TT_DYNAMIC_CAST:     tname[TT_DYNAMIC_CAST]       = "TT_DYNAMIC_CAST";  
-    case TT_ELLIPSIS:         tname[TT_ELLIPSIS]           = "TT_ELLIPSIS";      
-    case TT_ENDOFCODE:        tname[TT_ENDOFCODE]          = "TT_ENDOFCODE";     
-    case TT_ENUM:             tname[TT_ENUM]               = "TT_ENUM";          
-    case TT_EXTERN:           tname[TT_EXTERN]             = "TT_EXTERN";        
-    case TT_FRIEND:           tname[TT_FRIEND]             = "TT_FRIEND";        
-    case TT_GREATERTHAN:      tname[TT_GREATERTHAN]        = "TT_GREATERTHAN";   
-    case TT_HEXLITERAL:       tname[TT_HEXLITERAL]         = "TT_HEXLITERAL";    
-    case TT_IDENTIFIER:       tname[TT_IDENTIFIER]         = "TT_IDENTIFIER";    
-    case TT_INVALID:          tname[TT_INVALID]            = "TT_INVALID";       
-    case TT_ISEMPTY:          tname[TT_ISEMPTY]            = "TT_ISEMPTY";       
-    case TT_LEFTBRACE:        tname[TT_LEFTBRACE]          = "TT_LEFTBRACE";     
-    case TT_LEFTBRACKET:      tname[TT_LEFTBRACKET]        = "TT_LEFTBRACKET";   
-    case TT_LEFTPARENTH:      tname[TT_LEFTPARENTH]        = "TT_LEFTPARENTH";   
-    case TT_LESSTHAN:         tname[TT_LESSTHAN]           = "TT_LESSTHAN";      
-    case TT_MEMBEROF:         tname[TT_MEMBEROF]           = "TT_MEMBEROF";      
-    case TT_NAMESPACE:        tname[TT_NAMESPACE]          = "TT_NAMESPACE";     
-    case TT_NEW:              tname[TT_NEW]                = "TT_NEW";           
-    case TT_NOEXCEPT:         tname[TT_NOEXCEPT]           = "TT_NOEXCEPT";      
-    case TT_OCTLITERAL:       tname[TT_OCTLITERAL]         = "TT_OCTLITERAL";    
-    case TT_OPERATOR:         tname[TT_OPERATOR]           = "TT_OPERATOR";      
-    case TT_OPERATORKW:       tname[TT_OPERATORKW]         = "TT_OPERATORKW";    
-    case TT_PRIVATE:          tname[TT_PRIVATE]            = "TT_PRIVATE";       
-    case TT_PROTECTED:        tname[TT_PROTECTED]          = "TT_PROTECTED";     
-    case TT_PUBLIC:           tname[TT_PUBLIC]             = "TT_PUBLIC";        
-    case TT_REINTERPRET_CAST: tname[TT_REINTERPRET_CAST]   = "TT_REINTERPRET_CAST";
-    case TT_RIGHTBRACE:       tname[TT_RIGHTBRACE]         = "TT_RIGHTBRACE";    
-    case TT_RIGHTBRACKET:     tname[TT_RIGHTBRACKET]       = "TT_RIGHTBRACKET";  
-    case TT_RIGHTPARENTH:     tname[TT_RIGHTPARENTH]       = "TT_RIGHTPARENTH";  
-    case TT_SCOPE:            tname[TT_SCOPE]              = "TT_SCOPE";         
-    case TT_SEMICOLON:        tname[TT_SEMICOLON]          = "TT_SEMICOLON";     
-    case TT_SIZEOF:           tname[TT_SIZEOF]             = "TT_SIZEOF";        
-    case TT_STATIC_ASSERT:    tname[TT_STATIC_ASSERT]      = "TT_STATIC_ASSERT"; 
-    case TT_STATIC_CAST:      tname[TT_STATIC_CAST]        = "TT_STATIC_CAST";   
-    case TT_STRINGLITERAL:    tname[TT_STRINGLITERAL]      = "TT_STRINGLITERAL"; 
-    case TT_STRUCT:           tname[TT_STRUCT]             = "TT_STRUCT";        
-    case TT_TEMPLATE:         tname[TT_TEMPLATE]           = "TT_TEMPLATE";      
-    case TT_TILDE:            tname[TT_TILDE]              = "TT_TILDE";         
-    case TT_TYPEDEF:          tname[TT_TYPEDEF]            = "TT_TYPEDEF";       
-    case TT_TYPEID:           tname[TT_TYPEID]             = "TT_TYPEID";        
-    case TT_TYPENAME:         tname[TT_TYPENAME]           = "TT_TYPENAME";      
-    case TT_UNION:            tname[TT_UNION]              = "TT_UNION";         
-    case TT_USING:            tname[TT_USING]              = "TT_USING";         
-    case TTM_CONCAT:          tname[TTM_CONCAT]            = "TTM_CONCAT";         
-    case TTM_TOSTRING:        tname[TTM_TOSTRING]          = "TTM_TOSTRING";         
+    case TT_ALIGNAS:          tname[TT_ALIGNAS]            = "TT_ALIGNAS";          // Fallthrough
+    case TT_ALIGNOF:          tname[TT_ALIGNOF]            = "TT_ALIGNOF";          // Fallthrough
+    case TT_ASM:              tname[TT_ASM]                = "TT_ASM";              // Fallthrough
+    case TT_AUTO:             tname[TT_AUTO]               = "TT_AUTO";             // Fallthrough
+    case TT_CHARLITERAL:      tname[TT_CHARLITERAL]        = "TT_CHARLITERAL";      // Fallthrough
+    case TT_CLASS:            tname[TT_CLASS]              = "TT_CLASS";            // Fallthrough
+    case TT_COLON:            tname[TT_COLON]              = "TT_COLON";            // Fallthrough
+    case TT_COMMA:            tname[TT_COMMA]              = "TT_COMMA";            // Fallthrough
+    case TT_CONSTEXPR:        tname[TT_CONSTEXPR]          = "TT_CONSTEXPR";        // Fallthrough
+    case TT_CONST_CAST:       tname[TT_CONST_CAST]         = "TT_CONST_CAST";       // Fallthrough
+    case TT_DECFLAG:          tname[TT_DECFLAG]            = "TT_DECFLAG";          // Fallthrough
+    case TT_DECLARATOR:       tname[TT_DECLARATOR]         = "TT_DECLARATOR";       // Fallthrough
+    case TT_DECLITERAL:       tname[TT_DECLITERAL]         = "TT_DECLITERAL";       // Fallthrough
+    case TT_DECLTYPE:         tname[TT_DECLTYPE]           = "TT_DECLTYPE";         // Fallthrough
+    case TT_DEFINITION:       tname[TT_DEFINITION]         = "TT_DEFINITION";       // Fallthrough
+    case TT_DELETE:           tname[TT_DELETE]             = "TT_DELETE";           // Fallthrough
+    case TT_DYNAMIC_CAST:     tname[TT_DYNAMIC_CAST]       = "TT_DYNAMIC_CAST";     // Fallthrough
+    case TT_ELLIPSIS:         tname[TT_ELLIPSIS]           = "TT_ELLIPSIS";         // Fallthrough
+    case TT_ENDOFCODE:        tname[TT_ENDOFCODE]          = "TT_ENDOFCODE";        // Fallthrough
+    case TT_ENUM:             tname[TT_ENUM]               = "TT_ENUM";             // Fallthrough
+    case TT_EXTERN:           tname[TT_EXTERN]             = "TT_EXTERN";           // Fallthrough
+    case TT_FRIEND:           tname[TT_FRIEND]             = "TT_FRIEND";           // Fallthrough
+    case TT_GREATERTHAN:      tname[TT_GREATERTHAN]        = "TT_GREATERTHAN";      // Fallthrough
+    case TT_HEXLITERAL:       tname[TT_HEXLITERAL]         = "TT_HEXLITERAL";       // Fallthrough
+    case TT_IDENTIFIER:       tname[TT_IDENTIFIER]         = "TT_IDENTIFIER";       // Fallthrough
+    case TT_INVALID:          tname[TT_INVALID]            = "TT_INVALID";          // Fallthrough
+    case TT_ISEMPTY:          tname[TT_ISEMPTY]            = "TT_ISEMPTY";          // Fallthrough
+    case TT_LEFTBRACE:        tname[TT_LEFTBRACE]          = "TT_LEFTBRACE";        // Fallthrough
+    case TT_LEFTBRACKET:      tname[TT_LEFTBRACKET]        = "TT_LEFTBRACKET";      // Fallthrough
+    case TT_LEFTPARENTH:      tname[TT_LEFTPARENTH]        = "TT_LEFTPARENTH";      // Fallthrough
+    case TT_LESSTHAN:         tname[TT_LESSTHAN]           = "TT_LESSTHAN";         // Fallthrough
+    case TT_MEMBEROF:         tname[TT_MEMBEROF]           = "TT_MEMBEROF";         // Fallthrough
+    case TT_NAMESPACE:        tname[TT_NAMESPACE]          = "TT_NAMESPACE";        // Fallthrough
+    case TT_NEW:              tname[TT_NEW]                = "TT_NEW";              // Fallthrough
+    case TT_NOEXCEPT:         tname[TT_NOEXCEPT]           = "TT_NOEXCEPT";         // Fallthrough
+    case TT_OCTLITERAL:       tname[TT_OCTLITERAL]         = "TT_OCTLITERAL";       // Fallthrough
+    case TT_OPERATOR:         tname[TT_OPERATOR]           = "TT_OPERATOR";         // Fallthrough
+    case TT_OPERATORKW:       tname[TT_OPERATORKW]         = "TT_OPERATORKW";       // Fallthrough
+    case TT_PRIVATE:          tname[TT_PRIVATE]            = "TT_PRIVATE";          // Fallthrough
+    case TT_PROTECTED:        tname[TT_PROTECTED]          = "TT_PROTECTED";        // Fallthrough
+    case TT_PUBLIC:           tname[TT_PUBLIC]             = "TT_PUBLIC";           // Fallthrough
+    case TT_REINTERPRET_CAST: tname[TT_REINTERPRET_CAST]   = "TT_REINTERPRET_CAST"; // Fallthrough
+    case TT_RIGHTBRACE:       tname[TT_RIGHTBRACE]         = "TT_RIGHTBRACE";       // Fallthrough
+    case TT_RIGHTBRACKET:     tname[TT_RIGHTBRACKET]       = "TT_RIGHTBRACKET";     // Fallthrough
+    case TT_RIGHTPARENTH:     tname[TT_RIGHTPARENTH]       = "TT_RIGHTPARENTH";     // Fallthrough
+    case TT_SCOPE:            tname[TT_SCOPE]              = "TT_SCOPE";            // Fallthrough
+    case TT_SEMICOLON:        tname[TT_SEMICOLON]          = "TT_SEMICOLON";        // Fallthrough
+    case TT_SIZEOF:           tname[TT_SIZEOF]             = "TT_SIZEOF";           // Fallthrough
+    case TT_STATIC_ASSERT:    tname[TT_STATIC_ASSERT]      = "TT_STATIC_ASSERT";    // Fallthrough
+    case TT_STATIC_CAST:      tname[TT_STATIC_CAST]        = "TT_STATIC_CAST";      // Fallthrough
+    case TT_STRINGLITERAL:    tname[TT_STRINGLITERAL]      = "TT_STRINGLITERAL";    // Fallthrough
+    case TT_STRUCT:           tname[TT_STRUCT]             = "TT_STRUCT";           // Fallthrough
+    case TT_TEMPLATE:         tname[TT_TEMPLATE]           = "TT_TEMPLATE";         // Fallthrough
+    case TT_TILDE:            tname[TT_TILDE]              = "TT_TILDE";            // Fallthrough
+    case TT_TYPEDEF:          tname[TT_TYPEDEF]            = "TT_TYPEDEF";          // Fallthrough
+    case TT_TYPEID:           tname[TT_TYPEID]             = "TT_TYPEID";           // Fallthrough
+    case TT_TYPENAME:         tname[TT_TYPENAME]           = "TT_TYPENAME";         // Fallthrough
+    case TT_UNION:            tname[TT_UNION]              = "TT_UNION";            // Fallthrough
+    case TT_USING:            tname[TT_USING]              = "TT_USING";            // Fallthrough
+    case TTM_CONCAT:          tname[TTM_CONCAT]            = "TTM_CONCAT";          // Fallthrough
+    case TTM_TOSTRING:        tname[TTM_TOSTRING]          = "TTM_TOSTRING";        // Fallthrough
   }
 }
 
@@ -136,6 +136,7 @@ static void write_tokens() {
 }
 
 int main() {
+  cout << "Hello" << endl;
   initialize();
   cout << endl << endl;
   
@@ -181,7 +182,7 @@ int main() {
     builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include-fixed");
     
     llreader macro_reader("test/defines_custom.txt");
-  #else
+  #elif 0
     #ifdef __WIN32__
       builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++");
       builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++/mingw32");
@@ -207,12 +208,24 @@ int main() {
     #endif
   #endif
   
+  builtin->add_search_directory("/usr/include/c++/7.2.0");
+  builtin->add_search_directory("/usr/include/c++/7.2.0/x86_64-pc-linux-gnu");
+  builtin->add_search_directory("/usr/include/c++/7.2.0/backward");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.2.0/include");
+  builtin->add_search_directory("/usr/local/include");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.2.0/include-fixed");
+  builtin->add_search_directory("/usr/include");
+  builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
+  builtin->add_search_directory("/home/josh/.enigma/");
+  llreader macro_reader("test/defines_linux.txt");
+
+  
   if (macro_reader.is_open())
     builtin->parse_C_stream(macro_reader, "defines.txt");
   else
     cout << "ERROR: Could not open GCC macro file for parse!" << endl;
   
-  putcap("Text type reading");
+  putcap("Test type reading");
   name_type("int", *builtin);
   name_type("int*", *builtin);
   name_type("int&", *builtin);
@@ -223,7 +236,7 @@ int main() {
   write_tokens();
   
   putcap("Test parser");
-  llreader f("test/test.cc");
+  llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");
   if (f.is_open())
   {
     /* */
