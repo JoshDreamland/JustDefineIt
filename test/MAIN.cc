@@ -55,7 +55,7 @@ void do_cli(context &ct);
 
 #include <fstream>
 const char* tname[TT_INVALID + 1];
-static void populate_tnames() {
+/*static void populate_tnames() {
   TOKEN_TYPE tt = (TOKEN_TYPE)-1;
   switch (tt) { default:
     case TT_ALIGNAS:          tname[TT_ALIGNAS]            = "TT_ALIGNAS";          // Fallthrough
@@ -120,9 +120,9 @@ static void populate_tnames() {
     case TTM_CONCAT:          tname[TTM_CONCAT]            = "TTM_CONCAT";          // Fallthrough
     case TTM_TOSTRING:        tname[TTM_TOSTRING]          = "TTM_TOSTRING";        // Fallthrough
   }
-}
+}*/
 
-static void write_tokens() {
+/*static void write_tokens() {
   populate_tnames();
   context ct;
   llreader llr("test/test.cc");
@@ -133,7 +133,7 @@ static void write_tokens() {
     f << tname[tk.type] << "(" << tk.linenum << "), ";
   f << "END OF STREAM" << endl;
   f.close();
-}
+}*/
 
 int main() {
   cout << "Hello" << endl;
@@ -233,7 +233,7 @@ int main() {
   name_type("int(*)()", *builtin);
   name_type("int&(*)()", *builtin);
   
-  write_tokens();
+  // write_tokens();
   
   putcap("Test parser");
   llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");

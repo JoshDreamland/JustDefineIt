@@ -538,10 +538,10 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         for (size_t i = 0; i < builtin->search_dir_count(); ++i) {
           if (incfile.is_open()) break;
           if (!incnext) {
-            cout << "fnfind:" << endl;
-            cout << "  [" << fnfind.length() << "]\"" << fnfind << '"' << endl;
-            cout << "  [" << builtin->search_dir(i).length() << "]\"" << builtin->search_dir(i) << '"' << endl;
-            cout << "  cat: " << flush << (builtin->search_dir(i) + fnfind) << endl;
+            // cout << "fnfind:" << endl;
+            // cout << "  [" << fnfind.length() << "]\"" << fnfind << '"' << endl;
+            // cout << "  [" << builtin->search_dir(i).length() << "]\"" << builtin->search_dir(i) << '"' << endl;
+            // cout << "  cat: " << flush << (builtin->search_dir(i) + fnfind) << endl;
             incfile.open((incfn = (fdir = builtin->search_dir(i)) + fnfind).c_str());
           }
           else
