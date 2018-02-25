@@ -440,6 +440,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     if (scope->flags & DEF_CLASS) {
       token = read_next_token(scope);
       if (token.type == TT_CLASS) {
+        token = read_next_token(scope);
         read_qualified_definition(token, temp);
         delete temp;
         if (token.type != TT_SEMICOLON)

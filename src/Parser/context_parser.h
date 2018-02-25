@@ -361,9 +361,9 @@ namespace jdip {
                      TT_NAMESPACE. Upon termination, the type of this token will
                      be TT_RIGHTBRACE unless an error occurs. [in-out]
       
-      @return Zero if no error occurred, a non-zero exit status otherwise.
+      @return The namespace that was populated, or NULL upon failure.
     **/
-    int handle_namespace(definition_scope *scope, token_t& token);
+    definition_scope *handle_namespace(definition_scope *scope, token_t& token);
     
     /**
       Parse a class or struct definition.

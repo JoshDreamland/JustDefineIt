@@ -122,7 +122,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
           /* Printing a warning here is advisable but unnecessary. */
         break;
       
-      case TT_NAMESPACE: if (handle_namespace(scope,token)) return 1; break;
+      case TT_NAMESPACE: if (!handle_namespace(scope,token)) return 1; break;
       case TT_LEFTPARENTH: {
           token.report_error(herr, "Stray opening parenthesis.");
           #if FATAL_ERRORS

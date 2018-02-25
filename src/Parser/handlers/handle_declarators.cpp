@@ -40,6 +40,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
 {
   // Skip destructor tildes; log if we are a destructor
   bool dtor = token.type == TT_TILDE;
+  bool _inline = token.type == TT_DECFLAG && token.content.toString() == "inline";
   if (dtor) token = read_next_token(scope);
   
   // Outsource to read_fulltype, which will take care of the hard work for us.
@@ -78,7 +79,14 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
       res = scope->overload_function("(cast)", ft, inherited_flags, token, herr);
       return !res;
     }
-    else {
+    else if (_inline && token.type == TT_NAMESPACE) { 
+      definition_scope *ns = handle_namespace(scope, token);
+      if (!ns) return 1;
+      scope->use_namespace(ns);
+      if (token.type != TT_RIGHTBRACE) return 1;
+      token.type = TT_SEMICOLON;
+      return 0;
+    } else {
       token.report_error(herr, "Declaration does not give a valid type");
       return 1;
     }
