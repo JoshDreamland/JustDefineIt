@@ -208,12 +208,12 @@ int main() {
     #endif
   #endif
   
-  builtin->add_search_directory("/usr/include/c++/7.2.0");
-  builtin->add_search_directory("/usr/include/c++/7.2.0/x86_64-pc-linux-gnu");
-  builtin->add_search_directory("/usr/include/c++/7.2.0/backward");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.2.0/include");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/../../../../include/c++/7.3.0");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/../../../../include/c++/7.3.0/x86_64-pc-linux-gnu");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/../../../../include/c++/7.3.0/backward");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/include");
   builtin->add_search_directory("/usr/local/include");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.2.0/include-fixed");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/include-fixed");
   builtin->add_search_directory("/usr/include");
   builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
   builtin->add_search_directory("/home/josh/.enigma/");

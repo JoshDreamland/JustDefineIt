@@ -171,6 +171,9 @@
 		<Unit filename="test/debug_lexer.h">
 			<Option virtualFolder="test/" />
 		</Unit>
+		<Unit filename="test/defines_linux.txt">
+			<Option virtualFolder="test/" />
+		</Unit>
 		<Unit filename="test/modifiers.txt">
 			<Option virtualFolder="test/" />
 		</Unit>
