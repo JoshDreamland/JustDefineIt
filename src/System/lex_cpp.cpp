@@ -853,7 +853,7 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
     ++sz;
   if (newline_eof)
     if (open_macro_count)
-      return read_raw<false>(herr, is_id, idout);
+      return read_raw<true>(herr, is_id, idout);
   goto top;
 }
 
@@ -913,7 +913,8 @@ token_t lexer_macro::get_token(error_handler *herr)
   if (is_id) // Identifiers and keywords stop here.
   {
     static const char zero[] = "0", one[] = "1";
-    if (res.content.len == 7 && !strncmp((const char*)res.content.str, "defined", 7)) // magic number: strlen("defined") == 7; this is unlikely to change
+    // magic number: strlen("defined") == 7; this is unlikely to change
+    if (res.content.len == 7 && !strncmp((const char*) res.content.str, "defined", 7))
     {
       lex_base->skip_whitespace();
       bool endpar = lex_base->data[lex_base->pos] == '(';

@@ -224,6 +224,10 @@ namespace jdip {
       @param error The text of the error.
     **/
     void report_warning(error_handler *herr, std::string error) const;
+    /** Comparatively slow method to represent this token as a human-readable string. */
+    std::string to_string() const;
+    
+    static std::string get_name(TOKEN_TYPE type);
   };
 }
 

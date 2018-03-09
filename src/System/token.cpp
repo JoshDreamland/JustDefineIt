@@ -86,8 +86,8 @@ static struct token_info_c {
       case TT_NOEXCEPT: name[TT_NOEXCEPT] = "`noexcept' token"; // Fallthrough
       case TT_STATIC_ASSERT: name[TT_STATIC_ASSERT] = "`static_assert' token"; // Fallthrough
       
-      case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier"; // Fallthrough
-      case TT_DEFINITION: name[TT_DEFINITION] = "identifier"; // Fallthrough
+      case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier (\"%s\")"; // Fallthrough
+      case TT_DEFINITION: name[TT_DEFINITION] = "identifier (\"%s\")"; // Fallthrough
       
       case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token"; // Fallthrough
       case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token"; // Fallthrough
@@ -157,17 +157,10 @@ void token_t::report_errorf(error_handler *herr, std::string error) const
     p = pos
   );
   
-  size_t f;
-  string str = token_info.name[type];
-  f = str.find("%s");
+  string str = to_string();
+  size_t f = error.find("%s");
   while (f != string::npos) {
-    str.replace(f,2,string((const char*)content.str,content.len));
-    f = str.find("%s");
-  }
-  
-  f = error.find("%s");
-  while (f != string::npos) {
-    error.replace(f,2,str);
+    error.replace(f, 2, str);
     f = error.find("%s");
   }
   
@@ -182,6 +175,16 @@ void token_t::report_errorf(error_handler *herr, std::string error) const
     }
   #endif
 }
+std::string token_t::to_string() const {
+  size_t f;
+  string str = token_info.name[type];
+  f = str.find("%s");
+  while (f != string::npos) {
+    str.replace(f, 2, string((const char*) content.str, content.len));
+    f = str.find("%s");
+  }
+  return str;
+}
 void token_t::report_warning(error_handler *herr, std::string error) const
 {
   string fn; // Default values for non-existing info members
@@ -195,4 +198,15 @@ void token_t::report_warning(error_handler *herr, std::string error) const
   );
   
   herr->warning(error, fn, l, p);
+}
+
+std::string token_t::get_name(TOKEN_TYPE tt) {
+  size_t f;
+  string str = token_info.name[tt];
+  f = str.find("%s");
+  while (f != string::npos) {
+    str.replace(f, 2, "(content)");
+    f = str.find("%s");
+  }
+  return str;
 }
