@@ -164,7 +164,19 @@ namespace jdip
         myroot = new AST_Node(token.content.toString(), at = AT_TEMPID);
         break;
       
-      case TT_OPERATOR: case TT_TILDE: {
+      case TT_SLASH: case TT_MODULO: case TT_NOT_EQUAL_TO: case TT_EQUAL_TO:
+      case TT_LESS_EQUAL: case TT_GREATER_EQUAL: case TT_LSHIFT: case TT_RSHIFT:
+      case TT_PIPE: case TT_PIPES: case TT_CARET: case TT_QUESTIONMARK:
+      case TT_ARROW: case TT_DOT: case TT_ARROW_STAR: case TT_DOT_STAR:
+      
+      case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN:
+      case TT_MULTIPLY_ASSIGN: case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN:
+      case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
+      
+      // TODO: None of the above can be used as unary operators.
+      case TT_PLUS: case TT_MINUS: case TT_INCREMENT: case TT_DECREMENT:
+      case TT_NOT: case TT_TILDE: case TT_STAR: case TT_AMPERSAND: case TT_AMPERSANDS: {
         ct = token.content.toString();
         symbol& op = symbols[ct];
         if (not(op.type & ST_UNARY_PRE)) {
@@ -184,7 +196,7 @@ namespace jdip
       case TT_SCOPE:
           token.report_error(cparse->herr, "Unimplemented: global access '::'");
         return NULL;
-      case TT_MEMBEROF:
+      case TT_MEMBER:
           token.report_error(cparse->herr, "Unhandled (class::*) pointer");
         return NULL;
       
@@ -257,13 +269,8 @@ namespace jdip
         ann->alloc_type = cparse->read_type(token, search_scope);
         
         bool stillgoing = true;
-        while (token.type == TT_OPERATOR) {
-          if (token.content.len != 1 or *token.content.str != '*') {
-            stillgoing = false;
-            break;
-          }
-          else
-            ann->alloc_type.refs.push(ref_stack::RT_POINTERTO);
+        while (token.type == TT_STAR) {
+          ann->alloc_type.refs.push(ref_stack::RT_POINTERTO);
         }
         
         if (stillgoing and token.type == TT_LEFTBRACKET) {
@@ -391,6 +398,7 @@ namespace jdip
       case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
       case TT_ALIGNAS: case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
+      case TT_INLINE:
       #include <User/token_cases.h>
         token.report_errorf(cparse->herr, "Expected expression before %s");
         return NULL;
@@ -417,7 +425,8 @@ namespace jdip
   AST_Node* AST_Builder::parse_binary_or_unary_post(AST* ast, token_t &token, AST_Node *left_node, int prec_min) {
     switch (token.type)
     {
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN:
+      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT:
+      case TT_ENUM: case TT_UNION: case TT_EXTERN: case TT_INLINE:
         return left_node;
       
       case TT_IDENTIFIER: case TT_DEFINITION:
@@ -447,7 +456,7 @@ namespace jdip
         left_node = new AST_Node_Scope(left_node,right,"::");
         break;
       }
-      case TT_MEMBEROF:
+      case TT_MEMBER:
         track(string("::*"));
         token.report_error(cparse->herr, "Not handled: (class::*) pointers");
         delete left_node;
@@ -487,7 +496,18 @@ namespace jdip
         }
         // Fallthrough
           
-      case TT_OPERATOR: case_TT_OPERATOR: {
+      case TT_PLUS: case TT_MINUS: case TT_STAR: case TT_SLASH: case TT_MODULO:
+      case TT_INCREMENT: case TT_DECREMENT: case TT_NOT: case TT_TILDE:
+      case TT_LSHIFT: case TT_RSHIFT:
+      
+      case TT_EQUAL_TO: case TT_NOT_EQUAL_TO: case TT_LESS_EQUAL: case TT_GREATER_EQUAL:
+      case TT_AMPERSAND: case TT_AMPERSANDS: case TT_PIPE: case TT_PIPES: case TT_CARET:
+      case TT_ARROW: case TT_DOT: case TT_ARROW_STAR: case TT_DOT_STAR: case TT_QUESTIONMARK:
+      
+      case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
+      case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
+      case_TT_OPERATOR: {
           string op(token.content.toString());
           map<string,symbol>::iterator b = symbols.find(op);
           if (b == symbols.end()) {
@@ -573,7 +593,6 @@ namespace jdip
           }
         }
         break;
-      case TT_TILDE:
       
       case TT_LEFTPARENTH:
           if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE or left_node->type == AT_SCOPE) {
@@ -602,8 +621,7 @@ namespace jdip
                   ++depth;
                 else if (tk.type == TT_ENDOFCODE)
                   break;
-                else if (tk.type != TT_OPERATOR or tk.content.len != 1
-                     or (*tk.content.str != '*' and *tk.content.str != '&'))
+                else if (tk.type != TT_STAR && tk.type != TT_AMPERSAND)
                   is_cast = false;
               }
               if (token.type != TT_RIGHTPARENTH) {

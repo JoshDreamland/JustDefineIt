@@ -29,7 +29,9 @@ string jdip::context_parser::read_operatorkw_name(token_t &token, definition_sco
 {
   string res;
   token = lex->get_token_in_scope(scope, herr);
-  if (token.type == TT_OPERATOR or token.type == TT_LESSTHAN or token.type == TT_GREATERTHAN or token.type == TT_TILDE) {
+  if (token.gloss_type() == GTT_OPERATORMISC || token.gloss_type() == GTT_ANGLE
+      || token.gloss_type() == GTT_ARITHMETIC || token.gloss_type() == GTT_EQUAL
+      || token.gloss_type() == GTT_RELATIVE_ASSIGN) {
     res = "operator" + token.content.toString();
     token = lex->get_token_in_scope(scope, herr);
   }

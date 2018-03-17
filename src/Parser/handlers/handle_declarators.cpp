@@ -232,21 +232,15 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
   extra_loop:
   for (;;)
   {
-    switch (token.type) {
-      case TT_OPERATOR:
-          if (token.content.len != 1 or *token.content.str != '=') { // If this operator isn't =, this is a fatal error. No idea where we are.
-            case TT_GREATERTHAN: case TT_LESSTHAN:
-            token.report_error(herr, "Unexpected operator `" + token.content.toString() + "' at this point");
-            return 5;
-          }
-          else {
-            AST ast;
-            token = read_next_token(scope);
-            astbuilder->parse_expression(&ast, token, scope, precedence::comma);
-            // TODO: Store AST
-          }
+    switch (token.gloss_type()) {
+      case GTT_EQUAL: {
+          AST ast;
+          token = read_next_token(scope);
+          astbuilder->parse_expression(&ast, token, scope, precedence::comma);
         break;
-      case TT_COMMA:
+      }
+      case GTT_OPERATORMISC:
+        if (token.type == TT_COMMA) {
           // Move past this comma
           token = read_next_token(scope);
           
@@ -254,9 +248,8 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
           read_referencers(tp.refs, tp, token, scope);
           
           // Just hop into the error checking above and pass through the definition addition again.
-        return handle_declarators(scope, token, tp, inherited_flags, res);
-        
-      case TT_COLON: {
+          return handle_declarators(scope, token, tp, inherited_flags, res);
+        } else if (token.type == TT_COLON) {
           definition *root = tp.def;
           while (root->flags & DEF_TYPED and (root = ((definition_typed*)root)->type)); 
           if (root != builtin_type__int and root != builtin_type__long and root != builtin_type__short) {
@@ -271,38 +264,22 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
             FATAL_RETURN(1);
           }
           // TODO: Store the bit count somewhere
-        } break;
+          break;
+        }
+        token.report_error(herr, "Unexpected operator `" + token.content.toString() + "' at this point");
+        return 5;
       
-      case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
+      case GTT_LITERAL:
           token.report_error(herr, "Expected initializer `=' here before literal.");
         return 5;
       
-      case TT_MEMBEROF:
-          token.report_error(herr, "Unhandled (class::*) pointer");
-        return 1;
-      
-      case TT_ALIGNAS:
-          token.report_error(herr, "Not implemented: `alignas'");
-        return 1;
-      
-      case TT_NOEXCEPT:
-          token.report_error(herr, "Not implemented: `noexcept'");
-        return 1;
-      
-      case TT_ELLIPSIS:
-      case TT_SEMICOLON:
-      
-      case TT_DECLARATOR: case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_NAMESPACE: case TT_EXTERN: case TT_IDENTIFIER:
-      case TT_DEFINITION: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
-      case TT_SCOPE: case TT_LEFTPARENTH: case TT_RIGHTPARENTH: case TT_LEFTBRACKET: case TT_RIGHTBRACKET: case TT_LEFTBRACE: case TT_RIGHTBRACE:
-      case TT_ASM: case TT_TILDE: case TTM_CONCAT: case TTM_TOSTRING: case TT_ENDOFCODE: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_OPERATORKW:
-      case TT_NEW: case TT_DELETE: case TT_DECLTYPE: case TT_TYPEID: case TT_INVALID:
-      case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
-      case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
+      case GTT_DECLARATOR: case GTT_BRACKET: case GTT_MEMORYOP: case GTT_PREPROCESSOR:
+      case GTT_CONSTRUCT: case GTT_TYPEOP: case GTT_VISIBILITYSPEC: case GTT_IDENTIFIER:
+      case GTT_TEMPLATE: case GTT_USING: case GTT_ARITHMETIC: case GTT_RELATIVE_ASSIGN:
+      case GTT_ANGLE: case GTT_ENDOFCODE: case GTT_INVALID:
       default:
-      #include <User/token_cases.h>
         return 0;
-    }
+      }
   }
   
   return 0;

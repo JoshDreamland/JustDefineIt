@@ -27,84 +27,146 @@
 #include <string>
 
 namespace jdip {
+  enum GLOSS_TOKEN_TYPE {
+    GTT_DECLARATOR,     ///< Type names and modifiers.
+    GTT_CONSTRUCT,      ///< Tokens like class, struct, enum, union, namespace.
+    GTT_TYPEOP,         ///< Operations like sizeof, alignof, is_empty, decltype...
+    GTT_VISIBILITYSPEC, ///< Visibility specifier, like public or private.
+    GTT_IDENTIFIER,     ///< An identifier, with or without an attached definition.
+    GTT_TEMPLATE,       ///< The `template` keyword.
+    GTT_USING,          ///< The `using` keyword.
+    GTT_ARITHMETIC,     ///< Arithmetic and comparison operators, such as `+` or `==`.
+    GTT_EQUAL,          ///< Assignment operators, such as `=`, `+=`, and `<<=`.
+    GTT_RELATIVE_ASSIGN,///< Assignment operators, such as `=`, `+=`, and `<<=`.
+    GTT_ANGLE,          ///< Angle brackets or comparison operators, like `<` and `>>`.
+    GTT_OPERATORMISC,   ///< Miscellaneous operators that appear outside of expressions, like `:` or `~`.
+    GTT_LITERAL,        ///< String or numeric literals.
+    GTT_BRACKET,        ///< Brackets, including braces and parentheses, but not angle brackets (GTT_ANGLE).
+    GTT_MEMORYOP,       ///< Memory and cast operators, eg, `new`, `delete`, `static_cast`.
+    GTT_PREPROCESSOR,   ///< Preprocessor-only tokens.
+    GTT_ENDOFCODE,      ///< Signals the end of input.
+    GTT_INVALID         ///< Invalid; read failed.
+  };
+  
+  /// Used when defining `TOKEN_TYPE`s to choose a specific token value based on a gloss token value.
+  constexpr int GLOSS(int gloss_token) { return gloss_token << 5; }
+  
   enum TOKEN_TYPE {
-    TT_DECLARATOR, ///< Phrases like int, struct {}, std::map; anything that can be used as a type. 
-    TT_DECFLAG,    ///< Phrases which can be used multiple times in a declaration as flags, like const, unsigned, long. 
-    TT_CLASS,      ///< The `class' keyword.
-    TT_STRUCT,     ///< The `struct' keyword.
-    TT_ENUM,       ///< The `enum' keyword.
-    TT_UNION,      ///< The `union' keyword.
-    TT_NAMESPACE,  ///< The `namespace' keyword.
-    TT_EXTERN,     ///< The `extern' keyword.
+    TT_DECLARATOR = GLOSS(GTT_DECLARATOR), ///< Primitive type catch-it-all.
+    TT_DECFLAG,    ///< Phrases which can be used multiple times in a declaration as flags, like const, unsigned, long.
+    TT_TYPENAME,   ///< The `typename` keyword.
+    TT_INLINE,     ///< The `inline` keyword.
+    TT_EXTERN,     ///< The `extern` keyword.
+    TT_TYPEDEF,    ///< The `typedef' keyword.
+    TT_AUTO,       ///< The `auto` type resolver.        (C++11)
+    TT_DECLTYPE,   ///< The `decltype' keyword.          (C++11)
+    TT_ALIGNAS,    ///< The `alignas' specifier.         (C++11)
+    TT_CONSTEXPR,  ///< The `constexpr' specifier.       (C++11)
+    TT_NOEXCEPT,   ///< The `noexcept' specifier.        (C++11)
     
-    TT_ASM,        ///< The `asm' keyword.
-    TT_OPERATORKW, ///< The `operator' keyword; TT_OPERATOR is a generic operator.
-    TT_SIZEOF,     ///< The `sizeof' keyword.
+    TT_CLASS      = GLOSS(GTT_CONSTRUCT), ///< The `class` keyword.
+    TT_STRUCT,     ///< The `struct` keyword.
+    TT_ENUM,       ///< The `enum` keyword.
+    TT_UNION,      ///< The `union` keyword.
+    TT_NAMESPACE,  ///< The `namespace` keyword.
+    
+    TT_USING      = GLOSS(GTT_USING), ///< The `using' keyword.
+    
+    TT_ASM,        ///< The `asm` keyword.
+    TT_OPERATORKW, ///< The actual `operator` keyword.
+
+    TT_SIZEOF    = GLOSS(GTT_TYPEOP), ///< The `sizeof' keyword.
+    TT_ALIGNOF,    ///< The `alignof' operator.          (C++11)
     TT_ISEMPTY,    ///< The `is_empty' keyword.
-    TT_DECLTYPE,   ///< The `decltype' keyword.
     TT_TYPEID,     ///< The `typeid' keyword.
-    
-    TT_ALIGNAS,       ///< The `alignas' specifier.      (C++11)
-    TT_ALIGNOF,       ///< The `alignof' operator.       (C++11)
-    TT_AUTO,          ///< The `auto' type resolver.     (C++11)
-    TT_CONSTEXPR,     ///< The `constexpr' specifier.    (C++11)
-    TT_NOEXCEPT,      ///< The `noexcept' specifier.     (C++11)
     TT_STATIC_ASSERT, ///< The `static_assert' operator. (C++11)
     
-    TT_IDENTIFIER, ///< A standard identifier.
+    TT_IDENTIFIER = GLOSS(GTT_IDENTIFIER), ///< A standard identifier.
     TT_DEFINITION, ///< Something previously declared that is not immediately useful, like a field or function.
     
-    TT_TEMPLATE,   ///< The `template' keyword, which should be followed by <...>
-    TT_TYPENAME,   ///< The `typename' keyword.
+    TT_TEMPLATE = GLOSS(GTT_TEMPLATE),     ///< The `template' keyword, which should be followed by <...>
     
-    TT_TYPEDEF,    ///< The `typedef' keyword.
-    TT_USING,      ///< The `using' keyword.
-    
-    TT_PUBLIC,     ///< The `public' keyword.
+    TT_PUBLIC = GLOSS(GTT_VISIBILITYSPEC), ///< The `public' keyword.
     TT_PRIVATE,    ///< The `private' keyword.
     TT_PROTECTED,  ///< The `protected' keyword.
     TT_FRIEND,     ///< The `friend' keyword.
     
-    TT_COLON,      ///< A simple colon, which should always mark a label.
-    TT_SCOPE,      ///< The scope accessor `::' symbol.
-    TT_MEMBEROF,   ///< A pseudo-token representing ::*. Will be returned instead of * when reading passes the ::.
+    TT_PLUS = GLOSS(GTT_ARITHMETIC), ///< The `+` operator.
+    TT_MINUS,         ///< The `-` operator.
+    TT_STAR,          ///< The `*` operator.
+    TT_SLASH,         ///< The `/` operator.
+    TT_MODULO,        ///< The `%` operator.
+    TT_NOT_EQUAL_TO,  ///< The `!=` operator.
+    TT_EQUAL_TO,      ///< The `==` operator.
+    TT_LESS_EQUAL,    ///< The `<=` operator.
+    TT_GREATER_EQUAL, ///< The `>=` operator.
+    TT_AMPERSAND,     ///< The `&` operator.
+    TT_AMPERSANDS,    ///< The `&&` operator.
+    TT_PIPE,          ///< The `|` operator.
+    TT_PIPES,         ///< The `||` operator.
+    TT_CARET,         ///< The `^` operator.
+    TT_INCREMENT,     ///< The `++` operator.
+    TT_DECREMENT,     ///< The `--` operator.
+    TT_ARROW,         ///< The `->` operator.
+    TT_DOT,           ///< The `.` operator.
+    TT_ARROW_STAR,    ///< The `->*` operator.
+    TT_DOT_STAR,      ///< The `.*` operator.
+    TT_QUESTIONMARK,  ///< The ternary `?` operator.
     
-    TT_LEFTPARENTH,   ///< A left parenthesis, `('.
+    TT_EQUAL = GLOSS(GTT_EQUAL), ///< The `=` operator.
+
+    TT_ADD_ASSIGN = GLOSS(GTT_RELATIVE_ASSIGN), ///< The `+=` operator.
+    TT_SUBTRACT_ASSIGN, ///< The `-=` operator.
+    TT_MULTIPLY_ASSIGN, ///< The `*=` operator.
+    TT_DIVIDE_ASSIGN,   ///< The `/=` operator.
+    TT_MODULO_ASSIGN,   ///< The `%=` operator.
+    TT_LSHIFT_ASSIGN,   ///< The `<<=` operator.
+    TT_RSHIFT_ASSIGN,   ///< The `>>=` operator.
+    TT_AND_ASSIGN,      ///< The `&=` operator.
+    TT_OR_ASSIGN,       ///< The `|=` operator.
+    TT_XOR_ASSIGN,      ///< The `^=` operator.
+    TT_NEGATE_ASSIGN,   ///< The `~=` operator.
+    
+    TT_LESSTHAN = GLOSS(GTT_ANGLE), ///< A less-than symbol, or left angle bracket, `<`.
+    TT_GREATERTHAN, ///< A greater-than symbol, or right angle bracket, `>`.
+    TT_LSHIFT,     ///< The `<<` operator.
+    TT_RSHIFT,     ///< The `>>` operator.
+    
+    TT_COLON = GLOSS(GTT_OPERATORMISC), ///< A simple colon, which should always mark a label.
+    TT_SCOPE,        ///< The scope accessor `::` symbol.
+    TT_MEMBER,       ///< The member pointer access operator, `::*`.
+    TT_TILDE,        ///< The tilde `~' symbol.
+    TT_NOT,          ///< The `!` symbol or `not` keyword.
+    TT_ELLIPSIS,     ///< An ellipsis: Three dots. (...)
+    TT_COMMA,         ///< A comma, `,'. Separates items in lists.
+    TT_SEMICOLON,     ///< A semicolon, `;'. Separates statements and declarations.
+    
+    TT_LEFTPARENTH = GLOSS(GTT_BRACKET), ///< A left parenthesis, `('.
     TT_RIGHTPARENTH,  ///< A right parenthesis, `)'.
     TT_LEFTBRACKET,   ///< A left bracket, `['.
     TT_RIGHTBRACKET,  ///< A right bracket, `]'.
     TT_LEFTBRACE,     ///< A left brace, `{'.
     TT_RIGHTBRACE,    ///< A right brace, `}'.
-    TT_LESSTHAN,      ///< A less-than symbol, or left triangle bracket, `<'.
-    TT_GREATERTHAN,   ///< A greater-than symbol, or right triangle bracket, `>'.
     
-    TT_TILDE,         ///< The tilde `~' symbol.
-    TT_ELLIPSIS,      ///< An ellipsis: Three dots. (...)
-    TT_OPERATOR,      ///< Any sort of operator. This token is used only when the token has no other purpose but as an operator.
-    
-    TT_COMMA,         ///< A comma, `,'. Separates items in lists.
-    TT_SEMICOLON,     ///< A semicolon, `;'. Separates statements and declarations.
-    
-    TT_STRINGLITERAL, ///< A string literal, such as "hello, world!"
+    TT_STRINGLITERAL = GLOSS(GTT_LITERAL), ///< A string literal, such as "hello, world!"
     TT_CHARLITERAL,   ///< A character literal, such as 'h'
     TT_DECLITERAL,    ///< A decimal literal, such as 12345
     TT_HEXLITERAL,    ///< A hexadecimal literal, such as 0xDEC0DED
     TT_OCTLITERAL,    ///< An octal literal, such as 07654321.
     
-    TTM_CONCAT,       ///< A macro-only token meaning the concatenation of two tokens to form a new token, '##'.
-    TTM_TOSTRING,     ///< A macro-only token meaning the value of a parameter, treated as a string literal, '#'.
-    
-    TT_NEW,           ///< The `new' keyword.
-    TT_DELETE,        ///< The `delete' keyword.
-    
+    TT_NEW = GLOSS(GTT_MEMORYOP), ///< The `new' keyword.
+    TT_DELETE,           ///< The `delete' keyword.
     TT_CONST_CAST,       ///< The `const_cast' operator
     TT_STATIC_CAST,      ///< The `static_cast' operator
     TT_DYNAMIC_CAST,     ///< The `dynamic_cast' operator
     TT_REINTERPRET_CAST, ///< The `reinterpret_cast' operator
     
-    TT_ENDOFCODE,     ///< This token signifies that the code has reached its end.
+    TTM_CONCAT = GLOSS(GTT_PREPROCESSOR), ///< A macro-only token meaning the concatenation of two tokens to form a new token, '##'.
+    TTM_TOSTRING, ///< A macro-only token meaning the value of a parameter, treated as a string literal, '#'.
+    
+    TT_ENDOFCODE = GLOSS(GTT_ENDOFCODE), ///< This token signifies that the code has reached its end.
     #include <User/token_types.h>
-    TT_INVALID        ///< Invalid token; read failed.
+    TT_INVALID = GLOSS(GTT_INVALID) ///< Invalid token; read failed.
   };
   
   #ifdef DEBUG_MODE
@@ -144,6 +206,9 @@ namespace jdip {
   **/
   struct token_t {
     TOKEN_TYPE type; ///< The type of this token
+    inline GLOSS_TOKEN_TYPE gloss_type() {
+      return (GLOSS_TOKEN_TYPE) (type >> 4);
+    }
     
     /// Construct a new, invalid token.
     token_t();

@@ -215,11 +215,14 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
           return PT_FUNCTION;
         return PT_GROUPORINIT;
       }
-      else if (token.type == TT_OPERATOR) {
-        if (token.content.len > 1) return PT_INITIALIZERS;
-        if (*token.content.str == '=') return PT_FUNCTION;
-        if (*token.content.str == '*' or *token.content.str == '&')
-          return seen_type? PT_FUNCTION : PT_GROUPORINIT;
+      else if (token.type == TT_EQUAL) {
+        return PT_FUNCTION;
+      }
+      else if (token.type == TT_STAR || token.type == TT_AMPERSAND) {
+        return seen_type? PT_FUNCTION : PT_GROUPORINIT;
+      }
+      else if (token.gloss_type() == GTT_OPERATORMISC || token.gloss_type() == GTT_ANGLE
+          || token.gloss_type() == GTT_ARITHMETIC || token.gloss_type() == GTT_RELATIVE_ASSIGN) {
         return PT_INITIALIZERS;
       }
       else if (token.type == TT_COMMA)
@@ -315,7 +318,7 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         }
         
         ref_stack nestedrefs;
-        read_referencers(nestedrefs, ft, token, fs.scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
+      read_referencers(nestedrefs, ft, token, fs.scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
         
         lex = lb.fallback_lexer;
         
@@ -335,7 +338,7 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         definition *d = read_qualified_definition(token, scope);
         if (!d) return 1;
         
-        if (token.type == TT_MEMBEROF) {
+        if (token.type == TT_MEMBER) {
           if (!(d->flags & DEF_CLASS)) {
             token.report_error(herr, "Member pointer to non-class `" + d->name + "'");
             return 1;
@@ -376,7 +379,7 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
         refs.append_c(appme); return res;
       }
       
-      case TT_MEMBEROF:
+      case TT_MEMBER:
           token.report_error(herr, "Member pointer (class::*) not presently supported...");
         return 1;
          
@@ -391,8 +394,7 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
       case TT_NOEXCEPT:
         return read_referencers_post(refs, token, scope);
       
-      case TT_OPERATOR: // Could be an asterisk or ampersand
-        if ((token.content.str[0] == '&' or token.content.str[0] == '*') and token.content.len == 1) {
+      case TT_AMPERSAND: case TT_STAR: {
           refs.push(token.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
         } goto default_; // Else overflow
@@ -409,14 +411,28 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
         goto default_;
-      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: 
-      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND:
-      case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
-      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE: case TT_TYPEID:
-      case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
-      case TT_NEW: case TT_DELETE: case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_INLINE: case TT_UNION:
+      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING:
+      case TT_PUBLIC: case TT_FRIEND: case TT_PRIVATE: case TT_PROTECTED: case TT_COLON:
+      case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
+      case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN:
+      case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE: case TT_TYPEID:
+      case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL:
+      case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
+      case TT_NEW: case TT_DELETE:
+      case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_ALIGNOF: case TT_CONSTEXPR: case TT_AUTO: case TT_STATIC_ASSERT:
-      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
+      case TT_PLUS: case TT_MINUS: case TT_SLASH: case TT_MODULO:
+      case TT_INCREMENT: case TT_DECREMENT:
+      case TT_EQUAL_TO: case TT_NOT_EQUAL_TO: case TT_LESS_EQUAL: case TT_GREATER_EQUAL:
+      case TT_NOT: case TT_LSHIFT: case TT_RSHIFT: case TT_QUESTIONMARK:
+      case TT_AMPERSANDS: case TT_PIPE: case TT_PIPES: case TT_CARET:
+      case TT_ARROW: case TT_DOT: case TT_ARROW_STAR: case TT_DOT_STAR:
+      case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
+      case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
+      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING:
+      case TT_INVALID: default: default_:
       #include <User/token_cases.h>
         return 0;
     }
@@ -459,11 +475,10 @@ int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token,
         read_function_params(refs, token, scope);
       continue;
       
-      case TT_OPERATOR: // Could be an asterisk or ampersand
-        if ((token.content.str[0] == '&' or token.content.str[0] == '*') and token.content.len == 1) {
+      case TT_STAR: case TT_AMPERSAND: {
           refs.push(token.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
-        } goto default_; // Else overflow
+        }
       
       case TT_DECFLAG: {
           typeflag* a = ((typeflag*)token.def);
@@ -489,17 +504,27 @@ int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token,
       case TT_LESSTHAN:
         goto default_;
       
-      case TT_MEMBEROF:
+      case TT_MEMBER:
         token.report_error(herr, "Member access (class::*) expected before name in type");
         return 1;
       
-      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_INLINE: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND: case TT_DEFINITION: 
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE: case TT_OPERATORKW:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF:
       case TT_DECLTYPE: case TT_TYPEID: case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
       case TT_NEW: case TT_DELETE: case TT_STATIC_ASSERT: case TT_CONSTEXPR: case TT_AUTO:
+      
+      case TT_PLUS: case TT_MINUS: case TT_SLASH: case TT_MODULO: case TT_INCREMENT: case TT_DECREMENT:
+      case TT_EQUAL_TO: case TT_NOT_EQUAL_TO: case TT_LESS_EQUAL: case TT_GREATER_EQUAL: case TT_NOT:
+      case TT_LSHIFT: case TT_RSHIFT: case TT_AMPERSANDS: case TT_PIPE: case TT_PIPES: case TT_CARET:
+      case TT_DOT: case TT_ARROW: case TT_ARROW_STAR: case TT_DOT_STAR: case TT_QUESTIONMARK:
+      
+      case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
+      case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
+      
       case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
       #include <User/token_cases.h>
         return 0;
@@ -525,16 +550,10 @@ int jdip::context_parser::read_function_params(ref_stack &refs, token_t &token, 
     ref_stack::parameter param; // Instantiate a parameter
     param.swap_in(a); // Give it our read-in full type (including ref stack, which is costly to copy)
     param.variadic = ctex->variadics.find(param.def) != ctex->variadics.end();
-    if (token.type == TT_OPERATOR) {
-      if (token.content.len != 1 or *token.content.str != '=') {
-        token.report_errorf(herr, "Unexpected operator at this point; expected '=' or ')' before %s");
-        FATAL_RETURN(1);
-      }
-      else {
-        param.default_value = new AST();
-        token = lex->get_token_in_scope(scope, herr);
-        astbuilder->parse_expression(param.default_value, token, scope, precedence::comma+1);
-      }
+    if (token.type == TT_EQUAL) {
+      param.default_value = new AST();
+      token = lex->get_token_in_scope(scope, herr);
+      astbuilder->parse_expression(param.default_value, token, scope, precedence::comma+1);
     }
     params.throw_on(param);
     

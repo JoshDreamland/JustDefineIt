@@ -77,11 +77,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     }
     
     AST *ast = NULL;
-    if (token.type == TT_OPERATOR) {
-      if (token.content.len != 1 or *token.content.str != '=') {
-        token.report_error(herr, "Unexpected operator here; value must be denoted by '='");
-        FATAL_RETURN((void(delete temp),1));
-      }
+    if (token.type == TT_EQUAL) {
       token = read_next_token(temp);
       ast = new AST();
       ast->set_use_for_templates(true);
@@ -331,7 +327,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     if (funcrefs.refs.empty() || funcrefs.refs.top().type != ref_stack::RT_FUNCTION) {
       if (token.type == TT_DEFINITION && in_template(token.def)) {
         read_qualified_definition(token, scope); // We don't need to know the definition, just skip it. If we were a compiler, we'd need to know this. :P
-        if (token.type == TT_OPERATOR && token.content.len == 1 && *token.content.str == '=') { // We don't need to know the value, either; we just need to skip it.
+        if (token.type == TT_EQUAL) { // We don't need to know the value, either; we just need to skip it.
           token = read_next_token(scope);
           AST a; astbuilder->parse_expression(&a, token, scope, precedence::comma); // Read and discard; kind of a hack, but it's safe.
         }

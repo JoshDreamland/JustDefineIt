@@ -37,7 +37,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
   {
     switch (token.type)
     {
-      case TT_TYPENAME:
+      case TT_TYPENAME: case TT_INLINE:
       case TT_DECFLAG: case TT_DECLTYPE: case TT_DECLARATOR: case_TT_DECLARATOR:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_TILDE:
           decl = NULL;
@@ -245,7 +245,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_SCOPE:
           token = read_next_token(ctex->get_global());
         continue;
-      case TT_MEMBEROF:
+      case TT_MEMBER:
           token.report_error(herr, "Unexpected (scope::*) reference");
         return 1;
       
@@ -310,10 +310,21 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       } break;
       
       case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_ALIGNAS:
-      case TT_OPERATOR: case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
+      case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
       case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_STRINGLITERAL: case TT_CHARLITERAL:
       case TT_NEW: case TT_DELETE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
+      
+      case TT_PLUS: case TT_MINUS: case TT_STAR: case TT_SLASH: case TT_MODULO:
+      case TT_EQUAL_TO: case TT_NOT_EQUAL_TO: case TT_LESS_EQUAL: case TT_GREATER_EQUAL:
+      case TT_NOT: case TT_LSHIFT: case TT_RSHIFT: case TT_AMPERSAND: case TT_AMPERSANDS:
+      case TT_PIPE: case TT_PIPES: case TT_CARET: case TT_INCREMENT: case TT_DECREMENT:
+      case TT_ARROW: case TT_DOT: case TT_ARROW_STAR: case TT_DOT_STAR: case TT_QUESTIONMARK:
+
+      case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
+      case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
+      
       case TT_NOEXCEPT: case TT_TYPEID:
       #include <User/token_cases.h>
       default:
@@ -326,3 +337,4 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
     token = read_next_token(scope);
   }
 }
+      

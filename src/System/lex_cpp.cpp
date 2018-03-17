@@ -512,7 +512,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
         
         string fnfind = read_preprocessor_args(herr);
         if (!conditionals.empty() and !conditionals.top().is_true)
-          break;
+      break;
         
         bool chklocal = false;
         char match = '>';
@@ -652,9 +652,9 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
       if (++pos >= length) goto POP_FILE;
     }
     
-    //============================================================================================
-    //====: Check for and handle comments. :======================================================
-    //============================================================================================
+    //==============================================================================================
+    //====: Check for and handle comments. :========================================================
+    //==============================================================================================
     
     const size_t spos = pos;
     switch (cfile[pos++])
@@ -664,23 +664,27 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
      case '/': {
       if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
       if (cfile[pos] == '/') { skip_comment(); continue; }
-      if (cfile[pos] == '=')
-        return ++pos, token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-2, 2);
-      return token_t(token_basics(TT_OPERATOR,filename,line,pos-lpos), cfile+pos-1,1);
+      if (cfile[pos] == '=') {
+        ++pos;
+        return token_t(token_basics(TT_DIVIDE_ASSIGN, filename, line, pos - lpos),
+                       cfile + pos - 2, 2);
+      }
+      return token_t(token_basics(TT_SLASH, filename, line, pos - lpos), cfile + pos - 1, 1);
     }
       
       
     default:
-    //============================================================================================
-    //====: Not at a comment. See if we're at an identifier. :====================================
-    //============================================================================================
+    //==============================================================================================
+    //====: Not at a comment. See if we're at an identifier. :======================================
+    //==============================================================================================
     
     if (is_letter(cfile[spos])) // Check if we're at an identifier or keyword.
     {
       while (pos < length and is_letterd(cfile[pos])) ++pos;
       if (cfile[spos] == 'L' and pos - spos == 1 and cfile[pos] == '\'') {
         skip_string(herr);
-        return token_t(token_basics(TT_CHARLITERAL,filename,line,spos-lpos), cfile + spos, ++pos-spos);
+        return token_t(token_basics(TT_CHARLITERAL, filename, line, spos - lpos),
+                       cfile + spos, ++pos - spos);
       }
       
       string fn(cfile + spos, cfile + pos); // We'll need a copy of this thing for lookup purposes
@@ -721,7 +725,7 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
         const size_t sp = pos;
         while (++pos < length and is_hexdigit(cfile[pos]));
         while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
-        return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);  
+        return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's octal.
       const size_t sp = --pos;
@@ -746,51 +750,141 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
       return token_t(token_basics(TT_DECLITERAL,filename,line,pos-lpos), cfile+spos, pos-spos);
     }
     
-    //============================================================================================
-    //====: Not at a number. Find out where we are. :=============================================
-    //============================================================================================
+    //==============================================================================================
+    //====: Not at a number. Find out where we are. :===============================================
+    //==============================================================================================
     
       case ';':
         return token_t(token_basics(TT_SEMICOLON,filename,line,spos-lpos));
       case ',':
         return token_t(token_basics(TT_COMMA,filename,line,spos-lpos));
-      case '+': case '-':
-        pos += cfile[pos] == cfile[spos] or cfile[pos] == '=' or (cfile[pos] == '>' and cfile[spos] == '-');
-        pos += (cfile[pos-1] == '>' and cfile[pos] == '*');
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '=': pos += cfile[pos] == cfile[spos];
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '&': case '|':  case '!':
-        pos += cfile[pos] == cfile[spos] || cfile[pos] == '=';
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
+      case '+':
+        if (cfile[pos] == '+') {
+          ++pos;
+          return token_t(token_basics(TT_INCREMENT, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 1);
+      case '-':
+        if (cfile[pos] == '+') {
+          ++pos;
+          return token_t(token_basics(TT_INCREMENT, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '>') {
+          ++pos;
+          return token_t(token_basics(TT_ARROW, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 1);
+      case '=':
+        if (cfile[pos] == cfile[spos]) {
+          ++pos;
+          return token_t(token_basics(TT_EQUAL_TO, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_EQUAL, filename, line, spos - lpos), cfile + spos, 1);
+      case '&':
+        if (cfile[pos] == '&') {
+          ++pos;
+          return token_t(token_basics(TT_AMPERSANDS, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_AND_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_AMPERSAND, filename, line, spos - lpos), cfile + spos, 1);
+      case '|':
+        if (cfile[pos] == '|') {
+          ++pos;
+          return token_t(token_basics(TT_PIPES, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_OR_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_PIPE, filename, line, spos - lpos), cfile + spos, 1);
       case '~':
-        if (cfile[pos] == '=')
-          return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, ++pos-spos);
-        return token_t(token_basics(TT_TILDE,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '%': case '*': case '^': /*  case '/': */
-        if (cfile[pos] == '=')
-          return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, ++pos-spos);
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
-      case '>': case '<':
-        pos += cfile[pos] == cfile[spos]; pos += cfile[pos] == '=';
-        return token_t(token_basics((pos-spos==1?cfile[spos]=='<'?TT_LESSTHAN:TT_GREATERTHAN:TT_OPERATOR),filename,line,spos-lpos), cfile+spos, pos-spos);
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_NEGATE_ASSIGN, filename, line, spos - lpos),
+                         cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_TILDE, filename, line, spos - lpos), cfile + spos, 1);
+      case '!':
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_NOT_EQUAL_TO, filename, line, spos - lpos),
+                         cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_NOT, filename, line, spos - lpos), cfile + spos, 1);
+      case '%':
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_MODULO_ASSIGN, filename, line, spos - lpos),
+                         cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_MODULO, filename, line, spos - lpos), cfile + spos, 1);
+      case '*':
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_MULTIPLY_ASSIGN, filename, line, spos - lpos),
+                         cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_STAR, filename, line, spos - lpos), cfile + spos, 1);
+      case '^':
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_XOR_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_NOT, filename, line, spos - lpos), cfile + spos, 1);
+      case '>':
+        if (cfile[pos] == '>') {
+          ++pos;
+          return token_t(token_basics(TT_RSHIFT, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_GREATER_EQUAL, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_GREATERTHAN, filename, line, spos - lpos), cfile + spos, 1);
+      case '<':
+        if (cfile[pos] == '<') {
+          ++pos;
+          return token_t(token_basics(TT_LSHIFT, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        if (cfile[pos] == '=') {
+          ++pos;
+          return token_t(token_basics(TT_LESS_EQUAL, filename, line, spos - lpos), cfile + spos, 2);
+        }
+        return token_t(token_basics(TT_LESSTHAN, filename, line, spos - lpos), cfile + spos, 1);
       case ':':
         pos += cfile[pos] == cfile[spos];
-        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,filename,line,spos-lpos), cfile+spos, pos-spos);
+        return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,
+                                    filename, line, spos - lpos), cfile + spos, 1);
       case '?':
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
+        return token_t(token_basics(TT_QUESTIONMARK, filename, line, spos - lpos), cfile + spos, 1);
       
       case '.':
           if (is_digit(cfile[pos]))
             goto handle_decimal;
           else if (cfile[pos] == '.') {
-            if (cfile[++pos] == '.')
-              return token_t(token_basics(TT_ELLIPSIS,filename,line,spos-lpos), cfile+spos, pos++ - spos);
-            else
-              --pos;
+            if (cfile[++pos] == '.') {
+              ++pos;
+              return token_t(token_basics(TT_ELLIPSIS, filename, line, spos - lpos),
+                             cfile + spos, 3);
+            }
+            --pos;
           }
-          pos += cfile[pos] == '*';
-        return token_t(token_basics(TT_OPERATOR,filename,line,spos-lpos), cfile+spos, pos-spos);
+          if (cfile[pos] == '*') {
+            ++pos;
+            return token_t(token_basics(TT_DOT_STAR,filename,line,spos-lpos), cfile+spos, 1);
+          }
+        return token_t(token_basics(TT_DOT,filename,line,spos-lpos), cfile+spos, 1);
       
       case '(': return token_t(token_basics(TT_LEFTPARENTH, filename,line,spos-lpos));
       case '[': return token_t(token_basics(TT_LEFTBRACKET, filename,line,spos-lpos));

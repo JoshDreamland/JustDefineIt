@@ -47,13 +47,14 @@ namespace jdi {
   **/
   jdip::token_t create_token_oct_literal(const char* val, int len, const char* filename = "<no file>", int line = -1, int pos = -1);
   /** Create a token representing an operator.
+      @param type      The internal token type for the operator, such as TT_PLUS.
       @param op        A string representation of the operator, such as "+" or "==".
-      @param len       The length of the string pointed to by val.
+      @param len       The length of the string pointed to by op.
       @param filename  The filename from which this operator was read, if any.
       @param line      The line number in that file.
       @param pos       The position in that line.
   **/
-  jdip::token_t create_token_operator(const char* op, int len, const char* filename = "<no file>", int line = -1, int pos = -1);
+  jdip::token_t create_token_operator(jdip::TOKEN_TYPE type, const char* op, int len, const char* filename = "<no file>", int line = -1, int pos = -1);
   /** Create a token representing an operator.
       @param def       The definition 
       @param filename  The filename from which this operator was read, if any.

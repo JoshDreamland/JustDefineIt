@@ -71,6 +71,7 @@ static struct token_info_c {
       case TT_UNION: name[TT_UNION] = "`union' token"; // Fallthrough
       case TT_NAMESPACE: name[TT_NAMESPACE] = "`namespace' token"; // Fallthrough
       case TT_EXTERN: name[TT_EXTERN] = "`extern' token"; // Fallthrough
+      case TT_INLINE: name[TT_INLINE] = "`inline' token"; // Fallthrough
       
       case TT_ASM: name[TT_ASM] = "`asm' token"; // Fallthrough
       case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token"; // Fallthrough
@@ -102,7 +103,7 @@ static struct token_info_c {
       
       case TT_COLON: name[TT_COLON] = "`:' token"; // Fallthrough
       case TT_SCOPE: name[TT_SCOPE] = "`::' token"; // Fallthrough
-      case TT_MEMBEROF: name[TT_MEMBEROF] = "member specifier (class::*)"; // Fallthrough
+      case TT_MEMBER: name[TT_MEMBER] = "member specifier (class::*)"; // Fallthrough
       
       case TT_LEFTPARENTH: name[TT_LEFTPARENTH] = "'(' token"; // Fallthrough
       case TT_RIGHTPARENTH: name[TT_RIGHTPARENTH] = "')' token"; // Fallthrough
@@ -113,9 +114,44 @@ static struct token_info_c {
       case TT_LESSTHAN: name[TT_LESSTHAN] = "'<' token"; // Fallthrough
       case TT_GREATERTHAN: name[TT_GREATERTHAN] = "'>' token"; // Fallthrough
       
+      case TT_PLUS: name[TT_PLUS] = "'+' operator"; // Fallthrough
+      case TT_MINUS: name[TT_MINUS] = "'-' operator"; // Fallthrough
+      case TT_STAR: name[TT_STAR] = "'*' operator"; // Fallthrough
+      case TT_SLASH: name[TT_SLASH] = "'/' operator"; // Fallthrough
+      case TT_MODULO: name[TT_MODULO] = "'%' operator"; // Fallthrough
+      case TT_EQUAL_TO: name[TT_EQUAL_TO] = "`==' operator"; // Fallthrough
+      case TT_NOT_EQUAL_TO: name[TT_NOT_EQUAL_TO] = "`!=' operator"; // Fallthrough
+      case TT_LESS_EQUAL: name[TT_LESS_EQUAL] = "`<=' operator"; // Fallthrough
+      case TT_GREATER_EQUAL: name[TT_GREATER_EQUAL] = "`>=' operator"; // Fallthrough
+      case TT_AMPERSAND: name[TT_AMPERSAND] = "'&' operator"; // Fallthrough
+      case TT_AMPERSANDS: name[TT_AMPERSANDS] = "`&&' operator"; // Fallthrough
+      case TT_PIPE: name[TT_PIPE] = "'|' operator"; // Fallthrough
+      case TT_PIPES: name[TT_PIPES] = "`||' operator"; // Fallthrough
+      case TT_CARET: name[TT_CARET] = "'^' operator"; // Fallthrough
+      case TT_INCREMENT: name[TT_INCREMENT] = "increment (`++') operator"; // Fallthrough
+      case TT_DECREMENT: name[TT_DECREMENT] = "decrement (`--') operator"; // Fallthrough
+      case TT_ARROW: name[TT_ARROW] = "`->' operator"; // Fallthrough
+      case TT_DOT: name[TT_DOT] = "`.' operator"; // Fallthrough
+      case TT_ARROW_STAR: name[TT_ARROW_STAR] = "`->*' operator"; // Fallthrough
+      case TT_DOT_STAR: name[TT_DOT_STAR] = "`.*' operator"; // Fallthrough
+      case TT_QUESTIONMARK: name[TT_QUESTIONMARK] = "'?' operator"; // Fallthrough
+      case TT_EQUAL: name[TT_EQUAL] = "`=' operator"; // Fallthrough
+      case TT_ADD_ASSIGN: name[TT_ADD_ASSIGN] = "`+=' operator"; // Fallthrough
+      case TT_SUBTRACT_ASSIGN: name[TT_SUBTRACT_ASSIGN] = "`-=' operator"; // Fallthrough
+      case TT_MULTIPLY_ASSIGN: name[TT_MULTIPLY_ASSIGN] = "`*=' operator"; // Fallthrough
+      case TT_DIVIDE_ASSIGN: name[TT_DIVIDE_ASSIGN] = "`/=' operator"; // Fallthrough
+      case TT_MODULO_ASSIGN: name[TT_MODULO_ASSIGN] = "`%=' operator"; // Fallthrough
+      case TT_LSHIFT_ASSIGN: name[TT_LSHIFT_ASSIGN] = "`<<=' operator"; // Fallthrough
+      case TT_RSHIFT_ASSIGN: name[TT_RSHIFT_ASSIGN] = "`>>=' operator"; // Fallthrough
+      case TT_AND_ASSIGN: name[TT_AND_ASSIGN] = "`&=' operator"; // Fallthrough
+      case TT_OR_ASSIGN: name[TT_OR_ASSIGN] = "`|=' operator"; // Fallthrough
+      case TT_XOR_ASSIGN: name[TT_XOR_ASSIGN] = "`^=' operator"; // Fallthrough
+      case TT_NEGATE_ASSIGN: name[TT_NEGATE_ASSIGN] = "`~=' operator"; // Fallthrough
+      case TT_LSHIFT: name[TT_LSHIFT] = "`<<' operator"; // Fallthrough
+      case TT_RSHIFT: name[TT_RSHIFT] = "`>>' operator"; // Fallthrough
+      case TT_NOT: name[TT_NOT] = "`!' operator"; // Fallthrough
       case TT_TILDE: name[TT_TILDE] = "'~' token"; // Fallthrough
       case TT_ELLIPSIS: name[TT_ELLIPSIS] = "`...' token"; // Fallthrough
-      case TT_OPERATOR: name[TT_OPERATOR] = "`%s' operator"; // Fallthrough
       
       case TT_COMMA: name[TT_COMMA] = "',' token"; // Fallthrough
       case TT_SEMICOLON: name[TT_SEMICOLON] = "';' token"; // Fallthrough

@@ -95,10 +95,7 @@ jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope,
     token = read_next_token(scope);
     
     AST *ast = NULL;
-    if (token.type == TT_OPERATOR) {
-      if (token.content.len != 1 or token.content.str[0] != '=') {
-        token.report_error(herr, "Expected assignment operator `=' here before secondary operator");
-      }
+    if (token.type == TT_EQUAL) {
       token = read_next_token(scope);
       ast = new AST();
       if (astbuilder->parse_expression(ast, token, scope, precedence::comma + 1)) {

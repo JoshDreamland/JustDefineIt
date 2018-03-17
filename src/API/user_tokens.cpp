@@ -32,8 +32,8 @@ namespace jdi {
   jdip::token_t create_token_oct_literal(const char* val, int len, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_OCTLITERAL,filename,line,pos), val, len);
   }
-  jdip::token_t create_token_operator(const char* op, int len, const char* filename, int line, int pos) {
-    return token_t(token_basics(TT_OPERATOR,filename,line,pos), op, len);
+  jdip::token_t create_token_operator(TOKEN_TYPE type, const char* op, int len, const char* filename, int line, int pos) {
+    return token_t(token_basics(type,filename,line,pos), op, len);
   }
   jdip::token_t create_token_from_definition(definition* def, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_DECLARATOR,filename,line,pos), def);

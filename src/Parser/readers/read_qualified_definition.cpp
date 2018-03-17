@@ -117,12 +117,7 @@ definition* jdip::context_parser::read_qualified_definition(token_t &token, defi
           if (token.type != TT_SCOPE)
             break;
           continue;
-        }
-        if (res && token.type == TT_OPERATOR && token.content.len == 1 && *token.content.str == '*') {
-          token.type = TT_MEMBEROF;
-          return res;
-        }
-        else {
+        } else {
           token.report_errorf(herr, "Expected type or qualified-id before %s");
           return FATAL_TERNARY(NULL,res);
         }
