@@ -127,47 +127,12 @@ int main() {
     cout << "  [" << setw(w) << b.toString() << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
   }
   
-  #if 0
-    builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++");
-    builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++/mingw32");
-    builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++/backward");
-    builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include");
-    builtin->add_search_directory("c:\\mingw\\include");
-    builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include-fixed");
-    
-    llreader macro_reader("test/defines_custom.txt");
-  #elif 0
-    #ifdef __WIN32__
-      builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++");
-      builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++/mingw32");
-      builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include/c++/backward");
-      builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include");
-      builtin->add_search_directory("c:\\mingw\\include");
-      builtin->add_search_directory("c:\\mingw/lib/gcc/mingw32/4.6.1/include-fixed");
-      
-      llreader macro_reader("test/defines_mingw.txt");
-    #else
-      builtin->add_search_directory("/usr/include/c++/4.8");
-      builtin->add_search_directory("/usr/include/x86_64-linux-gnu/c++/4.8");
-      builtin->add_search_directory("/usr/include/c++/4.8/backward");
-      builtin->add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.8/include");
-      builtin->add_search_directory("/usr/local/include");
-      builtin->add_search_directory("/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed");
-      builtin->add_search_directory("/usr/include/x86_64-linux-gnu");
-      builtin->add_search_directory("/usr/include");
-      builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
-      builtin->add_search_directory("/home/josh/.enigma/");
-      
-      llreader macro_reader("test/defines_linux.txt");
-    #endif
-  #endif
-  
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/../../../../include/c++/7.3.0");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/../../../../include/c++/7.3.0/x86_64-pc-linux-gnu");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/../../../../include/c++/7.3.0/backward");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/include");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/../../../../include/c++/7.3.1");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/../../../../include/c++/7.3.1/x86_64-pc-linux-gnu");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/../../../../include/c++/7.3.1/backward");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/include");
   builtin->add_search_directory("/usr/local/include");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.0/include-fixed");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/include-fixed");
   builtin->add_search_directory("/usr/include");
   builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
   builtin->add_search_directory("/home/josh/.enigma/");
