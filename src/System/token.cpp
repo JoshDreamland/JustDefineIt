@@ -164,6 +164,8 @@ static struct token_info_c {
       
       case TTM_CONCAT:   name[TTM_CONCAT] = "`##' token"; // Fallthrough
       case TTM_TOSTRING: name[TTM_TOSTRING] = "`#' token"; // Fallthrough
+      case TTM_COMMENT: name[TTM_COMMENT] = "...comment(?)"; // Fallthrough
+      case TTM_NEWLINE: name[TTM_NEWLINE] = "...newline(?)"; // Fallthrough
       
       case TT_NEW: name[TT_NEW] = "`new' keyword"; // Fallthrough
       case TT_DELETE: name[TT_DELETE] = "`delete' keyword"; // Fallthrough

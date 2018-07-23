@@ -73,6 +73,42 @@ static inline int compute_diff(const vector<int> &v1, const vector<int> &v2, siz
   return window < 512 ? compute_diff(v1, v2, ind, window * 2) : 0;
 }
 
+static void test_lexer_16_3_3() {
+  string tcase = R"(
+    #define hash_hash # ## #
+    #define mkstr(a) # a
+    #define in_between(a) mkstr(a)
+    #define join(c, d) in_between(c hash_hash d)
+    join(x, y)
+  )";
+
+  llreader basic(tcase, tcase.length());
+  context butts;
+  macro_map buttMacros = butts.get_macros();
+  token_t token;
+  lexer_cpp lex(basic, buttMacros, "tcase");
+  token = lex.get_token(); cout << token.to_string() << endl;
+  // Should be the literal string "x ## y"
+}
+
+static void test_lexer_mathcat() {
+  string tcase = R"(
+    #define __CONCAT(x, y) x ## y
+    #define __SIMD_DECL(function) __CONCAT (__DECL_SIMD_, function)
+    #define __MATHCALL_VEC(function, suffix) 	\
+      __SIMD_DECL (__MATH_PRECNAME (function, suffix))
+    #define __MATH_PRECNAME(name,r)	__CONCAT(name,r)
+    __MATHCALL_VEC()
+  )";
+
+  llreader basic(tcase, tcase.length());
+  context butts;
+  macro_map buttMacros = butts.get_macros();
+  token_t token;
+  lexer_cpp lex(basic, buttMacros, "tcase");
+  token = lex.get_token(); cout << token.to_string() << endl;
+  // Should be the literal string "x ## y"
+}
 
 #include <fstream>
 const char* tname[TT_INVALID + 1];
@@ -127,17 +163,18 @@ int main() {
     cout << "  [" << setw(w) << b.toString() << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
   }
   
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/../../../../include/c++/7.3.1");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/../../../../include/c++/7.3.1/x86_64-pc-linux-gnu");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/../../../../include/c++/7.3.1/backward");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/include");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1/x86_64-pc-linux-gnu");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1/backward");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/include");
   builtin->add_search_directory("/usr/local/include");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/7.3.1/include-fixed");
+  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/include-fixed");
   builtin->add_search_directory("/usr/include");
+
   builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
   builtin->add_search_directory("/home/josh/.enigma/");
-  llreader macro_reader("test/defines_linux.txt");
 
+  llreader macro_reader("test/defines_linux.txt");
   
   if (macro_reader.is_open())
     builtin->parse_C_stream(macro_reader, "defines.txt");
@@ -155,6 +192,8 @@ int main() {
   // write_tokens();
   
   putcap("Test lexer");
+  test_lexer_16_3_3();
+  test_lexer_mathcat();
   if (false) {
     string tcase = "#define butts 1\n#if 2 > 1 && butts\n  int x;\n#endif\n";
     llreader basic(tcase, tcase.length());
@@ -172,6 +211,9 @@ int main() {
     vector<int> tokens, tokens2;
     if (true) {
       context butts;
+      // g++ --std=c++03 -E ~/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp
+      //   -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/
+      //   -DJUST_DEFINE_IT_RUN > Projects/JustDefineIt/shellmain-pp.cc
       llreader f("shellmain-pp.cc");
       macro_map buttMacros = butts.get_macros();
       lexer_cpp lex(f, buttMacros, "SHELLmain.cpp");
@@ -187,7 +229,7 @@ int main() {
       lexer_cpp lex(f, buttMacros, "SHELLmain.cpp");
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         size_t p = tokens.size();
-        if (p == 12509) {
+        if (p == 53315) {
           cerr << "BOOBIES!" << endl;
         }
         tokens.push_back(token.type);
@@ -214,8 +256,10 @@ int main() {
     for (size_t i = 0; i < tokens.size() || i < tokens2.size(); ++i) {
       int a = i < tokens.size()?  tokens[i]  : TT_ENDOFCODE;
       int b = i < tokens2.size()? tokens2[i] : TT_ENDOFCODE;
-      printf("%2d : %2d  -  %d\n", a, b, ndiffs);
-      ndiffs += a != b;
+      const bool diff = a != b;
+      if (diff and not ndiffs)
+        printf("%2d : %2d  -  %d\n", a, b, ndiffs);
+      ndiffs += diff;
     }
     return 0;
   }

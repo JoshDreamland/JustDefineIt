@@ -163,6 +163,8 @@ namespace jdip {
     
     TTM_CONCAT = GLOSS(GTT_PREPROCESSOR), ///< A macro-only token meaning the concatenation of two tokens to form a new token, '##'.
     TTM_TOSTRING, ///< A macro-only token meaning the value of a parameter, treated as a string literal, '#'.
+    TTM_COMMENT, ///< A comment, including the symbols that delimit the comment (excluding any newline).
+    TTM_NEWLINE, ///< A newline, which has semantic meaning in preprocessor directives.
     
     TT_ENDOFCODE = GLOSS(GTT_ENDOFCODE), ///< This token signifies that the code has reached its end.
     #include <User/token_types.h>

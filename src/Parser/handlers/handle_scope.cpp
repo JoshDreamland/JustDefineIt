@@ -312,7 +312,7 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_ALIGNAS:
       case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
       case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_STRINGLITERAL: case TT_CHARLITERAL:
-      case TT_NEW: case TT_DELETE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
+      case TT_NEW: case TT_DELETE: 
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       
       case TT_PLUS: case TT_MINUS: case TT_STAR: case TT_SLASH: case TT_MODULO:
@@ -326,7 +326,8 @@ int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, 
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
       
       case TT_NOEXCEPT: case TT_TYPEID:
-      #include <User/token_cases.h>
+      
+      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: case TTM_COMMENT: case TTM_NEWLINE:
       default:
         token.report_errorf(herr, "Unexpected %s in this scope");
         break;

@@ -197,7 +197,6 @@ bool lexer_cpp_base::parse_macro_function(const macro_function* mf, error_handle
   return true;  
 }
 
-
 string lexer_cpp::read_preprocessor_args(error_handler *herr)
 {
   for (;;) {
@@ -312,9 +311,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
     default: goto failout;
   }
   
-  for (;;)
-  {
-    break;
+  while (false) {  // This is an improvised switch statement; allows "break" to work.
     case_define: {
       string argstrs = read_preprocessor_args(herr);
       const char* argstr = argstrs.c_str();
@@ -624,32 +621,29 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
 }
 
 #include <cstdio>
-template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr, bool &is_id, string &idout)
+token_t lexer_cpp_base::read_raw(error_handler *herr)
 {
-  top:
   #ifdef DEBUG_MODE
     static int number_of_times_GDB_has_dropped_its_ass = 0;
     ++number_of_times_GDB_has_dropped_its_ass;
   #endif
   
-  for (;;) // Loop until we find something or hit world's end
-  {
-    if (pos >= length) goto POP_FILE;
+  for (;;) {  // Loop until we find something or hit world's end
+    if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,filename, line, pos - lpos));
     
     // Skip all whitespace
     while (is_useless(cfile[pos])) {
       if (cfile[pos] == '\n') {
-        ++line, lpos = pos;
-        if (newline_eof)
-          return ++pos, token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos), cfile+pos-2, 2);
+        ++line, lpos = pos++;
+        return token_t(token_basics(TTM_NEWLINE, filename, line, pos - lpos), cfile + lpos, 1);
       }
       if (cfile[pos] == '\r') {
         ++line; lpos = pos;
-        if (cfile[++pos] != '\n') --pos;
-        if (newline_eof)
-          return ++pos, token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos), cfile+pos-2, 2);
+        if (cfile[++pos] != '\n') ++pos;
+        return token_t(token_basics(TTM_NEWLINE, filename, line, pos - lpos),
+                       cfile + lpos, pos - lpos);
       }
-      if (++pos >= length) goto POP_FILE;
+      if (++pos >= length) return token_t(token_basics(TT_ENDOFCODE,filename, line, pos - lpos));
     }
     
     //==============================================================================================
@@ -678,39 +672,14 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
     //====: Not at a comment. See if we're at an identifier. :======================================
     //==============================================================================================
     
-    if (is_letter(cfile[spos])) // Check if we're at an identifier or keyword.
-    {
+    if (is_letter(cfile[spos])) {  // Check if we're at an identifier or keyword.
       while (pos < length and is_letterd(cfile[pos])) ++pos;
       if (cfile[spos] == 'L' and pos - spos == 1 and cfile[pos] == '\'') {
         skip_string(herr);
         return token_t(token_basics(TT_CHARLITERAL, filename, line, spos - lpos),
                        cfile + spos, ++pos - spos);
       }
-      
-      string fn(cfile + spos, cfile + pos); // We'll need a copy of this thing for lookup purposes
-      
-      macro_iter mi = macros.find(fn);
-      if (mi != macros.end()) {
-        if (mi->second->argc < 0) {
-          bool already_open = false; // Test if we're in this macro already
-          quick::stack<openfile>::iterator it = files.begin();
-          for (unsigned i = 0; i < open_macro_count; ++i)
-            if (it->filename == fn) { already_open = true; break; }
-            else --it;
-          if (!already_open) {
-            enter_macro((macro_scalar*)mi->second);
-            continue;
-          }
-        }
-        else {
-          if (parse_macro_function((macro_function*)mi->second, herr))
-            continue;
-        }
-      }
-      
-      is_id = true;
-      idout = fn;
-      return token_t(token_basics(TT_IDENTIFIER,filename,line,spos-lpos), cfile + spos, fn.length());
+      return token_t(token_basics(TT_IDENTIFIER,filename,line,spos-lpos), cfile + spos, pos - spos);
     }
     
     goto unknown;
@@ -896,24 +865,19 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
       case '#':
         if (cfile[pos] == '#') {
           ++pos;
-          return token_t(token_basics(TTM_CONCAT, filename, line, spos-lpos)); // Unoptimized tail call leads to death and destruction
+          return token_t(token_basics(TTM_CONCAT, filename, line, 2));
         }
-        return token_t(token_basics(TTM_TOSTRING, filename, line, spos-lpos)); // Unoptimized tail call leads to death and destruction
+        return token_t(token_basics(TTM_TOSTRING, filename, line, 1));
       
       case '\\':
-        if (newline_eof) {
-          if (cfile[pos] != '\n') {
-            if (cfile[pos] != '\r')
-              herr->error("Stray backslash", filename, line, pos-lpos);
-            else if (cfile[++pos] != '\n')
-              --pos;
-          }
-          ++line;
-          lpos = pos++;
-        }
-        else
-          if (cfile[pos] != '\n' and cfile[pos] != '\r')
+        if (cfile[pos] != '\n') {
+          if (cfile[pos] != '\r')
             herr->error("Stray backslash", filename, line, pos-lpos);
+          else if (cfile[++pos] != '\n')
+            --pos;
+        }
+        ++line;
+        lpos = pos++;
         continue;
       
       case '"': {
@@ -937,32 +901,40 @@ template<bool newline_eof> token_t lexer_cpp_base::read_raw(error_handler *herr,
   
   cerr << "UNREACHABLE BLOCK REACHED" << endl;
   return token_t(TT_INVALID,filename,line,pos-lpos++);
-  
-  POP_FILE: // This block was created instead of a helper function to piss Rusky off.
-  if (pop_file())
-    return token_t(token_basics(TT_ENDOFCODE,filename,line,pos-lpos));
-  
-  size_t sz = 0;
-  for (quick::stack<openfile>::iterator it = files.begin(); it != files.end(); ++it)
-    ++sz;
-  if (newline_eof)
-    if (open_macro_count)
-      return read_raw<true>(herr, is_id, idout);
-  goto top;
 }
 
 token_t lexer_cpp::get_token(error_handler *herr)
 {
-  string fn;
+  token_t res;
   top:
-  bool is_id = false;
-  token_t res = read_raw<false>(herr, is_id, fn);
-  if (is_id)
-  {
+  do res = read_raw(herr); while (res.type == TTM_NEWLINE);
+  if (res.type == TT_IDENTIFIER) {
+    string fn = res.content.toString();
+    macro_iter mi;
+    
+    mi = macros.find(fn);
+    if (mi != macros.end()) {
+      if (mi->second->argc < 0) {
+        bool already_open = false; // Test if we're in this macro already
+        quick::stack<openfile>::iterator it = files.begin();
+        for (unsigned i = 0; i < open_macro_count; ++i)
+          if (it->filename == fn) { already_open = true; break; }
+          else --it;
+        if (!already_open) {
+          enter_macro((macro_scalar*) mi->second);
+          goto top;
+        }
+      }
+      else {
+        if (parse_macro_function((macro_function*) mi->second, herr))
+          goto top;
+      }
+    }
+    
     keyword_map::iterator kwit = keywords.find(fn);
     if (kwit != keywords.end()) {
       if (kwit->second == TT_INVALID) {
-        macro_iter mi = kludge_map.find(fn);
+        mi = kludge_map.find(fn);
         #ifdef DEBUG_MODE
         if (mi == kludge_map.end())
           cerr << "SYSTEM ERROR! KEYWORD `" << fn << "' IS DEFINED AS INVALID" << endl;
@@ -979,7 +951,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
     
     tf_iter tfit = builtin_declarators.find(fn);
     if (tfit != builtin_declarators.end()) {
-      if ((tfit->second->usage & UF_STANDALONE_FLAG) == UF_PRIMITIVE)
+      if (tfit->second->usage  & UF_PRIMITIVE)
         res.type = TT_DECLARATOR, res.def = tfit->second->def;
       else
         res.type = TT_DECFLAG, res.def = (definition*)tfit->second;
@@ -995,17 +967,24 @@ token_t lexer_cpp::get_token(error_handler *herr)
     handle_preprocessor(herr);
     goto top;
   }
+  else if (res.type == TT_ENDOFCODE) {
+    if (pop_file())
+      return token_t(token_basics(TT_ENDOFCODE, filename, line, pos - lpos));
+    goto top;
+  }
   
   return res;
 }
 
 token_t lexer_macro::get_token(error_handler *herr)
 {
-  bool is_id = false;
-  string idout;
-  token_t res = lex_base->read_raw<true>(herr, is_id, idout);
-  if (is_id) // Identifiers and keywords stop here.
-  {
+  top:
+  token_t res = lex_base->read_raw(herr);
+  if (res.type == TTM_NEWLINE) {
+    res.type = TT_ENDOFCODE;
+    return res;
+  }
+  if (res.type == TT_IDENTIFIER) {  // Identifiers and keywords stop here.
     static const char zero[] = "0", one[] = "1";
     // magic number: strlen("defined") == 7; this is unlikely to change
     if (res.content.len == 7 && !strncmp((const char*) res.content.str, "defined", 7))
@@ -1034,9 +1013,34 @@ token_t lexer_macro::get_token(error_handler *herr)
       return token_t(token_basics(TT_DECLITERAL,lex_base->filename,lex_base->line,lex_base->pos-lex_base->lpos), lex_base->macros.find(macro)==lex_base->macros.end()? zero : one, 1);
     }
     
+    const string mn = res.content.toString();
+    macro_iter mi = lex_base->macros.find(mn);
+    if (mi != lex_base->macros.end()) {
+      if (mi->second->argc < 0) {
+        bool already_open = false; // Test if we're in this macro already
+        quick::stack<openfile>::iterator it = lex_base->files.begin();
+        for (unsigned i = 0; i < lex_base->open_macro_count; ++i)
+          if (it->filename == mn) { already_open = true; break; }
+          else --it;
+        if (!already_open) {
+          lex_base->enter_macro((macro_scalar*) mi->second);
+          goto top;
+        }
+      }
+      else {
+        if (lex_base->parse_macro_function((macro_function*)mi->second, herr))
+          goto top;
+      }
+    }
+    
     // This is an undefined identifier; if it were a macro, it would have been expanded by the base lexer.
     // Return token for literal false: zero.
     return token_t(token_basics(TT_DECLITERAL,lex_base->filename,lex_base->line,lex_base->pos-lex_base->lpos), zero, 1);
+  }
+  else if (res.type == TT_ENDOFCODE) {
+    if (lex_base->pop_file())
+      return lex_base->read_raw(herr);  // TT_ENDOFCODE
+    goto top;
   }
   
   return res;

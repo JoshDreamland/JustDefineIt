@@ -82,7 +82,7 @@ namespace jdip {
     size_t lpos; ///< The index in the file of the most recent line break.
     
     /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
-    template<bool newline_eof> token_t read_raw(error_handler *herr, bool &ident, string &idout);
+    token_t read_raw(error_handler *herr);
     lexer_cpp_base(llreader &input, macro_map &pmacros, const char *fname);
     
     /// Enter a scalar macro, if it has any content.

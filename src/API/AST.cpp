@@ -403,7 +403,8 @@ namespace jdip
         token.report_errorf(cparse->herr, "Expected expression before %s");
         return NULL;
       
-      case TTM_CONCAT: case TTM_TOSTRING: token.report_error(cparse->herr, "Illogical token type returned!");
+      case TTM_CONCAT: case TTM_TOSTRING: case TTM_COMMENT: case TTM_NEWLINE:
+        token.report_error(cparse->herr, "Illogical token type returned!");
         return NULL;
       case TT_INVALID: default: token.report_error(cparse->herr, "Invalid token type returned!");
         return NULL;
@@ -746,7 +747,8 @@ namespace jdip
       #include <User/token_cases.h>
       return left_node;
       
-      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: return left_node;
+      case TTM_CONCAT: case TTM_TOSTRING: case TTM_COMMENT: case TTM_NEWLINE: case TT_INVALID:
+      default: return left_node;
     }
     return parse_binary_or_unary_post(ast, token, left_node, prec_min);
   }

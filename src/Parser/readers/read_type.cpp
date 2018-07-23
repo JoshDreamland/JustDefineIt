@@ -431,7 +431,7 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
       case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
-      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING:
+      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TTM_COMMENT: case TTM_NEWLINE:
       case TT_INVALID: default: default_:
       #include <User/token_cases.h>
         return 0;
@@ -525,9 +525,9 @@ int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token,
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
       
-      case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: default: default_:
-      #include <User/token_cases.h>
-        return 0;
+      case TT_ENDOFCODE:
+      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: case TTM_COMMENT: case TTM_NEWLINE:
+      default: default_: return 0;
     }
     token = lex->get_token_in_scope(scope, herr);
   }
