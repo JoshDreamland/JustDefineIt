@@ -22,27 +22,29 @@
 #include <cstdio>
 #include <API/error_reporting.h>
 
+#define null_term(string_view) (std::string(string_view).c_str())
+
 namespace jdi {
-  void default_error_handler::error(std::string err, std::string filename, int line, int pos) {
+  void default_error_handler::error(std::string_view err, std::string_view filename, int line, int pos) {
     if (!filename.length())
-      fprintf(stderr, "ERROR: %s\n", err.c_str());
+      fprintf(stderr, "ERROR: %s\n", null_term(err));
     if (line == -1)
-      fprintf(stderr, "ERROR(%s): %s\n", filename.c_str(), err.c_str());
+      fprintf(stderr, "ERROR(%s): %s\n", null_term(filename), null_term(err));
     else if (pos == -1)
-      fprintf(stderr, "ERROR(%s:%d): %s\n", filename.c_str(), line, err.c_str());
+      fprintf(stderr, "ERROR(%s:%d): %s\n", null_term(filename), line, null_term(err));
     else
-      fprintf(stderr, "ERROR(%s,%d,%d): %s\n", filename.c_str(), line, pos, err.c_str());
+      fprintf(stderr, "ERROR(%s,%d,%d): %s\n", null_term(filename), line, pos, null_term(err));
     ++error_count;
   }
-  void default_error_handler::warning(std::string err, std::string filename, int line, int pos) {
+  void default_error_handler::warning(std::string_view err, std::string_view filename, int line, int pos) {
     if (!filename.length())
-      fprintf(stderr, "Warning: %s\n", err.c_str());
+      fprintf(stderr, "Warning: %s\n", null_term(err));
     if (line == -1)
-      fprintf(stderr, "Warning(%s): %s\n", filename.c_str(), err.c_str());
+      fprintf(stderr, "Warning(%s): %s\n", null_term(filename), null_term(err));
     else if (pos == -1)
-      fprintf(stderr, "Warning(%s:%d): %s\n", filename.c_str(), line, err.c_str());
+      fprintf(stderr, "Warning(%s:%d): %s\n", null_term(filename), line, null_term(err));
     else
-      fprintf(stderr, "Warning(%s,%d,%d): %s\n", filename.c_str(), line, pos, err.c_str());
+      fprintf(stderr, "Warning(%s,%d,%d): %s\n", null_term(filename), line, pos, null_term(err));
     ++warning_count;
   }
   

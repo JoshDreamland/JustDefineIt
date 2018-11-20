@@ -77,11 +77,11 @@ inline string fn_path(const char *fn) {
   return last == fn? dot : string(fn, last);
 }
 
-llreader::llreader(): pos(0), length(0), data(NULL), mode(FT_CLOSED), path(dot) {}
-llreader::llreader(const char* filename): pos(0), length(0), data(NULL), mode(FT_CLOSED), path(fn_path(filename)) { open(filename); }
-llreader::llreader(std::string contents, bool cp): pos(0), length(0), data(NULL), mode(FT_CLOSED), path(dot) { cp? copy(contents) : encapsulate(contents); }
+llreader::llreader(): pos(0), length(0), data(NULL), mode(FT_CLOSED) {}
+llreader::llreader(const char* filename): pos(0), length(0), data(NULL), mode(FT_CLOSED) { open(filename); }
+llreader::llreader(std::string bname, std::string contents): pos(0), length(0), data(NULL), name(bname), mode(FT_CLOSED) { copy(contents); }
 
-llreader::llreader(const llreader& x): pos(x.pos), length(FT_BUFFER), data(NULL), mode(FT_BUFFER), path(x.path) {
+llreader::llreader(const llreader& x): pos(x.pos), length(FT_BUFFER), data(NULL), name(x.name), mode(FT_BUFFER) {
   cerr << "WARNING: COPY CALLED ON LLREADER" << endl;
   if (x.mode == FT_CLOSED) mode = FT_CLOSED;
   else {
@@ -129,7 +129,7 @@ void llreader::open(const char* filename) {
   mode = FT_MMAP;
   ::close(fd);
 #endif
-  path = fn_path(filename);
+  name = filename;
 }
 
 void llreader::alias(const char* buffer, size_t len) {
@@ -150,7 +150,7 @@ void llreader::alias(const llreader &llread) {
   mode = FT_ALIAS;
   pos = llread.pos, length = llread.length;
   data = llread.data;
-  path = llread.path;
+  name = llread.name;
 }
 
 void llreader::consume(char* buffer, size_t len) {
@@ -175,7 +175,7 @@ void llreader::consume(llreader& whom) {
   whom.mode = FT_CLOSED;
   whom.length = 0;
   whom.data = NULL;
-  path = whom.path;
+  name = whom.name;
 }
 
 void llreader::close() {

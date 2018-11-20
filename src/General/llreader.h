@@ -44,13 +44,13 @@ class llreader {
   public:
     size_t pos; ///< Our position in the stream
     size_t length; ///< The length of the stream
+    size_t lpos; ///< The position of the most-recently-read newline
+    size_t lnum; ///< The number of newlines that have been read
     const char *data; ///< The data in the stream
+    std::string name; ///< The name or source of this file.
   
   private:
-     int mode; ///< What kind of stream we have open
-  
-  protected:
-     std::string path; ///< The path from which this file was opened
+    int mode; ///< What kind of stream we have open
   
   public:
     /**
@@ -119,6 +119,47 @@ class llreader {
     **/
     bool is_open();
     
+    // =========================================================================
+    // == Help with tokenization ===============================================
+    // =========================================================================
+    
+    /**
+      Skips whitespace from the current position, keeping track of newlines.
+    */
+    void skip_whitespace() {
+      for (;;) switch (data[pos]) {
+        case '\r': {
+          if (data[++pos] == '\n') ++pos;
+          ++lnum;
+          lpos = pos;
+          continue;
+        }
+        case '\n': {
+          ++lnum;
+          lpos = pos++;
+          continue;
+        }
+        case ' ': case '\t': case '\v': case '\f': {
+          ++pos;
+          continue;
+        }
+        // XXX: There are about a hundred other cases to handle here,
+        // but unicode whitespace is currently forbidden in the standard.
+        default: return;
+      }
+    }
+    
+    char operator[](size_t ind) const { return data[ind]; }
+    explicit operator char() const { return data[pos]; }
+    const char* operator+(size_t x) { return data + x; }
+    char at() const { return data[pos]; }
+    int next() { return ++pos < length ? data[pos] : EOF; }
+    bool eof() const { return pos >= length; }
+    
+    // =========================================================================
+    // == Constructors/destructors =============================================
+    // =========================================================================
+    
     /**
       Default constructor.
       There's really no good way to make a constructor for each method above.
@@ -131,13 +172,13 @@ class llreader {
     **/
     llreader(const char* filename);
     /**
-      The (string,bool) constructor behaves like either copy() or encapsulate().
-      For both of these, it's good to know how big the string is.
+      Constructs, behaving like either copy() or encapsulate().
       @param contents  A string containing contents to be mirrored.
       @param copy      True if the contents are to be copied, false if they are 
                        to simply be pointed to (see \c encapsulate).
     **/
-    llreader(std::string contents, bool copy);
+    llreader(std::string name, std::string contents, bool copy);
+    llreader(std::string name, std::string contents);
     /**
       Consumes another \c llreader, stealing its contents then settings its
       mode to closed (while keeping the stolen one open).

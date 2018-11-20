@@ -13,6 +13,7 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-std=c++1z" />
 					<Add option="-g" />
 					<Add option="-DDEBUG_MODE" />
 				</Compiler>
@@ -23,6 +24,7 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-std=c++1z" />
 					<Add option="-g" />
 					<Add option="-DDEBUG_MODE" />
 					<Add option="-DRENDER_ASTS" />
@@ -37,6 +39,7 @@
 					<Add option="-fomit-frame-pointer" />
 					<Add option="-fexpensive-optimizations" />
 					<Add option="-O3" />
+					<Add option="-std=c++1z" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -48,6 +51,7 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-std=c++1z" />
 					<Add option="-pg" />
 					<Add option="-g" />
 				</Compiler>

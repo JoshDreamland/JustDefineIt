@@ -82,7 +82,7 @@ static void test_lexer_16_3_3() {
     join(x, y)
   )";
 
-  llreader basic(tcase, tcase.length());
+  llreader basic("test macro", tcase, false);
   context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
@@ -101,7 +101,7 @@ static void test_lexer_mathcat() {
     __MATHCALL_VEC()
   )";
 
-  llreader basic(tcase, tcase.length());
+  llreader basic("test macro", tcase, false);
   context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
@@ -140,8 +140,6 @@ int main() {
   
   putcap("Metrics");
   cout << "sizeof(jdip::macro_type):        " << sizeof(jdip::macro_type) << endl
-       << "sizeof(jdip::macro_function):    " << sizeof(jdip::macro_function) << endl
-       << "sizeof(jdip::macro_scalar):      " << sizeof(jdip::macro_scalar) << endl
        << "sizeof(jdi::definition):         " << sizeof(jdi::definition) << endl
        << "sizeof(jdi::ref_stack):          " << sizeof(jdi::ref_stack) << endl
        << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl
@@ -196,7 +194,7 @@ int main() {
   test_lexer_mathcat();
   if (false) {
     string tcase = "#define butts 1\n#if 2 > 1 && butts\n  int x;\n#endif\n";
-    llreader basic(tcase, tcase.length());
+    llreader basic("test case", tcase, false);
     context butts;
     macro_map buttMacros = butts.get_macros();
     token_t token;
@@ -304,7 +302,7 @@ int main() {
 #include <Parser/context_parser.h>
 
 void name_type(string type, context &ct) {
-  llreader llr(type, type.length());
+  llreader llr("type string", type, type.length());
   macro_map undamageable = ct.get_macros();
   lexer_cpp c_lex(llr, undamageable, "User expression");
   context_parser cp(&ct, &c_lex, def_error_handler);
@@ -339,7 +337,7 @@ void do_cli(context &ct)
         if (false) { case 'o': justorder = true; justflags = false; }
         cout << "Enter the item to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
-        llreader llr(buf, strlen(buf));
+        llreader llr("user input", buf, true);
         lexer_cpp c_lex(llr, undamageable, "User expression");
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
         if (dummy.type != TT_DEFINITION && dummy.type != TT_DECLARATOR && dummy.type != TT_SCOPE) {
@@ -388,7 +386,7 @@ void do_cli(context &ct)
         } } }
         cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
-        llreader llr(buf, strlen(buf));
+        llreader llr("user input", buf, true);
         lexer_cpp c_lex(llr, undamageable, "User expression");
         AST a;
         context_parser cparse(&ct, &c_lex, def_error_handler);

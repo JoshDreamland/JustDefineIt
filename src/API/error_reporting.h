@@ -36,13 +36,13 @@ namespace jdi {
         of the system or to circumstances by which the error arose, the default values in the
         prototype are passed.
     **/
-    virtual void error(std::string err, std::string filename = "", int line = -1, int pos = -1) = 0;
+    virtual void error(std::string_view err, std::string_view filename = "", int line = -1, int pos = -1) = 0;
     /** Method invoked when an error occurs. As much detail about the location of the warning
         as possible is sent to the method. If information is unavailable, due to build flags
         of the system or to circumstances by which the error arose, the default values in the
         prototype are passed.
     **/
-    virtual void warning(std::string err, std::string filename = "", int line = -1, int pos = -1) = 0;
+    virtual void warning(std::string_view err, std::string_view filename = "", int line = -1, int pos = -1) = 0;
     /// Virtual destructor in case children have additional data types to free.
     virtual ~error_handler();
   };
@@ -52,9 +52,9 @@ namespace jdi {
   struct default_error_handler: error_handler {
     unsigned error_count, warning_count;
     /// Prints the error to stderr, in the format "ERROR[(<file>[:<line>[:<pos>]])]: <error string>"
-    void error(std::string err, std::string filename = "", int line = -1, int pos = -1);
+    void error(std::string_view err, std::string_view filename = "", int line = -1, int pos = -1);
     /// Prints the error to stderr, in the format "Warning[(<file>[:<line>[:<pos>]])]: <warning string>"
-    void warning(std::string err, std::string filename = "", int line = -1, int pos = -1);
+    void warning(std::string_view err, std::string_view filename = "", int line = -1, int pos = -1);
     default_error_handler();
   };
 

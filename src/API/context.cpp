@@ -30,6 +30,7 @@ using namespace std;
 #include "context.h"
 #include <System/macros.h>
 #include <System/builtins.h>
+#include <System/lex_cpp.h>
 
 using namespace jdi;
 using namespace jdip;
@@ -42,24 +43,37 @@ void context::read_macros(const char* filename)
   // TODO: IMPLEMENT
   in.close();
 }
-void context::add_macro(string definiendum, string definiens) {
-  macros[definiendum] = (macro_type*)new macro_scalar(definiendum, definiens);
+inline vector<token_t> &&parse_macro(const string &definiendum, const string &definiens, error_handler *herr) {
+  file_meta meta;
+  llreader str_reader(definiendum, definiens, false);
+  vector<token_t> tokens;
+  for (token_t t;
+      (t = read_token(str_reader, meta, herr)).type != TT_ENDOFCODE; )
+    tokens.push_back(t);
+  return std::move(tokens);
+}
+void context::add_macro_from_string(string definiendum, string definiens) {
+  macros[definiendum] = new macro_type(definiendum, std::move(parse_macro(definiendum, definiens, herr)));
 }
 void context::add_macro_func(string definiendum, string definiens) {
-  macros[definiendum] = (macro_type*)new macro_function(definiens);
+  macros[definiendum] = new macro_type(definiendum,
+                                       std::move(parse_macro(definiendum, definiens, herr)));
 }
-void context::add_macro_func(string definiendum, string p1, string definiens, bool variadic)
-{
+void context::add_macro_func(string definiendum, string p1, string definiens, bool variadic) {
   vector<string> arglist;
   arglist.push_back(p1);
-  macros[definiendum] = (macro_type*)new macro_function(definiendum, arglist, definiens, variadic);
+  macros[definiendum] = new macro_type(definiendum, std::move(arglist),
+                                       std::move(parse_macro(definiendum, definiens, herr)),
+                                       variadic);
 }
-void context::add_macro_func(string definiendum, string p1, string p2, string definiens, bool variadic)
-{
+void context::add_macro_func(string definiendum, string p1, string p2, string definiens, bool variadic) {
   vector<string> arglist;
   arglist.push_back(p1);
   arglist.push_back(p2);
-  macros[definiendum] = (macro_type*)new macro_function(definiendum, arglist, definiens, variadic);
+  macros[definiendum] = new macro_type(definiendum,
+                                       std::move(arglist), 
+                                       std::move(parse_macro(definiendum, definiens, herr)), 
+                                       variadic);
 }
 void context::add_macro_func(string definiendum, string p1, string p2, string p3, string definiens, bool variadic)
 {
@@ -67,7 +81,10 @@ void context::add_macro_func(string definiendum, string p1, string p2, string p3
   arglist.push_back(p1);
   arglist.push_back(p2);
   arglist.push_back(p3);
-  macros[definiendum] = (macro_type*)new macro_function(definiendum, arglist, definiens, variadic);
+  macros[definiendum] = new macro_type(definiendum,
+                                       std::move(arglist), 
+                                       std::move(parse_macro(definiendum, definiens, herr)), 
+                                       variadic);
 }
 
 #ifndef MAX_PATH
@@ -140,8 +157,7 @@ void context::copy(const context &ct)
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
     if (dest.second) {
-      dest.first->second = mi->second;
-      ++mi->second->refc;
+      dest.first->second = new macro_type(*mi->second);
     }
   }
   for (set<definition*>::iterator it = ct.variadics.begin(); it != ct.variadics.end(); ++it) {
@@ -153,7 +169,7 @@ void context::copy(const context &ct)
 }
 void context::swap(context &ct) {
   if (!parse_open and !ct.parse_open) {
-    { register definition_scope* gs = ct.global;
+    { definition_scope* gs = ct.global;
       ct.global = global; global = gs; }
     macros.swap(ct.macros);
     variadics.swap(ct.variadics);
@@ -200,7 +216,8 @@ void context::output_definitions(ostream &out) {
   out << global->toString();
 }
 
-context::context(): parse_open(false), global(new definition_scope()) {
+context::context(error_handler *herr_):
+    parse_open(false), global(new definition_scope()), herr(herr_) {
   copy(*builtin);
 }
 context::context(int): parse_open(false), global(new definition_scope()) { }

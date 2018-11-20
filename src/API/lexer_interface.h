@@ -36,7 +36,7 @@ namespace jdi {
 
 namespace jdi {
   /**
-    Base lexer class.
+    Main C++ lexer class.
     This class contains a virtual method for reading a token from the stream, and a
     virtual destructor to enable correctly freeing implementing classes with non-POD
     members.

@@ -42,66 +42,69 @@ namespace jdip {
 
 namespace jdip {
   using namespace jdi;
-  /**
-    @brief An extension of \c llreader which also stores information about the
-           current line number and the position of the last line break.
-  **/
-  struct openfile {
-    const char* filename; ///< The name of the open file.
+  
+  struct file_meta {
+    string name; ///< The name of the open file or macro.
     string searchdir; ///< The search directory from which this file was included, or the empty string.
-    size_t line; ///< The index of the current line.
-    size_t lpos; ///< The position of the most recent line break.
-    llreader file; ///< The llreader of this file.
-    openfile(); ///< Default constructor.
-    openfile(const char* fname); ///< Construct a new openfile at position 0 with the given filename.
-    /// Construct a new openfile with the works.
-    /// @param fname     The name of the file in use
-    /// @param sdir      The search directory from which this file was included, or the empty string
-    /// @param line_num  The number of the line, to store
-    /// @param line_pos  The position of the last newline, to store
-    /// @param consume   The llreader to consume for storage
-    openfile(const char* fname, string sdir, size_t line_num, size_t line_pos, llreader &consume);
-    void swap(openfile&); ///< Swap with another openfile.
+    size_t from_line; ///< The index of the line in the file that used or included this one.
+    size_t from_lpos; ///< The position in from_line.
   };
   
+  struct openfile: file_meta {
+    llreader file;
+  };
+  
+  struct enteredmacro: file_meta {
+    const std::vector<token_t> &tokens;
+    std::vector<token_t> assembled_token_data;
+    enteredmacro(string macro, size_t line, size_t lpos,
+                 const std::vector<token_t> *tokens_):
+                     file_meta{macro, "", line, lpos},
+                     tokens(*tokens_) {}
+    enteredmacro(string macro, size_t line, size_t lpos,
+                 std::vector<token_t> &&tokens_):
+                     file_meta{macro, "", line, lpos},
+                     tokens(assembled_token_data),
+                     assembled_token_data(std::move(tokens_)) {}
+  };
+  
+  /// The basic C++ lexer. Extracts a single preprocessor token from the given
+  /// reader. Uses @p file to include source metadata in the token.
+  token_t read_token(llreader &data, const file_meta &file,
+                     error_handler *herr = def_error_handler);
+
   /**
-    An implementation of \c jdi::lexer for handling macro expressions.
-    Unrolls macros automatically. Treats non-macro identifiers as zero.
-    Replaces `defined x` with 0 or 1, depending on whether x is defined.
-  **/
-  struct lexer_cpp_base: llreader
+   * An implementation of \c jdi::lexer for lexing C++.
+   * Handles preprocessing seamlessly, returning only relevant tokens.
+   **/
+  struct lexer_cpp: lexer
   {
-    quick::stack<openfile> files; ///< The macros we are nested in and files we have open, in the order we entered them.
-    unsigned open_macro_count; ///< Count of macros we are currently nested in; cached to prevent recursion.
+    llreader cfile;  ///< The current file being read.
+    std::vector<openfile> files; ///< The macros we are nested in and files we have open, in the order we entered them.
+    std::vector<enteredmacro> open_macros; ///< Count of macros we are currently nested in; cached to prevent recursion.
     
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
     
-    const char* filename; ///< The name of the open file.
-    string sdir; ///< The last loaded search directory.
-    size_t line; ///< The current line number in the file
-    size_t lpos; ///< The index in the file of the most recent line break.
-    
     /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
     token_t read_raw(error_handler *herr);
-    lexer_cpp_base(llreader &input, macro_map &pmacros, const char *fname);
     
     /// Enter a scalar macro, if it has any content.
     /// @param ms   The macro scalar to enter.
-    void enter_macro(macro_scalar *ms);
+    void enter_macro(macro_type *ms);
     /// Parse for parameters to a given macro function, if there are any, then evaluate
     /// the macro function and set the open file to reflect the change.
     /// This call should be made while the position is just after the macro name.
     /// @param mf   The macro function to parse
     /// @param herr An error handler in case of parameter mismatch or non-terminated literals
     /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_function(const macro_function* mf, error_handler *herr);
+    bool parse_macro_function(const macro_type* mf, error_handler *herr);
     /// Parse for parameters to a given macro function, if there are any.
     /// This call should be made while the position is just after the macro name.
     /// @param mf    The macro function to parse.
     /// @param dest  The vector to receive the individual parameters [out].
     /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
     /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_params(const macro_function* mf, vector<string>& dest, error_handler *herr);
+    bool parse_macro_params(const macro_type* mf, vector<string>& dest, error_handler *herr);
     
     /// Utility function to skip a single-line comment; invoke with pos indicating one of the slashes.
     inline void skip_comment();
@@ -115,16 +118,7 @@ namespace jdip {
     /// Pop the currently open file or active macro.
     /// @return Returns whether the end of all input has been reached.
     bool pop_file();
-  };
-  
-  struct lexer_macro;
-  
-  /**
-    @brief An implementation of \c jdi::lexer for lexing C++. Handles preprocessing
-           seamlessly, returning only relevant tokens.
-  **/
-  struct lexer_cpp: lexer, lexer_cpp_base
-  {
+
     virtual token_t get_token(error_handler *herr = def_error_handler);
     
     /// Map of string to token type; a map-of-keywords type.
@@ -177,12 +171,6 @@ namespace jdip {
     quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested `\#if*`)
     lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
     context_parser *mctex; ///< A context used for constructing ASTs from preprocessor expressions.
-  };
-  
-  struct lexer_macro: lexer {
-    lexer_cpp_base *lex_base;
-    virtual token_t get_token(error_handler *herr = def_error_handler);
-    lexer_macro(lexer_cpp_base* b): lex_base(b) {}
   };
 }
 

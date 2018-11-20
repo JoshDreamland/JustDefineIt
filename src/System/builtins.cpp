@@ -172,7 +172,7 @@ namespace jdi {
     builtin_flag__explicit = add_declarator("explicit", UF_FLAG).flag;
     
     builtin->variadics.insert(builtin_type__va_list);
-    builtin->add_macro("JUST_DEFINE_IT_RUN", string());
+    builtin->add_macro("JUST_DEFINE_IT_RUN", {});
   }
   
   void cleanup_declarators() {

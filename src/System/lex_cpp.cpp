@@ -40,8 +40,6 @@ using namespace jdi;
 using namespace jdip;
 using namespace std;
 
-#define cfile data //I'm sorry, but I can't spend the whole function calling the file buffer "data."
-
 /// Returns whether s1 begins with s2, followed by whitespace.
 static inline bool strbw(const char* s1, const char (&s2)[3]) { return *s1 == *s2 and s1[1] == s2[1] and (!is_letterd(s1[2])); }
 static inline bool strbw(const char* s1, const char (&s2)[4]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and (!is_letterd(s1[3])); }
@@ -51,7 +49,8 @@ static inline bool strbw(const char* s1, const char (&s2)[7]) { return *s1 == *s
 static inline bool strbw(const char* s1, const char (&s2)[11]){ return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and s1[5] == s2[5] and s1[6] == s2[6] and s1[7] == s2[7] and s1[8] == s2[8] and s1[9] == s2[9] and (!is_letterd(s1[10])); }
 static inline bool strbw(char s) { return !is_letterd(s); }
 
-void lexer_cpp_base::skip_comment()
+#if 0
+void lexer_cpp::skip_comment()
 {
   #if ALLOW_MULTILINE_COMMENTS
   while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') if (cfile[pos] == '\\') {
@@ -63,7 +62,7 @@ void lexer_cpp_base::skip_comment()
   #endif
 }
 
-inline void lexer_cpp_base::skip_multiline_comment()
+inline void lexer_cpp::skip_multiline_comment()
 {
   char pchr = 0;
   pos += 2; // Skip two chars so we don't break on /*/
@@ -73,7 +72,7 @@ inline void lexer_cpp_base::skip_multiline_comment()
   ++pos;
 }
 
-void lexer_cpp_base::skip_string(error_handler *herr)
+void lexer_cpp::skip_string(error_handler *herr)
 {
   register const char endc = cfile[pos];
   while (++pos < length and cfile[pos] != endc)
@@ -114,43 +113,66 @@ void lexer_cpp_base::skip_whitespace()
     return;
   }
 }
+#endif
 
-void lexer_cpp_base::enter_macro(macro_scalar* ms)
-{
-  if (ms->value.empty()) return;
-  openfile of(filename, sdir, line, lpos, *this);
-  files.enswap(of);
-  filename = ms->name.c_str();
-  this->encapsulate(ms->value);
-  line = lpos = pos = 0;
-  ++open_macro_count;
+void lexer_cpp::enter_macro(macro_type* macro) {
+  if (macro->value.empty()) return;
+  open_macros.push_back({macro->name, cfile.lnum, cfile.lpos, &macro->value});
 }
 
-bool lexer_cpp_base::parse_macro_params(const macro_function* mf, vector<string>& dest, error_handler *herr)
-{
-  skip_whitespace();
+static inline void lex_error(error_handler *herr, const llreader &cfile, string_view msg) {
+  herr->error(msg, cfile.name, cfile.lnum, cfile.pos - cfile.lpos);
+}
+
+static inline void skip_string(llreader &cfile, error_handler *herr) {
+  const char endc = cfile.at();
+  while (cfile.next() != EOF && cfile.at() != endc) {
+    if (cfile.at() == '\\') {
+      if (cfile.next() == EOF) {
+        lex_error(herr, cfile, "You can't escape the file ending, jackwagon.");
+        return;
+      } else if (cfile.at() == '\n') {
+        ++cfile.lnum, cfile.lpos = cfile.pos;
+      } else if (cfile.at() == '\r') {
+        if (cfile.next() != '\n') --cfile.pos;
+        ++cfile.lnum, cfile.lpos = cfile.pos; 
+      }
+    }
+    else if (cfile.at() == '\n' or cfile.at() == '\r') {
+      lex_error(herr, cfile, "Unterminated string literal");
+      break;
+    }
+  }
+  if (cfile.eof() or cfile.at() != endc)
+    lex_error(herr, cfile, "Unterminated string literal");
+}
+
+static inline size_t parse_macro_params(const macro_type* mf,
+    llreader &cfile, vector<string> *out, error_handler *herr) {
+  cfile.skip_whitespace();
+  size_t &pos = cfile.pos;
   
   size_t pspos = ++pos;
-  dest.reserve(mf->argc);
+  vector<string> dest;
+  dest.reserve(mf->args.size());
   
   // Read the parameters into our argument vector
   int nestcnt = 1;
-  while (pos < length and nestcnt > 0) {
+  while (pos < cfile.length && nestcnt > 0) {
     if (cfile[pos] == ',' and nestcnt == 1) {
-      dest.push_back(string(cfile+pspos, pos-pspos)); // FIXME: XXX: This latter line expands the parameters before embedding, similar to GCC; Is that strictly needed?
-      // dest.push_back(string(cfile+pspos, pos-pspos), macros, token_t(token_basics(TT_INVALID, filename, line, pos)), herr));
+      dest.push_back(string(cfile+pspos, pos-pspos));
       pspos = ++pos;
-      skip_whitespace();
+      cfile.skip_whitespace();
       continue;
     } else if (cfile[pos] == ')') { if (--nestcnt) ++pos; continue; }
       else if (cfile[pos] == '(') ++nestcnt;
       else if (cfile[pos] == '"' or cfile[pos] == '\'') 
-        skip_string(herr);
+        skip_string(cfile, herr);
     ++pos; 
-    skip_whitespace();
+    cfile.skip_whitespace();
   }
-  if (pos >= length or cfile[pos] != ')') {
-    herr->error("Unterminated parameters to macro function", filename, line, pos - lpos);
+  if (cfile.eof() or cfile.at() != ')') {
+    lex_error(herr, cfile, "Unterminated parameters to macro function");
     return false;
   }
   
@@ -159,22 +181,27 @@ bool lexer_cpp_base::parse_macro_params(const macro_function* mf, vector<string>
     //dest.push_back(_flatten(string(cfile+pspos, pos-pspos), macros, token_t(token_basics(TT_INVALID, filename, line, pos)), herr)); // Nab the final parameter
   
   ++pos; // Consume closing parenthesis to argument list
-  return true;
+  out->swap(dest);
+  return pos;
 }
 
-bool lexer_cpp_base::parse_macro_function(const macro_function* mf, error_handler *herr)
-{
+bool lexer_cpp::parse_macro_function(const macro_type* mf, error_handler *herr) {
   bool already_open = false; // Test if we're in this macro already
-  quick::stack<openfile>::iterator it = files.begin();
-  for (unsigned i = 0; i < open_macro_count; ++i)
-    if (it->filename == mf->name) { already_open = true; break; }
-    else --it;
+  vector<openfile>::iterator it = files.begin();
+  for (size_t i = 0; i < open_macros.size(); ++i, --it) {
+    if (it->name != mf->name) continue;
+    already_open = true;
+    break;
+  }
   if (already_open)
     return true;
   
-  size_t spos = pos, slpos = lpos, sline = line;
-  skip_whitespace(); // Move to the next "token"
-  if (pos >= length or cfile[pos] != '(') { pos = spos, lpos = slpos, line = sline; return false; }
+  size_t spos = cfile.pos, slpos = cfile.lpos, sline = cfile.line;
+  cfile.skip_whitespace(); // Move to the next "token"
+  if (cfile.eof() or cfile.at() != '(') {
+    cfile.pos = spos, cfile.lpos = slpos, cfile.line = sline;
+    return false;
+  }
   
   vector<string> params;
   parse_macro_params(mf, params, herr);
@@ -184,7 +211,7 @@ bool lexer_cpp_base::parse_macro_function(const macro_function* mf, error_handle
   files.enswap(of);
   alias(files.top().file);
   char *buf, *bufe;
-  if (!mf->parse(params, buf, bufe, token_t(token_basics(TT_INVALID,filename,line,lpos-pos)), herr)) {
+  if (!mf->parse(params, buf, bufe, token_t(token_basics(TT_INVALID,filename,line,lpos-pos)), true, herr)) {
     this->consume(files.top().file);
     files.pop();
     return true;
@@ -194,7 +221,7 @@ bool lexer_cpp_base::parse_macro_function(const macro_function* mf, error_handle
   filename = mf->name.c_str();
   lpos = line = 0;
   ++open_macro_count;
-  return true;  
+  return true;
 }
 
 string lexer_cpp::read_preprocessor_args(error_handler *herr)
@@ -373,7 +400,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
       else
       {
         if (!mins.second) { // If no insertion was made; ie, the macro existed already.
-        //  if (mins.first->second->argc != -1 or ((macro_scalar*)mins.first->second)->value != argstr.substr(i))
+        //  if (mins.first->second->argc != -1 or (mins.first->second)->value != argstr.substr(i))
         //    herr->warning("Redeclaring macro `" + mins.first->first + '\'', filename, line, pos-lpos);
           macro_type::free(mins.first->second);
           mins.first->second = NULL;
@@ -921,7 +948,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
           if (it->filename == fn) { already_open = true; break; }
           else --it;
         if (!already_open) {
-          enter_macro((macro_scalar*) mi->second);
+          enter_macro( mi->second);
           goto top;
         }
       }
@@ -940,7 +967,7 @@ token_t lexer_cpp::get_token(error_handler *herr)
           cerr << "SYSTEM ERROR! KEYWORD `" << fn << "' IS DEFINED AS INVALID" << endl;
         #endif
         if (mi->second->argc < 0)
-          enter_macro((macro_scalar*)mi->second);
+          enter_macro(mi->second);
         else if (!parse_macro_function((macro_function*)mi->second, herr))
           return res;
         goto top;
@@ -1023,7 +1050,7 @@ token_t lexer_macro::get_token(error_handler *herr)
           if (it->filename == mn) { already_open = true; break; }
           else --it;
         if (!already_open) {
-          lex_base->enter_macro((macro_scalar*) mi->second);
+          lex_base->enter_macro( mi->second);
           goto top;
         }
       }

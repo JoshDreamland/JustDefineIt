@@ -50,6 +50,7 @@ namespace jdip {
 #include <System/type_usage_flags.h>
 #include <Storage/definition.h>
 #include <General/llreader.h>
+#include <System/token.h>
 #include <API/error_reporting.h>
 #include <API/lexer_interface.h>
 
@@ -87,6 +88,8 @@ namespace jdi
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     definition_scope* global; ///< The global scope represented in this context.
     
+    error_handler *herr;
+    
   public:
     set<definition*> variadics; ///< Set of variadic types.
     
@@ -109,6 +112,7 @@ namespace jdi
     
     void read_macros(const char* filename); ///< Read a file containing exclusively macros, in C format.
     void add_macro(string definiendum, string definiens); ///< Add a macro to this context.
+    void add_macro_from_string(string definiendum, string definiens); ///< Add a macro to this context.
     
     /// Add a macro function with no parameters to this context.
     void add_macro_func(string definiendum, string definiens);
@@ -163,23 +167,22 @@ namespace jdi
     
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
-        @param errhandl  An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
-                         If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
-    int parse_C_stream(llreader& cfile, const char* fname = NULL, error_handler *errhandl = NULL);
+    int parse_C_stream(llreader& cfile, const char* fname = NULL);
     
     /** Parse an input stream for definitions using the default C++ lexer.
         @param lang_lexer The lexer which will be polled for tokens. This lexer will already know its token source.
                           If this parameter is NULL, the previous lexer will be used. Or else a huge error will be thrown.
-        @param errhandl   An instance of \c jdi::error_handler which will receive any warnings or errors encountered.
-                          If this parameter is NULL, the previous error handler will be used, or the default will be used.
     **/
-    int parse_stream(lexer *lang_lexer, error_handler *errhandl = NULL);
+    int parse_stream(lexer *lang_lexer);
     
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.
+        You may specify an error handler to use in this constructor, or you may
+        assign one later using `set_error_handler(herr)`.
     **/
-    context();
+    context(error_handler *herr = def_error_handler);
+    
     
     /** Construct with essentially nothing. This constructor circumvents the copy process. It has
         no purpose other than and is not to be used except in allocating the builtin scope.
@@ -201,6 +204,11 @@ namespace jdi
         context instead of the builtin context.
     **/
     context(const context&);
+    
+    /** Sets the error handler to use when parsing macros or code. */
+    void set_error_handler(error_handler *herr_) {
+      herr = herr_;
+    }
     
     /** A simple destructor to clean up after the definition loading. **/
     ~context();
