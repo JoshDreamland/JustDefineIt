@@ -170,12 +170,6 @@ namespace jdi
     **/
     int parse_C_stream(llreader& cfile, const char* fname = NULL);
     
-    /** Parse an input stream for definitions using the default C++ lexer.
-        @param lang_lexer The lexer which will be polled for tokens. This lexer will already know its token source.
-                          If this parameter is NULL, the previous lexer will be used. Or else a huge error will be thrown.
-    **/
-    int parse_stream(lexer *lang_lexer);
-    
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.
         You may specify an error handler to use in this constructor, or you may

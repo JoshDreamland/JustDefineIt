@@ -25,7 +25,6 @@
 #include <Storage/value_funcs.h>
 #include <System/builtins.h>
 #include <System/symbols.h>
-#include <System/lex_buffer.h>
 #include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 #include <iostream>
@@ -608,7 +607,7 @@ namespace jdip
                 ant = NULL, ft_annoying = &ft_stacked;
               full_type &ft = *ft_annoying;
               
-              lex_buffer lb(cparse->lex);
+              lexer_cpp::look_ahead lb(cparse->lex);
               bool is_cast = true; // True if the contents of these parentheses are part of the cast;
               // For example, in bool(*)(), the (*) is part of the cast. In bool(10), (10) is not part of the cast.
               
@@ -631,7 +630,7 @@ namespace jdip
                 return NULL;
               }
               
-              lb.reset();
+              lb.rewind();
               cparse->lex = &lb;
                 token = get_next_token();
                 if (is_cast) {

@@ -156,7 +156,6 @@
 		<Unit filename="src/System/builtins.cpp" />
 		<Unit filename="src/System/builtins.h" />
 		<Unit filename="src/System/lex_buffer.cpp" />
-		<Unit filename="src/System/lex_buffer.h" />
 		<Unit filename="src/System/lex_cpp.cpp" />
 		<Unit filename="src/System/lex_cpp.h" />
 		<Unit filename="src/System/macros.cpp" />

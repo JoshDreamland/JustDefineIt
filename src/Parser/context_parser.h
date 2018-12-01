@@ -58,7 +58,7 @@
 #include <API/context.h>
 #include <API/AST_forward.h>
 #include <System/token.h>
-#include <API/lexer_interface.h>
+#include <System/lex_cpp.h>
 #include <Storage/definition.h>
 #include <Storage/value.h>
 
@@ -82,28 +82,27 @@ namespace jdip {
     @brief A field-free utility class extending \c context, implementing the
            recursive-descent functions needed by the parser.
     
-    Since context_parser contains no members and context is not virtual, a cast to jdip::context_parser
-    from an allocated jdi::context is valid.
+    Since context_parser contains no members and context is not virtual, a cast to
+    jdip::context_parser from an allocated jdi::context is valid.
   **/
-  class context_parser
-  {
-    context *ctex_alloc; ///< Used to collect any context we allocated
+  class context_parser {
+    context *ctex_alloc;  ///< Used to collect any context we allocated
     
-    context *ctex; ///< The original context we are parsing into.
-    lexer *lex; ///< The lexer which all methods and all calls therefrom will poll for tokens.
-    error_handler *herr; ///< The error handler to which errors and warnings will be reported.
-    AST_Builder *astbuilder; ///< Used to build ASTs at any time during parse.
+    context *ctex;  ///< The original context we are parsing into.
+    lexer_cpp *lex;  ///< The lexer which all methods and all calls therefrom will poll for tokens.
+    error_handler *herr;  ///< The error handler to which errors and warnings will be reported.
+    AST_Builder *astbuilder;  ///< Used to build ASTs at any time during parse.
     friend class jdip::AST_Builder;
     
-    public:
-    inline lexer *get_lex() const { return lex; }
+   public:
+    inline lexer_cpp *get_lex() const { return lex; }
     inline AST_Builder *get_AST_builder() const { return astbuilder; }
     inline error_handler *get_herr() const { return herr; }
     
     /// Constructs, temporarily consuming a context. Do not use the context while this is active.
-    context_parser(context* ctex, lexer* lex, error_handler* herr);
+    context_parser(context* ctex, error_handler* herr);
     /// Construct without copying
-    context_parser(lexer* lex, error_handler* herr);
+    context_parser(error_handler* herr);
     /// Destructs, returning data to the original context.
     ~context_parser();
     
@@ -131,6 +130,7 @@ namespace jdip {
               first unhandled token.
     **/
     full_type read_fulltype(token_t &token, definition_scope *scope);
+
     /**
       Read a complete type from the given input stream.
       
@@ -153,6 +153,7 @@ namespace jdip {
               first unhandled token.
     **/
     full_type read_type(token_t &token, definition_scope *scope);
+
     /**
       Read a series of referencers from the given input stream.
       
@@ -175,6 +176,7 @@ namespace jdip {
                error state, as the error will have already been reported to the given error handler.
     **/
     int read_referencers(ref_stack& refs, const full_type &ft, token_t &token, definition_scope *scope);
+
     /**
       Read function parameters into a \c ref_stack from an input stream. This function should be invoked with the first
       token following the opening parentheses, and will terminate with the first token after the closing parentheses.
@@ -196,6 +198,7 @@ namespace jdip {
                error state, as the error will have already been reported to the given error handler.
     **/
     int read_function_params(ref_stack& refs, token_t &token, definition_scope *scope);
+
     /**
       Read the latter half of referencers, as handled in read_referencers.
       
@@ -208,6 +211,7 @@ namespace jdip {
                error state, as the error will have already been reported to the given error handler.
     **/
     int read_referencers_post(ref_stack& refs, token_t &token, definition_scope *scope);
+
     /**
       Read a list of template parameters from the given input stream.
       
@@ -331,6 +335,7 @@ namespace jdip {
       @return Zero if no error occurred, a non-zero exit status otherwise.
     **/
     int handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags, definition* &res = dangling_pointer);
+
     /**
       Parse a list of declarations assuming the given type, copying them into the given scope.
       

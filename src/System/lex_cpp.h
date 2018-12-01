@@ -54,14 +54,14 @@ namespace jdip {
     llreader file;
   };
   
-  struct enteredmacro: file_meta {
+  struct EnteredMacro: file_meta {
     const std::vector<token_t> &tokens;
     std::vector<token_t> assembled_token_data;
-    enteredmacro(string macro, size_t line, size_t lpos,
+    EnteredMacro(string macro, size_t line, size_t lpos,
                  const std::vector<token_t> *tokens_):
                      file_meta{macro, "", line, lpos},
                      tokens(*tokens_) {}
-    enteredmacro(string macro, size_t line, size_t lpos,
+    EnteredMacro(string macro, size_t line, size_t lpos,
                  std::vector<token_t> &&tokens_):
                      file_meta{macro, "", line, lpos},
                      tokens(assembled_token_data),
@@ -77,16 +77,49 @@ namespace jdip {
    * An implementation of \c jdi::lexer for lexing C++.
    * Handles preprocessing seamlessly, returning only relevant tokens.
    **/
-  struct lexer_cpp: lexer
-  {
+  struct lexer_cpp {
     llreader cfile;  ///< The current file being read.
     std::vector<openfile> files; ///< The macros we are nested in and files we have open, in the order we entered them.
-    std::vector<enteredmacro> open_macros; ///< Count of macros we are currently nested in; cached to prevent recursion.
+    std::vector<EnteredMacro> open_macros; ///< Macros we are currently nested in.
+    error_handler *herr;  ///< Error handler for problems during lex.
+    
+    /// Tokens that have been expanded from a macro or fetched as lookahead.
+    std::vector<token_t> *buffered_tokens = nullptr;
+    /// The position in the current token buffer.
+    size_t buffer_pos;
+    
+    /// Buffer to which tokens will be recorded for later re-parse, as needed.
+    std::vector<token_t> *lookahead_buffer = nullptr;
+    /// RAII type for initiating a lookahead.
+    struct look_ahead {
+      std::vector<token_t> buffer;
+      std::vector<token_t> *prev_buffer;
+      lexer_cpp *lexer;
+      
+      token_t &push(token_t token) {
+        buffer.push_back(token);
+        return buffer.back();
+      }
+      
+      look_ahead(lexer_cpp *lex): prev_buffer(lex->lookahead_buffer), lexer(lex) {
+        lex->lookahead_buffer = &buffer;
+      }
+      ~look_ahead() {
+        if (lexer->lookahead_buffer != &buffer) {
+          lexer->herr->error("LOGIC ERROR: lookahead buffer is not owned");
+          abort();
+        }
+        lexer->lookahead_buffer = prev_buffer;
+      }
+    };
     
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
     
     /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
-    token_t read_raw(error_handler *herr);
+    token_t read_raw();
+    /// Read a C++ token, with no scope information.
+    token_t get_token();
+    
     
     /// Enter a scalar macro, if it has any content.
     /// @param ms   The macro scalar to enter.
@@ -97,29 +130,27 @@ namespace jdip {
     /// @param mf   The macro function to parse
     /// @param herr An error handler in case of parameter mismatch or non-terminated literals
     /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_function(const macro_type* mf, error_handler *herr);
+    bool parse_macro_function(const macro_type* mf);
     /// Parse for parameters to a given macro function, if there are any.
     /// This call should be made while the position is just after the macro name.
     /// @param mf    The macro function to parse.
     /// @param dest  The vector to receive the individual parameters [out].
     /// @param herr  An error handler in case of parameter mismatch or non-terminated literals.
     /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_params(const macro_type* mf, vector<string>& dest, error_handler *herr);
+    bool parse_macro_params(const macro_type* mf, vector<string>& dest);
     
     /// Utility function to skip a single-line comment; invoke with pos indicating one of the slashes.
     inline void skip_comment();
     /// Utility function to skip a multi-line comment; invoke with pos indicating the starting slash.
     inline void skip_multiline_comment();
     /// Utility function to skip a string; invoke with pos indicating the quotation mark. Terminates indicating match.
-    inline void skip_string(error_handler *herr);
+    inline void skip_string();
     /// Skip anything that cannot be interpreted as code in any way.
     inline void skip_whitespace();
     
     /// Pop the currently open file or active macro.
     /// @return Returns whether the end of all input has been reached.
     bool pop_file();
-
-    virtual token_t get_token(error_handler *herr = def_error_handler);
     
     /// Map of string to token type; a map-of-keywords type.
     typedef map<string,TOKEN_TYPE> keyword_map;

@@ -147,8 +147,7 @@ static inline void skip_string(llreader &cfile, error_handler *herr) {
     lex_error(herr, cfile, "Unterminated string literal");
 }
 
-static inline size_t parse_macro_params(const macro_type* mf,
-    llreader &cfile, vector<string> *out, error_handler *herr) {
+bool lexer_cpp::parse_macro_params(const macro_type* mf, vector<string> *out) {
   cfile.skip_whitespace();
   size_t &pos = cfile.pos;
   
@@ -182,7 +181,7 @@ static inline size_t parse_macro_params(const macro_type* mf,
   
   ++pos; // Consume closing parenthesis to argument list
   out->swap(dest);
-  return pos;
+  return true;
 }
 
 bool lexer_cpp::parse_macro_function(const macro_type* mf, error_handler *herr) {
@@ -196,31 +195,17 @@ bool lexer_cpp::parse_macro_function(const macro_type* mf, error_handler *herr) 
   if (already_open)
     return true;
   
-  size_t spos = cfile.pos, slpos = cfile.lpos, sline = cfile.line;
+  size_t spos = cfile.pos, slpos = cfile.lpos, sline = cfile.lnum;
   cfile.skip_whitespace(); // Move to the next "token"
   if (cfile.eof() or cfile.at() != '(') {
-    cfile.pos = spos, cfile.lpos = slpos, cfile.line = sline;
+    cfile.pos = spos, cfile.lpos = slpos, cfile.lnum = sline;
     return false;
   }
   
   vector<string> params;
-  parse_macro_params(mf, params, herr);
-  
-  // Enter the macro
-  openfile of(filename, sdir, line, lpos, *this);
-  files.enswap(of);
-  alias(files.top().file);
-  char *buf, *bufe;
-  if (!mf->parse(params, buf, bufe, token_t(token_basics(TT_INVALID,filename,line,lpos-pos)), true, herr)) {
-    this->consume(files.top().file);
-    files.pop();
-    return true;
-  }
-  
-  this->consume(buf, bufe-buf);
-  filename = mf->name.c_str();
-  lpos = line = 0;
-  ++open_macro_count;
+  if (!parse_macro_params(mf, cfile, &params, herr)) return false;
+  vector<token_t> tokens = mf->substitute_and_unroll(params, herr)
+  open_macros.push_back({mf->name, line, lpos, std::move(tokens)});
   return true;
 }
 
