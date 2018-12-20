@@ -25,7 +25,7 @@
 #include <iostream>
 using std::cerr; using std::endl;
 
-namespace jdip {
+namespace jdi {
   context_parser::context_parser(context *ctex_i, lexer *lex_i, error_handler *herr_i): ctex_alloc(NULL), ctex(ctex_i), lex(lex_i), herr(herr_i), astbuilder(new AST_Builder(this)) {
     if (ctex->parse_open) {
       cerr << "Another parser is already active on this context." << endl;

@@ -21,33 +21,33 @@
 
 #include "user_tokens.h"
 
-using namespace jdip;
+using namespace jdi;
 namespace jdi {
-  jdip::token_t create_token_dec_literal(const char* val, int len, const char* filename, int line, int pos) {
+  jdi::token_t create_token_dec_literal(const char* val, int len, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_DECLITERAL,filename,line,pos), val, len);
   }
-  jdip::token_t create_token_hex_literal(const char* val, int len, const char* filename, int line, int pos) {
+  jdi::token_t create_token_hex_literal(const char* val, int len, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_HEXLITERAL,filename,line,pos), val, len);
   }
-  jdip::token_t create_token_oct_literal(const char* val, int len, const char* filename, int line, int pos) {
+  jdi::token_t create_token_oct_literal(const char* val, int len, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_OCTLITERAL,filename,line,pos), val, len);
   }
-  jdip::token_t create_token_operator(TOKEN_TYPE type, const char* op, int len, const char* filename, int line, int pos) {
+  jdi::token_t create_token_operator(TOKEN_TYPE type, const char* op, int len, const char* filename, int line, int pos) {
     return token_t(token_basics(type,filename,line,pos), op, len);
   }
-  jdip::token_t create_token_from_definition(definition* def, const char* filename, int line, int pos) {
+  jdi::token_t create_token_from_definition(definition* def, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_DECLARATOR,filename,line,pos), def);
   }
-  jdip::token_t create_token_opening_parenth(const char* filename, int line, int pos) {
+  jdi::token_t create_token_opening_parenth(const char* filename, int line, int pos) {
     return token_t(token_basics(TT_LEFTPARENTH,filename,line,pos));
   }
-  jdip::token_t create_token_closing_parenth(const char* filename, int line, int pos) {
+  jdi::token_t create_token_closing_parenth(const char* filename, int line, int pos) {
     return token_t(token_basics(TT_RIGHTPARENTH,filename,line,pos));
   }
-  jdip::token_t create_token_colon(const char* filename, int line, int pos) {
+  jdi::token_t create_token_colon(const char* filename, int line, int pos) {
     return token_t(token_basics(TT_COLON,filename,line,pos));
   }
-  jdip::token_t create_token_identifier(const char* name, int len, const char* filename, int line, int pos) {
+  jdi::token_t create_token_identifier(const char* name, int len, const char* filename, int line, int pos) {
     return token_t(token_basics(TT_IDENTIFIER,filename,line,pos), name, len);
   }
 }

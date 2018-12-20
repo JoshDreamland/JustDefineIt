@@ -31,12 +31,11 @@
 #include <API/compile_settings.h>
 #include <API/AST.h>
 #include <cstdio>
-using namespace jdip;
 using namespace jdi;
 
 static unsigned anon_count = 0;
-namespace jdip { definition *dangling_pointer = NULL; }
-int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags, definition* &res)
+namespace jdi { definition *dangling_pointer = NULL; }
+int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& token, unsigned inherited_flags, definition* &res)
 {
   // Skip destructor tildes; log if we are a destructor
   bool dtor = token.type == TT_TILDE;
@@ -98,7 +97,7 @@ int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& t
 #include <Parser/is_potential_constructor.h>
 #include "handle_function_impl.h"
 
-int jdip::context_parser::handle_declarators(definition_scope *scope, token_t& token, full_type &tp, unsigned inherited_flags, definition* &res)
+int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& token, full_type &tp, unsigned inherited_flags, definition* &res)
 {
   // Make sure we do indeed find ourselves at an identifier to declare.
   if (tp.refs.name.empty()) {

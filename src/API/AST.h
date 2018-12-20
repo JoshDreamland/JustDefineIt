@@ -35,15 +35,12 @@
 #include <Storage/arg_key.h>
 #include <System/token.h>
 #include <Storage/value.h>
-#include <API/lexer_interface.h>
 #include <API/error_reporting.h>
 #include <API/error_context.h>
 #include <Storage/definition.h>
 #include <API/context.h>
 
-namespace jdip
-{
-  using namespace jdi;
+namespace jdi {
   /// Structure containing info for use when rendering SVGs.
   /// This class can export SVG files. Some info needs tossed around to do so.
   struct SVGrenderInfo;
@@ -428,15 +425,15 @@ namespace jdi {
   class AST
   {
   protected:
-    friend struct jdip::ASTOperator;
-    friend struct jdip::ConstASTOperator;
-    friend class jdip::AST_Builder;
+    friend struct jdi::ASTOperator;
+    friend struct jdi::ConstASTOperator;
+    friend class jdi::AST_Builder;
     
-    void report_error(const jdip::token_t &token, string err);
-    void report_errorf(const jdip::token_t &token, string err);
-    void report_warning(const jdip::token_t &token, string err);
+    void report_error(const jdi::token_t &token, string err);
+    void report_errorf(const jdi::token_t &token, string err);
+    void report_warning(const jdi::token_t &token, string err);
     
-    jdip::AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
+    jdi::AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
     
     // State flags
     bool tt_greater_is_op; ///< True if the greater-than symbol is to be interpreted as an operator.
@@ -449,10 +446,10 @@ namespace jdi {
                 be it the node of the newly allocated node or some other operator. If an
                 error occurs, NULL is returned.
     ** /
-    int parse_binary_op(int precedence, jdip::token_t &origin);
-    int parse_unary_prefix(int precedence, jdip::token_t &origin);
-    int parse_unary_postfix(int precedence, jdip::token_t &origin);
-    int parse_ternary(int precedence, jdip::token_t &origin);*/
+    int parse_binary_op(int precedence, jdi::token_t &origin);
+    int parse_unary_prefix(int precedence, jdi::token_t &origin);
+    int parse_unary_postfix(int precedence, jdi::token_t &origin);
+    int parse_ternary(int precedence, jdi::token_t &origin);*/
     
     public:
     
@@ -480,8 +477,8 @@ namespace jdi {
     
     /// Render the AST as a string: This is a relatively costly operation.
     string toString() const; ///< Renders this node and its children as a string, recursively.
-    void operate(jdip::ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
-    void operate(jdip::ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
+    void operate(jdi::ASTOperator *aop, void *p); ///< Perform some externally defined recursive operation on this AST.
+    void operate(jdi::ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
     
     /// Render the AST to an SVG file.
     void writeSVG(const char* filename);
@@ -523,7 +520,7 @@ namespace jdi {
     
     protected:
       /// Construct with a root node; this will invariably be called internally.
-      AST(jdip::AST_Node* root);
+      AST(jdi::AST_Node* root);
     
     private:
       /// Copy constructor; highly expensive. Not implemented. Use duplicate(), sparingly.
@@ -531,7 +528,7 @@ namespace jdi {
   };
 }
 
-namespace jdip
+namespace jdi
 {
   class AST_Builder
   {
@@ -550,7 +547,7 @@ namespace jdip
         @param  token       The first token to be handled. Will be set to the first unhandled token. [in-out]
         @param  precedence  The lowest precedence of any operators to be handled.
     **/
-    AST_Node* parse_expression(AST* ast, jdip::token_t &token, int precedence = 0);
+    AST_Node* parse_expression(AST* ast, jdi::token_t &token, int precedence = 0);
     /** Handle anything you'd expect to see after a literal is given.
         
         This includes binary and ternary operators (to which the literal or enclosing tree
@@ -563,14 +560,14 @@ namespace jdip
         @return Returns the node of the operator of lowest precedence (ie, the root
                 node), or NULL if an error occurs.
     **/
-    AST_Node* parse_binary_or_unary_post(AST* ast, jdip::token_t &token, AST_Node *left_node, int prec_min);
+    AST_Node* parse_binary_or_unary_post(AST* ast, jdi::token_t &token, AST_Node *left_node, int prec_min);
     /** Handle anything you'd expect to see at the start of an expression, being a
         unary prefix operator or a literal.
         @param  token  The first token to be handled. Will be set to the first unhandled token. [in-out]
         @return Returns the node of the operator of lowest precedence (ie, the root
                 node), or NULL if an error occurs.
     **/
-    AST_Node* parse_unary_pre_or_literal(AST* ast, jdip::token_t& token);
+    AST_Node* parse_unary_pre_or_literal(AST* ast, jdi::token_t& token);
     
     public:
     /** Parse in an expression, building an AST.
@@ -585,7 +582,7 @@ namespace jdip
         @param prec   The lower-bound precedence.
         @return  This function will return 0 if no error has occurred, or nonzero otherwise.
     **/
-    int parse_expression(AST* ast, jdip::token_t &token, definition_scope *scope, int prec);
+    int parse_expression(AST* ast, jdi::token_t &token, definition_scope *scope, int prec);
     
     /// Construct with a context, lexer, and error reporter.
     /// @param ctp   The context parser that will be used to parse out typenames, etc.

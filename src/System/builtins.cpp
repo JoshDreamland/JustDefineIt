@@ -33,7 +33,7 @@ using namespace std;
 
 #include "builtins.h"
 
-namespace jdip {
+namespace jdi {
   tf_map builtin_declarators;
   prim_map builtin_primitives;
   tf_flag_map builtin_decls_byflag;
@@ -44,7 +44,7 @@ namespace jdip {
   typeflag* builtin_typeflag__throw;
 }
 
-using namespace jdip;
+using namespace jdi;
 namespace jdi {
   jdi::context *builtin = NULL;
   
@@ -187,7 +187,7 @@ namespace jdi {
     string res;
     for (int i = 1; i <= 0x10000; i <<= 1)
       if (flags & i) {
-        jdip::tf_flag_map::iterator tfi = builtin_decls_byflag.find(i);
+        jdi::tf_flag_map::iterator tfi = builtin_decls_byflag.find(i);
         if (tfi == builtin_decls_byflag.end()) res += "<ERROR:NOSUCHFLAG:" + tostr(i) + "> ";
         else res += tfi->second->name + " ";
       }

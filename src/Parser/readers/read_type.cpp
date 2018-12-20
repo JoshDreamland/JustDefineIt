@@ -29,16 +29,15 @@
 #include <Parser/is_potential_constructor.h>
 #include <System/builtins.h>
 #include <cstdio>
-using namespace jdip;
 using namespace jdi;
 
-full_type jdip::context_parser::read_fulltype(token_t &token, definition_scope *scope) {
+full_type jdi::context_parser::read_fulltype(token_t &token, definition_scope *scope) {
   full_type ft = read_type(token, scope);
   read_referencers(ft.refs, ft, token, scope);
   return ft;
 }
 
-full_type jdip::context_parser::read_type(token_t &token, definition_scope *scope)
+full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope)
 {
   definition* inferred_type = NULL; // This is the type we will use if absolutely no other type is given
   definition* overridable_type = NULL;
@@ -175,7 +174,6 @@ full_type jdip::context_parser::read_type(token_t &token, definition_scope *scop
   return full_type(rdef, rrefs, rflags);
 }
 
-#include <System/lex_buffer.h>
 #include <General/debug_macros.h>
 
 enum parenth_type { PT_FUNCTION, PT_GROUPORINIT, PT_INITIALIZERS, PT_NA };
@@ -281,7 +279,7 @@ public:
   ~fix_scope() { if (chp) s->parent = spp; }
 };
 
-int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft, token_t &token, definition_scope *scope)
+int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, token_t &token, definition_scope *scope)
 {
   #ifdef DEBUG_MODE
   static int number_of_times_GDB_dropped_its_ass = 0;
@@ -440,7 +438,7 @@ int jdip::context_parser::read_referencers(ref_stack &refs, const full_type& ft,
   }
 }
   
-int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token, definition_scope *scope)
+int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, definition_scope *scope)
 {
   #ifdef DEBUG_MODE
   static int number_of_times_GDB_dropped_its_ass = 0;
@@ -533,7 +531,7 @@ int jdip::context_parser::read_referencers_post(ref_stack &refs, token_t &token,
   }
 }
 
-int jdip::context_parser::read_function_params(ref_stack &refs, token_t &token, definition_scope *scope)
+int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, definition_scope *scope)
 {
   ref_stack::parameter_ct params;
   

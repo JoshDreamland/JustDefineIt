@@ -25,7 +25,7 @@
 
 #include "AST.h"
 
-namespace jdip {
+namespace jdi {
   struct ASTOperator {
     virtual void operate(AST_Node* x, void *param) = 0;
     virtual void operate_Definition(AST_Node_Definition* x, void *param) = 0;

@@ -31,7 +31,7 @@ using namespace std;
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
 #include <System/lex_cpp.h>
-using namespace jdip;
+using namespace jdi;
 
 macro_type::macro_type(const string &n, vector<token_t> &&val):
     is_function(false), is_variadic(false), name(n), args(),

@@ -25,11 +25,10 @@
 #include <API/AST.h>
 #include <API/compile_settings.h>
 #include <System/builtins.h>
-#include <System/lex_buffer.h>
 #include <Parser/handlers/handle_function_impl.h>
 #include <cstdio>
 
-int jdip::context_parser::handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags)
+int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, unsigned inherited_flags)
 {
   definition* decl;
   token = read_next_token(scope);

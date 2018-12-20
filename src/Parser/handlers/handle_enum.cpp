@@ -26,13 +26,13 @@
 #include <General/debug_macros.h>
 #include <API/compile_settings.h>
 
-using namespace jdip;
+using namespace jdi;
 
 #define def_kind enum
 #define DEF_FLAG DEF_ENUM
 #include <Parser/cclass_base.h>
 
-jdi::definition_enum* jdip::context_parser::handle_enum(definition_scope *scope, token_t& token, int inherited_flags)
+definition_enum* context_parser::handle_enum(definition_scope *scope, token_t& token, int inherited_flags)
 {
   dbg_assert(token.type == TT_ENUM);
   

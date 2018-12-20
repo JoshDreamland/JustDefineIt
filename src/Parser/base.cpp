@@ -30,14 +30,14 @@
 #include <General/debug_macros.h>
 #include "context_parser.h"
 using namespace std;
-using namespace jdip;
+using namespace jdi;
 
 /** @section Implementation
   This is the single most trivial function in the API. It makes a call to parse_stream, passing a
   new instance of the C++ lexer that ships with JDI, \c lex_cpp.
 **/
 int jdi::context::parse_C_stream(llreader &cfile, const char* fname) {
-  lexer_cpp lex_cpp(cfile, macros, fname);
+  lexer lex_cpp(cfile, macros, fname);
   return parse_stream(&lex_cpp); // Invoke our common method with it
 }
 
@@ -45,7 +45,7 @@ int jdi::context::parse_C_stream(llreader &cfile, const char* fname) {
   This function's task is to make a call to check if the parser is already running, then
   instantiate a token class and set a few members. The actual work is done by the next
   call, \c handle_scope(), and then the other members of the derived \c context_parser
-  class in \c jdip, which will be called from handle_scope.
+  class in \c jdi, which will be called from handle_scope.
 */
 int jdi::context::parse_stream(lexer *lex)
 {

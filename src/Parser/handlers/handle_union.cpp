@@ -26,14 +26,14 @@
 #include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 
-using namespace jdip;
+using namespace jdi;
 
 #define def_kind union
 #define DEF_FLAG DEF_UNION
 #include <Parser/cclass_base.h>
 
-jdi::definition_union* jdip::context_parser::handle_union(definition_scope *scope, token_t& token, int inherited_flags)
-{
+definition_union* context_parser::handle_union(
+    definition_scope *scope, token_t& token, int inherited_flags) {
   #ifdef DEBUG_MODE
   if (token.type != TT_UNION)
     token.report_error(herr, "PARSE ERROR: handle_union invoked with non-union token.");

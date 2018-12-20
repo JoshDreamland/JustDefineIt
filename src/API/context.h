@@ -42,7 +42,7 @@
 namespace jdi {
   class context;
 }
-namespace jdip {
+namespace jdi {
   class context_parser;
 }
 
@@ -52,7 +52,6 @@ namespace jdip {
 #include <General/llreader.h>
 #include <System/token.h>
 #include <API/error_reporting.h>
-#include <API/lexer_interface.h>
 
 namespace jdi
 {
@@ -62,10 +61,6 @@ namespace jdi
   using std::ostream;
   using std::cout;
   using std::set;
-  
-  typedef map<string,const jdip::macro_type*> macro_map; ///< Map type used for storing macros
-  typedef macro_map::iterator macro_iter; ///< Iterator type for macro maps.
-  typedef macro_map::const_iterator macro_iter_c; ///< Const iterator type for macro maps.
   
   /**
     @class context
@@ -81,7 +76,7 @@ namespace jdi
   {
     bool parse_open; ///< True if we're already parsing something
     friend class jdi::AST;
-    friend class jdip::context_parser;
+    friend class jdi::context_parser;
     
     protected: // Make sure our method-packing child can use these.
     macro_map macros; ///< A map of macros defined in this context.
@@ -168,7 +163,7 @@ namespace jdi
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
     **/
-    int parse_C_stream(llreader& cfile, const char* fname = NULL);
+    int parse_stream(llreader& cfile, const char* fname = NULL);
     
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.

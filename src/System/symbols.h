@@ -56,8 +56,7 @@ namespace jdi {
   }
 }
 
-namespace jdip {
-  using namespace jdi;
+namespace jdi {
   
   /**
     Enumeration of usage types of symbols used in this AST.

@@ -62,7 +62,7 @@
 #include <Storage/definition.h>
 #include <Storage/value.h>
 
-namespace jdip {
+namespace jdi {
   /// Never use this pointer; it gets written to frequently and is never set to NULL.
   extern definition* dangling_pointer;
   
@@ -83,19 +83,19 @@ namespace jdip {
            recursive-descent functions needed by the parser.
     
     Since context_parser contains no members and context is not virtual, a cast to
-    jdip::context_parser from an allocated jdi::context is valid.
+    jdi::context_parser from an allocated jdi::context is valid.
   **/
   class context_parser {
     context *ctex_alloc;  ///< Used to collect any context we allocated
     
     context *ctex;  ///< The original context we are parsing into.
-    lexer_cpp *lex;  ///< The lexer which all methods and all calls therefrom will poll for tokens.
+    lexer *lex;  ///< The lexer which all methods and all calls therefrom will poll for tokens.
     error_handler *herr;  ///< The error handler to which errors and warnings will be reported.
     AST_Builder *astbuilder;  ///< Used to build ASTs at any time during parse.
-    friend class jdip::AST_Builder;
+    friend class jdi::AST_Builder;
     
    public:
-    inline lexer_cpp *get_lex() const { return lex; }
+    inline lexer *get_lex() const { return lex; }
     inline AST_Builder *get_AST_builder() const { return astbuilder; }
     inline error_handler *get_herr() const { return herr; }
     

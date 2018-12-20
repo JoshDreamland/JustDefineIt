@@ -25,7 +25,7 @@
 
 using std::string;
 
-string jdip::context_parser::read_operatorkw_name(token_t &token, definition_scope *scope)
+string jdi::context_parser::read_operatorkw_name(token_t &token, definition_scope *scope)
 {
   string res;
   token = lex->get_token_in_scope(scope, herr);

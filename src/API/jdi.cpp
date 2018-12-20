@@ -34,7 +34,7 @@ namespace jdi {
   
   void clean_up() {
     cleanup_declarators();
-    jdip::lexer_cpp::cleanup();
+    jdi::lexer::cleanup();
     delete builtin;
     builtin = NULL;
   }

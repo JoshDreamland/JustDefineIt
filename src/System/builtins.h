@@ -28,7 +28,7 @@
 #ifndef _JDI_BUILTINS__H
 #define _JDI_BUILTINS__H
 
-namespace jdip {
+namespace jdi {
   class typeflag;
 }
 
@@ -54,8 +54,8 @@ namespace jdi {
   struct add_decl_info {
     definition* def; ///< The typeflag struct, as stored in the token.
     unsigned long flag; ///< The typeflag struct, as stored in the token.
-    jdip::typeflag *tf_struct; ///< The typeflag struct, as stored in the token.
-    add_decl_info(definition *d, unsigned long f, jdip::typeflag *tf);
+    jdi::typeflag *tf_struct; ///< The typeflag struct, as stored in the token.
+    add_decl_info(definition *d, unsigned long f, jdi::typeflag *tf);
   };
   /**
     Add a single declarator, toggling on its usage for the given flag.
@@ -110,8 +110,7 @@ namespace jdi {
   string typeflags_string(definition *type, unsigned flags);
 }
 
-namespace jdip {
-  using namespace jdi;
+namespace jdi {
   /// Class for storing information about a 'typeflag,' declarators such as 'int', 'short', and 'const' which refer to or modify primitives.
   class typeflag {
     friend add_decl_info jdi::add_declarator(string, USAGE_FLAG, size_t, string);

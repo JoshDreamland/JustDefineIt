@@ -23,8 +23,8 @@
 #include <API/compile_settings.h>
 #include <iostream>
 
-using namespace jdip;
-definition* jdip::context_parser::read_qualified_definition(token_t &token, definition_scope* scope)
+using namespace jdi;
+definition* jdi::context_parser::read_qualified_definition(token_t &token, definition_scope* scope)
 {
   definition *res;
   if (token.type == TT_SCOPE)

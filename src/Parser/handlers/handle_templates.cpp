@@ -27,7 +27,7 @@
 #include <Parser/is_potential_constructor.h>
 #include <cstdio>
 
-using namespace jdip;
+using namespace jdi;
 #if FATAL_ERRORS
 #define ERROR_CODE 1
 #else
@@ -468,7 +468,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
   return 0;
 }
 
-int jdip::context_parser::handle_template_extern(definition_scope *scope, token_t &token, unsigned inherited_flags) {
+int jdi::context_parser::handle_template_extern(definition_scope *scope, token_t &token, unsigned inherited_flags) {
   while (token.type != TT_ENDOFCODE and token.type != TT_SEMICOLON)
     token = read_next_token(scope);
   (void)inherited_flags;

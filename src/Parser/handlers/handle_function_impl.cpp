@@ -26,7 +26,7 @@
 **/
 
 #include "handle_function_impl.h"
-using namespace jdip;
+using namespace jdi;
 
 static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_handler *herr) {
   if (token.type == TT_LEFTBRACE) {

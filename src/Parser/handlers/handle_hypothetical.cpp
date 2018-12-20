@@ -22,7 +22,7 @@
 #include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 
-namespace jdip {
+namespace jdi {
   inline definition_hypothetical* handle_hypothetical_ast(AST *a, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
     definition_scope *temps;
     for (temps = scope; temps && !(temps->flags & DEF_TEMPLATE); temps = temps->parent);

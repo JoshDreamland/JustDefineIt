@@ -38,7 +38,6 @@ using namespace std;
 #include <System/lex_cpp.h>
 
 using namespace jdi;
-using namespace jdip;
 
 void test_expression_evaluator();
 void name_type(string type, context &ct);
@@ -86,7 +85,7 @@ static void test_lexer_16_3_3() {
   context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
-  lexer_cpp lex(basic, buttMacros, "tcase");
+  lexer lex(basic, buttMacros, "tcase");
   token = lex.get_token(); cout << token.to_string() << endl;
   // Should be the literal string "x ## y"
 }
@@ -105,7 +104,7 @@ static void test_lexer_mathcat() {
   context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
-  lexer_cpp lex(basic, buttMacros, "tcase");
+  lexer lex(basic, buttMacros, "tcase");
   token = lex.get_token(); cout << token.to_string() << endl;
   // Should be the literal string "x ## y"
 }
@@ -117,7 +116,7 @@ const char* tname[TT_INVALID + 1];
   context ct;
   llreader llr("test/test.cc");
   macro_map undamageable = ct.get_macros();
-  lexer_cpp c_lex(llr, undamageable, "User expression");
+  lexer c_lex(llr, undamageable, "User expression");
   ofstream f("/home/josh/Desktop/tokensnew.txt");
   for (token_t tk = c_lex.get_token(); tk.type != TT_ENDOFCODE; tk = c_lex.get_token())
     f << tname[tk.type] << "(" << tk.linenum << "), ";
@@ -139,7 +138,7 @@ int main() {
   //builtin->output_macros();
   
   putcap("Metrics");
-  cout << "sizeof(jdip::macro_type):        " << sizeof(jdip::macro_type) << endl
+  cout << "sizeof(jdi::macro_type):        " << sizeof(jdi::macro_type) << endl
        << "sizeof(jdi::definition):         " << sizeof(jdi::definition) << endl
        << "sizeof(jdi::ref_stack):          " << sizeof(jdi::ref_stack) << endl
        << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl
@@ -198,7 +197,7 @@ int main() {
     context butts;
     macro_map buttMacros = butts.get_macros();
     token_t token;
-    lexer_cpp lex(basic, buttMacros, "SHELLmain.cpp");
+    lexer lex(basic, buttMacros, "SHELLmain.cpp");
     token = lex.get_token(); cout << token.to_string() << endl;
     token = lex.get_token(); cout << token.to_string() << endl;
     token = lex.get_token(); cout << token.to_string() << endl;
@@ -214,7 +213,7 @@ int main() {
       //   -DJUST_DEFINE_IT_RUN > Projects/JustDefineIt/shellmain-pp.cc
       llreader f("shellmain-pp.cc");
       macro_map buttMacros = butts.get_macros();
-      lexer_cpp lex(f, buttMacros, "SHELLmain.cpp");
+      lexer lex(f, buttMacros, "SHELLmain.cpp");
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         tokens2.push_back(token.type);
       }
@@ -224,7 +223,7 @@ int main() {
       context butts;
       llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");
       macro_map buttMacros = butts.get_macros();
-      lexer_cpp lex(f, buttMacros, "SHELLmain.cpp");
+      lexer lex(f, buttMacros, "SHELLmain.cpp");
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         size_t p = tokens.size();
         if (p == 53315) {
@@ -284,7 +283,7 @@ int main() {
     do_cli(enigma);
     /*/
     macro_map m;
-    lexer_cpp lex(f, m, "test.cc");
+    lexer lex(f, m, "test.cc");
     token_t t = lex.get_token();
     while (t.type != TT_ENDOFCODE) {
       t = lex.get_token();
@@ -304,7 +303,7 @@ int main() {
 void name_type(string type, context &ct) {
   llreader llr("type string", type, type.length());
   macro_map undamageable = ct.get_macros();
-  lexer_cpp c_lex(llr, undamageable, "User expression");
+  lexer c_lex(llr, undamageable, "User expression");
   context_parser cp(&ct, &c_lex, def_error_handler);
   token_t tk = c_lex.get_token_in_scope(ct.get_global());
   full_type ft = cp.read_fulltype(tk, ct.get_global());
@@ -338,7 +337,7 @@ void do_cli(context &ct)
         cout << "Enter the item to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr("user input", buf, true);
-        lexer_cpp c_lex(llr, undamageable, "User expression");
+        lexer c_lex(llr, undamageable, "User expression");
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
         if (dummy.type != TT_DEFINITION && dummy.type != TT_DECLARATOR && dummy.type != TT_SCOPE) {
           dummy.report_errorf(def_error_handler, "Expected definition; encountered %s. Perhaps your term is a macro?");
@@ -387,7 +386,7 @@ void do_cli(context &ct)
         cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr("user input", buf, true);
-        lexer_cpp c_lex(llr, undamageable, "User expression");
+        lexer c_lex(llr, undamageable, "User expression");
         AST a;
         context_parser cparse(&ct, &c_lex, def_error_handler);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
@@ -462,7 +461,7 @@ void test_expression_evaluator() {
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
   v = ast.eval(dec);
@@ -471,9 +470,9 @@ void test_expression_evaluator() {
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("10",2);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_03.svg");
@@ -482,9 +481,9 @@ void test_expression_evaluator() {
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("40",2);
-  dlex << create_token_operator(jdip::TT_MINUS, "-",1);
+  dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_04.svg");
@@ -493,11 +492,11 @@ void test_expression_evaluator() {
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("40",2);
-  dlex << create_token_operator(jdip::TT_SLASH, "/",1);
+  dlex << create_token_operator(jdi::TT_SLASH, "/",1);
   dlex << create_token_dec_literal("4",1);
-  dlex << create_token_operator(jdip::TT_LSHIFT, "<<",2);
+  dlex << create_token_operator(jdi::TT_LSHIFT, "<<",2);
   dlex << create_token_dec_literal("1",1);
   token_t token;
   cp.get_AST_builder()->parse_expression(&ast);
@@ -507,37 +506,37 @@ void test_expression_evaluator() {
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_LSHIFT, "<<",2);
+  dlex << create_token_operator(jdi::TT_LSHIFT, "<<",2);
   dlex << create_token_dec_literal("1",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("6",1);
-  dlex << create_token_operator(jdip::TT_SLASH,"/",1);
+  dlex << create_token_operator(jdi::TT_SLASH,"/",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_MINUS, "-",1);
+  dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_SLASH,"/",1);
+  dlex << create_token_operator(jdi::TT_SLASH,"/",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_LSHIFT, "<<",2);
+  dlex << create_token_operator(jdi::TT_LSHIFT, "<<",2);
   dlex << create_token_dec_literal("8",1);
-  dlex << create_token_operator(jdip::TT_MODULO, "%",1);
+  dlex << create_token_operator(jdi::TT_MODULO, "%",1);
   dlex << create_token_dec_literal("5",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
-  dlex << create_token_operator(jdip::TT_MINUS, "-",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("5",1);
-  dlex << create_token_operator(jdip::TT_SLASH, "/",1);
-  dlex << create_token_operator(jdip::TT_MINUS, "-",1);
+  dlex << create_token_operator(jdi::TT_SLASH, "/",1);
+  dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_EQUAL_TO, "==",2);
+  dlex << create_token_operator(jdi::TT_EQUAL_TO, "==",2);
   dlex << create_token_dec_literal("1",1);
-  dlex << create_token_operator(jdip::TT_LSHIFT, "<<",2);
-  dlex << create_token_operator(jdip::TT_MINUS, "-",1);
+  dlex << create_token_operator(jdi::TT_LSHIFT, "<<",2);
+  dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_STAR, "*",1);
+  dlex << create_token_operator(jdi::TT_STAR, "*",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_STAR, "*",1);
-  dlex << create_token_operator(jdip::TT_MINUS, "-",1);
+  dlex << create_token_operator(jdi::TT_STAR, "*",1);
+  dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("1",1);
   cp.get_AST_builder()->parse_expression(&ast);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_06.svg");
@@ -546,23 +545,23 @@ void test_expression_evaluator() {
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("25",2);
-  dlex << create_token_operator(jdip::TT_SLASH, "/",1);
+  dlex << create_token_operator(jdi::TT_SLASH, "/",1);
   dlex << create_token_opening_parenth();
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("3",1);
   dlex << create_token_closing_parenth();
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_opening_parenth();
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("1",1);
-  dlex << create_token_operator(jdip::TT_STAR, "*",1);
+  dlex << create_token_operator(jdi::TT_STAR, "*",1);
   dlex << create_token_dec_literal("1",1);
   dlex << create_token_closing_parenth();
-  dlex << create_token_operator(jdip::TT_STAR, "*",1);
+  dlex << create_token_operator(jdi::TT_STAR, "*",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("1",1);
   cp.get_AST_builder()->parse_expression(&ast);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_07.svg");
@@ -571,25 +570,25 @@ void test_expression_evaluator() {
   
   ast.clear();
   dlex << create_token_identifier("a",1);
-  dlex << create_token_operator(jdip::TT_EQUAL, "=",1);
+  dlex << create_token_operator(jdi::TT_EQUAL, "=",1);
   dlex << create_token_dec_literal("2",1);
-  dlex << create_token_operator(jdip::TT_EQUAL_TO, "==",2);
+  dlex << create_token_operator(jdi::TT_EQUAL_TO, "==",2);
   dlex << create_token_dec_literal("1",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("1",1);
-  dlex << create_token_operator(jdip::TT_QUESTIONMARK, "?",1);
+  dlex << create_token_operator(jdi::TT_QUESTIONMARK, "?",1);
   dlex << create_token_identifier("b",1);
-  dlex << create_token_operator(jdip::TT_EQUAL, "=",1);
+  dlex << create_token_operator(jdi::TT_EQUAL, "=",1);
   dlex << create_token_dec_literal("15",2);
-  dlex << create_token_operator(jdip::TT_STAR, "*",1);
+  dlex << create_token_operator(jdi::TT_STAR, "*",1);
   dlex << create_token_dec_literal("8",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("3",1);
   dlex << create_token_colon();
   dlex << create_token_identifier("c",1);
-  dlex << create_token_operator(jdip::TT_EQUAL, "=",1);
+  dlex << create_token_operator(jdi::TT_EQUAL, "=",1);
   dlex << create_token_dec_literal("3",1);
-  dlex << create_token_operator(jdip::TT_PLUS, "+",1);
+  dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("4",1);
   cp.get_AST_builder()->parse_expression(&ast);
   ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_08.svg");

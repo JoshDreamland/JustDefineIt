@@ -24,7 +24,7 @@
 #include <API/compile_settings.h>
 #include <cstdio>
 
-int jdip::context_parser::read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, token_t &token, definition_scope *scope) {
+int jdi::context_parser::read_template_parameter(arg_key &argk, size_t argnum, definition_template *temp, token_t &token, definition_scope *scope) {
   if (argnum < temp->params.size() and temp->params[argnum]->flags & DEF_TYPENAME) {
     full_type ft = read_fulltype(token, scope);
     if (ft.def)
@@ -57,7 +57,7 @@ int jdip::context_parser::read_template_parameter(arg_key &argk, size_t argnum, 
   return 0;
 }
 
-int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, definition_template *temp, const token_t &token, error_handler *herr)
+int jdi::check_read_template_parameters(arg_key &argk, size_t args_given, definition_template *temp, const token_t &token, error_handler *herr)
 {
   if (args_given > temp->params.size()) {
       token.report_error(herr, "Too many template parameters provided to `" + temp->toString(0,0) + "'");
@@ -113,7 +113,7 @@ int jdip::check_read_template_parameters(arg_key &argk, size_t args_given, defin
   return 0;
 }
 
-int jdip::context_parser::read_template_parameters(arg_key &argk, definition_template *temp, token_t &token, definition_scope *scope)
+int jdi::context_parser::read_template_parameters(arg_key &argk, definition_template *temp, token_t &token, definition_scope *scope)
 {
   argk.mirror_types(temp);
   size_t args_given = 0;

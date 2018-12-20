@@ -29,10 +29,11 @@
 #ifndef _MACROS__H
 #define _MACROS__H
 
-namespace jdip {
+namespace jdi {
   struct macro_type;
 }
 
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -40,11 +41,10 @@ namespace jdip {
 #include <API/error_reporting.h>
 #include <System/token.h>
 
-namespace jdip {
+namespace jdi {
   using std::string;
   using std::string_view;
   using std::vector;
-  using namespace jdi;
   
   /**
     @struct macro_type
@@ -98,5 +98,9 @@ namespace jdip {
     macro_type(string_view name, vector<string> &&arg_list,
                vector<token_t> &&definiens, bool variadic = false);
   };
+  
+  typedef std::map<string, const jdi::macro_type*> macro_map; ///< Map type used for storing macros
+  typedef macro_map::iterator macro_iter; ///< Iterator type for macro maps.
+  typedef macro_map::const_iterator macro_iter_c; ///< Const iterator type for macro maps.
 }
 #endif

@@ -440,7 +440,7 @@ namespace jdi {
     return new AST(root->duplicate());
   }
 
-} namespace jdip {
+} namespace jdi {
   
   AST_Node *AST_Node            ::duplicate() const { return new AST_Node(content, type);                         }
   AST_Node *AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);  }

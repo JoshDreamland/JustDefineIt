@@ -104,7 +104,7 @@ namespace jdi {
     template_overloads.push_back(ovrl);
   }
   
-  definition_overload* definition_scope::overload_function(string fname, full_type &ft, unsigned inflags, const jdip::token_t& errtok, error_handler *herr) {
+  definition_overload* definition_scope::overload_function(string fname, full_type &ft, unsigned inflags, const jdi::token_t& errtok, error_handler *herr) {
     definition_function *df;
     definition_overload *dov;
     decpair dp = declare(fname, NULL);
@@ -123,7 +123,7 @@ namespace jdi {
     return dov;
   }
   
-  definition_function* definition_scope::overload_function(string fname, definition_template* dtemp, unsigned inflags, const jdip::token_t& errtok, error_handler *herr) {
+  definition_function* definition_scope::overload_function(string fname, definition_template* dtemp, unsigned inflags, const jdi::token_t& errtok, error_handler *herr) {
     definition_function *df;
     decpair dp = declare(fname, NULL);
     if (dp.inserted)

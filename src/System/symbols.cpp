@@ -23,7 +23,7 @@
 #include "symbols.h"
 #include <Storage/value_funcs.h>
 
-namespace jdip {
+namespace jdi {
   symbol_table symbols;
 
   symbol::symbol() {}
@@ -48,7 +48,7 @@ namespace jdip {
   }
 }
 
-using namespace jdip;
+using namespace jdi;
 
 /// Constructor designed to circumvent C++'s lack of static initializer blocks; will be run at program start to populate symbols.
 /// Simply maps all the symbols with their AST generation and evaluation information.

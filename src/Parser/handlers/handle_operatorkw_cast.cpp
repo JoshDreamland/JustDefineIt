@@ -30,13 +30,12 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "System/lex_buffer.h"
 #include "Parser/context_parser.h"
 #include "General/debug_macros.h"
 #include "API/compile_settings.h"
 #include "Storage/definition.h"
 
-using namespace jdip;
+using namespace jdi;
 
 full_type context_parser::read_operatorkw_cast_type(token_t &token, definition_scope *scope)
 {

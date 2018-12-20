@@ -21,7 +21,7 @@
 
 #include "lex_buffer.h"
 
-namespace jdip {
+namespace jdi {
   token_t& lex_buffer::push(const token_t &token) {
     token_t &ret = *cur_token = token;
     if (--modulo)

@@ -33,7 +33,6 @@ using namespace std;
 #include <System/lex_cpp.h>
 
 using namespace jdi;
-using namespace jdip;
 
 void context::read_macros(const char* filename)
 {

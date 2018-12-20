@@ -374,7 +374,7 @@ namespace jdi {
         @param herr   An error handler to receieve errors.
         @return Returns the definition_overload corresponding to the overload with the given parameters, or NULL if an error occurred.
     */
-    definition_overload *overload_function(string name, full_type &tp, unsigned flags, const jdip::token_t& errtok, error_handler *herr);
+    definition_overload *overload_function(string name, full_type &tp, unsigned flags, const jdi::token_t& errtok, error_handler *herr);
     /** Function to add the given definition as a template overload
         exists, or to merge it in (handling any errors) otherwise.
         @param name   The function name.
@@ -385,7 +385,7 @@ namespace jdi {
         @param herr   An error handler to which errors will be reported.
         @return Returns the definition_function to which the overload was added, or NULL if an error occurred.
     */
-    definition_function *overload_function(string name, definition_template* ovrl, unsigned flags, const jdip::token_t& errtok, error_handler *herr);
+    definition_function *overload_function(string name, definition_template* ovrl, unsigned flags, const jdi::token_t& errtok, error_handler *herr);
     
     virtual string kind() const;
     virtual definition* duplicate(remap_set &n) const;
@@ -646,7 +646,7 @@ namespace jdi {
   */
   struct definition_hypothetical: definition_class {
     AST *def; ///< The expression this definition represents.
-    jdip::context_parser *context_p; ///< A context/parser in which this definition exists, and will exist.
+    jdi::context_parser *context_p; ///< A context/parser in which this definition exists, and will exist.
     unsigned int required_flags; ///< Set of flags required of any type provided to this template parameter
     
     virtual string kind() const;

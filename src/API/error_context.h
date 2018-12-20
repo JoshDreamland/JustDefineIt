@@ -31,19 +31,19 @@ namespace jdi {
   class error_context {
     error_handler *herr;
     string fname;
-    jdip::token_t token;
+    jdi::token_t token;
   public:
     /// Construct from an error_handler and a token
-    error_context(error_handler *h, const jdip::token_t &tk): herr(h), token(tk) {}
+    error_context(error_handler *h, const jdi::token_t &tk): herr(h), token(tk) {}
     /// Construct from an error_handler and line info
-    error_context(error_handler *h, string filename, int linenum, int pos): herr(h), fname(filename), token(token_basics(jdip::TT_INVALID, fname.c_str(), linenum, pos)) {}
+    error_context(error_handler *h, string filename, int linenum, int pos): herr(h), fname(filename), token(token_basics(jdi::TT_INVALID, fname.c_str(), linenum, pos)) {}
     /// Report an error
     inline void report_error(string err) const { token.report_error(herr, err); }
     /// Report a warning
     inline void report_warning(string err) const { token.report_warning(herr, err); }
     /// Get a token representation of the line information
     inline error_handler *get_herr()  const { return herr; }
-    inline const jdip::token_t &get_token() const { return token; }
+    inline const jdi::token_t &get_token() const { return token; }
   };
 }
 

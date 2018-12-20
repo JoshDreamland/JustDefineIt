@@ -38,7 +38,7 @@
 #include <map>
 
 using namespace std;
-using namespace jdip;
+using namespace jdi;
 
 #ifdef DEBUG_MODE
 #define track(ct) ast->expression += ct + " "
@@ -89,7 +89,7 @@ inline long parselong(string s) {
   return res;
 }
 
-namespace jdip
+namespace jdi
 {
   AST_Builder::AST_Builder(context_parser *ctp): cparse(ctp), search_scope(NULL) {}
   
@@ -607,7 +607,7 @@ namespace jdip
                 ant = NULL, ft_annoying = &ft_stacked;
               full_type &ft = *ft_annoying;
               
-              lexer_cpp::look_ahead lb(cparse->lex);
+              lexer::look_ahead lb(cparse->lex);
               bool is_cast = true; // True if the contents of these parentheses are part of the cast;
               // For example, in bool(*)(), the (*) is part of the cast. In bool(10), (10) is not part of the cast.
               
@@ -788,7 +788,7 @@ namespace jdi {
   }
 }
 
-namespace jdip {
+namespace jdi {
   value AST_Node::eval(const error_context &errc) const {
     if (type == AT_DECLITERAL) {
       dec_literal:
@@ -1025,7 +1025,7 @@ namespace jdi {
   }
 }
 
-namespace jdip {
+namespace jdi {
   full_type AST_Node::coerce(const error_context &) const {
     full_type res;
     res.def = builtin_type__int;

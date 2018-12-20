@@ -17,10 +17,10 @@
 #include <deque>
 
 class debug_lexer: public jdi::lexer {
-  std::deque<jdip::token_t> tokens;
+  std::deque<jdi::token_t> tokens;
   public:
   void clear();
-  debug_lexer &operator<< (jdip::token_t t);
-  jdip::token_t get_token(jdi::error_handler *herr = jdi::def_error_handler);
+  debug_lexer &operator<< (jdi::token_t t);
+  jdi::token_t get_token(jdi::error_handler *herr = jdi::def_error_handler);
   ~debug_lexer(); ///< Destruct and free any non-POD or pointer members.
 };

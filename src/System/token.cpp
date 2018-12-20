@@ -21,7 +21,7 @@
 
 #include "token.h"
 #include <API/context.h>
-using namespace jdip;
+using namespace jdi;
 
 #ifdef DEBUG_MODE
   #define cdebuginit(x,y) ,x(y)

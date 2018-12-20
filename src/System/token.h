@@ -2,7 +2,7 @@
  * @file token.h
  * @brief Header defining token types.
  * 
- * These are system constants; use only if you have read the \c jdip disclaimer.
+ * These are system constants; use only if you have read the \c jdi disclaimer.
  * 
  * @section License
  * 
@@ -26,7 +26,7 @@
 
 #include <string>
 
-namespace jdip {
+namespace jdi {
   enum GLOSS_TOKEN_TYPE {
     GTT_DECLARATOR,     ///< Type names and modifiers.
     GTT_CONSTRUCT,      ///< Tokens like class, struct, enum, union, namespace.
@@ -188,9 +188,8 @@ namespace jdip {
 #include <API/error_reporting.h>
 #include <Storage/definition_forward.h>
 
-namespace jdip {
+namespace jdi {
   using std::string;
-  using namespace jdi; // If you are in the private namespace, you probably intend access to the regular namespace as well.
   
   /**
     A structure for representing complete info about a token.

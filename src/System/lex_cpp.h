@@ -12,7 +12,7 @@
  * 
  * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ * I only code for 
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
@@ -28,20 +28,21 @@
 #ifndef _LEX_CPP__H
 #define _LEX_CPP__H
 
-namespace jdip {
-  struct lexer_cpp;
+namespace jdi {
+  struct lexer;
   struct lexer_macro;
 }
 
 #include <set>
 #include <string>
-#include <API/lexer_interface.h>
+#include <vector>
 #include <General/quickstack.h>
 #include <General/llreader.h>
-#include <API/context.h>
+#include <System/token.h>
+#include <System/macros.h>
 
-namespace jdip {
-  using namespace jdi;
+namespace jdi {
+  using std::string;
   
   struct file_meta {
     string name; ///< The name of the open file or macro.
@@ -77,9 +78,9 @@ namespace jdip {
    * An implementation of \c jdi::lexer for lexing C++.
    * Handles preprocessing seamlessly, returning only relevant tokens.
    **/
-  struct lexer_cpp {
+  struct lexer {
     llreader cfile;  ///< The current file being read.
-    std::vector<openfile> files; ///< The macros we are nested in and files we have open, in the order we entered them.
+    std::vector<openfile> files; ///< The macros we aI need to fix the re nested in and files we have open, in the order we entered them.
     std::vector<EnteredMacro> open_macros; ///< Macros we are currently nested in.
     error_handler *herr;  ///< Error handler for problems during lex.
     
@@ -94,22 +95,22 @@ namespace jdip {
     struct look_ahead {
       std::vector<token_t> buffer;
       std::vector<token_t> *prev_buffer;
-      lexer_cpp *lexer;
+      lexer *lex;
       
       token_t &push(token_t token) {
         buffer.push_back(token);
         return buffer.back();
       }
       
-      look_ahead(lexer_cpp *lex): prev_buffer(lex->lookahead_buffer), lexer(lex) {
+      look_ahead(lexer *lex_): prev_buffer(lex->lookahead_buffer), lex(lex_) {
         lex->lookahead_buffer = &buffer;
       }
       ~look_ahead() {
-        if (lexer->lookahead_buffer != &buffer) {
-          lexer->herr->error("LOGIC ERROR: lookahead buffer is not owned");
+        if (lex->lookahead_buffer != &buffer) {
+          lex->herr->error("LOGIC ERROR: lookahead buffer is not owned");
           abort();
         }
-        lexer->lookahead_buffer = prev_buffer;
+        lex->lookahead_buffer = prev_buffer;
       }
     };
     
@@ -168,9 +169,9 @@ namespace jdip {
         @param pmacros  A \c jdi::macro_map which will receive and be probed for macros.
         @param fname    The name of the file that was first opened.
     **/
-    lexer_cpp(llreader& input, macro_map &pmacros, const char *fname = "stdcall/file.cpp");
+    lexer(llreader& input, macro_map &pmacros, const char *fname = "stdcall/file.cpp");
     /** Destructor; free the attached macro lexer. **/
-    ~lexer_cpp();
+    ~lexer();
     
     /**
       Utility function designed to handle the preprocessor directive

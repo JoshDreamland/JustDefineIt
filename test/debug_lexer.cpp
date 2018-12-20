@@ -17,12 +17,12 @@
 using namespace std;
 
 void debug_lexer::clear() { tokens.clear(); }
-debug_lexer& debug_lexer::operator<< (jdip::token_t t) { tokens.push_back(t); return *this; }
-jdip::token_t debug_lexer::get_token(jdi::error_handler *) {
+debug_lexer& debug_lexer::operator<< (jdi::token_t t) { tokens.push_back(t); return *this; }
+jdi::token_t debug_lexer::get_token(jdi::error_handler *) {
   if (tokens.size() > 0) {
-    jdip::token_t res = tokens[0]; tokens.pop_front();
+    jdi::token_t res = tokens[0]; tokens.pop_front();
     return res;
   }
-  return jdip::token_t(jdip::TT_ENDOFCODE,0,0,0);
+  return jdi::token_t(jdi::TT_ENDOFCODE,0,0,0);
 }
 debug_lexer::~debug_lexer() {}

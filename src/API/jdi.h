@@ -36,11 +36,11 @@
 #include <System/builtins.h>
 
 /**
-  @namespace jdip
+  @namespace jdi
   @brief A private namespace containing classes meant for use by the system, or
          projects extending the system.
   
-  The jdip namespace contains token information and other data that does not concern
+  The jdi namespace contains token information and other data that does not concern
   the typical user. Users wishing to create structures that are compatible with JDI
   can use this namespace, but for typical applications, it is recommended that only
   the jdi namespace be used.

@@ -30,7 +30,7 @@ namespace jdi {
   }
 }
 
-namespace jdip
+namespace jdi
 {
   /// A wrapper to \c SVG which generates IDs based on an internally-stored node count.
   struct SVGrenderInfo {
@@ -260,7 +260,7 @@ namespace jdi {
   //===========================================================================================================================
   
   void AST::writeSVG(const char* filename) {
-    jdip::SVGrenderInfo svg(filename);
+    jdi::SVGrenderInfo svg(filename);
     svg.cur = NULL;
     if (!svg.svg->is_open()) return;
     
@@ -288,7 +288,7 @@ namespace jdi {
   }
 }
 
-namespace jdip {
+namespace jdi {
   
   //===========================================================================================================================
   //=: Recursive Width/Height Resolvers :======================================================================================

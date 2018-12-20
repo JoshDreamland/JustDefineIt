@@ -23,14 +23,14 @@
 #include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 
-using namespace jdip;
+using namespace jdi;
 
 #define def_kind class
 #define DEF_FLAG DEF_CLASS
 #include <Parser/cclass_base.h>
 #include <System/builtins.h>
 
-int jdip::context_parser::handle_class_inheritance(definition_scope *scope, token_t& token, definition_class *recipient, unsigned default_protection) {
+int jdi::context_parser::handle_class_inheritance(definition_scope *scope, token_t& token, definition_class *recipient, unsigned default_protection) {
   do {
     unsigned iprotection = default_protection; //, ivirtuality = 0; TODO: mark inheritance as virtual
     token = read_next_token(scope);
@@ -82,7 +82,7 @@ int jdip::context_parser::handle_class_inheritance(definition_scope *scope, toke
   return 0;
 }
 
-jdi::definition_class* jdip::context_parser::handle_class(definition_scope *scope, token_t& token, int inherited_flags)
+jdi::definition_class* jdi::context_parser::handle_class(definition_scope *scope, token_t& token, int inherited_flags)
 {
   unsigned protection = 0;
   if (token.type == TT_CLASS)

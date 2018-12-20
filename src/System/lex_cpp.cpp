@@ -37,7 +37,6 @@
 #include <API/compile_settings.h>
 
 using namespace jdi;
-using namespace jdip;
 using namespace std;
 
 /// Returns whether s1 begins with s2, followed by whitespace.
@@ -50,7 +49,7 @@ static inline bool strbw(const char* s1, const char (&s2)[11]){ return *s1 == *s
 static inline bool strbw(char s) { return !is_letterd(s); }
 
 #if 0
-void lexer_cpp::skip_comment()
+void lexer::skip_comment()
 {
   #if ALLOW_MULTILINE_COMMENTS
   while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') if (cfile[pos] == '\\') {
@@ -62,7 +61,7 @@ void lexer_cpp::skip_comment()
   #endif
 }
 
-inline void lexer_cpp::skip_multiline_comment()
+inline void lexer::skip_multiline_comment()
 {
   char pchr = 0;
   pos += 2; // Skip two chars so we don't break on /*/
@@ -72,7 +71,7 @@ inline void lexer_cpp::skip_multiline_comment()
   ++pos;
 }
 
-void lexer_cpp::skip_string(error_handler *herr)
+void lexer::skip_string(error_handler *herr)
 {
   register const char endc = cfile[pos];
   while (++pos < length and cfile[pos] != endc)
@@ -100,7 +99,7 @@ static inline void skip_string(const char* cfile, size_t &pos, size_t length)
     if (cfile[pos] == '\\') if (cfile[pos++] == '\r' and cfile[pos] == '\n') ++pos;
 }
 
-void lexer_cpp_base::skip_whitespace()
+void lexer_base::skip_whitespace()
 {
   while (pos < length) {
     while (is_spacer(cfile[pos])) if (++pos >= length) return;
@@ -115,7 +114,7 @@ void lexer_cpp_base::skip_whitespace()
 }
 #endif
 
-void lexer_cpp::enter_macro(macro_type* macro) {
+void lexer::enter_macro(macro_type* macro) {
   if (macro->value.empty()) return;
   open_macros.push_back({macro->name, cfile.lnum, cfile.lpos, &macro->value});
 }
@@ -147,7 +146,7 @@ static inline void skip_string(llreader &cfile, error_handler *herr) {
     lex_error(herr, cfile, "Unterminated string literal");
 }
 
-bool lexer_cpp::parse_macro_params(const macro_type* mf, vector<string> *out) {
+bool lexer::parse_macro_params(const macro_type* mf, vector<string> *out) {
   cfile.skip_whitespace();
   size_t &pos = cfile.pos;
   
@@ -184,7 +183,7 @@ bool lexer_cpp::parse_macro_params(const macro_type* mf, vector<string> *out) {
   return true;
 }
 
-bool lexer_cpp::parse_macro_function(const macro_type* mf, error_handler *herr) {
+bool lexer::parse_macro_function(const macro_type* mf, error_handler *herr) {
   bool already_open = false; // Test if we're in this macro already
   vector<openfile>::iterator it = files.begin();
   for (size_t i = 0; i < open_macros.size(); ++i, --it) {
@@ -209,7 +208,7 @@ bool lexer_cpp::parse_macro_function(const macro_type* mf, error_handler *herr) 
   return true;
 }
 
-string lexer_cpp::read_preprocessor_args(error_handler *herr)
+string lexer::read_preprocessor_args(error_handler *herr)
 {
   for (;;) {
     while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return "";
@@ -266,7 +265,7 @@ static void donothing(int) {}
   simple enough, but unlike other aspects of the parser, is not as trivial as a single
   function call. Don't gripe; originally I was going to use a perfect hash.
 **/
-void lexer_cpp::handle_preprocessor(error_handler *herr)
+void lexer::handle_preprocessor(error_handler *herr)
 {
   top:
   bool variadic = false; // Whether this function is variadic
@@ -633,7 +632,7 @@ void lexer_cpp::handle_preprocessor(error_handler *herr)
 }
 
 #include <cstdio>
-token_t lexer_cpp_base::read_raw(error_handler *herr)
+token_t lexer_base::read_raw(error_handler *herr)
 {
   #ifdef DEBUG_MODE
     static int number_of_times_GDB_has_dropped_its_ass = 0;
@@ -915,7 +914,7 @@ token_t lexer_cpp_base::read_raw(error_handler *herr)
   return token_t(TT_INVALID,filename,line,pos-lpos++);
 }
 
-token_t lexer_cpp::get_token(error_handler *herr)
+token_t lexer::get_token(error_handler *herr)
 {
   token_t res;
   top:
@@ -1058,7 +1057,7 @@ token_t lexer_macro::get_token(error_handler *herr)
   return res;
 }
 
-bool lexer_cpp_base::pop_file() {
+bool lexer_base::pop_file() {
   if (files.empty())
     return true;
   
@@ -1081,12 +1080,12 @@ bool lexer_cpp_base::pop_file() {
   return false;
 }
 
-macro_map lexer_cpp::kludge_map;
-lexer_cpp::keyword_map lexer_cpp::keywords;
-lexer_cpp_base::lexer_cpp_base(llreader &input, macro_map &pmacros, const char *fname): open_macro_count(0), macros(pmacros), filename(fname), line(1), lpos(0) {
+macro_map lexer::kludge_map;
+lexer::keyword_map lexer::keywords;
+lexer_base::lexer_base(llreader &input, macro_map &pmacros, const char *fname): open_macro_count(0), macros(pmacros), filename(fname), line(1), lpos(0) {
   consume(input); // We are also an llreader. Consume the given one using the inherited method.
 }
-lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): lexer_cpp_base(input, pmacros, fname), mlex(new lexer_macro(this)), mctex(new context_parser(mlex, def_error_handler))
+lexer::lexer(llreader &input, macro_map &pmacros, const char *fname): lexer_base(input, pmacros, fname), mlex(new lexer_macro(this)), mctex(new context_parser(mlex, def_error_handler))
 {
   if (keywords.empty()) {
     keywords["asm"] = TT_ASM;
@@ -1154,12 +1153,12 @@ lexer_cpp::lexer_cpp(llreader &input, macro_map &pmacros, const char *fname): le
     context::global_macros().swap(kludge_map);
   }
 }
-lexer_cpp::~lexer_cpp() {
+lexer::~lexer() {
   delete mlex;
   delete mctex;
 }
 
-void lexer_cpp::cleanup() {
+void lexer::cleanup() {
   keywords.clear();
   for (macro_iter it = kludge_map.begin(); it != kludge_map.end(); ++it)
     macro_type::free(it->second);
@@ -1184,5 +1183,5 @@ void openfile::swap(openfile &f) {
 
 #undef cfile
 
-lexer_cpp::condition::condition() {}
-lexer_cpp::condition::condition(bool t, bool cbt): is_true(t), can_be_true(cbt) {}
+lexer::condition::condition() {}
+lexer::condition::condition(bool t, bool cbt): is_true(t), can_be_true(cbt) {}
