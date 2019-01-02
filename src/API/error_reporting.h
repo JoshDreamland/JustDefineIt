@@ -26,8 +26,10 @@
 #define ERROR_REPORTING__H
 
 #include <string>
+#include "General/strings.h"
 
 namespace jdi {
+
   /// Abstract class for error handling and warning reporting.
   /// Implement this class yourself, or use \c default_error_handler.
   struct error_handler {
@@ -43,6 +45,19 @@ namespace jdi {
         prototype are passed.
     **/
     virtual void warning(std::string_view err, std::string_view filename = "", int line = -1, int pos = -1) = 0;
+
+    // Formatting helpers.
+    template<typename PositionInfo, typename... Args>
+    void error(const PositionInfo &file, std::string_view msg, Args... args) {
+      return error(format(msg, args...),
+                   file.get_filename(), file.get_line_number(), file.get_line_position()); 
+    }
+    template<typename PositionInfo, typename... Args>
+    void warning(const PositionInfo &file, std::string_view msg, Args... args) {
+      return warning(format(msg, args...),
+                     file.get_filename(), file.get_line_number(), file.get_line_position()); 
+    }
+
     /// Virtual destructor in case children have additional data types to free.
     virtual ~error_handler();
   };

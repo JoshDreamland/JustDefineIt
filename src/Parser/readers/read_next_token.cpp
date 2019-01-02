@@ -37,6 +37,6 @@ using namespace jdi;
 **/
 token_t jdi::context_parser::read_next_token(definition_scope *scope)
 {
-  return lex->get_token_in_scope(scope, herr);
+  return lex->get_token_in_scope(scope);
 }
 

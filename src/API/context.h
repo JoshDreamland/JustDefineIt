@@ -150,7 +150,7 @@ namespace jdi
     void output_definitions(ostream &out = cout); ///< Print a any scoped-in other shit.
     
     /// Drop all current macros, freeing them.
-    void dump_macros();
+    void delete_macros();
     
     /// Get a reference to the macro map
     inline const macro_map& get_macros() const { return macros; }
@@ -163,7 +163,7 @@ namespace jdi
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
     **/
-    int parse_stream(llreader& cfile, const char* fname = NULL);
+    int parse_stream(llreader& cfile);
     
     /** Default constructor; allocates a global context with built-in definitions.
         Definitions are copied into the new context from the \c builtin context.

@@ -52,12 +52,12 @@ static inline bool strbw(char s) { return !is_letterd(s); }
 void lexer::skip_comment()
 {
   #if ALLOW_MULTILINE_COMMENTS
-  while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') if (cfile[pos] == '\\') {
-    if (cfile[++pos] == '\n') ++line, lpos = pos;
-    else if (cfile[pos] == '\r') pos += cfile[pos+1] == '\n', ++line, lpos = pos;
+  while (++pos < length and cfile.at() != '\n' and cfile.at() != '\r') if (cfile.at() == '\\') {
+    if (cfile.next() == '\n') ++line, lpos = pos;
+    else if (cfile.at() == '\r') pos += cfile[pos+1] == '\n', ++line, lpos = pos;
   }
   #else
-  while (++pos < length and cfile[pos] != '\n' and cfile[pos] != '\r');
+  while (++pos < length and cfile.at() != '\n' and cfile.at() != '\r');
   #endif
 }
 
@@ -66,47 +66,47 @@ inline void lexer::skip_multiline_comment()
   char pchr = 0;
   pos += 2; // Skip two chars so we don't break on /*/
   do if (pos >= length) return;
-    else if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
-    while ((pchr = cfile[pos++]) != '*' or cfile[pos] != '/');
+    else if (cfile.at() == '\n' or (cfile.at() == '\r' and cfile[pos+1] != '\n')) ++line, lpos = pos;
+    while ((pchr = cfile[pos++]) != '*' or cfile.at() != '/');
   ++pos;
 }
 
 void lexer::skip_string(error_handler *herr)
 {
-  register const char endc = cfile[pos];
-  while (++pos < length and cfile[pos] != endc)
+  register const char endc = cfile.at();
+  while (++pos < length and cfile.at() != endc)
   {
-    if (cfile[pos] == '\\') {
-      if (cfile[++pos] == '\n') ++line, lpos = pos;
-      else if (cfile[pos] == '\r') {
-        if (cfile[++pos] != '\n') --pos;
+    if (cfile.at() == '\\') {
+      if (cfile.next() == '\n') ++line, lpos = pos;
+      else if (cfile.at() == '\r') {
+        if (cfile.next() != '\n') --pos;
         ++line, lpos = pos; 
       }
     }
-    else if (cfile[pos] == '\n' or cfile[pos] == '\r') {
-      herr->error("Unterminated string literal", filename, line, pos-lpos);
+    else if (cfile.at() == '\n' or cfile.at() == '\r') {
+      herr->error(cfile, "Unterminated string literal");
       break;
     }
   }
-  if (cfile[pos] != endc)
-    herr->error("Unterminated string literal", filename, line, pos-lpos);
+  if (cfile.at() != endc)
+    herr->error(cfile, "Unterminated string literal");
 }
 
 static inline void skip_string(const char* cfile, size_t &pos, size_t length)
 {
-  register const char endc = cfile[pos];
-  while (++pos < length and cfile[pos] != endc)
-    if (cfile[pos] == '\\') if (cfile[pos++] == '\r' and cfile[pos] == '\n') ++pos;
+  register const char endc = cfile.at();
+  while (++pos < length and cfile.at() != endc)
+    if (cfile.at() == '\\') if (cfile[pos++] == '\r' and cfile.at() == '\n') ++pos;
 }
 
 void lexer_base::skip_whitespace()
 {
   while (pos < length) {
-    while (is_spacer(cfile[pos])) if (++pos >= length) return;
-    if (cfile[pos] == '\n' or (cfile[pos] == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos++; continue; }
-    if (cfile[pos] == '/') {
-      if (cfile[++pos] == '/') { skip_comment(); continue; }
-      if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
+    while (is_spacer(cfile.at())) if (++pos >= length) return;
+    if (cfile.at() == '\n' or (cfile.at() == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos++; continue; }
+    if (cfile.at() == '/') {
+      if (cfile.next() == '/') { skip_comment(); continue; }
+      if (cfile.at() == '*') { skip_multiline_comment(); continue; }
       return;
     }
     return;
@@ -146,44 +146,48 @@ static inline void skip_string(llreader &cfile, error_handler *herr) {
     lex_error(herr, cfile, "Unterminated string literal");
 }
 
-bool lexer::parse_macro_params(const macro_type* mf, vector<string> *out) {
+bool lexer::parse_macro_params(const macro_type* mf, vector<token_vector> *out) {
   cfile.skip_whitespace();
   size_t &pos = cfile.pos;
   
-  size_t pspos = ++pos;
-  vector<string> dest;
-  dest.reserve(mf->args.size());
+  if (cfile.at() != '(') return false;
+  ++pos;
+
+  vector<token_vector> res;
+  res.reserve(mf->args.size());
   
   // Read the parameters into our argument vector
-  int nestcnt = 1;
-  while (pos < cfile.length && nestcnt > 0) {
-    if (cfile[pos] == ',' and nestcnt == 1) {
-      dest.push_back(string(cfile+pspos, pos-pspos));
-      pspos = ++pos;
-      cfile.skip_whitespace();
-      continue;
-    } else if (cfile[pos] == ')') { if (--nestcnt) ++pos; continue; }
-      else if (cfile[pos] == '(') ++nestcnt;
-      else if (cfile[pos] == '"' or cfile[pos] == '\'') 
-        skip_string(cfile, herr);
-    ++pos; 
-    cfile.skip_whitespace();
+  int too_many_args = 0;
+  for (int nestcnt = 1;;) {
+    token_t tok = read_token(cfile, herr);
+    if (cfile.eof() or cfile.at() != ')') {
+      lex_error(herr, cfile, "Unterminated parameters to macro function");
+      return false;
+    }
+    if (tok.type == TT_LEFTPARENTH) ++nestcnt;
+    if (tok.type == TT_RIGHTPARENTH) {
+      if (!--nestcnt) break;
+    }
+    if (res.empty()) res.emplace_back();
+    if (tok.type == TT_COMMA && nestcnt == 1) {
+      if (res.size() < mf->args.size()) {
+        res.emplace_back();
+        continue;
+      } else if (!mf->is_variadic) {
+        ++too_many_args;
+      }
+    }
+    
   }
-  if (cfile.eof() or cfile.at() != ')') {
-    lex_error(herr, cfile, "Unterminated parameters to macro function");
-    return false;
+  if (too_many_args) {
+    herr->error(cfile, "Too many arguments to macro function `%s`; expected %s but got %s", 
+                mf->name, mf->args.size(), mf->args.size() + too_many_args);
   }
-  
-  if (pos > pspos) // If there was a parameter
-    dest.push_back(string(cfile+pspos, pos-pspos)); // FIXME: XXX: Same as above.
-    //dest.push_back(_flatten(string(cfile+pspos, pos-pspos), macros, token_t(token_basics(TT_INVALID, filename, line, pos)), herr)); // Nab the final parameter
-  
-  ++pos; // Consume closing parenthesis to argument list
-  out->swap(dest);
+  out->swap(res);
   return true;
 }
 
-bool lexer::parse_macro_function(const macro_type* mf, error_handler *herr) {
+bool lexer::parse_macro_function(const macro_type* mf) {
   bool already_open = false; // Test if we're in this macro already
   vector<openfile>::iterator it = files.begin();
   for (size_t i = 0; i < open_macros.size(); ++i, --it) {
@@ -201,44 +205,56 @@ bool lexer::parse_macro_function(const macro_type* mf, error_handler *herr) {
     return false;
   }
   
-  vector<string> params;
-  if (!parse_macro_params(mf, cfile, &params, herr)) return false;
-  vector<token_t> tokens = mf->substitute_and_unroll(params, herr)
-  open_macros.push_back({mf->name, line, lpos, std::move(tokens)});
+  vector<vector<token_t>> params;
+  if (!parse_macro_params(mf, &params)) return false;
+  vector<token_t> tokens = mf->substitute_and_unroll(params);
+  open_macros.push_back({mf->name, cfile.lnum, cfile.lpos, std::move(tokens)});
   return true;
 }
 
-string lexer::read_preprocessor_args(error_handler *herr)
-{
+string lexer::read_preprocessor_args() {
   for (;;) {
-    while (cfile[pos] == ' ' or cfile[pos] == '\t') if (++pos >= length) return "";
-    if (cfile[pos] == '/') {
-      if (cfile[++pos] == '/') { skip_comment(); return ""; }
-      if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
+    while (cfile.at() == ' ' or cfile.at() == '\t') if (!cfile.advance()) return "";
+    if (cfile.at() == '/') {
+      if (cfile.next() == '/') { skip_comment(); return ""; }
+      if (cfile.at() == '*') { skip_multiline_comment(); continue; }
       break;
     }
-    if (cfile[pos] == '\n' or cfile[pos] == '\r') return "";
-    if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or --pos)))) { lpos = pos++; ++line; }
+    if (cfile.at_newline()) return "";
+    if (cfile.at() == '\\') {
+      if (!cfile.advance()) return "";
+      cfile.take_newline();
+    }
     break;
   }
   string res;
   res.reserve(256);
-  size_t spos = pos;
-  while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') {
-    if (cfile[pos] == '/') {
-      if (cfile[++pos] == '/') { res += string(cfile+spos,pos-spos-1); skip_comment(); return res; }
-      if (cfile[pos] == '*') {
-        res.reserve(res.length()+pos-spos);
-        res += string(cfile+spos,pos-spos-1), res += " ";
-        skip_multiline_comment(); spos = pos; continue; }
+  size_t spos = cfile.pos;
+  while (!cfile.eof() && cfile.at() != '\n' && cfile.at() != '\r') {
+    if (cfile.at() == '/') {
+      if (cfile.next() == '/') {
+        res += cfile.slice(spos, cfile.pos - 1);
+        skip_comment();
+        return res;
+      }
+      if (cfile.at() == '*') {
+        res += cfile.slice(spos, cfile.pos - 1);
+        res += " ";
+        skip_multiline_comment();
+        spos = cfile.pos;
+        continue;
+      }
     }
-    if (cfile[pos] == '\'' or cfile[pos] == '"') skip_string(herr), ++pos;
-    else if (cfile[pos] == '\\' and (cfile[++pos] == '\n' or (cfile[pos] == '\r' and (cfile[++pos] == '\n' or (--pos, true))))) { lpos = pos++; ++line; }
-    else ++pos;
+    if (cfile.at() == '\'' || cfile.at() == '"') skip_string(), cfile.advance();
+    else if (cfile.at() == '\\') {
+      if (!cfile.advance()) break;
+      cfile.take_newline();
+    }
+    else cfile.advance();
   }
-  res += string(cfile+spos,pos-spos);
+  res += cfile.slice(spos);
   {
-    register size_t trim = res.length() - 1;
+    size_t trim = res.length() - 1;
     if (is_useless(res[trim])) {
       while (is_useless(res[--trim]));
       res.erase(++trim);
@@ -265,73 +281,80 @@ static void donothing(int) {}
   simple enough, but unlike other aspects of the parser, is not as trivial as a single
   function call. Don't gripe; originally I was going to use a perfect hash.
 **/
-void lexer::handle_preprocessor(error_handler *herr)
-{
+void lexer::handle_preprocessor() {
   top:
   bool variadic = false; // Whether this function is variadic
-  while (cfile[pos] == ' ' or cfile[pos] == '\t') ++pos;
-  const size_t pspos = pos;
-  switch (cfile[pos++])
+  while ((cfile.at() == ' ' || cfile.at() == '\t') && cfile.advance());
+  const size_t pspos = cfile.tell();
+  switch (cfile.getc())
   {
     case 'd':
-      if (strbw(cfile+pos, "efine")) { pos += 5; goto case_define; }
+      if (cfile.take("efine") && strbw(cfile.at())) goto case_define;
       goto failout;
     case 'e':
-      if (cfile[pos] == 'n') { if (strbw(cfile+pos+1, "dif")) { pos += 4; goto case_endif; } goto failout; }
-      if (cfile[pos] == 'l')
-      { 
-        if (cfile[++pos] == 's') { if (cfile[++pos] == 'e') { ++pos; goto case_else; } goto failout; }
-        if (cfile[pos] == 'i' and cfile[++pos] == 'f')
-        {
-          if (strbw(cfile[++pos])) goto case_elif;
-          if (cfile[pos] == 'd') { if (strbw(cfile+pos+1, "ef"))  { pos += 3; goto case_elifdef;  } goto failout; }
-          if (cfile[pos] == 'n') { if (strbw(cfile+pos+1, "def")) { pos += 4; goto case_elifndef; } goto failout; }
+      if (cfile.at() == 'n') {
+        if (cfile.take("ndif") && strbw(cfile.at())) goto case_endif;
+        goto failout;
+      }
+      if (cfile.at() == 'l') { 
+        if (cfile.next() == 's') {
+          if (cfile.next() == 'e') {
+            cfile.advance();
+            goto case_else;
+          }
+          goto failout;
+        }
+        if (cfile.at() == 'i' && cfile.next() == 'f') {
+          if (strbw(cfile.next())) goto case_elif;
+          if (cfile.take("def") && strbw(cfile.at()))  goto case_elifdef;
+          if (cfile.take("ndef") && strbw(cfile.at())) goto case_elifndef;
         }
         goto failout;
       }
-      if (strbw(cfile+pos, "rror")) { pos += 4; goto case_error; }
+      if (cfile.take("rror") && strbw(cfile.at())) goto case_error;
       goto failout;
     case 'i':
-      if (cfile[pos] == 'f')
+      if (cfile.at() == 'f')
       {
-        if (strbw(cfile[++pos])) goto case_if;
-        if (cfile[pos] == 'd') { if (strbw(cfile+pos+1, "ef"))  { pos += 3; goto case_ifdef;  } goto failout; }
-        if (cfile[pos] == 'n') { if (strbw(cfile+pos+1, "def")) { pos += 4; goto case_ifndef; } goto failout; }
+        if (strbw(cfile.next())) goto case_if;
+        if (cfile.take("def") && strbw(cfile.at()))  goto case_ifdef;
+        if (cfile.take("ndef") && strbw(cfile.at())) goto case_ifndef;
         goto failout;
       }
-      if (cfile[pos] == 'n') {
-        if (strbw(cfile+pos+1, "clude")) { pos += 6; goto case_include; }
-        if (strbw(cfile+pos+1, "clude_next")) { pos += 11; goto case_include_next; }
+      if (cfile.at() == 'n') {
+        cfile.advance();
+        if (cfile.take("clude") && strbw(cfile.at()))      goto case_include;
+        if (cfile.take("clude_next") && strbw(cfile.at())) goto case_include_next;
         goto failout;
       }
-      if (cfile[pos] == 'm') { if (strbw(cfile+pos+1, "port"))  { pos += 5; goto case_import;  } goto failout; }
+      if (cfile.take("mport") && strbw(cfile.at())) goto case_import;
       goto failout;
     case 'l':
-      if (strbw(cfile+pos, "ine")) { pos += 3; goto case_line; }
+      if (cfile.take("ine") && strbw(cfile.at())) goto case_line;
       goto failout;
     case 'p':
-      if (strbw(cfile+pos, "ragma")) { pos += 5; goto case_pragma; }
+      if (cfile.take("ragma") && strbw(cfile.at())) goto case_pragma;
       goto failout;
     case 'u':
-      if (strbw(cfile+pos, "ndef")) { pos += 4; goto case_undef; }
-      if (strbw(cfile+pos, "sing")) { pos += 4; goto case_using; }
+      if (cfile.take("ndef") && strbw(cfile.at())) goto case_undef;
+      if (cfile.take("sing") && strbw(cfile.at())) goto case_using;
       goto failout;
     case 'w':
-      if (strbw(cfile+pos, "arning")) { pos += 6; goto case_warning; }
+      if (cfile.take("arning") && strbw(cfile.at())) goto case_warning;
       goto failout;
     default: goto failout;
   }
   
   while (false) {  // This is an improvised switch statement; allows "break" to work.
     case_define: {
-      string argstrs = read_preprocessor_args(herr);
+      string argstrs = read_preprocessor_args();
       const char* argstr = argstrs.c_str();
       if (!conditionals.empty() and !conditionals.top().is_true)
         break;
       size_t i = 0;
       while (is_useless(argstr[i])) ++i;
       if (!is_letter(argstr[i])) {
-        herr->error("Expected macro definiendum at this point", filename, line, pos-lpos);
+        herr->error(cfile, "Expected macro definiendum at this point");
       }
       const size_t nsi = i;
       while (is_letterd(argstr[++i]));
@@ -346,11 +369,11 @@ void lexer::handle_preprocessor(error_handler *herr)
               variadic = true, i += 3;
               while (is_useless(argstr[i])) ++i;
               if (argstr[i] != ')')
-                herr->error("Expected end of parameters after variadic", filename, line, pos-lpos);
+                herr->error(cfile, "Expected end of parameters after variadic");
               break;
             }
             else {
-              herr->error("Expected parameter name for macro declaration", filename, line, pos-lpos);
+              herr->error(cfile, "Expected parameter name for macro declaration");
               break;
             }
           }
@@ -367,41 +390,34 @@ void lexer::handle_preprocessor(error_handler *herr)
             i += 2; while (is_useless(argstr[++i]));
             variadic = true;
             if (argstr[i] == ')') break;
-            herr->error("Expected closing parenthesis at this point; further parameters not allowed following variadic", filename, line, pos-lpos);
+            herr->error(cfile, "Expected closing parenthesis at this point; further parameters not allowed following variadic");
           }
           else
-            herr->error("Expected comma or closing parenthesis at this point", filename, line, pos-lpos);
+            herr->error(cfile, "Expected comma or closing parenthesis at this point");
         }
         
         if (!mins.second) { // If no insertion was made; ie, the macro existed already.
         //  if ((size_t)mins.first->second->argc != paramlist.size())
         //    herr->warning("Redeclaring macro function `" + mins.first->first + '\'', filename, line, pos-lpos);
-          macro_type::free(mins.first->second);
-          mins.first->second = NULL;
+          mins.first->second = nullptr;
         }
-        mins.first->second = new macro_function(mins.first->first,paramlist, argstrs.substr(++i), variadic, herr);
-      }
-      else
-      {
-        if (!mins.second) { // If no insertion was made; ie, the macro existed already.
-        //  if (mins.first->second->argc != -1 or (mins.first->second)->value != argstr.substr(i))
-        //    herr->warning("Redeclaring macro `" + mins.first->first + '\'', filename, line, pos-lpos);
-          macro_type::free(mins.first->second);
-          mins.first->second = NULL;
-        }
+        mins.first->second = std::make_shared<const macro_type>(
+            mins.first->first, paramlist, argstrs.substr(++i), variadic, herr);
+      } else {
         while (is_useless(argstr[i])) ++i;
-        mins.first->second = new macro_scalar(mins.first->first,argstrs.substr(i));
+        mins.first->second = std::make_shared<const macro_type>(
+            mins.first->first,argstrs.substr(i));
       }
     } break;
     case_error: {
-        string emsg = read_preprocessor_args(herr);
+        string emsg = read_preprocessor_args();
         if (conditionals.empty() or conditionals.top().is_true)
-          herr->error(token_basics("#error " + emsg,filename,line,pos-lpos));
+          herr->error(cfile, "#error " + emsg);
       } break;
       break;
     case_elif:
         if (conditionals.empty())
-          herr->error(token_basics("Unexpected #elif directive; no matching #if",filename,line,pos-lpos));
+          herr->error(cfile, "Unexpected #elif directive; no matching #if");
         else {
           if (conditionals.top().is_true)
             conditionals.top().is_true = conditionals.top().can_be_true = false;
@@ -415,7 +431,7 @@ void lexer::handle_preprocessor(error_handler *herr)
       break;
     case_elifdef:
         if (conditionals.empty())
-          herr->error(token_basics("Unexpected #elifdef directive; no matching #if",filename,line,pos-lpos));
+          herr->error(cfile, "Unexpected #elifdef directive; no matching #if");
         else {
           if (conditionals.top().is_true)
             conditionals.top().is_true = conditionals.top().can_be_true = false;
@@ -429,7 +445,7 @@ void lexer::handle_preprocessor(error_handler *herr)
       break;
     case_elifndef:
         if (conditionals.empty())
-          herr->error(token_basics("Unexpected #elifndef directive; no matching #if",filename,line,pos-lpos));
+          herr->error(cfile, "Unexpected #elifndef directive; no matching #if");
         else {
           if (conditionals.top().is_true)
             conditionals.top().is_true = conditionals.top().can_be_true = false;
@@ -443,7 +459,7 @@ void lexer::handle_preprocessor(error_handler *herr)
       break;
     case_else:
         if (conditionals.empty())
-          herr->error(token_basics("Unexpected #else directive; no matching #if",filename,line,pos-lpos));
+          herr->error(cfile, "Unexpected #else directive; no matching #if");
         else {
           if (conditionals.top().is_true)
             conditionals.top().is_true = conditionals.top().can_be_true = false;
@@ -453,12 +469,14 @@ void lexer::handle_preprocessor(error_handler *herr)
       break;
     case_endif:
         if (conditionals.empty())
-          return herr->error(token_basics("Unexpected #endif directive: no open conditionals.",filename,line,pos-lpos));
+          return herr->error(cfile, "Unexpected #endif directive: no open conditionals.");
         conditionals.pop();
       break;
     case_if: 
         if (conditionals.empty() or conditionals.top().is_true) {
           AST a;
+          token_t tok;
+          while (tok = read_t
           if (mctex->get_AST_builder()->parse_expression(&a) or !a.eval(error_context(herr, filename, line, pos-lpos))) {
             //token_t res;
             render_ast(a, "if_directives");
@@ -472,13 +490,13 @@ void lexer::handle_preprocessor(error_handler *herr)
           conditionals.push(condition(0,0));
       break;
     case_ifdef: {
-        while (is_useless(cfile[pos])) ++pos;
-        if (!is_letter(cfile[pos])) {
-          herr->error("Expected identifier to check against macros",filename,line,pos);
+        while (is_useless(cfile.at())) ++pos;
+        if (!is_letter(cfile.at())) {
+          herr->error(cfile, "Expected identifier to check against macros");
           break;
         }
         const size_t msp = pos;
-        while (is_letterd(cfile[++pos]));
+        while (is_letterd(cfile.next()));
         string macro(cfile+msp, pos-msp);
         if (conditionals.empty() or conditionals.top().is_true) {
           if (macros.find(macro) == macros.end()) {
@@ -492,13 +510,13 @@ void lexer::handle_preprocessor(error_handler *herr)
           conditionals.push(condition(0,0));
       } break;
     case_ifndef: {
-        while (is_useless(cfile[pos])) ++pos;
-        if (!is_letter(cfile[pos])) {
-          herr->error("Expected identifier to check against macros",filename,line,pos);
+        while (is_useless(cfile.at())) ++pos;
+        if (!is_letter(cfile.at())) {
+          herr->error(cfile, "Expected identifier to check against macros");
           break;
         }
         const size_t msp = pos;
-        while (is_letterd(cfile[++pos]));
+        while (is_letterd(cfile.next()));
         string macro(cfile+msp, pos-msp);
         if (conditionals.empty() or conditionals.top().is_true) {
           if (macros.find(macro) != macros.end()) {
@@ -527,7 +545,7 @@ void lexer::handle_preprocessor(error_handler *herr)
         if (!incnext and fnfind[0] == '"')
           chklocal = true, match = '"';
         else if (fnfind[0] != '<') {
-          herr->error("Expected filename inside <> or \"\" delimiters", filename, line, pos - lpos);
+          herr->error(cfile, "Expected filename inside <> or \"\" delimiters");
           break;
         }
         fnfind[0] = '/';
@@ -535,7 +553,7 @@ void lexer::handle_preprocessor(error_handler *herr)
           if (fnfind[i] == match) { fnfind.erase(i); break; }
         
         if (files.size() > 9000) {
-          herr->error("Nested include count is OVER NINE THOUSAAAAAAAAND. Not including another.");
+          herr->error(cfile, "Nested include count is OVER NINE THOUSAAAAAAAAND. Not including another.");
           break;
         }
         
@@ -556,7 +574,7 @@ void lexer::handle_preprocessor(error_handler *herr)
             incnext = sdir != builtin->search_dir(i);
         }
         if (!incfile.is_open()) {
-          herr->error("Could not find " + fnfind.substr(1), filename, line, pos-lpos);
+          herr->error(cfile, "Could not find " + fnfind.substr(1));
           if (chklocal) cerr << "  Checked " << path << endl;
           for (size_t i = 0; !incfile.is_open() and i < builtin->search_dir_count(); ++i)
             cerr << "  Checked " << builtin->search_dir(i) << endl;
@@ -590,12 +608,12 @@ void lexer::handle_preprocessor(error_handler *herr)
         if (!conditionals.empty() and !conditionals.top().is_true)
           break;
         
-        while (is_useless(cfile[pos])) ++pos;
-        if (!is_letter(cfile[pos]))
+        while (is_useless(cfile.at())) ++pos;
+        if (!is_letter(cfile.at()))
           herr->error("Expected macro identifier at this point", filename, line, pos);
         else {
           const size_t nspos = pos;
-          while (is_letterd(cfile[++pos]));
+          while (is_letterd(cfile.next()));
           macro_iter mdel = macros.find(string(cfile+nspos,pos-nspos));
           if (mdel != macros.end()) {
             macro_type::free(mdel->second);
@@ -616,7 +634,7 @@ void lexer::handle_preprocessor(error_handler *herr)
   
   // skip_to_macro:
   while (pos < length) {
-    if (cfile[pos] == '/' || is_useless(cfile[pos]))
+    if (cfile.at() == '/' || is_useless(cfile.at()))
       skip_whitespace();
     else if (cfile[pos++] == '#')
       goto top;
@@ -625,15 +643,13 @@ void lexer::handle_preprocessor(error_handler *herr)
   return;
   
   failout:
-    while (is_letterd(cfile[pos])) ++pos;
+    while (is_letterd(cfile.at())) ++pos;
     string ppname(cfile + pspos, pos - pspos);
-    herr->error(token_basics("Invalid preprocessor directive `" + ppname + "'",filename,line,pos-lpos));
-    while (pos < length and cfile[pos] != '\n' and cfile[pos] != '\r') ++pos;
+    herr->error(cfile, "Invalid preprocessor directive `%s'", ppname));
+    while (pos < length and cfile.at() != '\n' and cfile.at() != '\r') ++pos;
 }
 
-#include <cstdio>
-token_t lexer_base::read_raw(error_handler *herr)
-{
+token_t read_token(llreader& data, const file_meta& file, error_handler* herr) {
   #ifdef DEBUG_MODE
     static int number_of_times_GDB_has_dropped_its_ass = 0;
     ++number_of_times_GDB_has_dropped_its_ass;
@@ -643,14 +659,14 @@ token_t lexer_base::read_raw(error_handler *herr)
     if (pos >= length) return token_t(token_basics(TT_ENDOFCODE,filename, line, pos - lpos));
     
     // Skip all whitespace
-    while (is_useless(cfile[pos])) {
-      if (cfile[pos] == '\n') {
+    while (is_useless(cfile.at())) {
+      if (cfile.at() == '\n') {
         ++line, lpos = pos++;
         return token_t(token_basics(TTM_NEWLINE, filename, line, pos - lpos), cfile + lpos, 1);
       }
-      if (cfile[pos] == '\r') {
+      if (cfile.at() == '\r') {
         ++line; lpos = pos;
-        if (cfile[++pos] != '\n') ++pos;
+        if (cfile.next() != '\n') ++pos;
         return token_t(token_basics(TTM_NEWLINE, filename, line, pos - lpos),
                        cfile + lpos, pos - lpos);
       }
@@ -667,9 +683,9 @@ token_t lexer_base::read_raw(error_handler *herr)
     // Skip all whitespace
     
      case '/': {
-      if (cfile[pos] == '*') { skip_multiline_comment(); continue; }
-      if (cfile[pos] == '/') { skip_comment(); continue; }
-      if (cfile[pos] == '=') {
+      if (cfile.at() == '*') { skip_multiline_comment(); continue; }
+      if (cfile.at() == '/') { skip_comment(); continue; }
+      if (cfile.at() == '=') {
         ++pos;
         return token_t(token_basics(TT_DIVIDE_ASSIGN, filename, line, pos - lpos),
                        cfile + pos - 2, 2);
@@ -684,8 +700,8 @@ token_t lexer_base::read_raw(error_handler *herr)
     //==============================================================================================
     
     if (is_letter(cfile[spos])) {  // Check if we're at an identifier or keyword.
-      while (pos < length and is_letterd(cfile[pos])) ++pos;
-      if (cfile[spos] == 'L' and pos - spos == 1 and cfile[pos] == '\'') {
+      while (pos < length and is_letterd(cfile.at())) ++pos;
+      if (cfile[spos] == 'L' and pos - spos == 1 and cfile.at() == '\'') {
         skip_string(herr);
         return token_t(token_basics(TT_CHARLITERAL, filename, line, spos - lpos),
                        cfile + spos, ++pos - spos);
@@ -700,17 +716,17 @@ token_t lexer_base::read_raw(error_handler *herr)
     //============================================================================================
     
     case '0': { // Check if the number is hexadecimal or octal.
-      if (cfile[pos] == 'x') { // Check if the number is hexadecimal.
+      if (cfile.at() == 'x') { // Check if the number is hexadecimal.
         // Yes, it is hexadecimal.
         const size_t sp = pos;
-        while (++pos < length and is_hexdigit(cfile[pos]));
-        while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
+        while (++pos < length and is_hexdigit(cfile.at()));
+        while (pos < length and is_letter(cfile.at())) pos++; // Include the flags, like ull
         return token_t(token_basics(TT_HEXLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
       }
       // Turns out, it's octal.
       const size_t sp = --pos;
-      while (++pos < length and is_hexdigit(cfile[pos]));
-      while (pos < length and is_letter(cfile[pos])) pos++; // Include the flags, like ull
+      while (++pos < length and is_hexdigit(cfile.at()));
+      while (pos < length and is_letter(cfile.at())) pos++; // Include the flags, like ull
       return token_t(token_basics(TT_OCTLITERAL,filename,line,pos-lpos), cfile+sp, pos-sp);
     }
     
@@ -719,14 +735,14 @@ token_t lexer_base::read_raw(error_handler *herr)
     case '9': {
       // Turns out, it's decimal.
       handle_decimal:
-      while (pos < length and is_digit(cfile[pos])) ++pos;
-      if (cfile[pos] == '.')
-        while (++pos < length and is_digit(cfile[pos]));
-      if (cfile[pos] == 'e' or cfile[pos] == 'E') { // Accept exponents
-        if (cfile[++pos] == '-') ++pos;
-        while (pos < length and is_digit(cfile[pos])) ++pos;
+      while (pos < length and is_digit(cfile.at())) ++pos;
+      if (cfile.at() == '.')
+        while (++pos < length and is_digit(cfile.at()));
+      if (cfile.at() == 'e' or cfile.at() == 'E') { // Accept exponents
+        if (cfile.next() == '-') ++pos;
+        while (pos < length and is_digit(cfile.at())) ++pos;
       }
-      while (pos < length and is_letter(cfile[pos])) ++pos; // Include the flags, like ull
+      while (pos < length and is_letter(cfile.at())) ++pos; // Include the flags, like ull
       return token_t(token_basics(TT_DECLITERAL,filename,line,pos-lpos), cfile+spos, pos-spos);
     }
     
@@ -739,128 +755,128 @@ token_t lexer_base::read_raw(error_handler *herr)
       case ',':
         return token_t(token_basics(TT_COMMA,filename,line,spos-lpos));
       case '+':
-        if (cfile[pos] == '+') {
+        if (cfile.at() == '+') {
           ++pos;
           return token_t(token_basics(TT_INCREMENT, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 1);
       case '-':
-        if (cfile[pos] == '+') {
+        if (cfile.at() == '+') {
           ++pos;
           return token_t(token_basics(TT_INCREMENT, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '>') {
+        if (cfile.at() == '>') {
           ++pos;
           return token_t(token_basics(TT_ARROW, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_ADD_ASSIGN, filename, line, spos - lpos), cfile + spos, 1);
       case '=':
-        if (cfile[pos] == cfile[spos]) {
+        if (cfile.at() == cfile[spos]) {
           ++pos;
           return token_t(token_basics(TT_EQUAL_TO, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_EQUAL, filename, line, spos - lpos), cfile + spos, 1);
       case '&':
-        if (cfile[pos] == '&') {
+        if (cfile.at() == '&') {
           ++pos;
           return token_t(token_basics(TT_AMPERSANDS, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_AND_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_AMPERSAND, filename, line, spos - lpos), cfile + spos, 1);
       case '|':
-        if (cfile[pos] == '|') {
+        if (cfile.at() == '|') {
           ++pos;
           return token_t(token_basics(TT_PIPES, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_OR_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_PIPE, filename, line, spos - lpos), cfile + spos, 1);
       case '~':
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_NEGATE_ASSIGN, filename, line, spos - lpos),
                          cfile + spos, 2);
         }
         return token_t(token_basics(TT_TILDE, filename, line, spos - lpos), cfile + spos, 1);
       case '!':
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_NOT_EQUAL_TO, filename, line, spos - lpos),
                          cfile + spos, 2);
         }
         return token_t(token_basics(TT_NOT, filename, line, spos - lpos), cfile + spos, 1);
       case '%':
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_MODULO_ASSIGN, filename, line, spos - lpos),
                          cfile + spos, 2);
         }
         return token_t(token_basics(TT_MODULO, filename, line, spos - lpos), cfile + spos, 1);
       case '*':
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_MULTIPLY_ASSIGN, filename, line, spos - lpos),
                          cfile + spos, 2);
         }
         return token_t(token_basics(TT_STAR, filename, line, spos - lpos), cfile + spos, 1);
       case '^':
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_XOR_ASSIGN, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_NOT, filename, line, spos - lpos), cfile + spos, 1);
       case '>':
-        if (cfile[pos] == '>') {
+        if (cfile.at() == '>') {
           ++pos;
           return token_t(token_basics(TT_RSHIFT, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_GREATER_EQUAL, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_GREATERTHAN, filename, line, spos - lpos), cfile + spos, 1);
       case '<':
-        if (cfile[pos] == '<') {
+        if (cfile.at() == '<') {
           ++pos;
           return token_t(token_basics(TT_LSHIFT, filename, line, spos - lpos), cfile + spos, 2);
         }
-        if (cfile[pos] == '=') {
+        if (cfile.at() == '=') {
           ++pos;
           return token_t(token_basics(TT_LESS_EQUAL, filename, line, spos - lpos), cfile + spos, 2);
         }
         return token_t(token_basics(TT_LESSTHAN, filename, line, spos - lpos), cfile + spos, 1);
       case ':':
-        pos += cfile[pos] == cfile[spos];
+        pos += cfile.at() == cfile[spos];
         return token_t(token_basics(pos - spos == 1 ? TT_COLON : TT_SCOPE,
                                     filename, line, spos - lpos), cfile + spos, 1);
       case '?':
         return token_t(token_basics(TT_QUESTIONMARK, filename, line, spos - lpos), cfile + spos, 1);
       
       case '.':
-          if (is_digit(cfile[pos]))
+          if (is_digit(cfile.at()))
             goto handle_decimal;
-          else if (cfile[pos] == '.') {
-            if (cfile[++pos] == '.') {
+          else if (cfile.at() == '.') {
+            if (cfile.next() == '.') {
               ++pos;
               return token_t(token_basics(TT_ELLIPSIS, filename, line, spos - lpos),
                              cfile + spos, 3);
             }
             --pos;
           }
-          if (cfile[pos] == '*') {
+          if (cfile.at() == '*') {
             ++pos;
             return token_t(token_basics(TT_DOT_STAR,filename,line,spos-lpos), cfile+spos, 1);
           }
@@ -874,17 +890,17 @@ token_t lexer_base::read_raw(error_handler *herr)
       case ')': return token_t(token_basics(TT_RIGHTPARENTH,filename,line,spos-lpos));
       
       case '#':
-        if (cfile[pos] == '#') {
+        if (cfile.at() == '#') {
           ++pos;
           return token_t(token_basics(TTM_CONCAT, filename, line, 2));
         }
         return token_t(token_basics(TTM_TOSTRING, filename, line, 1));
       
       case '\\':
-        if (cfile[pos] != '\n') {
-          if (cfile[pos] != '\r')
-            herr->error("Stray backslash", filename, line, pos-lpos);
-          else if (cfile[++pos] != '\n')
+        if (cfile.at() != '\n') {
+          if (cfile.at() != '\r')
+            herr->error(cfile, "Stray backslash");
+          else if (cfile.next() != '\n')
             --pos;
         }
         ++line;
@@ -914,8 +930,7 @@ token_t lexer_base::read_raw(error_handler *herr)
   return token_t(TT_INVALID,filename,line,pos-lpos++);
 }
 
-token_t lexer::get_token(error_handler *herr)
-{
+token_t lexer::get_token() {
   token_t res;
   top:
   do res = read_raw(herr); while (res.type == TTM_NEWLINE);

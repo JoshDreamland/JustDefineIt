@@ -34,11 +34,11 @@
 #include <string>
 #include <Storage/arg_key.h>
 #include <System/token.h>
+#include <System/lex_cpp.h>
 #include <Storage/value.h>
 #include <API/error_reporting.h>
 #include <API/error_context.h>
 #include <Storage/definition.h>
-#include <API/context.h>
 
 namespace jdi {
   /// Structure containing info for use when rendering SVGs.
@@ -415,16 +415,13 @@ namespace jdi {
       virtual int width(); ///< Returns the width which will be used to render this node and all its children.
       virtual int height(); ///< Returns the height which will be used to render this node and all its children.
     };
-}
 
-namespace jdi {
   /** @class jdi::AST
       General-purpose class designed to take in a series of tokens and generate an abstract syntax tree.
       The generated AST can then be evaluated for a \c value or coerced for a resultant type as a \c definition.
   **/
-  class AST
-  {
-  protected:
+  class AST {
+   protected:
     friend struct jdi::ASTOperator;
     friend struct jdi::ConstASTOperator;
     friend class jdi::AST_Builder;
@@ -451,8 +448,7 @@ namespace jdi {
     int parse_unary_postfix(int precedence, jdi::token_t &origin);
     int parse_ternary(int precedence, jdi::token_t &origin);*/
     
-    public:
-    
+   public:
     #ifdef DEBUG_MODE
     string expression; ///< The string representation of the expression fed in, for debug purposes.
     #endif
@@ -514,26 +510,27 @@ namespace jdi {
     /// @param id        The identifier which is to be accessed in the scope.
     /// @param scope_op  The scope resolution operator, probably "::", but "." and "->" are also permitted.
     static AST* create_from_access(definition_scope* scope, string id, string scope_op);
+
+    /// Move constructor.
+    AST(AST &&ast) = default;
     
     /// Default destructor. Deletes the AST.
     ~AST();
     
-    protected:
-      /// Construct with a root node; this will invariably be called internally.
-      AST(jdi::AST_Node* root);
+   protected:
+    /// Construct with a root node; this will invariably be called internally.
+    AST(jdi::AST_Node* root);
     
-    private:
-      /// Copy constructor; highly expensive. Not implemented. Use duplicate(), sparingly.
-      AST(const AST& ast);
+   private:
+    /// Copy constructor; highly expensive. Not implemented. Use duplicate(), sparingly.
+    AST(const AST& ast) = delete;
   };
-}
 
-namespace jdi
-{
-  class AST_Builder
-  {
-  protected:
-    context_parser *cparse; ///< A context parser to poll for tokens and handle error checking
+  class AST_Builder {
+   protected:
+    lexer *lex;
+    error_handler *herr;
+    context_parser *cparse; ///< Legacy. Handles reading types. Type reading logic is really fucking compliocated. It should probably always involve building an AST, instead of trying to rewind time like all the other compilers.
     inline context_parser *get_context() const { return cparse; } /// Get this AST builder's context
     
     definition_scope *search_scope; ///< The scope from which token values will be harvested.
@@ -589,7 +586,11 @@ namespace jdi
     /// @param lex   A lexer which can be polled for tokens.
     AST_Builder(context_parser *ctp);
   };
-}
+
+  /// Read and parse an expression from the given lexer. The expression cannot
+  /// reference anything apart from builtints.
+  AST parse_expression(lexer *lex);
+}  // namespace jdi
 
 #include <System/symbols.h>
 

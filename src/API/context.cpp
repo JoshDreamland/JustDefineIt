@@ -34,6 +34,8 @@ using namespace std;
 
 using namespace jdi;
 
+#define new_macro std::make_shared<const macro_type>
+
 void context::read_macros(const char* filename)
 {
   ifstream in(filename);
@@ -43,36 +45,35 @@ void context::read_macros(const char* filename)
   in.close();
 }
 inline vector<token_t> &&parse_macro(const string &definiendum, const string &definiens, error_handler *herr) {
-  file_meta meta;
   llreader str_reader(definiendum, definiens, false);
   vector<token_t> tokens;
   for (token_t t;
-      (t = read_token(str_reader, meta, herr)).type != TT_ENDOFCODE; )
+      (t = read_token(str_reader, herr)).type != TT_ENDOFCODE; )
     tokens.push_back(t);
   return std::move(tokens);
 }
 void context::add_macro_from_string(string definiendum, string definiens) {
-  macros[definiendum] = new macro_type(definiendum, std::move(parse_macro(definiendum, definiens, herr)));
+  macros[definiendum] = new_macro(definiendum,
+                                  parse_macro(definiendum, definiens, herr));
 }
 void context::add_macro_func(string definiendum, string definiens) {
-  macros[definiendum] = new macro_type(definiendum,
-                                       std::move(parse_macro(definiendum, definiens, herr)));
+  macros[definiendum] = new_macro(definiendum,
+                                  parse_macro(definiendum, definiens, herr));
 }
 void context::add_macro_func(string definiendum, string p1, string definiens, bool variadic) {
   vector<string> arglist;
   arglist.push_back(p1);
-  macros[definiendum] = new macro_type(definiendum, std::move(arglist),
-                                       std::move(parse_macro(definiendum, definiens, herr)),
-                                       variadic);
+  macros[definiendum] = new_macro(definiendum, std::move(arglist),
+                                  parse_macro(definiendum, definiens, herr),
+                                  variadic);
 }
 void context::add_macro_func(string definiendum, string p1, string p2, string definiens, bool variadic) {
   vector<string> arglist;
   arglist.push_back(p1);
   arglist.push_back(p2);
-  macros[definiendum] = new macro_type(definiendum,
-                                       std::move(arglist), 
-                                       std::move(parse_macro(definiendum, definiens, herr)), 
-                                       variadic);
+  macros[definiendum] = new_macro(definiendum,  std::move(arglist), 
+                                  parse_macro(definiendum, definiens, herr), 
+                                  variadic);
 }
 void context::add_macro_func(string definiendum, string p1, string p2, string p3, string definiens, bool variadic)
 {
@@ -80,10 +81,9 @@ void context::add_macro_func(string definiendum, string p1, string p2, string p3
   arglist.push_back(p1);
   arglist.push_back(p2);
   arglist.push_back(p3);
-  macros[definiendum] = new macro_type(definiendum,
-                                       std::move(arglist), 
-                                       std::move(parse_macro(definiendum, definiens, herr)), 
-                                       variadic);
+  macros[definiendum] = new_macro(definiendum,  std::move(arglist), 
+                                  parse_macro(definiendum, definiens, herr), 
+                                  variadic);
 }
 
 #ifndef MAX_PATH
@@ -156,14 +156,14 @@ void context::copy(const context &ct)
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
     if (dest.second) {
-      dest.first->second = new macro_type(*mi->second);
+      dest.first->second = new_macro(*mi->second);
     }
   }
-  for (set<definition*>::iterator it = ct.variadics.begin(); it != ct.variadics.end(); ++it) {
-    if ((*it)->parent)
-      variadics.insert(find_mirror(*it, global));
+  for (definition* var : ct.variadics) {
+    if (var->parent)
+      variadics.insert(find_mirror(var, global));
     else
-      variadics.insert(*it);
+      variadics.insert(var);
   }
 }
 void context::swap(context &ct) {
@@ -224,13 +224,6 @@ context::context(int): parse_open(false), global(new definition_scope()) { }
 size_t context::search_dir_count() { return search_directories.size(); }
 string context::search_dir(size_t index) { return search_directories[index]; }
 
-void context::dump_macros() {
-  // Clean up macros
-  for (macro_iter it = macros.begin(); it != macros.end(); it++)
-    macro_type::free(it->second);
-}
-
 context::~context() {
   delete global;
-  dump_macros();
 }

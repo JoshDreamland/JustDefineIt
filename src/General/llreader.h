@@ -48,6 +48,10 @@ class llreader {
     size_t lnum; ///< The number of newlines that have been read
     const char *data; ///< The data in the stream
     std::string name; ///< The name or source of this file.
+
+    const std::string &get_filename() const { return name; }
+    size_t get_line_number() const { return lnum; }
+    size_t get_line_position() const { return pos - lpos; }
   
   private:
     int mode; ///< What kind of stream we have open
@@ -152,9 +156,35 @@ class llreader {
     char operator[](size_t ind) const { return data[ind]; }
     explicit operator char() const { return data[pos]; }
     const char* operator+(size_t x) { return data + x; }
+    size_t tell() const { return pos; }
     char at() const { return data[pos]; }
+    char getc() { return data[pos++]; }
     int next() { return ++pos < length ? data[pos] : EOF; }
     bool eof() const { return pos >= length; }
+    bool advance() { return ++pos < length; }
+    bool at_newline() const { return data[pos] == '\n' || data[pos] == '\r'; }
+
+    bool take_newline() {
+      if (data[pos] == '\n') ++pos;
+      else {
+        if (data[pos] != '\r') return false;
+        if (data[++pos] == '\n') ++pos;
+      }
+      lnum++;
+      lpos = pos;
+      return true;
+    }
+
+    template<int n> bool take(const char (&str)[n]) {  // fun rolls
+      for (int i = 0; i < n; ++i) if (data[pos + i] != str[i]) return false;
+      pos += n;
+      return true;
+    }
+
+    std::string_view slice(size_t start) const { return slice(start, pos); }
+    std::string_view slice(size_t start, size_t end) const {
+      return std::string_view(data + start, end - start);
+    }
     
     // =========================================================================
     // == Constructors/destructors =============================================

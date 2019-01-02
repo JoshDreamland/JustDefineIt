@@ -201,7 +201,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_USING:
           token = read_next_token(scope);
           if (token.type == TT_NAMESPACE) {
-            token = lex->get_token_in_scope(scope, herr);
+            token = lex->get_token_in_scope(scope);
             if (token.type == TT_DEFINITION) {
               definition *d = read_qualified_definition(token, scope);
               if (!d) {

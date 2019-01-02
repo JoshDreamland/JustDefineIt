@@ -58,7 +58,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     
     definition_tempparam* dtn;
     if (token.type == TT_TYPENAME || token.type == TT_CLASS || token.type == TT_STRUCT) {
-      token = lex->get_token(herr);
+      token = lex->get_token();
       if (token.type == TT_IDENTIFIER) {
         pname = token.content.toString();
         token = read_next_token(temp);

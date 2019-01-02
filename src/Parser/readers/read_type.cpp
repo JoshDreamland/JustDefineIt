@@ -78,10 +78,10 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       }
       else if (token.type == TT_ELLIPSIS) {
         rdef = builtin_type__va_list;
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
       }
       else if (token.type == TT_TYPENAME) {
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         if (not(rdef = handle_hypothetical(scope, token, DEF_TYPENAME)))
           return full_type();
       }
@@ -104,7 +104,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
           inferred_type = tf->def;
         rflags = tf->flagbit;
       }
-      token = lex->get_token_in_scope(scope,herr);
+      token = lex->get_token_in_scope(scope);
     }
   }
   else
@@ -140,7 +140,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       else if (tf->usage & UF_STANDALONE_FLAG)
         inferred_type = tf->def,
         rflags |= tf->flagbit;
-      token = lex->get_token_in_scope(scope, herr);
+      token = lex->get_token_in_scope(scope);
     }
   }
   if (rdef == NULL) {
@@ -177,15 +177,15 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
 #include <General/debug_macros.h>
 
 enum parenth_type { PT_FUNCTION, PT_GROUPORINIT, PT_INITIALIZERS, PT_NA };
-static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffer &lb, token_t &token, context_parser *cp, error_handler *herr)
+static parenth_type parenths_type(lexer *lex, definition_scope *scope, lexer::look_ahead &lb, token_t &token, context_parser *cp, error_handler *herr)
 {
   if (token.type == TT_LEFTPARENTH)
   {
     bool seen_type = false, seen_comma = false;
-    token_t *backt = &lb.push(token = lex->get_token_in_scope(scope, herr));
+    token_t *backt = &lb.push(token = lex->get_token_in_scope(scope));
     
     bool read_next = false;
-    for (; token.type != TT_RIGHTPARENTH; backt = &lb.push(read_next? token : (token = lex->get_token_in_scope(scope, herr))))
+    for (; token.type != TT_RIGHTPARENTH; backt = &lb.push(read_next? token : (token = lex->get_token_in_scope(scope))))
     {
       read_next = false;
       if (token.type == TT_LEFTPARENTH) {
@@ -236,7 +236,7 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lex_buffe
   }
   else {
     while (token.type != TT_ENDOFCODE) {
-    lb.push(token = lex->get_token_in_scope(scope, herr));
+    lb.push(token = lex->get_token_in_scope(scope));
     if (token.type == TT_LEFTPARENTH) {
       parenths_type(lex, scope, lb, token, cp, herr);
       if (token.type != TT_RIGHTPARENTH) return token.report_errorf(herr, "Expected closing parenthesis before %s"), PT_NA;
@@ -296,18 +296,16 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
       case TT_LEFTPARENTH: { // Either a function or a grouping, or, potentially, a constructor call.
         fix_scope fs(ft.refs.ndef, scope);
         
-        lex_buffer lb(lex);
+        lexer::look_ahead lb(lex);
         bool is_func = parenths_type(lex, fs.scope, lb, token, this, herr) == PT_FUNCTION;
         
-        lb.reset();
-        lex = &lb;
-        token = lex->get_token(herr);
+        lb.rewind();
+        token = lex->get_token();
         
         if (is_func)
         {
           ref_stack appme;
           bool error = read_function_params(appme, token, fs.scope);
-          lex = lb.fallback_lexer;
           if (error)
             return 1;
           int res = read_referencers_post(appme, token, fs.scope);
@@ -316,15 +314,13 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
         }
         
         ref_stack nestedrefs;
-      read_referencers(nestedrefs, ft, token, fs.scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
-        
-        lex = lb.fallback_lexer;
+        read_referencers(nestedrefs, ft, token, fs.scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
         
         if (token.type != TT_RIGHTPARENTH) {
           token.report_errorf(herr, "Expected right parenthesis before %s to close nested referencers");
           FATAL_RETURN(1);
         }
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         ref_stack appme; int res = read_referencers_post(appme, token, scope);
         refs.append_c(appme); refs.append_nest_c(nestedrefs);
         return res;
@@ -342,10 +338,10 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
             return 1;
           }
           refs.push_memptr((definition_class*)d);
-          token = lex->get_token(herr);
+          token = lex->get_token();
           if (token.type == TT_IDENTIFIER) {
             refs.name = token.content.toString();
-            token = lex->get_token_in_scope(scope, herr);
+            token = lex->get_token_in_scope(scope);
           }
         }
         else {
@@ -401,7 +397,7 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
           typeflag* a = ((typeflag*)token.def);
           if (a->flagbit == builtin_flag__const || a->flagbit == builtin_flag__volatile || a->flagbit == builtin_flag__restrict) {
             // TODO: Give RT_POINTERTO node a bool/volatile flag; to denote that the pointer is const or volatile; set it here.
-            token = lex->get_token_in_scope(scope, herr);
+            token = lex->get_token_in_scope(scope);
             continue;
           }
         } goto default_;
@@ -434,7 +430,7 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
       #include <User/token_cases.h>
         return 0;
     }
-    token = lex->get_token_in_scope(scope, herr);
+    token = lex->get_token_in_scope(scope);
   }
 }
   
@@ -451,7 +447,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
     {
       case TT_LEFTBRACKET: { // Array bound indicator
         AST ast;
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         if (token.type != TT_RIGHTBRACKET) {
           if (astbuilder->parse_expression(&ast, token,scope,precedence::comma+1))
             return 1; // This error has already been reported, just return empty.
@@ -469,7 +465,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
       } break;
       
       case TT_LEFTPARENTH: // Function parameters
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         read_function_params(refs, token, scope);
       continue;
       
@@ -482,7 +478,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
           typeflag* a = ((typeflag*)token.def);
           if (a->flagbit == builtin_flag__const || a->flagbit == builtin_flag__volatile || a->flagbit == builtin_flag__restrict) {
             // TODO: Give RT_POINTERTO node a bool/volatile flag; to denote that the pointer is const or volatile; set it here.
-            token = lex->get_token_in_scope(scope, herr);
+            token = lex->get_token_in_scope(scope);
             continue;
           }
         } goto default_;
@@ -527,7 +523,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: case TTM_COMMENT: case TTM_NEWLINE:
       default: default_: return 0;
     }
-    token = lex->get_token_in_scope(scope, herr);
+    token = lex->get_token_in_scope(scope);
   }
 }
 
@@ -550,7 +546,7 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
     param.variadic = ctex->variadics.find(param.def) != ctex->variadics.end();
     if (token.type == TT_EQUAL) {
       param.default_value = new AST();
-      token = lex->get_token_in_scope(scope, herr);
+      token = lex->get_token_in_scope(scope);
       astbuilder->parse_expression(param.default_value, token, scope, precedence::comma+1);
     }
     params.throw_on(param);
@@ -560,7 +556,7 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
       token.report_errorf(herr,"Expected comma or closing parenthesis to function parameters before %s");
       FATAL_RETURN(1);
     }
-    token = lex->get_token_in_scope(scope, herr);
+    token = lex->get_token_in_scope(scope);
   }
   
   // Push our function information onto the reference stack
@@ -573,13 +569,13 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
   // If there's no other special garbage being tacked onto this, then we are not a pointer-to function,
   // and we are not an array of functions, and we aren't a function returning a function.
   // Ergo, the function can be implemented here. FIXME: Make sure parser allows implementing function returning function pointer.
-  token = lex->get_token_in_scope(scope, herr); // Read in our next token to see if it's a brace or extra info
+  token = lex->get_token_in_scope(scope); // Read in our next token to see if it's a brace or extra info
   while (token.type == TT_DECFLAG) { // It is legal to put the flags throw and const here.
     typeflag *tf = (typeflag*)token.def;
-    token = lex->get_token_in_scope(scope, herr);
+    token = lex->get_token_in_scope(scope);
     if (tf == builtin_typeflag__throw) {
       if (token.type == TT_LEFTPARENTH) {
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         if (token.type != TT_RIGHTPARENTH) {
           if (!read_fulltype(token, scope).def) {
             token.report_error(herr, "Expected type to throw() statement");
@@ -590,10 +586,10 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
             FATAL_RETURN(1);
           }
           else
-            token = lex->get_token_in_scope(scope, herr);
+            token = lex->get_token_in_scope(scope);
         }
         else
-          token = lex->get_token_in_scope(scope, herr);
+          token = lex->get_token_in_scope(scope);
       }
     }
   }

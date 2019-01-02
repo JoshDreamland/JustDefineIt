@@ -34,6 +34,7 @@ namespace jdi {
 }
 
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -72,14 +73,11 @@ namespace jdi {
     /// The definiens of this macro, as a series of preprocessor tokens.
     vector<token_t> value;
     
-    /// Release a macro
-    static void free(const macro_type* whom);
+    vector<token_t> substitute_and_unroll(vector<vector<token_t>> args) const;
     
     /// Convert this macro to a string
     string toString() const;
     
-    ~macro_type();
-      
     /// Default constructor; construct a zero-parameter macro function with the given value.
     macro_type(const string &n, vector<token_t> &&definiens);
     /** Construct a macro function taking the arguments in arg_list.
@@ -97,9 +95,13 @@ namespace jdi {
     **/
     macro_type(string_view name, vector<string> &&arg_list,
                vector<token_t> &&definiens, bool variadic = false);
+    
+    ~macro_type();
   };
   
-  typedef std::map<string, const jdi::macro_type*> macro_map; ///< Map type used for storing macros
+  /** Map type used for storing macros. Sharing reduces copy times when cloning
+      the base context. It also makes destruction automatic. */
+  typedef std::map<string, std::shared_ptr<const jdi::macro_type>> macro_map;
   typedef macro_map::iterator macro_iter; ///< Iterator type for macro maps.
   typedef macro_map::const_iterator macro_iter_c; ///< Const iterator type for macro maps.
 }

@@ -30,7 +30,7 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
   if (token.type == TT_SCOPE)
   {
     res = ctex->get_global();
-    token = lex->get_token(herr);
+    token = lex->get_token();
     if (token.type == TT_IDENTIFIER)
     {
       res = ((definition_scope*)res)->get_local(token.content.toString());
@@ -39,7 +39,7 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
         return NULL;
       }
       if (!(res->flags & DEF_SCOPE)) {
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         return res;
       }
       token.def = res;
@@ -76,7 +76,7 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
       definition_template* dt = (definition_template*)res;
       if (dt->def && dt->def->flags & DEF_CLASS)
       {
-        token = lex->get_token_in_scope(scope, herr);
+        token = lex->get_token_in_scope(scope);
         if (token.type == TT_LESSTHAN)
         {
           arg_key k(dt->params.size());
@@ -88,7 +88,7 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
             res =  dt->instantiate(k, error_context(herr, token));
           if (token.type != TT_GREATERTHAN)
             token.report_errorf(herr, "Expected closing triangle bracket before %s");
-          token = lex->get_token_in_scope(scope,herr);
+          token = lex->get_token_in_scope(scope);
         }
         else {
           for (definition_scope* dsi = scope; dsi; dsi = dsi->parent)
@@ -105,10 +105,10 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
     else if (tdef->flags & DEF_SCOPE)
     {
       definition_scope* as = (definition_scope*)tdef;
-      token = lex->get_token_in_scope(scope, herr);
+      token = lex->get_token_in_scope(scope);
       if (token.type != TT_SCOPE)
         break;
-      token = lex->get_token(herr);
+      token = lex->get_token();
       if (token.type != TT_IDENTIFIER) {
         if (token.type == TT_OPERATORKW) {
           res = token.def = as->look_up(read_operatorkw_name(token, scope));
@@ -130,7 +130,7 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
       continue;
     }
     else {
-      token = lex->get_token_in_scope(scope, herr);
+      token = lex->get_token_in_scope(scope);
       break;
     }
     
@@ -139,20 +139,20 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
         if (!res) { token.report_error(herr, "Accessing NULL scope..."); return NULL; }
         if (!(res->flags & DEF_SCOPE)) { token.report_error(herr, "Accessing non-scope object " + res->name + "..."); return NULL; }
       #endif
-      token = lex->get_token(herr);
+      token = lex->get_token();
       if (token.type != TT_IDENTIFIER) {
         if (token.type == TT_OPERATORKW) {
           string dname = read_operatorkw_name(token, scope);
           return ((definition_scope*)res)->get_local(dname);
         }
         if (token.type == TT_TILDE) {
-          token = lex->get_token(herr);
+          token = lex->get_token();
           if (token.type != TT_IDENTIFIER || token.content.toString() != res->name) {
             token.report_errorf(herr, "Expected class name following '~' before %s");
             return NULL;
           }
           res = ((definition_scope*)res)->get_local("~" + res->name);
-          token = lex->get_token_in_scope(scope, herr);
+          token = lex->get_token_in_scope(scope);
           return res;
         }
         token.report_errorf(herr, "Expected variable name following `::' before %s");

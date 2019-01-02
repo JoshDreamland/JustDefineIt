@@ -33,29 +33,14 @@ using namespace std;
 using namespace jdi;
 
 /** @section Implementation
-  This is the single most trivial function in the API. It makes a call to parse_stream, passing a
-  new instance of the C++ lexer that ships with JDI, \c lex_cpp.
-**/
-int jdi::context::parse_C_stream(llreader &cfile, const char* fname) {
-  lexer lex_cpp(cfile, macros, fname);
-  return parse_stream(&lex_cpp); // Invoke our common method with it
-}
-
-/** @section Implementation
   This function's task is to make a call to check if the parser is already running, then
   instantiate a token class and set a few members. The actual work is done by the next
   call, \c handle_scope(), and then the other members of the derived \c context_parser
   class in \c jdi, which will be called from handle_scope.
 */
-int jdi::context::parse_stream(lexer *lex)
-{
+int jdi::context::parse_stream(llreader &cfile) {
   if (parse_open) { // Make sure we're not still parsing anything
     herr->error("Attempted to invoke parser while parse is in progress in another thread");
-    return -1;
-  }
-  
-  if (!lex) {
-    herr->error("Attempted to invoke parser without a lexer");
     return -1;
   }
   
@@ -64,7 +49,7 @@ int jdi::context::parse_stream(lexer *lex)
   
   int res;
   {
-    context_parser cp(this, lex, herr);
+    context_parser cp(this, cfile);
     token_t eoc; // An invalid token to appease the parameter chain.
     res = cp.handle_scope(global, eoc);
     while (eoc.type != TT_ENDOFCODE) {
@@ -73,11 +58,11 @@ int jdi::context::parse_stream(lexer *lex)
       #else
         eoc.report_errorf(herr, "Premature abort caused by %s here; relaunching");
         while (eoc.type != TT_SEMICOLON && eoc.type != TT_LEFTBRACE && eoc.type != TT_RIGHTBRACE && eoc.type != TT_ENDOFCODE)
-          eoc = lex->get_token_in_scope(global, herr);
+          eoc = cp.get_lex()->get_token_in_scope(global);
         if (eoc.type == TT_LEFTBRACE) {
           size_t depth = 1;
           while (eoc.type != TT_ENDOFCODE) {
-            eoc = lex->get_token_in_scope(global, herr);
+            eoc = cp.get_lex()->get_token_in_scope(global);
             if (eoc.type == TT_LEFTBRACE) ++depth;
             else if (eoc.type == TT_RIGHTBRACE) if (!--depth) break;
           }

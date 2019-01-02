@@ -99,10 +99,13 @@ namespace jdi {
     inline AST_Builder *get_AST_builder() const { return astbuilder; }
     inline error_handler *get_herr() const { return herr; }
     
-    /// Constructs, temporarily consuming a context. Do not use the context while this is active.
-    context_parser(context* ctex, error_handler* herr);
-    /// Construct without copying
-    context_parser(error_handler* herr);
+    /// Constructs, temporarily consuming a context. Do not use the input
+    /// context while this parser is active.
+    context_parser(context* ctex, llreader &cfile);
+    /// Legacy. Allows construction for use with a simple AST_Builder.
+    context_parser(context* ctex, lexer *lex);
+    // /// Construct without copying
+    // context_parser(error_handler* herr);
     /// Destructs, returning data to the original context.
     ~context_parser();
     

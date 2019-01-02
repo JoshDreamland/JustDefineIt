@@ -119,7 +119,7 @@ int jdi::context_parser::read_template_parameters(arg_key &argk, definition_temp
   size_t args_given = 0;
   for (;;++args_given)
   {
-    token = lex->get_token_in_scope(scope, herr);
+    token = lex->get_token_in_scope(scope);
     if (token.type == TT_GREATERTHAN)
       break;
     if (token.type == TT_SEMICOLON || token.type == TT_LEFTBRACE) {
