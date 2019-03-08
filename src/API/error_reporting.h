@@ -50,13 +50,26 @@ namespace jdi {
     template<typename PositionInfo, typename... Args>
     void error(const PositionInfo &file, std::string_view msg, Args... args) {
       return error(format(msg, args...),
-                   file.get_filename(), file.get_line_number(), file.get_line_position()); 
+                   file.get_filename(), file.get_line_number(), file.get_line_position());
     }
     template<typename PositionInfo, typename... Args>
     void warning(const PositionInfo &file, std::string_view msg, Args... args) {
       return warning(format(msg, args...),
-                     file.get_filename(), file.get_line_number(), file.get_line_position()); 
+                     file.get_filename(), file.get_line_number(), file.get_line_position());
     }
+    virtual void error(const std::string &e, std::string_view f, int l = -1, int p = -1) {
+      return error((std::string_view) e, f, l, p);
+    }
+    virtual void warning(const std::string &e, std::string_view f, int l = -1, int p = -1) {
+      return warning((std::string_view) e, f, l, p);
+    }
+    virtual void error(const std::string &e, const std::string &f, int l = -1, int p = -1) {
+      return error((std::string_view) e, (std::string_view) f, l, p);
+    }
+    virtual void warning(const std::string &e, const std::string &f, int l = -1, int p = -1) {
+      return warning((std::string_view) e, (std::string_view) f, l, p);
+    }
+    
 
     /// Virtual destructor in case children have additional data types to free.
     virtual ~error_handler();

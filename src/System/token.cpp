@@ -161,6 +161,7 @@ static struct token_info_c {
       case TT_DECLITERAL: name[TT_DECLITERAL] = "decimal literal"; // Fallthrough
       case TT_HEXLITERAL: name[TT_HEXLITERAL] = "hexadecimal literal"; // Fallthrough
       case TT_OCTLITERAL: name[TT_OCTLITERAL] = "octal literal"; // Fallthrough
+      case TT_BINLITERAL: name[TT_BINLITERAL] = "binary literal"; // Fallthrough
       
       case TTM_CONCAT:   name[TTM_CONCAT] = "`##' token"; // Fallthrough
       case TTM_TOSTRING: name[TTM_TOSTRING] = "`#' token"; // Fallthrough

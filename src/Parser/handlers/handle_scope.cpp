@@ -310,7 +310,8 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       
       case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_ALIGNAS:
       case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
-      case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_STRINGLITERAL: case TT_CHARLITERAL:
+      case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_BINLITERAL:
+      case TT_STRINGLITERAL: case TT_CHARLITERAL:
       case TT_NEW: case TT_DELETE: 
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       

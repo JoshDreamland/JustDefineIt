@@ -42,11 +42,6 @@ macro_type::macro_type(string_view n, vector<string> &&arglist,
     value(std::move(val)) {}
 macro_type::~macro_type() {}
 
-void macro_type::free(const macro_type* whom) {
-  delete whom;
-}
-
-
 //==============================================================================
 //=====: Macro function parsing methods :=======================================
 //==============================================================================
@@ -64,7 +59,7 @@ string macro_type::toString() const {
     res += " \\\n";
   }
   for (size_t i = 0; i < value.size(); ++i)
-    res += "  " + value[i].to_string() + (i+1 < value.size()? "\\\n" : "");
+    res += "  " + value[i].to_string() + (i + 1 < value.size()? "\\\n" : "");
   return res;
 }
 

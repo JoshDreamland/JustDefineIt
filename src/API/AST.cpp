@@ -313,6 +313,8 @@ namespace jdi {
                           track(myroot->content); break;
       case TT_OCTLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_OCTLITERAL);
                           track(myroot->content); break;
+      case TT_BINLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_BINLITERAL);
+                          track(myroot->content); break;
       
       case TT_DECLTYPE:
           token.report_error(herr, "Unimplemented: `decltype'.");
@@ -725,6 +727,7 @@ namespace jdi {
       case TT_DECLITERAL:
       case TT_HEXLITERAL:
       case TT_OCTLITERAL:
+      case TT_BINLITERAL:
       
       case TT_ELLIPSIS:
       

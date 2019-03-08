@@ -57,12 +57,12 @@ namespace jdi {
     TT_TYPENAME,   ///< The `typename` keyword.
     TT_INLINE,     ///< The `inline` keyword.
     TT_EXTERN,     ///< The `extern` keyword.
-    TT_TYPEDEF,    ///< The `typedef' keyword.
+    TT_TYPEDEF,    ///< The `typedef` keyword.
     TT_AUTO,       ///< The `auto` type resolver.        (C++11)
-    TT_DECLTYPE,   ///< The `decltype' keyword.          (C++11)
-    TT_ALIGNAS,    ///< The `alignas' specifier.         (C++11)
-    TT_CONSTEXPR,  ///< The `constexpr' specifier.       (C++11)
-    TT_NOEXCEPT,   ///< The `noexcept' specifier.        (C++11)
+    TT_DECLTYPE,   ///< The `decltype` keyword.          (C++11)
+    TT_ALIGNAS,    ///< The `alignas` specifier.         (C++11)
+    TT_CONSTEXPR,  ///< The `constexpr` specifier.       (C++11)
+    TT_NOEXCEPT,   ///< The `noexcept` specifier.        (C++11)
     
     TT_CLASS      = GLOSS(GTT_CONSTRUCT), ///< The `class` keyword.
     TT_STRUCT,     ///< The `struct` keyword.
@@ -70,26 +70,26 @@ namespace jdi {
     TT_UNION,      ///< The `union` keyword.
     TT_NAMESPACE,  ///< The `namespace` keyword.
     
-    TT_USING      = GLOSS(GTT_USING), ///< The `using' keyword.
+    TT_USING      = GLOSS(GTT_USING), ///< The `using` keyword.
     
     TT_ASM,        ///< The `asm` keyword.
     TT_OPERATORKW, ///< The actual `operator` keyword.
 
-    TT_SIZEOF    = GLOSS(GTT_TYPEOP), ///< The `sizeof' keyword.
-    TT_ALIGNOF,    ///< The `alignof' operator.          (C++11)
-    TT_ISEMPTY,    ///< The `is_empty' keyword.
-    TT_TYPEID,     ///< The `typeid' keyword.
-    TT_STATIC_ASSERT, ///< The `static_assert' operator. (C++11)
+    TT_SIZEOF    = GLOSS(GTT_TYPEOP), ///< The `sizeof` keyword.
+    TT_ALIGNOF,    ///< The `alignof` operator.          (C++11)
+    TT_ISEMPTY,    ///< The `is_empty` keyword.
+    TT_TYPEID,     ///< The `typeid` keyword.
+    TT_STATIC_ASSERT, ///< The `static_assert` operator. (C++11)
     
     TT_IDENTIFIER = GLOSS(GTT_IDENTIFIER), ///< A standard identifier.
     TT_DEFINITION, ///< Something previously declared that is not immediately useful, like a field or function.
     
-    TT_TEMPLATE = GLOSS(GTT_TEMPLATE),     ///< The `template' keyword, which should be followed by <...>
+    TT_TEMPLATE = GLOSS(GTT_TEMPLATE),     ///< The `template` keyword, which should be followed by <...>
     
-    TT_PUBLIC = GLOSS(GTT_VISIBILITYSPEC), ///< The `public' keyword.
-    TT_PRIVATE,    ///< The `private' keyword.
-    TT_PROTECTED,  ///< The `protected' keyword.
-    TT_FRIEND,     ///< The `friend' keyword.
+    TT_PUBLIC = GLOSS(GTT_VISIBILITYSPEC), ///< The `public` keyword.
+    TT_PRIVATE,    ///< The `private` keyword.
+    TT_PROTECTED,  ///< The `protected` keyword.
+    TT_FRIEND,     ///< The `friend` keyword.
     
     TT_PLUS = GLOSS(GTT_ARITHMETIC), ///< The `+` operator.
     TT_MINUS,         ///< The `-` operator.
@@ -135,34 +135,35 @@ namespace jdi {
     TT_COLON = GLOSS(GTT_OPERATORMISC), ///< A simple colon, which should always mark a label.
     TT_SCOPE,        ///< The scope accessor `::` symbol.
     TT_MEMBER,       ///< The member pointer access operator, `::*`.
-    TT_TILDE,        ///< The tilde `~' symbol.
+    TT_TILDE,        ///< The tilde `~` symbol.
     TT_NOT,          ///< The `!` symbol or `not` keyword.
     TT_ELLIPSIS,     ///< An ellipsis: Three dots. (...)
-    TT_COMMA,         ///< A comma, `,'. Separates items in lists.
-    TT_SEMICOLON,     ///< A semicolon, `;'. Separates statements and declarations.
+    TT_COMMA,         ///< A comma, `,`. Separates items in lists.
+    TT_SEMICOLON,     ///< A semicolon, `;`. Separates statements and declarations.
     
-    TT_LEFTPARENTH = GLOSS(GTT_BRACKET), ///< A left parenthesis, `('.
-    TT_RIGHTPARENTH,  ///< A right parenthesis, `)'.
-    TT_LEFTBRACKET,   ///< A left bracket, `['.
-    TT_RIGHTBRACKET,  ///< A right bracket, `]'.
-    TT_LEFTBRACE,     ///< A left brace, `{'.
-    TT_RIGHTBRACE,    ///< A right brace, `}'.
+    TT_LEFTPARENTH = GLOSS(GTT_BRACKET), ///< A left parenthesis, `(`.
+    TT_RIGHTPARENTH,  ///< A right parenthesis, `)`.
+    TT_LEFTBRACKET,   ///< A left bracket, `[`.
+    TT_RIGHTBRACKET,  ///< A right bracket, `]`.
+    TT_LEFTBRACE,     ///< A left brace, `{`.
+    TT_RIGHTBRACE,    ///< A right brace, `}`.
     
-    TT_STRINGLITERAL = GLOSS(GTT_LITERAL), ///< A string literal, such as "hello, world!"
-    TT_CHARLITERAL,   ///< A character literal, such as 'h'
-    TT_DECLITERAL,    ///< A decimal literal, such as 12345
-    TT_HEXLITERAL,    ///< A hexadecimal literal, such as 0xDEC0DED
+    TT_STRINGLITERAL = GLOSS(GTT_LITERAL), ///< A string literal, such as "hello, world!".
+    TT_CHARLITERAL,   ///< A character literal, such as 'h'.
+    TT_DECLITERAL,    ///< A decimal literal, such as 12345.
+    TT_HEXLITERAL,    ///< A hexadecimal literal, such as 0xDEC0DED.
     TT_OCTLITERAL,    ///< An octal literal, such as 07654321.
+    TT_BINLITERAL,    ///< A binary literal, such as 0b1001010.
     
-    TT_NEW = GLOSS(GTT_MEMORYOP), ///< The `new' keyword.
-    TT_DELETE,           ///< The `delete' keyword.
-    TT_CONST_CAST,       ///< The `const_cast' operator
-    TT_STATIC_CAST,      ///< The `static_cast' operator
-    TT_DYNAMIC_CAST,     ///< The `dynamic_cast' operator
-    TT_REINTERPRET_CAST, ///< The `reinterpret_cast' operator
+    TT_NEW = GLOSS(GTT_MEMORYOP), ///< The `new` keyword.
+    TT_DELETE,           ///< The `delete` keyword.
+    TT_CONST_CAST,       ///< The `const_cast` operator
+    TT_STATIC_CAST,      ///< The `static_cast` operator
+    TT_DYNAMIC_CAST,     ///< The `dynamic_cast` operator
+    TT_REINTERPRET_CAST, ///< The `reinterpret_cast` operator
     
-    TTM_CONCAT = GLOSS(GTT_PREPROCESSOR), ///< A macro-only token meaning the concatenation of two tokens to form a new token, '##'.
-    TTM_TOSTRING, ///< A macro-only token meaning the value of a parameter, treated as a string literal, '#'.
+    TTM_CONCAT = GLOSS(GTT_PREPROCESSOR), ///< A macro-only token meaning the concatenation of two tokens to form a new token, `##`.
+    TTM_TOSTRING, ///< A macro-only token meaning the value of a parameter, treated as a string literal, `#`.
     TTM_COMMENT, ///< A comment, including the symbols that delimit the comment (excluding any newline).
     TTM_NEWLINE, ///< A newline, which has semantic meaning in preprocessor directives.
     

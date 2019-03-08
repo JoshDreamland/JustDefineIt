@@ -23,7 +23,6 @@ using namespace std;
 #include <API/user_tokens.h>
 #include <General/llreader.h>
 #include <General/quickstack.h>
-#include "debug_lexer.h"
 
 #ifdef linux
   #include <sys/time.h>
@@ -85,7 +84,7 @@ static void test_lexer_16_3_3() {
   context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
-  lexer lex(basic, buttMacros, "tcase");
+  lexer lex(basic, buttMacros, def_error_handler);
   token = lex.get_token(); cout << token.to_string() << endl;
   // Should be the literal string "x ## y"
 }
@@ -104,7 +103,7 @@ static void test_lexer_mathcat() {
   context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
-  lexer lex(basic, buttMacros, "tcase");
+  lexer lex(basic, buttMacros, def_error_handler);
   token = lex.get_token(); cout << token.to_string() << endl;
   // Should be the literal string "x ## y"
 }
@@ -174,7 +173,7 @@ int main() {
   llreader macro_reader("test/defines_linux.txt");
   
   if (macro_reader.is_open())
-    builtin->parse_C_stream(macro_reader, "defines.txt");
+    builtin->parse_stream(macro_reader);
   else
     cout << "ERROR: Could not open GCC macro file for parse!" << endl;
   
@@ -197,7 +196,7 @@ int main() {
     context butts;
     macro_map buttMacros = butts.get_macros();
     token_t token;
-    lexer lex(basic, buttMacros, "SHELLmain.cpp");
+    lexer lex(basic, buttMacros, def_error_handler);
     token = lex.get_token(); cout << token.to_string() << endl;
     token = lex.get_token(); cout << token.to_string() << endl;
     token = lex.get_token(); cout << token.to_string() << endl;
@@ -213,7 +212,7 @@ int main() {
       //   -DJUST_DEFINE_IT_RUN > Projects/JustDefineIt/shellmain-pp.cc
       llreader f("shellmain-pp.cc");
       macro_map buttMacros = butts.get_macros();
-      lexer lex(f, buttMacros, "SHELLmain.cpp");
+      lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         tokens2.push_back(token.type);
       }
@@ -223,7 +222,7 @@ int main() {
       context butts;
       llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");
       macro_map buttMacros = butts.get_macros();
-      lexer lex(f, buttMacros, "SHELLmain.cpp");
+      lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         size_t p = tokens.size();
         if (p == 53315) {
@@ -269,7 +268,7 @@ int main() {
     /* */
     context enigma;
     start_time(ts);
-    int res = enigma.parse_C_stream(f, "test.cc");
+    int res = enigma.parse_stream(f);
     end_time(te,tel);
     cout << "Parse finished in " << tel << " microseconds." << endl;
     
@@ -303,8 +302,8 @@ int main() {
 void name_type(string type, context &ct) {
   llreader llr("type string", type, type.length());
   macro_map undamageable = ct.get_macros();
-  lexer c_lex(llr, undamageable, "User expression");
-  context_parser cp(&ct, &c_lex, def_error_handler);
+  lexer c_lex(llr, undamageable, def_error_handler);
+  context_parser cp(&ct, &c_lex);
   token_t tk = c_lex.get_token_in_scope(ct.get_global());
   full_type ft = cp.read_fulltype(tk, ct.get_global());
   cout << ft.toString() << ": " << ft.toEnglish() << endl;
@@ -337,13 +336,13 @@ void do_cli(context &ct)
         cout << "Enter the item to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr("user input", buf, true);
-        lexer c_lex(llr, undamageable, "User expression");
+        lexer c_lex(llr, undamageable, def_error_handler);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
         if (dummy.type != TT_DEFINITION && dummy.type != TT_DECLARATOR && dummy.type != TT_SCOPE) {
           dummy.report_errorf(def_error_handler, "Expected definition; encountered %s. Perhaps your term is a macro?");
           break;
         }
-        context_parser cp(&ct, &c_lex, def_error_handler);
+        context_parser cp(&ct, &c_lex);
         definition *def = cp.read_qualified_definition(dummy, ct.get_global());
         if (def) {
           if (justflags) {
@@ -386,9 +385,9 @@ void do_cli(context &ct)
         cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr("user input", buf, true);
-        lexer c_lex(llr, undamageable, "User expression");
+        lexer c_lex(llr, undamageable, def_error_handler);
         AST a;
-        context_parser cparse(&ct, &c_lex, def_error_handler);
+        context_parser cparse(&ct, &c_lex);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
         if (!cparse.get_AST_builder()->parse_expression(&a, dummy, ct.get_global(), precedence::all)) {
           if (render) {
@@ -437,10 +436,11 @@ void do_cli(context &ct)
   cout << endl << "Goodbye" << endl;
 }
 
+#if 0
 void test_expression_evaluator() {
   putcap("Test expression evaluator");
   
-  debug_lexer dlex;
+  lexer dlex;
   context ct;//(&dlex, def_error_handler);
   context_parser cp(&ct, &dlex, def_error_handler);
   AST ast;
@@ -595,3 +595,4 @@ void test_expression_evaluator() {
   v = ast.eval(dec);
   cout << v.val.i << endl;
 }
+#endif

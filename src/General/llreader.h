@@ -154,14 +154,15 @@ class llreader {
     }
     
     char operator[](size_t ind) const { return data[ind]; }
-    explicit operator char() const { return data[pos]; }
     const char* operator+(size_t x) { return data + x; }
     size_t tell() const { return pos; }
     char at() const { return data[pos]; }
     char getc() { return data[pos++]; }
     int next() { return ++pos < length ? data[pos] : EOF; }
+    int peek_next() { return pos + 1 < length ? data[pos + 1] : EOF; }
     bool eof() const { return pos >= length; }
     bool advance() { return ++pos < length; }
+    bool skip(size_t count) { return (pos += count) < length; }
     bool at_newline() const { return data[pos] == '\n' || data[pos] == '\r'; }
 
     bool take_newline() {
@@ -175,6 +176,11 @@ class llreader {
       return true;
     }
 
+    bool take(char c) {
+      if (data[pos] != c) return false;
+      ++pos;
+      return true;
+    }
     template<int n> bool take(const char (&str)[n]) {  // fun rolls
       for (int i = 0; i < n; ++i) if (data[pos + i] != str[i]) return false;
       pos += n;
