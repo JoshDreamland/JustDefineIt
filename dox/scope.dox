@@ -1,0 +1,57 @@
+/*!
+  @page scope Scope members
+  @section specialnames Special member names
+  
+  For convenience and in the interest of avoiding name collisions, JDI
+  assigns special names to some scope and class members. This section
+  details JDI's internal representation of these entities.
+  
+  @par Constructors
+  
+  Constructors are represented as ordinary functions under the name
+  "(construct)", as specified in is_potential_constructor.h . Thus,
+  you can access any class's constructor as `members["(construct)"]`
+  in the appropriate definition object.
+  
+  The reason for this is so that no special measures have to be taken
+  to allow some class to contain a class by its own name.
+  
+  @par Destructors
+  
+  Destructors are treated as an ordinary function, except they contain
+  the tilde, which is an invalid identifier character. Thus, if `my_class`
+  contains a destructor, you can access it by referring, in its definition
+  object, to `members["~my_class"]`.
+  
+  @par Operators
+  
+  Similar to destructors, ISO C++ already sufficiently distinguishes
+  operator functions from regular definitions. Thus, they are stored
+  the same as any other function, with ISO-like names. No spacing is
+  used in the names where excluding them is not visually ambiguous.
+  
+  <table>
+  <tr><th>Example operator names</th></tr>
+  <tr><td>`"operator+"`</td></tr>
+  <tr><td>`"operator+="`</td></tr>
+  <tr><td>`"operator[]"`</td></tr>
+  <tr><td>`"operator()"`</td></tr>
+  <tr><td>`"operator new"`</td></tr>
+  <tr><td>`"operator new[]"`</td></tr>
+  <tr><td>`"operator delete"`</td></tr>
+  <tr><td>`"operator delete[]"`</td></tr>
+  </table>
+  
+  @par Cast operators
+  
+  As a special exception, cast operators are bitterly mangled in JDI's
+  internal representation. In order to facilitate storage and lookup of
+  these operators, they are converted into overloads of a single function
+  which accept one parameter. The name assigned is simply `"(cast)"`.
+  
+  For example, `operator int` becomes `int "(cast)"(int)`.
+  
+  By this convention, determining the best available cast is done in an
+  identical manner to determining a best overload. In fact, the same
+  mechanism is used, exactly.
+*/

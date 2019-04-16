@@ -1,17 +1,20 @@
-/*
-typedef int x;
-template<typename _Tp> struct _Array { _Array(x); };
-#pragma DEBUG_ENTRY_POINT
-template<typename _Tp> inline _Array<_Tp>::_Array(x __n) { }
-*/
+/* Simple C test case * /
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stdlib.h>
+#include <malloc.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/file.h>
+#include <GL/gl.h>
+#include <AL/al.h>
+#include <zlib.h>
+#include <png.h>
+/* */
 
-/*
-template<int x> class b;
-template<int x> class
-#pragma DEBUG_ENTRY_POINT
-b: syntax_error {};
-*/
-
+/* * /
 #include <cassert>
 #include <cctype>
 #include <cerrno>
@@ -37,37 +40,35 @@ b: syntax_error {};
 #include <utility>
 #include <new>
 #include <numeric>
-
-/*
-#include <algorithm>
-#include <bitset>
-#include <complex>
-#include <deque>
-#include <fstream>
 #include <functional>
-#include <hash_map>
-#include <hash_set>
-#include <iomanip>
-#include <ios>
-#include <iosfwd>
-#include <iostream>
-#include <istream>
-#include <iterator>
-#include <limits>
-#include <list>
-#include <locale>
-#include <map>
+#include <algorithm>
 #include <memory>
-#include <ostream>
+#include <list>
+#include <deque>
+#include <vector>
+#include <stack>
 #include <queue>
 #include <set>
-#include <sstream>
-#include <stack>
-#include <stdexcept>
-#include <streambuf>
+#include <map>
+#include <limits>
 #include <string>
-#include <strstream>
-#include <vector>
-*/
+#include <stdexcept>
+#include <bitset>
+/* */
 
+/* * /
+#include <iomanip>    // 2
+#include <streambuf>  // 13
+#include <ios>        // 27
+#include <locale>     // 39
+#include <ostream>    // 50
+#include <iterator>   // 107
+#include <istream>    // 107
+#include <iostream>   // 107
+#include <fstream>    // 113
+#include <sstream>    // 121
+#include <strstream>  // 129
+#include <hash_set>   // 182
+#include <complex>    // 265
+/* */
 

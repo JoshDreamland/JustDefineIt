@@ -15,64 +15,66 @@ not thoroughly describe the data in a file.
 
 <table>
   <tr><th>Token Type</th>       <th>Content?</th> <th>Definition?</th></tr>
-  <tr><td>TT_DECLARATOR</td>    <td></td> <td>The definition by the name of this token</td> </tr>
-  <tr><td>TT_DECFLAG</td>       <td></td> <td>The typeflag by the name of this token, cast to definition*</td> </tr>
-  <tr><td>TT_CLASS</td>         <td></td> <td></td> </tr>
-  <tr><td>TT_STRUCT</td>        <td></td> <td></td> </tr>
-  <tr><td>TT_ENUM</td>          <td></td> <td></td> </tr>
-  <tr><td>TT_UNION</td>         <td></td> <td></td> </tr>
-  <tr><td>TT_NAMESPACE</td>     <td></td> <td></td> </tr>
-  <tr><td>TT_EXTERN</td>        <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_ASM</td>           <td></td> <td></td> </tr>
-  <tr><td>TT_OPERATORKW</td>    <td></td> <td></td> </tr>
-  <tr><td>TT_SIZEOF</td>        <td></td> <td></td> </tr>
-  <tr><td>TT_ISEMPTY</td>       <td></td> <td></td> </tr>
-  <tr><td>TT_DECLTYPE</td>      <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_IDENTIFIER</td>    <td>The name that was read.</td> <td></td> </tr>
-  <tr><td>TT_DEFINITION</td>    <td>The name that was read.</td> <td>The definition by that name.</td> </tr>
-                                          
-  <tr><td>TT_TEMPLATE</td>      <td></td> <td></td> </tr>
-  <tr><td>TT_TYPENAME</td>      <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_TYPEDEF</td>       <td></td> <td></td> </tr>
-  <tr><td>TT_USING</td>         <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_PUBLIC</td>        <td></td> <td></td> </tr>
-  <tr><td>TT_PRIVATE</td>       <td></td> <td></td> </tr>
-  <tr><td>TT_PROTECTED</td>     <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_COLON</td>         <td>":"</td> <td></td> </tr>
-  <tr><td>TT_SCOPE</td>         <td>"::"</td> <td></td> </tr>
-                                          
-  <tr><td>TT_LEFTPARENTH</td>   <td></td> <td></td> </tr>
-  <tr><td>TT_RIGHTPARENTH</td>  <td></td> <td></td> </tr>
-  <tr><td>TT_LEFTBRACKET</td>   <td></td> <td></td> </tr>
-  <tr><td>TT_RIGHTBRACKET</td>  <td></td> <td></td> </tr>
-  <tr><td>TT_LEFTBRACE</td>     <td></td> <td></td> </tr>
-  <tr><td>TT_RIGHTBRACE</td>    <td></td> <td></td> </tr>
-  <tr><td>TT_LESSTHAN</td>      <td>"<"</td> <td></td> </tr>
-  <tr><td>TT_GREATERTHAN</td>   <td>">"</td> <td></td> </tr>
-                                          
-  <tr><td>TT_TILDE</td>         <td>"~"</td> <td></td> </tr>
-  <tr><td>TT_ELLIPSIS</td>      <td>"..."</td> <td></td> </tr>
-  <tr><td>TT_OPERATOR</td>      <td>The exact operator.</td> <td></td> </tr>
-                                          
-  <tr><td>TT_COMMA</td>         <td>","</td> <td></td> </tr>
-  <tr><td>TT_SEMICOLON</td>     <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_STRINGLITERAL</td> <td>The string, in quotes.</td> <td></td> </tr>
-  <tr><td>TT_CHARLITERAL</td>   <td>The character, in single quotes.</td> <td></td> </tr>
-  <tr><td>TT_DECLITERAL</td>    <td>The number, with all flags.</td> <td></td> </tr>
-  <tr><td>TT_HEXLITERAL</td>    <td>The number, with all flags.</td> <td></td> </tr>
-  <tr><td>TT_OCTLITERAL</td>    <td>The number, with all flags.</td> <td></td> </tr>
-                                          
-  <tr><td>TTM_CONCAT</td>       <td></td> <td></td> </tr>
-  <tr><td>TTM_TOSTRING</td>     <td></td> <td></td> </tr>
-                                          
-  <tr><td>TT_ENDOFCODE</td>     <td></td> <td></td> </tr>
-  <tr><td>TT_INVALID</td>       <td></td> <td></td> </tr>
+  <tr><td>TT_DECLARATOR</td>    <td>&mdash;</td> <td>The definition by the name of this token</td> </tr>
+  <tr><td>TT_DECFLAG</td>       <td>&mdash;</td> <td>The typeflag by the name of this token, cast to definition*</td> </tr>
+  <tr><td>TT_CLASS</td>         <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_STRUCT</td>        <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_ENUM</td>          <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_UNION</td>         <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_NAMESPACE</td>     <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_EXTERN</td>        <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_ASM</td>           <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_OPERATORKW</td>    <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_SIZEOF</td>        <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_ISEMPTY</td>       <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_DECLTYPE</td>      <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_IDENTIFIER</td>    <td>The name that was read.</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_DEFINITION</td>    <td>The name that was read.</td> <td>The definition by that name.</td>
+  </tr>
+  <tr><td>TT_TEMPLATE</td>      <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_TYPENAME</td>      <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_TYPEDEF</td>       <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_USING</td>         <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_PUBLIC</td>        <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_PRIVATE</td>       <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_PROTECTED</td>     <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_FRIEND</td>        <td>&mdash;</td> <td>&mdash;</td>
+  </tr>                                        
+  <tr><td>TT_COLON</td>         <td>The literal ":"</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_SCOPE</td>         <td>The literal "::"</td> <td>&mdash;</td>
+  <tr><td>TT_MEMBEROF</td>      <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_LEFTPARENTH</td>   <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_RIGHTPARENTH</td>  <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_LEFTBRACKET</td>   <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_RIGHTBRACKET</td>  <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_LEFTBRACE</td>     <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_RIGHTBRACE</td>    <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_LESSTHAN</td>      <td>The literal "<"</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_GREATERTHAN</td>   <td>The literal ">"</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_TILDE</td>         <td>The literal "~"</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_ELLIPSIS</td>      <td>The literal "..."</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_OPERATOR</td>      <td>The exact operator.</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_COMMA</td>         <td>The literal ","</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_SEMICOLON</td>     <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_STRINGLITERAL</td> <td>The string, in quotes.</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_CHARLITERAL</td>   <td>The character, in single quotes.</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_DECLITERAL</td>    <td>The number, with all flags.</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_HEXLITERAL</td>    <td>The number, with all flags.</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_OCTLITERAL</td>    <td>The number, with all flags.</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TTM_CONCAT</td>       <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TTM_TOSTRING</td>     <td>&mdash;</td> <td>&mdash;</td>
+  </tr>
+  <tr><td>TT_ENDOFCODE</td>     <td>&mdash;</td> <td>&mdash;</td> </tr>
+  <tr><td>TT_INVALID</td>       <td>&mdash;</td> <td>&mdash;</td> </tr>
 </table>
 
 By default, tokens also construct with information about the file from where they were read.
@@ -94,5 +96,15 @@ parameters corresponding to members which are pre-processed out, comma-separatin
 rest. As such, you will often see calls to token_t(TOKEN_BASICS(...)), and, more generally,
 TOKEN_BASICS(statement, statement, statement...). This is so removing those members does not
 cause compilation error.
+
+While the majority of the above tokens correspond to an actual in-file syntactical construct,
+two do not. The first, TT_OPERATOR, corresponds to any generic operator not covered by its
+own token, and is provided in the interest of simplifying code that has no use for operators.
+
+The other token, TT_MEMBEROF, does not correspond to any single textual element. It is used
+internally when specifying class membership of a function pointer. For example, in reading
+`void (myclass::* x)()`, the `::*` becomes TT_MEMBEROF when, for example, `read_qualified_definition`
+encounters the `*` operator. To simplify communication, no backtracking is done, and instead,
+the token type is changed to TT_MEMBEROF before returning success on reading `myclass`.
 
 */
