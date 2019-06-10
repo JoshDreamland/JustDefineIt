@@ -436,7 +436,7 @@ void lexer::handle_preprocessor() {
     case_define: {
       string argstrs = read_preprocessor_args();
       const char* argstr = argstrs.c_str();
-      if (!conditionals.empty() and !conditionals.top().is_true)
+      if (!conditionals.empty() and !conditionals.back().is_true)
         break;
       size_t i = 0;
       while (is_useless(argstr[i])) ++i;
@@ -498,7 +498,7 @@ void lexer::handle_preprocessor() {
     } break;
     case_error: {
         string emsg = read_preprocessor_args();
-        if (conditionals.empty() or conditionals.top().is_true)
+        if (conditionals.empty() or conditionals.back().is_true)
           herr->error(cfile, "#error " + emsg);
       } break;
       break;
@@ -506,11 +506,11 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elif directive; no matching #if");
         else {
-          if (conditionals.top().is_true)
-            conditionals.top().is_true = conditionals.top().can_be_true = false;
+          if (conditionals.back().is_true)
+            conditionals.back().is_true = conditionals.back().can_be_true = false;
           else {
-            if (conditionals.top().can_be_true) {
-              conditionals.pop();
+            if (conditionals.back().can_be_true) {
+              conditionals.pop_back();
               goto case_if;
             }
           }
@@ -520,11 +520,11 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elifdef directive; no matching #if");
         else {
-          if (conditionals.top().is_true)
-            conditionals.top().is_true = conditionals.top().can_be_true = false;
+          if (conditionals.back().is_true)
+            conditionals.back().is_true = conditionals.back().can_be_true = false;
           else {
-            if (conditionals.top().can_be_true) {
-              conditionals.pop();
+            if (conditionals.back().can_be_true) {
+              conditionals.pop_back();
               goto case_ifdef;
             }
           }
@@ -534,11 +534,11 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elifndef directive; no matching #if");
         else {
-          if (conditionals.top().is_true)
-            conditionals.top().is_true = conditionals.top().can_be_true = false;
+          if (conditionals.back().is_true)
+            conditionals.back().is_true = conditionals.back().can_be_true = false;
           else {
-            if (conditionals.top().can_be_true) {
-              conditionals.pop();
+            if (conditionals.back().can_be_true) {
+              conditionals.pop_back();
               goto case_ifndef;
             }
           }
@@ -548,20 +548,20 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #else directive; no matching #if");
         else {
-          if (conditionals.top().is_true)
-            conditionals.top().is_true = conditionals.top().can_be_true = false;
+          if (conditionals.back().is_true)
+            conditionals.back().is_true = conditionals.back().can_be_true = false;
           else
-            conditionals.top().is_true = conditionals.top().can_be_true;
+            conditionals.back().is_true = conditionals.back().can_be_true;
         }
       break;
     case_endif:
         if (conditionals.empty())
           return
            herr->error(cfile, "Unexpected #endif directive: no open conditionals.");
-        conditionals.pop();
+        conditionals.pop_back();
       break;
     case_if:
-        if (conditionals.empty() or conditionals.top().is_true) {
+        if (conditionals.empty() or conditionals.back().is_true) {
           token_t tok;
           token_vector toks;
           while ((tok = get_token()).type != TT_ENDOFCODE
@@ -572,12 +572,12 @@ void lexer::handle_preprocessor() {
           AST a = parse_expression(&l);
           render_ast(a, "if_directives");
           if (!a.eval({herr, tok}))
-            conditionals.push(condition(0,1));
+            conditionals.push_back(condition(0,1));
           else
-            conditionals.push(condition(1,0));
+            conditionals.push_back(condition(1,0));
         }
         else
-          conditionals.push(condition(0,0));
+          conditionals.push_back(condition(0,0));
       break;
     case_ifdef: {
         cfile.skip_whitespace();
@@ -588,16 +588,16 @@ void lexer::handle_preprocessor() {
         const size_t msp = cfile.tell();
         while (is_letterd(cfile.next()));
         string macro(cfile + msp, cfile.tell() - msp);
-        if (conditionals.empty() or conditionals.top().is_true) {
+        if (conditionals.empty() or conditionals.back().is_true) {
           if (macros.find(macro) == macros.end()) {
             token_t res;
-            conditionals.push(condition(0,1));
+            conditionals.push_back(condition(0,1));
             break;
           }
-          conditionals.push(condition(1,0));
+          conditionals.push_back(condition(1,0));
         }
         else
-          conditionals.push(condition(0,0));
+          conditionals.push_back(condition(0,0));
       } break;
     case_ifndef: {
         cfile.skip_whitespace();
@@ -608,16 +608,16 @@ void lexer::handle_preprocessor() {
         const size_t msp = cfile.tell();
         while (is_letterd(cfile.next()));
         string macro(cfile+msp, cfile.tell()-msp);
-        if (conditionals.empty() or conditionals.top().is_true) {
+        if (conditionals.empty() or conditionals.back().is_true) {
           if (macros.find(macro) != macros.end()) {
             token_t res;
-            conditionals.push(condition(0,1));
+            conditionals.push_back(condition(0,1));
             break;
           }
-          conditionals.push(condition(1,0));
+          conditionals.push_back(condition(1,0));
         }
         else
-          conditionals.push(condition(0,0));
+          conditionals.push_back(condition(0,0));
       } break;
     case_import:
       break;
@@ -627,7 +627,7 @@ void lexer::handle_preprocessor() {
         else { case_include_next: incnext = true; }
         
         string fnfind = read_preprocessor_args();
-        if (!conditionals.empty() and !conditionals.top().is_true)
+        if (!conditionals.empty() and !conditionals.back().is_true)
       break;
         
         bool chklocal = false;
@@ -682,7 +682,7 @@ void lexer::handle_preprocessor() {
         #ifdef DEBUG_MODE
         {
           string n = read_preprocessor_args();
-          if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.top().is_true)) {
+          if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.back().is_true)) {
             signal(SIGTRAP, donothing); // Try not to die when we raise hell in the interrupt handler briefly
             asm("INT3;"); // Raise hell in the interrupt handler; the debugger will grab us from here
             cout << "* Debug entry point" << endl;
@@ -693,7 +693,7 @@ void lexer::handle_preprocessor() {
         #endif
       break;
     case_undef:
-        if (!conditionals.empty() and !conditionals.top().is_true)
+        if (!conditionals.empty() and !conditionals.back().is_true)
           break;
         
         cfile.skip_whitespace();
@@ -709,11 +709,11 @@ void lexer::handle_preprocessor() {
       break;
     case_warning: {
         string wmsg = read_preprocessor_args();
-        if (conditionals.empty() or conditionals.top().is_true)
+        if (conditionals.empty() or conditionals.back().is_true)
           herr->warning(cfile, "#warning " + wmsg);
       } break;
   }
-  if (conditionals.empty() or conditionals.top().is_true)
+  if (conditionals.empty() or conditionals.back().is_true)
     return;
   
   // skip_to_macro:
@@ -1186,41 +1186,30 @@ bool lexer::pop_file() {
     4. During normal lexing operations, minor lookahead may be required.
        Tokens read during lookahead are stacked. */
   if (lookahead_buffer) {
-    herr->error(lookahead.front(), "Attempting to pop a buffer while there are "
-                                   "lexed tokens remaining to be returned.");
+    herr->error(lookahead_buffer->front(),
+                "Attempting to pop a buffer while there are lexed tokens "
+                "remaining to be returned.");
   }
-  
-  if (macro_
   
   if (files.empty())
     return true;
   
   // Close whatever file we have open now
-  close();
+  cfile.close();
   
-  // Fetch data from top item
-  openfile& of = files.top();
-  line = of.line, lpos = of.lpos;
-  filename = of.filename;
-  consume(of.file);
-  
-  // Pop file stack and return next token in the containing file.
-  files.pop();
-  
-  // Remove any open macro
-  if (open_macro_count)
-      --open_macro_count;
+  // Fetch data from top item and pop stack
+  openfile &of = files.back();
+  cfile.consume(of.file);
+  files.pop_back();
   
   return false;
 }
 
 macro_map lexer::kludge_map;
 lexer::keyword_map lexer::keywords;
-lexer_base::lexer_base(llreader &input, macro_map &pmacros, const char *fname): open_macro_count(0), macros(pmacros), filename(fname), line(1), lpos(0) {
-  consume(input); // We are also an llreader. Consume the given one using the inherited method.
-}
-lexer::lexer(llreader &input, macro_map &pmacros, const char *fname): lexer_base(input, pmacros, fname), mlex(new lexer_macro(this)), mctex(new context_parser(mlex, def_error_handler))
-{
+
+lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
+    cfile(std::move(input)), herr(err) , macros(pmacros){
   if (keywords.empty()) {
     keywords["asm"] = TT_ASM;
     keywords["__asm"] = TT_ASM;
@@ -1287,35 +1276,14 @@ lexer::lexer(llreader &input, macro_map &pmacros, const char *fname): lexer_base
     context::global_macros().swap(kludge_map);
   }
 }
-lexer::~lexer() {
-  delete mlex;
-  delete mctex;
-}
+
+lexer::~lexer() {}
 
 void lexer::cleanup() {
   keywords.clear();
-  for (macro_iter it = kludge_map.begin(); it != kludge_map.end(); ++it)
-    macro_type::free(it->second);
   kludge_map.clear();
-}
-
-openfile::openfile() {}
-openfile::openfile(const char* fname): filename(fname), line(0), lpos(0) {}
-openfile::openfile(const char* fname, string sdir, size_t line_num, size_t line_pos, llreader &consume): filename(fname), searchdir(sdir), line(line_num), lpos(line_pos) { file.consume(consume); }
-void openfile::swap(openfile &f) {
-  { register const char* tmpl = filename;
-  filename = f.filename, f.filename = tmpl; }
-  searchdir.swap(f.searchdir);
-  register size_t tmpl = line;
-  line = f.line, f.line = tmpl;
-  tmpl = lpos, lpos = f.lpos, f.lpos = tmpl;
-  llreader tmpr;
-  tmpr.consume(file);
-  file.consume(f.file);
-  f.file.consume(tmpr);
 }
 
 #undef cfile
 
-lexer::condition::condition() {}
 lexer::condition::condition(bool t, bool cbt): is_true(t), can_be_true(cbt) {}

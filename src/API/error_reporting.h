@@ -47,12 +47,12 @@ namespace jdi {
     virtual void warning(std::string_view err, std::string_view filename = "", int line = -1, int pos = -1) = 0;
 
     // Formatting helpers.
-    template<typename PositionInfo, typename... Args>
+    template<typename PositionInfo, typename... Args, typename idiot = decltype(((PositionInfo*) nullptr)->get_filename())>
     void error(const PositionInfo &file, std::string_view msg, Args... args) {
       return error(format(msg, args...),
                    file.get_filename(), file.get_line_number(), file.get_line_position());
     }
-    template<typename PositionInfo, typename... Args>
+    template<typename PositionInfo, typename... Args, typename idiot = decltype(((PositionInfo*) nullptr)->get_filename())>
     void warning(const PositionInfo &file, std::string_view msg, Args... args) {
       return warning(format(msg, args...),
                      file.get_filename(), file.get_line_number(), file.get_line_position());

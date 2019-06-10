@@ -65,7 +65,8 @@ namespace jdi {
     const token_vector &tokens;
     /// Allows us to own the above vector.
     std::vector<token_t> assembled_token_data;
-    EnteredMacro(string &&macro, const std::vector<token_t> *tokens_):
+
+    EnteredMacro(string macro, const std::vector<token_t> *tokens_):
                      name(macro), tokens(*tokens_) {}
     EnteredMacro(string macro, std::vector<token_t> &&tokens_):
                      name(macro), tokens(assembled_token_data),
@@ -74,13 +75,13 @@ namespace jdi {
 
   /**
   The basic C++ lexer. Extracts a single preprocessor token from the given reader.
-  Uses @p file to include source metadata in the token.
+  Uses @p cfile to include source metadata in the token.
   
   ISO C++ calls for nine phases of translation. The llreader passed to this call
   handles the first (file character mapping), and this routine handles the second
   and third. The data is not physically modified for any of these phases.
   */
-  token_t read_token(llreader &data, error_handler *herr);
+  token_t read_token(llreader &cfile, error_handler *herr);
 
   /**
   Basic lexing/preprocessing unit; polled by all systems for tokens.
@@ -115,10 +116,15 @@ namespace jdi {
   order from 1-4, but tokens are retrieved in order of 4-1.
   */
   class lexer {
+    struct condition;
+
     llreader cfile;  ///< The current file being read.
     std::vector<openfile> files; ///< The files we have open, in the order we entered them.
     std::vector<EnteredMacro> open_macros; ///< Macros we are currently nested in.
     error_handler *herr;  ///< Error handler for problems during lex.
+
+    /// Our conditional levels (one for each nested `\#if*`)
+    vector<condition> conditionals;
 
     /// Tokens that have been expanded from a macro or fetched as lookahead.
     token_vector *buffered_tokens = nullptr;
@@ -170,6 +176,17 @@ namespace jdi {
     /// Pop the currently open file to return to the file that included it.
     /// @return Returns true if the buffer was successfully popped, and input remains.
     bool pop_file();
+
+    /// Storage mechanism for conditionals, such as <code>\#if</code>, <code>\#ifdef</code>, and <code>\#ifndef</code>.
+    struct condition {
+      /// True if code in this layer is to be parsed
+      /// (the condition that was given is true).
+      bool is_true;
+      /// True if an `else` statement or the like can set is_true to true.
+      bool can_be_true;
+      /// Convenience constructor.
+      condition(bool, bool);
+    };
     
    public:
     /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
@@ -185,6 +202,7 @@ namespace jdi {
       token_vector *prev_buffer;
       lexer *lex;
 
+     public:
       token_t &push(token_t token) {
         buffer.push_back(token);
         return buffer.back();
@@ -245,18 +263,6 @@ namespace jdi {
     lexer(token_vector &&tokens, error_handler *herr);
     /** Destructor; free the attached macro lexer. **/
     ~lexer();
-
-  protected:
-    /// Storage mechanism for conditionals, such as <code>\#if</code>, <code>\#ifdef</code>, and <code>\#ifndef</code>.
-    struct condition {
-      bool is_true; ///< True if code in this layer is to be parsed; ie, the condition given is true.
-      bool can_be_true; ///< True if an `else` statement or the like can set is_true to true.
-      condition(bool,bool); ///< Convenience constructor.
-      condition(); ///< Default constructor.
-    };
-
-    quick::stack<condition> conditionals; ///< Our conditional levels (one for each nested `\#if*`)
-    lexer_macro *mlex; ///< The macro lexer that will be passed to the AST builder for #if directives.
   };
 }
 

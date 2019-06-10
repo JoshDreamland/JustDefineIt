@@ -29,10 +29,16 @@
 
 namespace jdi {
 
+  template<typename T> std::string to_string(T x) { return std::to_string(x); }
+  static inline std::string to_string(const std::string &x) { return x; }
+  static inline std::string to_string(std::string_view x) {
+    return std::string(x);
+  }
+
   template <typename... Args>
   std::string format(std::string_view text, Args... args) {
     std::string res;
-    std::string strs[] = { std::to_string(args)... };
+    std::string strs[] = { jdi::to_string(args)... };
 
     int cap = text.length();
     for (const std::string str : strs) { cap += str.length() - 2; }
@@ -53,6 +59,9 @@ namespace jdi {
     return res;
   }
 
+  static inline std::string format(std::string_view text) {
+    return std::string(text);
+  }
 }
 
 #endif

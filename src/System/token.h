@@ -214,32 +214,23 @@ namespace jdi {
     
     /// Construct a new, invalid token.
     token_t();
-    #ifndef NO_ERROR_REPORTING
-      /// Log the name of the file from which this token was read.
-      volatile const char* file;
-      /// Log the line on which this token was named in the file.
-      int linenum;
-      #ifndef NO_ERROR_POSITION
-        /// We are logging positions for precise error reporting.
-        int pos;
-        
-        /// Construct a new token with the file, line number, and position in which it was declared.
-        #define full_token_constructor_parameters int, const char*, int, int
-        /// Wrapper to the token_t constructor which can ignore removed attributes.
-        #define token_basics(type,filename,line,pos) type,filename,line,pos
-      #else
-        /// Wrapper to the token_t constructor which can ignore removed attributes.
-        #define token_basics(type,filename,line,pos) type,filename,line
-        /// Construct a new token with the file and line number in which it was declared.
-        #define full_token_constructor_parameters int, const char*, int
-      #endif
-      /// Construct a new token without origin information.
-      token_t(TOKEN_TYPE t, const char* fn, int l);
-    #else
-      /// Wrapper to the token_t constructor which can ignore removed attributes.
-      #define token_basics(type,filename,line,pos) type
-      #define full_token_constructor_parameters TOKEN_TYPE, const char*, int
-    #endif
+    
+    /// Log the name of the file from which this token was read.
+    volatile const char* file;
+    /// Log the line on which this token was named in the file.
+    int linenum;
+    /// We are logging positions for precise error reporting.
+    int pos;
+    // TODO: DELETEME
+    #define full_token_constructor_parameters int, const char*, int, int
+    #define token_basics(type,filename,line,pos) type,filename,line,pos
+    
+    std::string get_filename() const { return (const char*) file; }
+    int get_line_number()      const { return linenum; }
+    int get_line_position()    const { return pos; }
+    
+    /// Construct a new token without origin information.
+    token_t(TOKEN_TYPE t, const char* fn, int l);
     
     /// Structure containing a pointer inside a string, and a length, representing a substring.
     struct content {

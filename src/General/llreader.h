@@ -83,6 +83,11 @@ class llreader {
     **/
     void consume(char* buffer, size_t length);
     /**
+      Consumes another \c llreader, stealing its contents then settings its
+      mode to closed (while keeping the stolen one open).
+    **/
+    void consume(llreader& whom);
+    /**
       Alias the file buffer to a given const char* buffer.
       @param buffer  The buffer to alias. You are still the owner, and must free it after this class is done with it.
       @param length  The length of the data pointed to by buffer.
@@ -215,11 +220,6 @@ class llreader {
     **/
     llreader(std::string name, std::string contents, bool copy);
     llreader(std::string name, std::string contents);
-    /**
-      Consumes another \c llreader, stealing its contents then settings its
-      mode to closed (while keeping the stolen one open).
-    **/
-    void consume(llreader& whom);
     /**
       Copy constructor.
       This constructor really shouldn't be used; it is provided to be compliant.
