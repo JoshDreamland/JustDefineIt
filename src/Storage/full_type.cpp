@@ -44,7 +44,12 @@ namespace jdi {
     flags = ft.flags;
     refs.copy(ft.refs);
   }
-  
+
+  full_type &full_type::operator=(full_type &&other) {
+    swap(other);
+    return *this;
+  }
+
   bool full_type::operator==(const full_type& other) const {
     return def == other.def && refs == other.refs && flags == other.flags;
   }

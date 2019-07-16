@@ -70,12 +70,12 @@ class llreader {
       Length will be set to code.length(), and data will be
       set to its c_str().
       
-      @param contents  A string containing contents to be pointed to.
+      @param contents  A view of the contents to be pointed to.
       @warning As this function only encapsulates the string,
                without copying it; its contents will become
                invalid once the encapsulated string leaves scope.
     **/
-    void encapsulate(std::string &contents);
+    void encapsulate(std::string_view contents);
     /**
       Consume a const char*, taking responsibility for its deallocation.
       @param buffer  The buffer to consume. You should discard this pointer afterward.
@@ -105,10 +105,10 @@ class llreader {
     /**
       Copies a string into a new buffer and uses it as the data.
       Length will be set to code.length(), and data will be set
-      to a buffer containing a copy of its c_str().
+      to a buffer containing a copy of the viewing range of its data().
       @param contents  A string containing contents to be mirrored.
     **/
-    void copy(std::string contents);
+    void copy(std::string_view contents);
     /**
       Close the open stream.
       This function will take care of any necessary memory frees
@@ -117,11 +117,9 @@ class llreader {
     **/
     void close();
     
-    /**
-      Overrides default operator= to create a copy of the stored data.
-      This function behaves like the constructor.
-    **/
-    void operator=(const llreader& llr);
+    // Copying this reader can be expensive.
+    llreader &operator=(const llreader &llr) = delete;
+    llreader &operator=(llreader &&llr);
     
     /**
       Returns whether the stream is open.
@@ -218,18 +216,12 @@ class llreader {
       @param copy      True if the contents are to be copied, false if they are 
                        to simply be pointed to (see \c encapsulate).
     **/
-    llreader(std::string name, std::string contents, bool copy);
+    llreader(std::string name, std::string_view contents, bool copy);
+    /// Construct by copying a std::string.
     llreader(std::string name, std::string contents);
-    /**
-      Copy constructor.
-      This constructor really shouldn't be used; it is provided to be compliant.
-      This constructor will perform an O(N) copy of the entire contents to a string,
-      resulting in the new class having a different storage mode.
-    **/
-    llreader(const llreader&);
-    /**
-      Default destructor. Closes open stream.
-    **/
+    llreader(const llreader&) = delete;
+    llreader(llreader&&);
+    /** Default destructor. Closes open stream. */
     ~llreader();
 };
 

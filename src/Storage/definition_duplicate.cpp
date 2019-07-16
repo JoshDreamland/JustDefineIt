@@ -418,7 +418,7 @@ namespace jdi {
         value v = a->eval(errc);
         if (v.type != VT_DEPENDENT) {
           n->av().ast = NULL;
-          n->val() = v;
+          n->val() = std::move(v);
           delete ao;
         }
         else {

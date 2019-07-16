@@ -113,8 +113,8 @@ definition_enum* context_parser::handle_enum(definition_scope *scope, token_t& t
         this_value = value(++this_value.val.i);
       }
       else {
-        this_value = v;
-        if (v.type != VT_DEPENDENT) {
+        this_value = std::move(v);
+        if (this_value.type != VT_DEPENDENT) {
           delete ast;
           ast = NULL;
         }

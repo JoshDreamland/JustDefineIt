@@ -45,7 +45,9 @@ namespace jdi {
       memcpy((void*)val.s, v.val.s, l);
     }
   }
-  value::~value() { if (type == VT_STRING) delete[] val.s; }
+  value::~value() {
+    if (type == VT_STRING) delete[] val.s;
+  }
   
   std::string value::toString() const {
     char buf[128];
@@ -57,6 +59,26 @@ namespace jdi {
       case VT_NONE:      return "<nothing>";
       default:           return "<ERROR!>";
     }
+  }
+  
+  value &value::operator=(value &&other) {
+    if (type == VT_STRING) delete[] val.s;
+    switch (type = other.type) {
+      case VT_DOUBLE:
+        val.d = other.val.d;
+        break;
+      case VT_INTEGER:
+        val.i = other.val.i;
+        break;
+      case VT_STRING:
+        val.s = other.val.s;
+        other.val.s = nullptr;
+        break;
+      case VT_DEPENDENT:
+      case VT_NONE:
+      default: ;
+    }
+    return *this;
   }
   
   bool value::operator==(const value& other) const { if (type != other.type) return false;

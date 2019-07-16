@@ -44,15 +44,15 @@ void context::read_macros(const char* filename)
   // TODO: IMPLEMENT
   in.close();
 }
-inline vector<token_t> &&parse_macro(const string &definiendum, const string &definiens, error_handler *herr) {
+inline vector<token_t> parse_macro(const string &definiendum, const string &definiens, error_handler *herr) {
   llreader str_reader(definiendum, definiens, false);
   vector<token_t> tokens;
   for (token_t t;
       (t = read_token(str_reader, herr)).type != TT_ENDOFCODE; )
     tokens.push_back(t);
-  return std::move(tokens);
+  return tokens;
 }
-void context::add_macro_from_string(string definiendum, string definiens) {
+void context::add_macro(string definiendum, string definiens) {
   macros[definiendum] = new_macro(definiendum,
                                   parse_macro(definiendum, definiens, herr));
 }

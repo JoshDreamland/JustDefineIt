@@ -1354,16 +1354,13 @@ namespace jdi {
   AST* AST::create_from_access(definition_scope* scope, string id, string scope_op) {
     return new AST(
       new AST_Node_Scope(
-        new AST_Node_Definition(
-          scope,
-          scope->name
-        ),
-        new AST_Node(
-          id,
-          AT_IDENTIFIER
-        ),
-        scope_op
-      )
+          new AST_Node_Definition(
+              scope,
+              scope->name),
+          new AST_Node(
+              id,
+              AT_IDENTIFIER),
+          scope_op)
     );
   }
     
@@ -1380,6 +1377,6 @@ namespace jdi {
     AST_Builder ab(&ctp);
     AST res;
     ab.parse_expression(&res);
-    return std::move(res);
+    return res;
   }
 }

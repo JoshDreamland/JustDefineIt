@@ -176,9 +176,9 @@ void lexer_base::skip_whitespace()
 }
 #endif
 
-void lexer::enter_macro(const macro_type &macro) {
+void lexer::enter_macro(const token_t &otk, const macro_type &macro) {
   if (macro.value.empty()) return;
-  open_macros.emplace_back(macro.name, &macro.value);
+  open_buffers.emplace_back(macro.name, otk, &macro.value);
 }
 
 static inline void lex_error(error_handler *herr, const llreader &cfile, string_view msg) {
@@ -272,10 +272,10 @@ bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) 
   return true;
 }
 
-bool lexer::parse_macro_function(const macro_type &mf) {
+bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
   bool already_open = false; // Test if we're in this macro already
-  vector<openfile>::iterator it = files.begin();
-  for (size_t i = 0; i < open_macros.size(); ++i, --it) {
+  vector<OpenFile>::iterator it = files.begin();
+  for (size_t i = 0; i < open_buffers.size(); ++i, --it) {
     if (it->name != mf.name) continue;
     already_open = true;
     break;
@@ -293,7 +293,7 @@ bool lexer::parse_macro_function(const macro_type &mf) {
   vector<vector<token_t>> params;
   if (!parse_macro_params(mf, &params)) return false;
   vector<token_t> tokens = mf.substitute_and_unroll(params);
-  open_macros.emplace_back(mf.name, std::move(tokens));
+  open_buffers.emplace_back(mf.name, otk, std::move(tokens));
   return true;
 }
 
@@ -489,11 +489,13 @@ void lexer::handle_preprocessor() {
           mins.first->second = nullptr;
         }
         mins.first->second = std::make_shared<const macro_type>(
-            mins.first->first, paramlist, argstrs.substr(++i), variadic, herr);
+            mins.first->first, std::move(paramlist),
+            std::move(tokenize(argstrs.substr(++i), herr)),
+            variadic);
       } else {
         while (is_useless(argstr[i])) ++i;
         mins.first->second = std::make_shared<const macro_type>(
-            mins.first->first,argstrs.substr(i));
+            mins.first->first, tokenize(argstrs.substr(i), herr));
       }
     } break;
     case_error: {
@@ -1021,10 +1023,20 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
   return mktok(TT_INVALID, cfile.tell(), 0);
 }
 
+token_vector jdi::tokenize(std::string_view str, error_handler *herr) {
+  token_vector res;
+  llreader read;
+  read.encapsulate(str);
+  for (token_t tk = read_token(read, herr); tk.type != TT_ENDOFCODE;
+               tk = read_token(read, herr))
+    res.push_back(tk);
+  return res;
+}
+
 token_t lexer::get_token() {
   token_t res;
   top:
-  do res = read_raw(); while (res.type == TTM_NEWLINE);
+  do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
   if (res.type == TT_IDENTIFIER) {
     string fn = res.content.toString();
     macro_iter mi;
@@ -1032,14 +1044,14 @@ token_t lexer::get_token() {
     mi = macros.find(fn);
     if (mi != macros.end()) {
       if (mi->second->is_function) {
-        if (parse_macro_function(*mi->second)) {
+        if (parse_macro_function(res, *mi->second)) {
           // Upon success, restart routine. On failure, treat as identifier.
           goto top;
         }
       } else {
         bool already_open = false; // Test if we're in this macro already
         auto it = files.rbegin();
-        for (unsigned i = 0; i < open_macros.size(); ++i) {
+        for (unsigned i = 0; i < open_buffers.size(); ++i) {
           if (it->name == fn) {
             already_open = true;
             break;
@@ -1048,7 +1060,7 @@ token_t lexer::get_token() {
           }
         }
         if (!already_open) {
-          enter_macro(*mi->second);
+          enter_macro(res, *mi->second);
           goto top;
         }
       }
@@ -1058,15 +1070,16 @@ token_t lexer::get_token() {
     if (kwit != keywords.end()) {
       if (kwit->second == TT_INVALID) {
         mi = kludge_map.find(fn);
-        #ifdef DEBUG_MODE
-        if (mi == kludge_map.end())
-          cerr << "SYSTEM ERROR! KEYWORD `" << fn << "' IS DEFINED AS INVALID" << endl;
-        #endif
+        if (mi == kludge_map.end()) {
+          cerr << "SYSTEM ERROR! KEYWORD `" << fn
+               << "' IS DEFINED AS INVALID" << endl;
+          return res;
+        }
         if (mi->second->is_function) {
-          if (!parse_macro_function(*mi->second))
+          if (!parse_macro_function(res, *mi->second))
             return res;
         } else {
-          enter_macro(*mi->second);
+          enter_macro(res, *mi->second);
         }
         goto top;
       }
@@ -1098,6 +1111,19 @@ token_t lexer::get_token() {
                      cfile.tell() - cfile.lpos, "", 0);
     }
     goto top;
+  }
+  
+  return res;
+}
+
+token_t lexer::get_token_in_scope(jdi::definition_scope *scope) {
+  token_t res = get_token();
+  
+  if (res.type == TT_IDENTIFIER) {
+    definition *def = res.def = scope->look_up(res.content.toString());
+    if (def) {
+      res.type = (def->flags & DEF_TYPENAME) ? TT_DECLARATOR : TT_DEFINITION;
+    }
   }
   
   return res;
@@ -1198,7 +1224,7 @@ bool lexer::pop_file() {
   cfile.close();
   
   // Fetch data from top item and pop stack
-  openfile &of = files.back();
+  OpenFile &of = files.back();
   cfile.consume(of.file);
   files.pop_back();
   
@@ -1208,8 +1234,8 @@ bool lexer::pop_file() {
 macro_map lexer::kludge_map;
 lexer::keyword_map lexer::keywords;
 
-lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
-    cfile(std::move(input)), herr(err) , macros(pmacros){
+lexer::lexer(macro_map &pmacros, error_handler *err):
+    herr(err), macros(pmacros) {
   if (keywords.empty()) {
     keywords["asm"] = TT_ASM;
     keywords["__asm"] = TT_ASM;
@@ -1275,6 +1301,17 @@ lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
     builtin->add_macro("true", string(1,'1'));
     context::global_macros().swap(kludge_map);
   }
+}
+
+lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
+    lexer(pmacros, err) {
+  cfile.consume(input);
+}
+
+static macro_map no_macros;
+lexer::lexer(token_vector &&tokens, error_handler *err):
+    lexer(no_macros, err) {
+  push_buffer(std::move(tokens));
 }
 
 lexer::~lexer() {}

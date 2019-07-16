@@ -53,24 +53,46 @@ namespace jdi {
     size_t from_lpos; ///< The position in from_line.
   };
 
-  struct openfile: file_meta {
+  struct OpenFile: file_meta {
     llreader file;
-    openfile(llreader &&f): file(f) {}
+    OpenFile(llreader &&f): file(std::move(f)) {}
   };
 
-  struct EnteredMacro {
-    /// The name of the macro (used to report errors and prevent recursion).
+  /// Details a macro we entered during preprocessing. Used in error reporting,
+  /// and to avoid infinite recursion from unrolling the same macro.
+  struct $EnteredMacro {
+    /// The name of the macro we have entered.
     string name;
+    /// The token used in reporting location information.
+    token_t origin;
+    /// Construct with name and origin token.
+    $EnteredMacro(string name_, token_t origin_): name(name_), origin(origin_) {}
+  };
+
+  /// References or holds a buffer of tokens to emit before processing more.
+  /// Brings three principle benefits:
+  /// 1. Macros can be entered without re-lexing a buffer.
+  /// 2. Our Lexer can be constructed to supply a fixed collection of tokens.
+  /// 3. Rewinding is trivial, as previously-read tokens can just be re-stacked.
+  struct OpenBuffer {
+    /// If this buffer belongs to a macro, this describes it.
+    std::optional<$EnteredMacro> macro_info;
     /// Tokens in this macro (owned by the macro!)
     const token_vector &tokens;
     /// Allows us to own the above vector.
-    std::vector<token_t> assembled_token_data;
+    token_vector assembled_token_data;
+    /// Scratch space: how far the lexer advanced in this buffer before pushing
+    /// a new one and switching to it.
+    size_t buf_pos = 0;
 
-    EnteredMacro(string macro, const std::vector<token_t> *tokens_):
-                     name(macro), tokens(*tokens_) {}
-    EnteredMacro(string macro, std::vector<token_t> &&tokens_):
-                     name(macro), tokens(assembled_token_data),
-                     assembled_token_data(std::move(tokens_)) {}
+    OpenBuffer(string macro, token_t origin, const std::vector<token_t> *tokens_):
+        macro_info({macro, origin}), tokens(*tokens_) {}
+    OpenBuffer(string macro, token_t origin, std::vector<token_t> &&tokens_):
+        macro_info({macro, origin}), tokens(assembled_token_data),
+        assembled_token_data(std::move(tokens_)) {}
+    OpenBuffer(token_vector &&tokens_):
+        macro_info(), tokens(assembled_token_data),
+        assembled_token_data(tokens_) {}
   };
 
   /**
@@ -82,6 +104,9 @@ namespace jdi {
   and third. The data is not physically modified for any of these phases.
   */
   token_t read_token(llreader &cfile, error_handler *herr);
+
+  /// Tokenizes a string with no preprocessing. Does not return whitespace tokens.
+  token_vector tokenize(std::string_view str, error_handler *herr);
 
   /**
   Basic lexing/preprocessing unit; polled by all systems for tokens.
@@ -119,8 +144,8 @@ namespace jdi {
     struct condition;
 
     llreader cfile;  ///< The current file being read.
-    std::vector<openfile> files; ///< The files we have open, in the order we entered them.
-    std::vector<EnteredMacro> open_macros; ///< Macros we are currently nested in.
+    std::vector<OpenFile> files; ///< The files we have open, in the order we entered them.
+    std::vector<OpenBuffer> open_buffers; ///< Buffers of tokens to consume.
     error_handler *herr;  ///< Error handler for problems during lex.
 
     /// Our conditional levels (one for each nested `\#if*`)
@@ -133,19 +158,19 @@ namespace jdi {
 
     /// Buffer to which tokens will be recorded for later re-parse, as needed.
     token_vector *lookahead_buffer = nullptr;
-    /// RAII type for initiating a lookahead.
 
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
 
     std::set<string> visited_files; ///< For record and reporting purposes only.
+
+    /// Private base constructor.
+    lexer(macro_map &pmacros, error_handler *herr);
 
     /**
       Utility function designed to handle the preprocessor directive
       pointed to by \c pos upon invoking the function. Note that it should
       be the character directly after the pound pointed to upon invoking
       the function, not the pound itself.
-      @param herr  The error handler to use if the preprocessor doesn't
-                   exist or is malformed.
     **/
     void handle_preprocessor();
 
@@ -156,14 +181,16 @@ namespace jdi {
     void skip_to_macro();
 
     /// Enter a scalar macro, if it has any content.
+    /// @param otk  The originating token (naming this macro).
     /// @param ms   The macro scalar to enter.
-    void enter_macro(const macro_type &ms);
+    void enter_macro(const token_t &otk, const macro_type &ms);
     /// Parse for parameters to a given macro function, if there are any, then evaluate
     /// the macro function and set the open file to reflect the change.
     /// This call should be made while the position is just after the macro name.
+    /// @param otk  The originating token (naming this macro function).
     /// @param mf   The macro function to parse
     /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_function(const macro_type &mf);
+    bool parse_macro_function(const token_t &otk, const macro_type &mf);
     /// Parse for parameters to a given macro function, if there are any.
     /// This call should be made while the position is just after the macro
     /// name. That is, the next token should be an opening parenthesis.
@@ -177,7 +204,7 @@ namespace jdi {
     /// @return Returns true if the buffer was successfully popped, and input remains.
     bool pop_file();
 
-    /// Storage mechanism for conditionals, such as <code>\#if</code>, <code>\#ifdef</code>, and <code>\#ifndef</code>.
+    /// Storage mechanism for conditionals, such as `\#if`, `\#ifdef`, and `\#ifndef`.
     struct condition {
       /// True if code in this layer is to be parsed
       /// (the condition that was given is true).
@@ -189,8 +216,25 @@ namespace jdi {
     };
     
    public:
-    /// Read a raw token; this implies that TT_IDENTIFIER is the only token returned when any id is encountered: no keywords, no declarators, no definitions.
-    token_t read_raw();
+    /** Consumes an llreader and attaches a new \c lex_macro.
+        @param input    The file from which to read definitions.
+                        This file will be manipulated by the system.
+        @param pmacros  A \c jdi::macro_map which will receive
+                        (and be probed for) macros.
+        @param fname    The name of the file that was first opened.
+    **/
+    lexer(llreader& input, macro_map &pmacros, error_handler *herr);  // TODO: Have Lexer own pmacros.
+    /**
+      Consumes a token_vector, returning only the tokens in the vector before
+      returning END_OF_CODE.
+      @param input    The file from which to read definitions.
+                      This file will be manipulated by the system.
+      @param fname    The name of the file that was first opened.
+    **/
+    lexer(token_vector &&tokens, error_handler *herr);
+    /** Destructor; free the attached macro lexer. **/
+    ~lexer();
+
     /// Read a C++ token, with no scope information.
     token_t get_token();
     /// Read a C++ token, searching the given scope for names.
@@ -225,8 +269,17 @@ namespace jdi {
           }
         }
       }
-      void rewind();
+      void rewind() {
+        if (buffer.empty()) return;
+        token_vector buf;
+        buf.swap(buffer);
+        lex->push_buffer(std::move(buf));
+      }
     };
+
+    void push_buffer(token_vector &&buf) {
+      open_buffers.emplace_back(std::move(buf));
+    }
 
     // ============================================================================================
     // == Static Configuration Storage ============================================================
@@ -242,27 +295,11 @@ namespace jdi {
     /// compiler-specific builtins.
     static macro_map kludge_map;
 
+    /// Retrieve this lexer's error handler
+    error_handler *get_error_handler() { return herr; }
+
     /// Static cleanup function; safe to call without a matching init.
     static void cleanup();
-
-    /** Consumes an llreader and attaches a new \c lex_macro.
-        @param input    The file from which to read definitions.
-                        This file will be manipulated by the system.
-        @param pmacros  A \c jdi::macro_map which will receive
-                        (and be probed for) macros.
-        @param fname    The name of the file that was first opened.
-    **/
-    lexer(llreader& input, macro_map &pmacros, error_handler *herr);  // TODO: Have Lexer own pmacros.
-    /**
-      Consumes a token_vector, returning only the tokens in the vector before
-      returning END_OF_CODE.
-      @param input    The file from which to read definitions.
-                      This file will be manipulated by the system.
-      @param fname    The name of the file that was first opened.
-    **/
-    lexer(token_vector &&tokens, error_handler *herr);
-    /** Destructor; free the attached macro lexer. **/
-    ~lexer();
   };
 }
 

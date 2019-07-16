@@ -107,7 +107,6 @@ namespace jdi
     
     void read_macros(const char* filename); ///< Read a file containing exclusively macros, in C format.
     void add_macro(string definiendum, string definiens); ///< Add a macro to this context.
-    void add_macro_from_string(string definiendum, string definiens); ///< Add a macro to this context.
     
     /// Add a macro function with no parameters to this context.
     void add_macro_func(string definiendum, string definiens);

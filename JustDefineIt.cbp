@@ -100,7 +100,6 @@
 		<Unit filename="src/API/error_reporting.h" />
 		<Unit filename="src/API/jdi.cpp" />
 		<Unit filename="src/API/jdi.h" />
-		<Unit filename="src/API/lexer_interface.cpp" />
 		<Unit filename="src/API/lexer_interface.h" />
 		<Unit filename="src/API/parse_config.h" />
 		<Unit filename="src/API/user_tokens.cpp" />
@@ -166,12 +165,6 @@
 		<Unit filename="src/System/token.h" />
 		<Unit filename="src/System/type_usage_flags.h" />
 		<Unit filename="test/MAIN.cc">
-			<Option virtualFolder="test/" />
-		</Unit>
-		<Unit filename="test/debug_lexer.cpp">
-			<Option virtualFolder="test/" />
-		</Unit>
-		<Unit filename="test/debug_lexer.h">
 			<Option virtualFolder="test/" />
 		</Unit>
 		<Unit filename="test/defines_linux.txt">

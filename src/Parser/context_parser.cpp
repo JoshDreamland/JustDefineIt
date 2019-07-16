@@ -36,6 +36,16 @@ namespace jdi {
     else
       ctex->parse_open = true;
   }
+  context_parser::context_parser(context *ctex_, lexer *lex_):
+      ctex(ctex_), lex(lex_),
+      herr(lex_->get_error_handler()), astbuilder(new AST_Builder(this)) {
+    if (ctex->parse_open) {
+      cerr << "Another parser is already active on this context." << endl;
+      abort();
+    }
+    else
+      ctex->parse_open = true;
+  }
   context_parser::~context_parser() {
     delete astbuilder;
     if (ctex) {

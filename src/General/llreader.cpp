@@ -49,15 +49,15 @@ enum {
 
 using namespace std;
 
-void llreader::encapsulate(string &contents) {
-  data = contents.c_str();
+void llreader::encapsulate(string_view contents) {
+  data = contents.data();
   length = contents.length();
   mode = FT_ALIAS;
 }
-void llreader::copy(string contents) {
+void llreader::copy(string_view contents) {
   length = contents.length();
   char* buf = new char[length + 1];
-  memcpy(buf, contents.c_str(), length);
+  memcpy(buf, contents.data(), length);
   pos = buf[length] = 0;
   mode = FT_BUFFER;
   data = buf;
@@ -78,19 +78,10 @@ inline string fn_path(const char *fn) {
 }
 
 llreader::llreader(): pos(0), length(0), data(NULL), mode(FT_CLOSED) {}
+llreader::llreader(llreader &&other): llreader() { consume(other); }
 llreader::llreader(const char* filename): pos(0), length(0), data(NULL), mode(FT_CLOSED) { open(filename); }
 llreader::llreader(std::string bname, std::string contents): pos(0), length(0), data(NULL), name(bname), mode(FT_CLOSED) { copy(contents); }
-
-llreader::llreader(const llreader& x): pos(x.pos), length(FT_BUFFER), data(NULL), name(x.name), mode(FT_BUFFER) {
-  cerr << "WARNING: COPY CALLED ON LLREADER" << endl;
-  if (x.mode == FT_CLOSED) mode = FT_CLOSED;
-  else {
-    char *buf = new char[x.length+1];
-    memcpy(buf, x.data, x.length);
-    buf[length = x.length] = 0;
-    data = buf;
-  }
-}
+llreader::llreader(std::string bname, std::string_view contents, bool copy_): pos(0), length(0), data(NULL), name(bname), mode(FT_CLOSED) { copy_ ? copy(contents) : encapsulate(contents); }
 llreader::~llreader() { close(); }
 
 void llreader::open(const char* filename) {
@@ -161,6 +152,11 @@ void llreader::consume(char* buffer, size_t len) {
   mode = FT_BUFFER;
   pos = 0, length = len;
   data = buffer;
+}
+
+llreader &llreader::operator=(llreader &&other) {
+  consume(other);
+  return *this;
 }
 
 void llreader::consume(llreader& whom) {

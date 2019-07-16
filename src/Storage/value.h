@@ -68,6 +68,9 @@ namespace jdi {
     value(const VT& t); ///< Construct with only a value type
     ~value(); ///< Default destructor; handles freeing any strings.
     
+    value &operator=(const value&) = delete;
+    value &operator=(value&&);
+    
     std::string toString() const; ///< Convert to a string, whatever the value is
     
     operator int() const; ///< Cast to an int, returning zero if no valid cast exists.
