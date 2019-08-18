@@ -51,23 +51,23 @@ int jdi::context::parse_stream(llreader &cfile) {
   {
     context_parser cp(this, cfile);
     token_t eoc; // An invalid token to appease the parameter chain.
-    res = cp.handle_scope(global, eoc);
+    res = cp.handle_scope(global.get(), eoc);
     while (eoc.type != TT_ENDOFCODE) {
       #ifdef FATAL_ERRORS
         eoc.report_errorf(herr, "Premature abort caused by %s here; aborting.");
       #else
         eoc.report_errorf(herr, "Premature abort caused by %s here; relaunching");
         while (eoc.type != TT_SEMICOLON && eoc.type != TT_LEFTBRACE && eoc.type != TT_RIGHTBRACE && eoc.type != TT_ENDOFCODE)
-          eoc = cp.get_lex()->get_token_in_scope(global);
+          eoc = cp.get_lex()->get_token_in_scope(global.get());
         if (eoc.type == TT_LEFTBRACE) {
           size_t depth = 1;
           while (eoc.type != TT_ENDOFCODE) {
-            eoc = cp.get_lex()->get_token_in_scope(global);
+            eoc = cp.get_lex()->get_token_in_scope(global.get());
             if (eoc.type == TT_LEFTBRACE) ++depth;
             else if (eoc.type == TT_RIGHTBRACE) if (!--depth) break;
           }
         }
-        cp.handle_scope(global, eoc);
+        cp.handle_scope(global.get(), eoc);
       #endif
     }
   }

@@ -77,11 +77,11 @@ inline string fn_path(const char *fn) {
   return last == fn? dot : string(fn, last);
 }
 
-llreader::llreader(): pos(0), length(0), data(NULL), mode(FT_CLOSED) {}
+llreader::llreader(): pos(0), length(0), lpos(0), lnum(0), data(NULL), mode(FT_CLOSED) {}
 llreader::llreader(llreader &&other): llreader() { consume(other); }
-llreader::llreader(const char* filename): pos(0), length(0), data(NULL), mode(FT_CLOSED) { open(filename); }
-llreader::llreader(std::string bname, std::string contents): pos(0), length(0), data(NULL), name(bname), mode(FT_CLOSED) { copy(contents); }
-llreader::llreader(std::string bname, std::string_view contents, bool copy_): pos(0), length(0), data(NULL), name(bname), mode(FT_CLOSED) { copy_ ? copy(contents) : encapsulate(contents); }
+llreader::llreader(const char* filename): llreader() { open(filename); }
+llreader::llreader(std::string bname, std::string contents): pos(0), length(0),  lpos(0), lnum(0), data(NULL), name(bname), mode(FT_CLOSED) { copy(contents); }
+llreader::llreader(std::string bname, std::string_view contents, bool copy_): pos(0), length(0),  lpos(0), lnum(0), data(NULL), name(bname), mode(FT_CLOSED) { copy_ ? copy(contents) : encapsulate(contents); }
 llreader::~llreader() { close(); }
 
 void llreader::open(const char* filename) {

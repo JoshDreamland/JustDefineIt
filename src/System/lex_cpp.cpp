@@ -132,50 +132,6 @@ static inline StringPrefixFlags parse_string_prefix(string_view pre) {
   return res;
 }
 
-#if 0
-void lexer::skip_string(error_handler *herr)
-{
-  register const char endc = cfile.at();
-  while (cfile.advance() and cfile.at() != endc)
-  {
-    if (cfile.at() == '\\') {
-      if (cfile.next() == '\n') ++line, lpos = pos;
-      else if (cfile.at() == '\r') {
-        if (cfile.next() != '\n') --pos;
-        ++line, lpos = pos; 
-      }
-    }
-    else if (cfile.at() == '\n' or cfile.at() == '\r') {
-      herr->error(cfile, "Unterminated string literal");
-      break;
-    }
-  }
-  if (cfile.at() != endc)
-    herr->error(cfile, "Unterminated string literal");
-}
-
-static inline void skip_string(const char* cfile, size_t &pos, size_t length)
-{
-  register const char endc = cfile.at();
-  while (cfile.advance() and cfile.at() != endc)
-    if (cfile.at() == '\\') if (cfile[pos++] == '\r' and cfile.at() == '\n') ++pos;
-}
-
-void lexer_base::skip_whitespace()
-{
-  while (!cfile.eof()) {
-    while (is_spacer(cfile.at())) if (++pos >= length) return;
-    if (cfile.at() == '\n' or (cfile.at() == '\r' and cfile[pos+1] != '\n')) { ++line; lpos = pos++; continue; }
-    if (cfile.at() == '/') {
-      if (cfile.next() == '/') { skip_comment(); continue; }
-      if (cfile.at() == '*') { skip_multiline_comment(); continue; }
-      return;
-    }
-    return;
-  }
-}
-#endif
-
 void lexer::enter_macro(const token_t &otk, const macro_type &macro) {
   if (macro.value.empty()) return;
   open_buffers.emplace_back(macro.name, otk, &macro.value);
@@ -186,6 +142,9 @@ static inline void lex_error(error_handler *herr, const llreader &cfile, string_
 }
 
 static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
+  static int n = 0;
+  if (++n == 3)
+    cout << "Hi." << endl;
   while (cfile.next() != EOF && cfile.at() != qc) {
     if (cfile.at() == '\\') {
       if (cfile.next() == EOF) {
@@ -207,6 +166,7 @@ static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
     lex_error(herr, cfile, "Unterminated string literal");
     return false;
   }
+  cfile.advance();
   return true;
 }
 
@@ -239,7 +199,7 @@ bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) 
   cfile.advance();
 
   vector<token_vector> res;
-  res.reserve(mf.args.size());
+  res.reserve(mf.params.size());
   
   // Read the parameters into our argument vector
   int too_many_args = 0;
@@ -255,7 +215,7 @@ bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) 
     }
     if (res.empty()) res.emplace_back();
     if (tok.type == TT_COMMA && nestcnt == 1) {
-      if (res.size() < mf.args.size()) {
+      if (res.size() < mf.params.size()) {
         res.emplace_back();
         continue;
       } else if (!mf.is_variadic) {
@@ -266,21 +226,23 @@ bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) 
   }
   if (too_many_args) {
     herr->error(cfile, "Too many arguments to macro function `%s`; expected %s but got %s", 
-                mf.name, mf.args.size(), mf.args.size() + too_many_args);
+                mf.name, mf.params.size(), mf.params.size() + too_many_args);
   }
   out->swap(res);
   return true;
 }
 
+// This is so much more convenient as a helper, where no comment is required
+// and we don't need to store a bool outside our loop.
+bool lexer::inside_macro(string_view name) const {
+  for (const auto &buf : open_buffers)
+    if (buf.macro_info && buf.macro_info->name == name)
+      return true;
+  return false;
+}
+
 bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
-  bool already_open = false; // Test if we're in this macro already
-  vector<OpenFile>::iterator it = files.begin();
-  for (size_t i = 0; i < open_buffers.size(); ++i, --it) {
-    if (it->name != mf.name) continue;
-    already_open = true;
-    break;
-  }
-  if (already_open)
+  if (inside_macro(mf.name))
     return true;
   
   size_t spos = cfile.pos, slpos = cfile.lpos, sline = cfile.lnum;
@@ -292,7 +254,7 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
   
   vector<vector<token_t>> params;
   if (!parse_macro_params(mf, &params)) return false;
-  vector<token_t> tokens = mf.substitute_and_unroll(params);
+  vector<token_t> tokens = mf.substitute_and_unroll(params, herr);
   open_buffers.emplace_back(mf.name, otk, std::move(tokens));
   return true;
 }
@@ -332,7 +294,6 @@ string lexer::read_preprocessor_args() {
     }
     if (cfile.at() == '\'' || cfile.at() == '"') {
       skip_string(cfile, cfile.getc(), herr);
-      cfile.advance();
     } else if (cfile.at() == '\\') {
       if (!cfile.advance()) break;
       cfile.take_newline();
@@ -720,11 +681,15 @@ void lexer::handle_preprocessor() {
   
   // skip_to_macro:
   while (!cfile.eof()) {
-    if (cfile.at() == '/' || is_useless(cfile.at()))
+    if (is_useless(cfile.at())) {
       cfile.skip_whitespace();
-    else if (cfile.at() == '#') {
+    } else if (cfile.at() == '/') {
+      skip_comment(cfile);
+    } else if (cfile.at() == '#') {
       cfile.advance();
       goto top;
+    } else {
+      cfile.advance();
     }
   }
   herr->error(cfile, "Expected closing preprocessors before end of code");
@@ -792,7 +757,7 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
             if (skip_rstring(cfile, herr)) cfile.advance();
             return mktok(TT_STRINGLITERAL, spos, cfile.tell() - spos);
           }
-          if (skip_string(cfile, cfile.at(), herr)) cfile.advance();
+          skip_string(cfile, cfile.at(), herr);
           return mktok(TT_CHARLITERAL, spos, cfile.tell() - spos);
         }
       }
@@ -1033,87 +998,102 @@ token_vector jdi::tokenize(std::string_view str, error_handler *herr) {
   return res;
 }
 
-token_t lexer::get_token() {
-  token_t res;
-  top:
-  do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
-  if (res.type == TT_IDENTIFIER) {
-    string fn = res.content.toString();
-    macro_iter mi;
-    
-    mi = macros.find(fn);
-    if (mi != macros.end()) {
-      if (mi->second->is_function) {
-        if (parse_macro_function(res, *mi->second)) {
-          // Upon success, restart routine. On failure, treat as identifier.
-          goto top;
-        }
-      } else {
-        bool already_open = false; // Test if we're in this macro already
-        auto it = files.rbegin();
-        for (unsigned i = 0; i < open_buffers.size(); ++i) {
-          if (it->name == fn) {
-            already_open = true;
-            break;
-          } else {
-            ++it;
-          }
-        }
-        if (!already_open) {
-          enter_macro(res, *mi->second);
-          goto top;
-        }
+bool lexer::handle_macro(token_t &identifier) {
+  if (identifier.type != TT_IDENTIFIER) {
+    herr->error(identifier, "Internal error: Not an identifier: %s",
+                identifier.to_string());
+    return false;
+  }
+  string fn = identifier.content.toString();
+  macro_iter mi;
+  
+  mi = macros.find(fn);
+  if (mi != macros.end()) {
+    if (mi->second->is_function) {
+      if (parse_macro_function(identifier, *mi->second)) {
+        // Upon success, restart routine. On failure, treat as identifier.
+        return true;
+      }
+    } else {
+      if (!inside_macro(fn)) {
+        enter_macro(identifier, *mi->second);
+        return true;
       }
     }
-    
-    keyword_map::iterator kwit = keywords.find(fn);
-    if (kwit != keywords.end()) {
-      if (kwit->second == TT_INVALID) {
-        mi = kludge_map.find(fn);
-        if (mi == kludge_map.end()) {
-          cerr << "SYSTEM ERROR! KEYWORD `" << fn
-               << "' IS DEFINED AS INVALID" << endl;
-          return res;
-        }
-        if (mi->second->is_function) {
-          if (!parse_macro_function(res, *mi->second))
-            return res;
-        } else {
-          enter_macro(res, *mi->second);
-        }
-        goto top;
-      }
-      res.type = kwit->second;
-      return res;
-    }
-    
-    tf_iter tfit = builtin_declarators.find(fn);
-    if (tfit != builtin_declarators.end()) {
-      if (tfit->second->usage  & UF_PRIMITIVE)
-        res.type = TT_DECLARATOR, res.def = tfit->second->def;
-      else
-        res.type = TT_DECFLAG, res.def = (definition*)tfit->second;
-      return res;
-    }
-  }
-  else if (res.type == TTM_CONCAT) {
-    res.report_error(herr, "Extraneous # ignored");
-    goto pp_anyway;
-  }
-  else if (res.type == TTM_TOSTRING) {
-    pp_anyway:
-    handle_preprocessor();
-    goto top;
-  }
-  else if (res.type == TT_ENDOFCODE) {
-    if (pop_file()) {
-      return token_t(TT_ENDOFCODE, cfile.name.c_str(), cfile.lnum,
-                     cfile.tell() - cfile.lpos, "", 0);
-    }
-    goto top;
   }
   
-  return res;
+  keyword_map::iterator kwit = keywords.find(fn);
+  if (kwit != keywords.end()) {
+    if (kwit->second == TT_INVALID) {
+      mi = kludge_map.find(fn);
+      if (mi == kludge_map.end()) {
+        cerr << "SYSTEM ERROR! KEYWORD `" << fn
+             << "' IS DEFINED AS INVALID" << endl;
+        return false;
+      }
+      if (mi->second->is_function) {
+        if (!parse_macro_function(identifier, *mi->second))
+          return false;
+      } else {
+        enter_macro(identifier, *mi->second);
+      }
+      return true;
+    }
+    identifier.type = kwit->second;
+    return false;
+  }
+  
+  tf_iter tfit = builtin_declarators.find(fn);
+  if (tfit != builtin_declarators.end()) {
+    if (tfit->second->usage  & UF_PRIMITIVE) {
+      identifier.type = TT_DECLARATOR;
+      identifier.def = tfit->second->def;
+    } else {
+      identifier.type = TT_DECFLAG;
+      identifier.def = (definition*)tfit->second;
+    }
+    return false;
+  }
+  return false;
+}
+
+token_t lexer::preprocess_and_read_token() {
+  token_t res;
+  for (;;) {
+    if (buffered_tokens) {
+      if (buffer_pos >= buffered_tokens->size()) {
+        pop_buffer();
+        continue;
+      }
+      return (*buffered_tokens)[buffer_pos++];
+    }
+    
+    do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
+    if (res.type == TT_IDENTIFIER) {
+      if (handle_macro(res)) continue;
+    } else if (res.type == TTM_CONCAT) {
+      res.report_error(herr, "Extraneous # ignored");
+      handle_preprocessor();
+      continue;
+    } else if (res.type == TTM_TOSTRING) {
+      handle_preprocessor();
+      continue;
+    } else if (res.type == TT_ENDOFCODE) {
+      if (pop_file()) {
+        return token_t(TT_ENDOFCODE, cfile.name.c_str(), cfile.lnum,
+                       cfile.tell() - cfile.lpos, "", 0);
+      }
+      continue;
+    }
+    
+    return res;
+  }
+}
+
+token_t lexer::get_token() {
+  token_t token = preprocess_and_read_token();
+  if (lookahead_buffer) lookahead_buffer->push_back(token);
+  return token;
 }
 
 token_t lexer::get_token_in_scope(jdi::definition_scope *scope) {
@@ -1129,92 +1109,49 @@ token_t lexer::get_token_in_scope(jdi::definition_scope *scope) {
   return res;
 }
 
-#if 0
-token_t lexer_macro::get_token(error_handler *herr)
-{
-  top:
-  token_t res = lex_base->read_raw();
-  if (res.type == TTM_NEWLINE) {
-    res.type = TT_ENDOFCODE;
-    return res;
+void lexer::push_buffer(token_vector &&buf) {
+  assert(open_buffers.empty() == !buffered_tokens);
+  if (buffered_tokens) {
+    assert(open_buffers.empty() == !buffered_tokens);
+    open_buffers.back().buf_pos = buffer_pos;
   }
-  if (res.type == TT_IDENTIFIER) {  // Identifiers and keywords stop here.
-    static const char zero[] = "0", one[] = "1";
-    // magic number: strlen("defined") == 7; this is unlikely to change
-    if (res.content.len == 7 && !strncmp((const char*) res.content.str, "defined", 7))
-    {
-      lex_base->skip_whitespace();
-      bool endpar = lex_base->data[lex_base->pos] == '(';
-      if (endpar) {
-        ++lex_base->pos;
-        lex_base->skip_whitespace();
-      }
-      
-      if (!is_letter(lex_base->data[lex_base->pos]))
-        herr->error("Expected identifier to look up as macro", lex_base->filename, lex_base->line, lex_base->pos - lex_base->lpos);
-      
-      const size_t spos = lex_base->pos;
-      while (is_letterd(lex_base->data[++lex_base->pos]));
-      string macro(lex_base->data + spos, lex_base->pos - spos);
-      
-      if (endpar) {
-        lex_base->skip_whitespace();
-        if (lex_base->data[lex_base->pos] != ')')
-          herr->error("Expected ending parenthesis for defined()", lex_base->filename, lex_base->line, lex_base->pos-lex_base->lpos);
-        ++lex_base->pos;
-      }
-      
-      return mktok(TT_DECLITERAL,lex_base->filename,lex_base->line,lex_base->pos-lex_base->lpos, lex_base->macros.find(macro)==lex_base->macros.end()? zero : one, 1);
-    }
-    
-    const string mn = res.content.toString();
-    macro_iter mi = lex_base->macros.find(mn);
-    if (mi != lex_base->macros.end()) {
-      if (mi->second->argc < 0) {
-        bool already_open = false; // Test if we're in this macro already
-        quick::stack<openfile>::iterator it = lex_base->files.begin();
-        for (unsigned i = 0; i < lex_base->open_macro_count; ++i)
-          if (it->filename == mn) { already_open = true; break; }
-          else --it;
-        if (!already_open) {
-          lex_base->enter_macro( mi->second);
-          goto top;
-        }
-      }
-      else {
-        if (lex_base->parse_macro_function((macro_function*)mi->second, herr))
-          goto top;
-      }
-    }
-    
-    // This is an undefined identifier; if it were a macro, it would have been expanded by the base lexer.
-    // Return token for literal false: zero.
-    return mktok(TT_DECLITERAL,lex_base->filename,lex_base->line,lex_base->pos-lex_base->lpos, zero, 1);
-  }
-  else if (res.type == TT_ENDOFCODE) {
-    if (lex_base->pop_file())
-      return lex_base->read_raw(herr);  // TT_ENDOFCODE
-    goto top;
-  }
-  
-  return res;
+  open_buffers.emplace_back(std::move(buf));
+  buffered_tokens = &open_buffers.back().tokens;
+  buffer_pos = 0;
 }
-#endif
+
+void lexer::pop_buffer() {
+  assert(open_buffers.empty() == !buffered_tokens);
+  assert(buffered_tokens);
+  open_buffers.pop_back();
+  if (open_buffers.empty()) {
+    buffered_tokens = nullptr;
+  } else {
+    buffered_tokens = &open_buffers.back().tokens;
+    buffer_pos = open_buffers.back().buf_pos;
+  }
+}
 
 bool lexer::pop_file() {
   /*
-  Thus, this lexer implementation has four layers of token source data:
-    1. The open file stack. Files or string buffers (managed by an llreader) are
-       lexed for raw tokens.
-    2. Macros used within a file are expanded into tokens, and these buffers of
-       tokens are stacked. Per ISO, a macro may not appear twice in this stack.
-    3. Rewind operations produce queues of tokens. Each queue is stacked.
-    4. During normal lexing operations, minor lookahead may be required.
-       Tokens read during lookahead are stacked. */
-  if (lookahead_buffer) {
-    herr->error(lookahead_buffer->front(),
-                "Attempting to pop a buffer while there are lexed tokens "
-                "remaining to be returned.");
+   * This lexer implementation has four layers of token source data:
+   * 1. The open file stack. Files or string buffers (managed by an llreader)
+   *    are lexed for raw tokens.
+   * 2. Macros used within a file are expanded into tokens, and these buffers of
+   *    tokens are stacked. Per ISO, a macro may not appear twice in this stack.
+   * 3. Rewind operations produce queues of tokens. Each queue is stacked.
+   * 4. During normal lexing operations, minor lookahead may be required.
+   *    Tokens read during lookahead are stacked.
+   */
+  if (buffered_tokens) {
+    if (buffer_pos < buffered_tokens->size()) {
+      herr->error((*buffered_tokens)[buffer_pos],
+                  "Internal error: Attempting to pop a file while there are "
+                  "lexed tokens remaining to be returned.");
+    } else {
+      herr->error("Internal error: Attempting to pop a file without first "
+                  "popping open buffers.");
+    }
   }
   
   if (files.empty())

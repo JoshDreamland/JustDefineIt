@@ -55,8 +55,8 @@ void do_cli(context &ct);
 static inline int compute_diff(const vector<int> &v1, const vector<int> &v2, size_t ind, size_t window = 16) {
   if (ind + window > v1.size() || ind + window > v2.size()) {
     int candoff = v2.size() - v1.size();
-    if (candoff > 0 && v1[ind + candoff] == v2[ind]) return candoff;
-    if (candoff < 0 && v1[ind] == v2[ind - candoff]) return candoff;
+    if (candoff > 0 && v1[ind] == v2[ind + candoff]) return candoff;
+    if (candoff < 0 && v1[ind - candoff] == v2[ind]) return candoff;
     return 0;
   }
   const size_t hwindow = window / 2;
@@ -153,10 +153,14 @@ int main() {
     b.put_type(0, full_type(builtin_type__double));
     b.put_type(1, full_type(builtin_type__double));
     const int w = max(a.toString().length(), b.toString().length());
-    cout << "  [" << setw(w) << a.toString() << "]  <  [" << setw(w) << b.toString() << "]: " << (a < b) << endl;
-    cout << "  [" << setw(w) << b.toString() << "]  <  [" << setw(w) << a.toString() << "]: " << (b < a) << endl;
-    cout << "  [" << setw(w) << a.toString() << "]  <  [" << setw(w) << a.toString() << "]: " << (a < a) << endl;
-    cout << "  [" << setw(w) << b.toString() << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
+    cout <<     "  [" << setw(w) << a.toString()
+         << "]  <  [" << setw(w) << b.toString() << "]: " << (a < b) << endl;
+    cout <<     "  [" << setw(w) << b.toString()
+         << "]  <  [" << setw(w) << a.toString() << "]: " << (b < a) << endl;
+    cout <<     "  [" << setw(w) << a.toString()
+         << "]  <  [" << setw(w) << a.toString() << "]: " << (a < a) << endl;
+    cout <<     "  [" << setw(w) << b.toString()
+         << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
   }
   
   builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1");

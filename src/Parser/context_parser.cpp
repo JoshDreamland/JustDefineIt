@@ -56,6 +56,5 @@ namespace jdi {
         abort();
       }
     }
-    delete ctex_alloc;
   }
 }

@@ -64,6 +64,7 @@
 
 namespace jdi {
   /// Never use this pointer; it gets written to frequently and is never set to NULL.
+  /// Nothing in the system uses it, either. Its value is only assigned.
   extern definition* dangling_pointer;
   
   /**
@@ -86,8 +87,6 @@ namespace jdi {
     jdi::context_parser from an allocated jdi::context is valid.
   **/
   class context_parser {
-    context *ctex_alloc;  ///< Used to collect any context we allocated
-    
     context *ctex;  ///< The original context we are parsing into.
     lexer *lex;  ///< The lexer which all methods and all calls therefrom will poll for tokens.
     error_handler *herr;  ///< The error handler to which errors and warnings will be reported.
@@ -108,6 +107,9 @@ namespace jdi {
     // context_parser(error_handler* herr);
     /// Destructs, returning data to the original context.
     ~context_parser();
+    
+    /// Do not copy.
+    context_parser(const context_parser &other) = delete;
     
     /**
       Read a complete type from the given input stream.

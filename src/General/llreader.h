@@ -185,8 +185,8 @@ class llreader {
       return true;
     }
     template<int n> bool take(const char (&str)[n]) {  // fun rolls
-      for (int i = 0; i < n; ++i) if (data[pos + i] != str[i]) return false;
-      pos += n;
+      for (int i = 0; i < n - 1; ++i) if (data[pos + i] != str[i]) return false;
+      pos += n - 1;
       return true;
     }
 

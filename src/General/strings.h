@@ -46,14 +46,11 @@ namespace jdi {
 
     size_t p = 0;
     for (const std::string str : strs) {
-      const size_t pp = p;
-      p = text.find("%s", p);
-      if (p == std::string::npos) {
-        res += text.substr(pp);
-        break;
-      }
-      res += text.substr(pp, p - pp);
+      const size_t pn = text.find("%s", p);
+      if (pn == std::string::npos) break;
+      res += text.substr(p, pn - p);
       res += str;
+      p = pn + 2;
     }
     if (p != std::string::npos) res += text.substr(p);
     return res;

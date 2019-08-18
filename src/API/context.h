@@ -38,6 +38,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <memory>
 
 namespace jdi {
   class context;
@@ -61,6 +62,8 @@ namespace jdi
   using std::ostream;
   using std::cout;
   using std::set;
+  using std::shared_ptr;
+  using std::unique_ptr;
   
   /**
     @class context
@@ -81,7 +84,7 @@ namespace jdi
     protected: // Make sure our method-packing child can use these.
     macro_map macros; ///< A map of macros defined in this context.
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
-    definition_scope* global; ///< The global scope represented in this context.
+    unique_ptr<definition_scope> global; ///< The global scope represented in this context.
     
     error_handler *herr;
     
@@ -154,7 +157,7 @@ namespace jdi
     /// Get a reference to the macro map
     inline const macro_map& get_macros() const { return macros; }
     /// Get our global scope
-    inline definition_scope* get_global() const { return global; }
+    inline definition_scope* get_global() const { return global.get(); }
     
     /// Get a non-const reference to the global macro set.
     static macro_map &global_macros();
@@ -199,7 +202,7 @@ namespace jdi
     }
     
     /** A simple destructor to clean up after the definition loading. **/
-    ~context();
+    ~context() = default;
   };
 }
 

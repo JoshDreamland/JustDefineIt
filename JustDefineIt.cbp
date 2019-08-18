@@ -113,6 +113,7 @@
 		<Unit filename="src/General/quickreference.h" />
 		<Unit filename="src/General/quickstack.h" />
 		<Unit filename="src/General/quickvector.h" />
+		<Unit filename="src/General/strings.h" />
 		<Unit filename="src/General/svg_simple.cpp" />
 		<Unit filename="src/General/svg_simple.h" />
 		<Unit filename="src/Parser/base.cpp" />
@@ -154,7 +155,6 @@
 		<Unit filename="src/Storage/value_funcs.h" />
 		<Unit filename="src/System/builtins.cpp" />
 		<Unit filename="src/System/builtins.h" />
-		<Unit filename="src/System/lex_buffer.cpp" />
 		<Unit filename="src/System/lex_cpp.cpp" />
 		<Unit filename="src/System/lex_cpp.h" />
 		<Unit filename="src/System/macros.cpp" />

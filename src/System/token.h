@@ -25,6 +25,7 @@
 #define _TOKEN__H
 
 #include <string>
+#include <vector>
 
 namespace jdi {
   enum GLOSS_TOKEN_TYPE {
@@ -241,13 +242,46 @@ namespace jdi {
       volatile const char* str;
       
       /// The length of the string pointed to by \c content.
-      int len;
+      size_t len;
+      
+      /// Lazy string value initialization via caching. Also allows external ownership.
+      mutable const std::string *cached_str = nullptr;
+      /// Allows building, then caching.
+      mutable std::string owned_str;
       
       /// Get the string contents of this token: This operation is somewhat costly.
-      inline string toString() { return string((const char*)str,len); }
+      inline const string &toString() const {
+        if (cached_str) return *cached_str;
+        owned_str = string((const char*) str, len);
+        cached_str = &owned_str;
+        return *cached_str;
+      }
+      
+      /// Copy another token's content, handling ownership.
+      void copy(const content&);
+      /// Copy another token's content, handling ownership.
+      void consume(content&&);
       
       inline content() {}
-      inline content(const char* s, int l): str(s), len(l) {}
+      inline content(const char *s, int l): str(s), len(l) {}
+      inline content(const string *s):
+          str(s->data()), len(s->length()), cached_str(s) {}
+      inline content(string &&s): owned_str(std::move(s)) {
+        str = owned_str.data();
+        len = owned_str.length();
+        cached_str = &owned_str;
+      }
+
+      content(const content &other) { copy(other); }
+      content(content &&other) { consume(std::move(other)); }
+      content &operator=(const content &other) {
+        copy(other);
+        return *this;
+      }
+      content &operator=(content &&other) {
+        consume(std::move(other));
+        return *this;
+      }
     } content;
     
     /// For types, namespace-names, etc., the definition by which the type of this token was determined.
@@ -282,11 +316,14 @@ namespace jdi {
       @param error The text of the error.
     **/
     void report_warning(error_handler *herr, std::string error) const;
-    /** Comparatively slow method to represent this token as a human-readable string. */
+    
+    /// Comparatively-slow method to represent this token as a human-readable string.
     std::string to_string() const;
     
     static std::string get_name(TOKEN_TYPE type);
   };
+
+  typedef std::vector<token_t> token_vector;
 }
 
 #endif

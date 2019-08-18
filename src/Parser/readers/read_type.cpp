@@ -45,6 +45,9 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
   long int swif = 0; // Swap-in flags: or'd in when a flag is determined not to be the main type.
   definition *rdef = NULL;
   ref_stack rrefs;
+
+  // XXX: Should this be allowed? AST builders are calling it.
+  if (!scope) scope = ctex->global.get();
   
   if (token.type != TT_DECLARATOR) {
     if (token.type != TT_DECFLAG) {

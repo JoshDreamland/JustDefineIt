@@ -60,13 +60,13 @@ namespace jdi {
 
   /// Details a macro we entered during preprocessing. Used in error reporting,
   /// and to avoid infinite recursion from unrolling the same macro.
-  struct $EnteredMacro {
+  struct EnteredMacro {
     /// The name of the macro we have entered.
     string name;
     /// The token used in reporting location information.
     token_t origin;
     /// Construct with name and origin token.
-    $EnteredMacro(string name_, token_t origin_): name(name_), origin(origin_) {}
+    EnteredMacro(string name_, token_t origin_): name(name_), origin(origin_) {}
   };
 
   /// References or holds a buffer of tokens to emit before processing more.
@@ -76,8 +76,8 @@ namespace jdi {
   /// 3. Rewinding is trivial, as previously-read tokens can just be re-stacked.
   struct OpenBuffer {
     /// If this buffer belongs to a macro, this describes it.
-    std::optional<$EnteredMacro> macro_info;
-    /// Tokens in this macro (owned by the macro!)
+    std::optional<EnteredMacro> macro_info;
+    /// Tokens in the macro or other buffer (may be owned by someone else!)
     const token_vector &tokens;
     /// Allows us to own the above vector.
     token_vector assembled_token_data;
@@ -151,8 +151,9 @@ namespace jdi {
     /// Our conditional levels (one for each nested `\#if*`)
     vector<condition> conditionals;
 
-    /// Tokens that have been expanded from a macro or fetched as lookahead.
-    token_vector *buffered_tokens = nullptr;
+    /// Tokens to return before lexing continues. Generally, these are tokens
+    /// that have been expanded from a macro or fetched as lookahead.
+    const token_vector *buffered_tokens = nullptr;
     /// The position in the current token buffer.
     size_t buffer_pos;
 
@@ -174,10 +175,14 @@ namespace jdi {
     **/
     void handle_preprocessor();
 
+    /// Tests the given identifier token against currently-defined macros, and
+    /// handles expanding it if it is defined and usable in this context.
+    bool handle_macro(token_t &identifier);
+
     /// Function used by the preprocessor to read in macro parameters in compliance with ISO.
     string read_preprocessor_args();
-    /** Second-order utility function to skip lines until a preprocessor
-        directive is encountered, then invoke the handler on the directive it found. **/
+    /// Second-order utility function to skip lines until a preprocessor
+    /// directive is encountered, then invoke the handler on the directive it found.
     void skip_to_macro();
 
     /// Enter a scalar macro, if it has any content.
@@ -199,6 +204,8 @@ namespace jdi {
     /// @param dest  The vector to receive the individual parameters [out].
     /// @return Returns whether parameters were encountered and parsed.
     bool parse_macro_params(const macro_type &mf, vector<vector<token_t>>* dest);
+    /// Check if we're currently inside a macro by the given name.
+    bool inside_macro(string_view macro_name) const;
 
     /// Pop the currently open file to return to the file that included it.
     /// @return Returns true if the buffer was successfully popped, and input remains.
@@ -214,6 +221,10 @@ namespace jdi {
       /// Convenience constructor.
       condition(bool, bool);
     };
+
+    /// Internal logic to handle preprocessing and fetching a token, as well
+    /// as reading tokens off the current buffer, if needed.
+    token_t preprocess_and_read_token();
     
    public:
     /** Consumes an llreader and attaches a new \c lex_macro.
@@ -252,7 +263,7 @@ namespace jdi {
         return buffer.back();
       }
 
-      look_ahead(lexer *lex_): prev_buffer(lex->lookahead_buffer), lex(lex_) {
+      look_ahead(lexer *lex_): prev_buffer(lex_->lookahead_buffer), lex(lex_) {
         lex->lookahead_buffer = &buffer;
       }
       ~look_ahead() {
@@ -277,9 +288,11 @@ namespace jdi {
       }
     };
 
-    void push_buffer(token_vector &&buf) {
-      open_buffers.emplace_back(std::move(buf));
-    }
+    /// Push some tokens onto this lexer.
+    void push_buffer(token_vector &&buf);
+
+    /// Pop the current top buffer.
+    void pop_buffer();
 
     // ============================================================================================
     // == Static Configuration Storage ============================================================

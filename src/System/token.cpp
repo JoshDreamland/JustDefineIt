@@ -249,3 +249,40 @@ std::string token_t::get_name(TOKEN_TYPE tt) {
   }
   return str;
 }
+
+void token_t::content::copy(const content &other) {
+  if (other.cached_str == &other.owned_str) {
+    // The other token already owned its data.
+    owned_str = other.owned_str;
+    cached_str = &owned_str;
+    str = owned_str.data();
+    len = owned_str.length();
+  } else if (other.cached_str) {
+    // Static or non-owned string data.
+    cached_str = other.cached_str;
+    str = other.str;
+    len = other.len;
+  } else {
+    // Volatile data, probably from the file buffer. Persist it.
+    owned_str = string((const char*) other.str, other.len);
+    cached_str = &owned_str;
+    str = owned_str.data();
+    len = owned_str.length();
+  }
+}
+
+void token_t::content::consume(content &&other) {
+  if (other.cached_str == &other.owned_str) {
+    // The other token already owned its data.
+    owned_str = std::move(other.owned_str);
+    cached_str = &owned_str;
+    str = owned_str.data();
+    len = owned_str.length();
+    other.cached_str = nullptr;
+  } else {
+    str = other.str;
+    len = other.len;
+    // May be null. Don't bother persisting string view, here.
+    cached_str = other.cached_str;
+  }
+}

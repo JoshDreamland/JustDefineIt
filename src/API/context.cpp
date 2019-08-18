@@ -150,7 +150,7 @@ void context::reset_all()
 void context::copy(const context &ct)
 {
   remap_set n;
-  ct.global->copy(global, n);
+  ct.global->copy(global.get(), n);
   ct.global->remap(n, error_context(def_error_handler, "Internal Copy Operation", 0, 0));
   
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
@@ -161,15 +161,14 @@ void context::copy(const context &ct)
   }
   for (definition* var : ct.variadics) {
     if (var->parent)
-      variadics.insert(find_mirror(var, global));
+      variadics.insert(find_mirror(var, global.get()));
     else
       variadics.insert(var);
   }
 }
 void context::swap(context &ct) {
   if (!parse_open and !ct.parse_open) {
-    { definition_scope* gs = ct.global;
-      ct.global = global; global = gs; }
+    ct.global.swap(global);
     macros.swap(ct.macros);
     variadics.swap(ct.variadics);
   }
@@ -223,7 +222,3 @@ context::context(int): parse_open(false), global(new definition_scope()) { }
 
 size_t context::search_dir_count() { return search_directories.size(); }
 string context::search_dir(size_t index) { return search_directories[index]; }
-
-context::~context() {
-  delete global;
-}

@@ -66,14 +66,37 @@ namespace jdi {
     /// A copy of the name of this macro.
     string name;
     /// A copy of the parameter list of this macro.
-    vector<string> args;
+    vector<string> params;
     /// Copy of the string from which this macro was parsed. Referenced by `value`.
     string raw_value;
-    
+
     /// The definiens of this macro, as a series of preprocessor tokens.
-    vector<token_t> value;
-    
-    vector<token_t> substitute_and_unroll(vector<vector<token_t>> args) const;
+    token_vector value;
+
+    /// Caches meaning for chunks of the replacement list of macro functions.
+    struct FuncComponent {
+      enum TAG {
+        TOKEN_SPAN = 1,
+        ARGUMENT,
+        PASTE
+      };
+      TAG tag;
+      union {
+        struct {
+          size_t begin, end;
+        } token_span;
+        struct {
+          size_t index;
+        } argument;
+      };
+    };
+
+    /// Semantic cache of the replacement list of our function-like macro.
+    vector<FuncComponent> parts;
+
+    /// Expand this macro function, given arguments.
+    token_vector substitute_and_unroll(const vector<token_vector> &args,
+                                       error_handler *herr) const;
     
     /// Convert this macro to a string
     string toString() const;
