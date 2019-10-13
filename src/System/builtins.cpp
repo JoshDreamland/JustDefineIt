@@ -46,8 +46,6 @@ namespace jdi {
 
 using namespace jdi;
 namespace jdi {
-  jdi::context *builtin = NULL;
-  
   unsigned long builtin_flag__volatile;
   unsigned long builtin_flag__static;
   unsigned long builtin_flag__const;
@@ -80,6 +78,9 @@ namespace jdi {
   
   unsigned long builtin_flag__virtual;
   unsigned long builtin_flag__explicit;
+  
+  // Make entities cache this or not use it.
+  static jdi::Context *builtin = NULL;
   
   void read_declarators(const char* filename, USAGE_FLAG usage_flags)
   {
@@ -196,4 +197,21 @@ namespace jdi {
     else res += "<NULL>";
     return res;
   }
-}
+
+  static void initialize() {
+    builtin = new Context(0);
+    add_gnu_declarators();
+    builtin->load_standard_builtins();
+  }
+  
+  void clean_up() {
+    cleanup_declarators();
+    delete builtin;
+    builtin = NULL;
+  }
+  
+  Context &builtin_context() {
+    if (!builtin) initialize();
+    return *builtin;
+  }
+}  // namespace jdi

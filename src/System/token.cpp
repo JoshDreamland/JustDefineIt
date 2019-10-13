@@ -28,226 +28,206 @@ using namespace jdi;
 #else
   #define cdebuginit(x,y)
 #endif
-  
-token_t::token_t(): token_basics(type(TT_INVALID), file(""), linenum(), pos()) {}
-token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p)): token_basics(type(t), file(fn), linenum(l), pos(p)) cdebuginit(def,NULL) {}
-token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), const char* ct, int ctl): token_basics(type(t), file(fn), linenum(l), pos(p)), content(ct, ctl) cdebuginit(def,NULL) {}
-token_t::token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition* d): token_basics(type(t), file(fn), linenum(l), pos(p)), def(d) {}
-
-void token_t::report_error(error_handler *herr, std::string error) const
-{
-  string fn; // Default values for non-existing info members
-  int l = -1, p = -1;
-  
-  // Overwrite those which exist
-  token_basics(p = -1,
-    fn = (const char*)file,
-    l = linenum,
-    p = pos
-  );
-  
-  herr->error(error, fn, l, p);
-}
 
 #include <cstdio>
 static struct token_info_c {
-  string name[TT_INVALID+1];
+  string description[TT_INVALID+1];
+  string spelling[TT_INVALID+1];
   token_info_c() {
     for (int i = 0; i <= TT_INVALID; ++i) {
       char buf[128];
-      sprintf(buf, "GLITCH: No name data afilliated with token %d. Oops.", i);
-      name[i] = buf;
+      sprintf(buf, "GLITCH: No name data affiliated with token %d. Oops.", i);
+      description[i] = buf;
+      spelling[i] = buf;
     }
     TOKEN_TYPE a(TT_INVALID);
+#   define TKD(tname, desc)         \
+      [[fallthrough]]; case tname:  \
+        spelling[tname] = #tname;   \
+        description[tname] = desc;
     switch (a) {
       default:
-      case TT_INVALID: name[TT_INVALID] = "invalid token"; // Fallthrough
-      
-      case TT_DECLARATOR:name[TT_DECLARATOR] = "declarator"; // Fallthrough
-      case TT_DECFLAG: name[TT_DECFLAG] = "declarator"; // Fallthrough
-      case TT_CLASS: name[TT_CLASS] = "`class' token"; // Fallthrough
-      case TT_STRUCT: name[TT_STRUCT] = "`struct' token"; // Fallthrough
-      case TT_ENUM: name[TT_ENUM] = "`enum' token"; // Fallthrough
-      case TT_UNION: name[TT_UNION] = "`union' token"; // Fallthrough
-      case TT_NAMESPACE: name[TT_NAMESPACE] = "`namespace' token"; // Fallthrough
-      case TT_EXTERN: name[TT_EXTERN] = "`extern' token"; // Fallthrough
-      case TT_INLINE: name[TT_INLINE] = "`inline' token"; // Fallthrough
-      
-      case TT_ASM: name[TT_ASM] = "`asm' token"; // Fallthrough
-      case TT_OPERATORKW: name[TT_OPERATORKW] = "`operator' token"; // Fallthrough
-      case TT_SIZEOF: name[TT_SIZEOF] = "`sizeof' token"; // Fallthrough
-      case TT_ISEMPTY: name[TT_ISEMPTY] = "`is_empty' token"; // Fallthrough
-      case TT_DECLTYPE: name[TT_DECLTYPE] = "`decltype' token"; // Fallthrough
-      case TT_TYPEID: name[TT_TYPEID] = "`typeid' token"; // Fallthrough
-      
-      case TT_ALIGNAS: name[TT_ALIGNAS] = "`alignas' token"; // Fallthrough
-      case TT_ALIGNOF: name[TT_ALIGNOF] = "`alignof' token"; // Fallthrough
-      case TT_AUTO: name[TT_AUTO] = "`autp' token"; // Fallthrough
-      case TT_CONSTEXPR: name[TT_CONSTEXPR] = "`constexpr' token"; // Fallthrough
-      case TT_NOEXCEPT: name[TT_NOEXCEPT] = "`noexcept' token"; // Fallthrough
-      case TT_STATIC_ASSERT: name[TT_STATIC_ASSERT] = "`static_assert' token"; // Fallthrough
-      
-      case TT_IDENTIFIER: name[TT_IDENTIFIER] = "identifier (\"%s\")"; // Fallthrough
-      case TT_DEFINITION: name[TT_DEFINITION] = "identifier (\"%s\")"; // Fallthrough
-      
-      case TT_TEMPLATE: name[TT_TEMPLATE] = "`template' token"; // Fallthrough
-      case TT_TYPENAME: name[TT_TYPENAME] = "`typename' token"; // Fallthrough
-      
-      case TT_TYPEDEF: name[TT_TYPEDEF] = "`typedef' token"; // Fallthrough
-      case TT_USING: name[TT_USING] = "`using' token"; // Fallthrough
-      
-      case TT_PUBLIC: name[TT_PUBLIC] = "`public' token"; // Fallthrough
-      case TT_PRIVATE: name[TT_PRIVATE] = "`private' token"; // Fallthrough
-      case TT_PROTECTED: name[TT_PROTECTED] = "`protected' token"; // Fallthrough
-      case TT_FRIEND: name[TT_FRIEND] = "`friend' token"; // Fallthrough
-      
-      case TT_COLON: name[TT_COLON] = "`:' token"; // Fallthrough
-      case TT_SCOPE: name[TT_SCOPE] = "`::' token"; // Fallthrough
-      case TT_MEMBER: name[TT_MEMBER] = "member specifier (class::*)"; // Fallthrough
-      
-      case TT_LEFTPARENTH: name[TT_LEFTPARENTH] = "'(' token"; // Fallthrough
-      case TT_RIGHTPARENTH: name[TT_RIGHTPARENTH] = "')' token"; // Fallthrough
-      case TT_LEFTBRACKET: name[TT_LEFTBRACKET] = "'[' token"; // Fallthrough
-      case TT_RIGHTBRACKET: name[TT_RIGHTBRACKET] = "']' token"; // Fallthrough
-      case TT_LEFTBRACE: name[TT_LEFTBRACE] = "'{' token"; // Fallthrough
-      case TT_RIGHTBRACE: name[TT_RIGHTBRACE] = "'}' token"; // Fallthrough
-      case TT_LESSTHAN: name[TT_LESSTHAN] = "'<' token"; // Fallthrough
-      case TT_GREATERTHAN: name[TT_GREATERTHAN] = "'>' token"; // Fallthrough
-      
-      case TT_PLUS: name[TT_PLUS] = "'+' operator"; // Fallthrough
-      case TT_MINUS: name[TT_MINUS] = "'-' operator"; // Fallthrough
-      case TT_STAR: name[TT_STAR] = "'*' operator"; // Fallthrough
-      case TT_SLASH: name[TT_SLASH] = "'/' operator"; // Fallthrough
-      case TT_MODULO: name[TT_MODULO] = "'%' operator"; // Fallthrough
-      case TT_EQUAL_TO: name[TT_EQUAL_TO] = "`==' operator"; // Fallthrough
-      case TT_NOT_EQUAL_TO: name[TT_NOT_EQUAL_TO] = "`!=' operator"; // Fallthrough
-      case TT_LESS_EQUAL: name[TT_LESS_EQUAL] = "`<=' operator"; // Fallthrough
-      case TT_GREATER_EQUAL: name[TT_GREATER_EQUAL] = "`>=' operator"; // Fallthrough
-      case TT_AMPERSAND: name[TT_AMPERSAND] = "'&' operator"; // Fallthrough
-      case TT_AMPERSANDS: name[TT_AMPERSANDS] = "`&&' operator"; // Fallthrough
-      case TT_PIPE: name[TT_PIPE] = "'|' operator"; // Fallthrough
-      case TT_PIPES: name[TT_PIPES] = "`||' operator"; // Fallthrough
-      case TT_CARET: name[TT_CARET] = "'^' operator"; // Fallthrough
-      case TT_INCREMENT: name[TT_INCREMENT] = "increment (`++') operator"; // Fallthrough
-      case TT_DECREMENT: name[TT_DECREMENT] = "decrement (`--') operator"; // Fallthrough
-      case TT_ARROW: name[TT_ARROW] = "`->' operator"; // Fallthrough
-      case TT_DOT: name[TT_DOT] = "`.' operator"; // Fallthrough
-      case TT_ARROW_STAR: name[TT_ARROW_STAR] = "`->*' operator"; // Fallthrough
-      case TT_DOT_STAR: name[TT_DOT_STAR] = "`.*' operator"; // Fallthrough
-      case TT_QUESTIONMARK: name[TT_QUESTIONMARK] = "'?' operator"; // Fallthrough
-      case TT_EQUAL: name[TT_EQUAL] = "`=' operator"; // Fallthrough
-      case TT_ADD_ASSIGN: name[TT_ADD_ASSIGN] = "`+=' operator"; // Fallthrough
-      case TT_SUBTRACT_ASSIGN: name[TT_SUBTRACT_ASSIGN] = "`-=' operator"; // Fallthrough
-      case TT_MULTIPLY_ASSIGN: name[TT_MULTIPLY_ASSIGN] = "`*=' operator"; // Fallthrough
-      case TT_DIVIDE_ASSIGN: name[TT_DIVIDE_ASSIGN] = "`/=' operator"; // Fallthrough
-      case TT_MODULO_ASSIGN: name[TT_MODULO_ASSIGN] = "`%=' operator"; // Fallthrough
-      case TT_LSHIFT_ASSIGN: name[TT_LSHIFT_ASSIGN] = "`<<=' operator"; // Fallthrough
-      case TT_RSHIFT_ASSIGN: name[TT_RSHIFT_ASSIGN] = "`>>=' operator"; // Fallthrough
-      case TT_AND_ASSIGN: name[TT_AND_ASSIGN] = "`&=' operator"; // Fallthrough
-      case TT_OR_ASSIGN: name[TT_OR_ASSIGN] = "`|=' operator"; // Fallthrough
-      case TT_XOR_ASSIGN: name[TT_XOR_ASSIGN] = "`^=' operator"; // Fallthrough
-      case TT_NEGATE_ASSIGN: name[TT_NEGATE_ASSIGN] = "`~=' operator"; // Fallthrough
-      case TT_LSHIFT: name[TT_LSHIFT] = "`<<' operator"; // Fallthrough
-      case TT_RSHIFT: name[TT_RSHIFT] = "`>>' operator"; // Fallthrough
-      case TT_NOT: name[TT_NOT] = "`!' operator"; // Fallthrough
-      case TT_TILDE: name[TT_TILDE] = "'~' token"; // Fallthrough
-      case TT_ELLIPSIS: name[TT_ELLIPSIS] = "`...' token"; // Fallthrough
-      
-      case TT_COMMA: name[TT_COMMA] = "',' token"; // Fallthrough
-      case TT_SEMICOLON: name[TT_SEMICOLON] = "';' token"; // Fallthrough
-      
-      case TT_STRINGLITERAL: name[TT_STRINGLITERAL] = "string literal"; // Fallthrough
-      case TT_CHARLITERAL: name[TT_CHARLITERAL] = "character literal"; // Fallthrough
-      case TT_DECLITERAL: name[TT_DECLITERAL] = "decimal literal"; // Fallthrough
-      case TT_HEXLITERAL: name[TT_HEXLITERAL] = "hexadecimal literal"; // Fallthrough
-      case TT_OCTLITERAL: name[TT_OCTLITERAL] = "octal literal"; // Fallthrough
-      case TT_BINLITERAL: name[TT_BINLITERAL] = "binary literal"; // Fallthrough
-      
-      case TTM_CONCAT:   name[TTM_CONCAT] = "`##' token"; // Fallthrough
-      case TTM_TOSTRING: name[TTM_TOSTRING] = "`#' token"; // Fallthrough
-      case TTM_COMMENT:  name[TTM_COMMENT] = "...comment(?)"; // Fallthrough
-      case TTM_NEWLINE:  name[TTM_NEWLINE] = "...newline(?)"; // Fallthrough
-      
-      case TT_NEW: name[TT_NEW] = "`new' keyword"; // Fallthrough
-      case TT_DELETE: name[TT_DELETE] = "`delete' keyword"; // Fallthrough
-      
-      case TT_CONST_CAST: name[TT_CONST_CAST] = "`const_cast' keyword"; // Fallthrough
-      case TT_STATIC_CAST: name[TT_STATIC_CAST] = "`static_cast' keyword"; // Fallthrough
-      case TT_DYNAMIC_CAST: name[TT_DYNAMIC_CAST] = "`dynamic_cast' keyword"; // Fallthrough
-      case TT_REINTERPRET_CAST: name[TT_REINTERPRET_CAST] = "`reinterpret_cast' keyword"; // Fallthrough
-      
-      case TT_ENDOFCODE: name[TT_ENDOFCODE] = "end of code";
-      #define handle_user_token(tname, desc) case tname: name[tname] = desc;
+      TKD(TT_INVALID,          "invalid token");
+
+      TKD(TT_DECLARATOR,       "declarator");
+      TKD(TT_DECFLAG,          "`%f' declarator");
+      TKD(TT_CLASS,            "`class' token");
+      TKD(TT_STRUCT,           "`struct' token");
+      TKD(TT_ENUM,             "`enum' token");
+      TKD(TT_UNION,            "`union' token");
+      TKD(TT_NAMESPACE,        "`namespace' token");
+      TKD(TT_EXTERN,           "`extern' token");
+      TKD(TT_INLINE,           "`inline' token");
+
+      TKD(TT_ASM,              "`asm' token");
+      TKD(TT_OPERATORKW,       "`operator' token");
+      TKD(TT_SIZEOF,           "`sizeof' token");
+      TKD(TT_ISEMPTY,          "`is_empty' token");
+      TKD(TT_DECLTYPE,         "`decltype' token");
+      TKD(TT_TYPEID,           "`typeid' token");
+
+      TKD(TT_ALIGNAS,          "`alignas' token");
+      TKD(TT_ALIGNOF,          "`alignof' token");
+      TKD(TT_AUTO,             "`autp' token");
+      TKD(TT_CONSTEXPR,        "`constexpr' token");
+      TKD(TT_NOEXCEPT,         "`noexcept' token");
+
+      TKD(TT_IDENTIFIER,       "identifier (\"%s\")");
+      TKD(TT_DEFINITION,       "identifier (\"%s\")");
+
+      TKD(TT_TEMPLATE,         "`template' token");
+      TKD(TT_TYPENAME,         "`typename' token");
+
+      TKD(TT_TYPEDEF,          "`typedef' token");
+      TKD(TT_USING,            "`using' token");
+
+      TKD(TT_PUBLIC,           "`public' token");
+      TKD(TT_PRIVATE,          "`private' token");
+      TKD(TT_PROTECTED,        "`protected' token");
+      TKD(TT_FRIEND,           "`friend' token");
+
+      TKD(TT_COLON,            "`:' token");
+      TKD(TT_SCOPE,            "`::' token");
+      TKD(TT_MEMBER,           "`::*' token");
+
+      TKD(TT_LEFTPARENTH,      "'(' token");
+      TKD(TT_RIGHTPARENTH,     "')' token");
+      TKD(TT_LEFTBRACKET,      "'[' token");
+      TKD(TT_RIGHTBRACKET,     "']' token");
+      TKD(TT_LEFTBRACE,        "'{' token");
+      TKD(TT_RIGHTBRACE,       "'}' token");
+      TKD(TT_LESSTHAN,         "'<' token");
+      TKD(TT_GREATERTHAN,      "'>' token");
+
+      TKD(TT_PLUS,              "'+' operator");
+      TKD(TT_MINUS,             "'-' operator");
+      TKD(TT_STAR,              "'*' operator");
+      TKD(TT_SLASH,             "'/' operator");
+      TKD(TT_MODULO,            "'%' operator");
+      TKD(TT_EQUAL_TO,         "`==' operator");
+      TKD(TT_NOT_EQUAL_TO,     "`!=' operator");
+      TKD(TT_LESS_EQUAL,       "`<=' operator");
+      TKD(TT_GREATER_EQUAL,    "`>=' operator");
+      TKD(TT_AMPERSAND,         "'&' operator");
+      TKD(TT_AMPERSANDS,       "`&&' operator");
+      TKD(TT_PIPE,              "'|' operator");
+      TKD(TT_PIPES,            "`||' operator");
+      TKD(TT_CARET,             "'^' operator");
+      TKD(TT_INCREMENT,        "`++' operator");
+      TKD(TT_DECREMENT,        "`--' operator");
+      TKD(TT_ARROW,            "`->' operator");
+      TKD(TT_DOT,               "`.' operator");
+      TKD(TT_ARROW_STAR,      "`->*' operator");
+      TKD(TT_DOT_STAR,         "`.*' operator");
+      TKD(TT_QUESTIONMARK,      "'?' operator");
+      TKD(TT_EQUAL,             "`=' operator");
+      TKD(TT_ADD_ASSIGN,       "`+=' operator");
+      TKD(TT_SUBTRACT_ASSIGN,  "`-=' operator");
+      TKD(TT_MULTIPLY_ASSIGN,  "`*=' operator");
+      TKD(TT_DIVIDE_ASSIGN,    "`/=' operator");
+      TKD(TT_MODULO_ASSIGN,    "`%=' operator");
+      TKD(TT_LSHIFT_ASSIGN,   "`<<=' operator");
+      TKD(TT_RSHIFT_ASSIGN,   "`>>=' operator");
+      TKD(TT_AND_ASSIGN,       "`&=' operator");
+      TKD(TT_OR_ASSIGN,        "`|=' operator");
+      TKD(TT_XOR_ASSIGN,       "`^=' operator");
+      TKD(TT_NEGATE_ASSIGN,    "`~=' operator");
+      TKD(TT_LSHIFT,           "`<<' operator");
+      TKD(TT_RSHIFT,           "`>>' operator");
+      TKD(TT_NOT,               "`!' operator");
+      TKD(TT_TILDE,             "'~' token");
+      TKD(TT_ELLIPSIS,        "`...' token");
+
+      TKD(TT_COMMA,            "',' token");
+      TKD(TT_SEMICOLON,        "';' token");
+
+      TKD(TT_STRINGLITERAL,    "string literal");
+      TKD(TT_CHARLITERAL,      "character literal");
+      TKD(TT_DECLITERAL,       "decimal literal");
+      TKD(TT_HEXLITERAL,       "hexadecimal literal");
+      TKD(TT_OCTLITERAL,       "octal literal");
+      TKD(TT_BINLITERAL,       "binary literal");
+
+      TKD(TTM_CONCAT,          "`##' token");
+      TKD(TTM_TOSTRING,        "`#' token");
+      TKD(TTM_COMMENT,         "...comment(?)");
+      TKD(TTM_NEWLINE,         "...newline(?)");
+
+      TKD(TT_NEW,              "`new' keyword");
+      TKD(TT_DELETE,           "`delete' keyword");
+
+      TKD(TT_CONST_CAST,       "`const_cast' keyword");
+      TKD(TT_STATIC_CAST,      "`static_cast' keyword");
+      TKD(TT_DYNAMIC_CAST,     "`dynamic_cast' keyword");
+      TKD(TT_REINTERPRET_CAST, "`reinterpret_cast' keyword");
+      TKD(TT_STATIC_ASSERT,    "`static_assert' keyword");
+
+      TKD(TT_ENDOFCODE, "end of code");
+      #define handle_user_token(tname, desc) TKD(tname, desc);
       #include <User/token_cases.h>
     }
   }
 } token_info;
 
-#include <cstdio>
-void token_t::report_errorf(error_handler *herr, std::string error) const
-{
-  string fn; // Default values for non-existing info members
-  int l = -1, p = -1;
-  
-  // Overwrite those which exist
-  token_basics(p = -1,
-    fn = (const char*)file,
-    l = linenum,
-    p = pos
-  );
-  
-  string str = to_string();
-  size_t f = error.find("%s");
-  while (f != string::npos) {
-    error.replace(f, 2, str);
-    f = error.find("%s");
+namespace std {
+  string to_string(jdi::TOKEN_TYPE type) {
+    return token_info.spelling[type];
   }
-  
-  #ifdef DEBUG_MODE
-    if (herr)
-  #endif
-  herr->error(error, fn, l, p);
-  #ifdef DEBUG_MODE
-    else {
-      perror("NULL ERROR HANDLER PASSED TO REPORT METHOD\n");
-      perror((error + "\n").c_str());
-    }
-  #endif
+  string to_string(const jdi::token_t &token) {
+    return token.to_string();
+  }
+}
+
+#include <cstdio>
+
+void token_t::report_error(error_handler *herr, std::string error) const {
+  if (herr) {
+    herr->error(error, get_filename(), linenum, pos);
+  } else {
+    perror("NULL ERROR HANDLER PASSED TO REPORT METHOD\n");
+    perror((error + "\n").c_str());
+  }
+}
+
+void token_t::report_errorf(error_handler *herr, std::string error) const {
+  string str = to_string();
+  for (size_t f = 0; (f = error.find("%s", f)) != string::npos; f += str.length())
+    error.replace(f, 2, str);
+  report_error(herr, error);
 }
 std::string token_t::to_string() const {
   size_t f;
-  string str = token_info.name[type];
-  f = str.find("%s");
-  while (f != string::npos) {
+  string str = token_info.description[type];
+  for (f = 0; (f = str.find("%s", f)) != string::npos; f += content.len)
     str.replace(f, 2, string((const char*) content.str, content.len));
-    f = str.find("%s");
-  }
+  for (f = 0; (f = str.find("%s", f)) != string::npos; f += content.len)
+    str.replace(f, 2, string((const char*) content.str, content.len));
   return str;
 }
-void token_t::report_warning(error_handler *herr, std::string error) const
-{
-  string fn; // Default values for non-existing info members
-  int l = -1, p = -1;
-  
-  // Overwrite those which exist
-  token_basics(p = -1,
-    fn = (const char*)file,
-    l = linenum,
-    p = pos
-  );
-  
-  herr->warning(error, fn, l, p);
+void token_t::report_warning(error_handler *herr, std::string error) const {
+  if (herr) {
+    herr->warning(error, get_filename(), linenum, pos);
+  } else {
+    perror("NULL ERROR HANDLER PASSED TO WARNING METHOD\n");
+    perror((error + "\n").c_str());
+  }
 }
 
 std::string token_t::get_name(TOKEN_TYPE tt) {
   size_t f;
-  string str = token_info.name[tt];
+  string str = token_info.description[tt];
   f = str.find("%s");
   while (f != string::npos) {
     str.replace(f, 2, "(content)");
     f = str.find("%s");
   }
   return str;
+}
+
+void token_t::validate() const {
+  if (file.empty() && type != TT_ENDOFCODE) throw std::range_error("You bastard!");
+  if (content.toString().empty() && type != TT_ENDOFCODE && type != TTM_NEWLINE)
+    throw std::range_error("You slut!");
 }
 
 void token_t::content::copy(const content &other) {

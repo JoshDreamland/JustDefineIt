@@ -36,7 +36,10 @@ namespace jdi {
     /// Construct from an error_handler and a token
     error_context(error_handler *h, const jdi::token_t &tk): herr(h), token(tk) {}
     /// Construct from an error_handler and line info
-    error_context(error_handler *h, string filename, int linenum, int pos): herr(h), fname(filename), token(token_basics(jdi::TT_INVALID, fname.c_str(), linenum, pos)) {}
+    error_context(error_handler *h, string filename, int linenum, int pos):
+        herr(h), fname(filename),
+        token(jdi::TT_INVALID, fname.c_str(), linenum, pos,
+              "<Error context placeholder token>") {}
     /// Report an error
     inline void report_error(string err) const { token.report_error(herr, err); }
     /// Report a warning

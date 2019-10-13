@@ -24,30 +24,31 @@
 **/
 
 #include "lex_cpp.h"
+
+#include <API/AST.h>
+#include <API/compile_settings.h>
+#include <API/context.h>
 #include <General/debug_macros.h>
 #include <General/parse_basics.h>
 #include <General/debug_macros.h>
-#include <System/builtins.h>
 #include <Parser/context_parser.h>
-#include <API/context.h>
-#include <API/AST.h>
+#include <System/builtins.h>
+
 #include <cstring>
 #include <csignal>
 #include <filesystem>
 
-#include <API/compile_settings.h>
 
 using namespace jdi;
 using namespace std;
 
-/// Returns whether s1 begins with s2, followed by whitespace.
-// static inline bool strbw(const char* s1, const char (&s2)[3]) { return *s1 == *s2 and s1[1] == s2[1] and (!is_letterd(s1[2])); }
-// static inline bool strbw(const char* s1, const char (&s2)[4]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and (!is_letterd(s1[3])); }
-// static inline bool strbw(const char* s1, const char (&s2)[5]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and (!is_letterd(s1[4])); }
-// static inline bool strbw(const char* s1, const char (&s2)[6]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and (!is_letterd(s1[5])); }
-// static inline bool strbw(const char* s1, const char (&s2)[7]) { return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and s1[5] == s2[5] and (!is_letterd(s1[6])); }
-// static inline bool strbw(const char* s1, const char (&s2)[11]){ return *s1 == *s2 and s1[1] == s2[1] and s1[2] == s2[2] and s1[3] == s2[3] and s1[4] == s2[4] and s1[5] == s2[5] and s1[6] == s2[6] and s1[7] == s2[7] and s1[8] == s2[8] and s1[9] == s2[9] and (!is_letterd(s1[10])); }
+/// Returns true if the given character is not a word character (/\w/).
 static inline bool strbw(char s) { return !is_letterd(s); }
+
+static inline bool is_numeric(string_view sv) {
+  for (char c : sv) if (c < '0' || c > '9') return false;
+  return sv.size();
+}
 
 static inline void skip_comment(llreader &cfile) {
   if (ALLOW_MULTILINE_COMMENTS) {
@@ -134,7 +135,7 @@ static inline StringPrefixFlags parse_string_prefix(string_view pre) {
 
 void lexer::enter_macro(const token_t &otk, const macro_type &macro) {
   if (macro.value.empty()) return;
-  open_buffers.emplace_back(macro.name, otk, &macro.value);
+  push_buffer({macro.name, otk, &macro.value});
 }
 
 static inline void lex_error(error_handler *herr, const llreader &cfile, string_view msg) {
@@ -142,9 +143,6 @@ static inline void lex_error(error_handler *herr, const llreader &cfile, string_
 }
 
 static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
-  static int n = 0;
-  if (++n == 3)
-    cout << "Hi." << endl;
   while (cfile.next() != EOF && cfile.at() != qc) {
     if (cfile.at() == '\\') {
       if (cfile.next() == EOF) {
@@ -153,11 +151,10 @@ static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
       } else if (cfile.at() == '\n') {
         ++cfile.lnum, cfile.lpos = cfile.pos;
       } else if (cfile.at() == '\r') {
-        if (cfile.next() != '\n') --cfile.pos;
+        cfile.take("\n");
         ++cfile.lnum, cfile.lpos = cfile.pos; 
       }
-    }
-    else if (cfile.at() == '\n' or cfile.at() == '\r') {
+    } else if (cfile.at() == '\n' or cfile.at() == '\r') {
       lex_error(herr, cfile, "Unterminated string literal");
       return false;
     }
@@ -205,7 +202,7 @@ bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) 
   int too_many_args = 0;
   for (int nestcnt = 1;;) {
     token_t tok = read_token(cfile, herr);
-    if (cfile.eof() or cfile.at() != ')') {
+    if (cfile.eof()) {
       lex_error(herr, cfile, "Unterminated parameters to macro function");
       return false;
     }
@@ -222,7 +219,7 @@ bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) 
         ++too_many_args;
       }
     }
-    
+    res.back().push_back(tok);
   }
   if (too_many_args) {
     herr->error(cfile, "Too many arguments to macro function `%s`; expected %s but got %s", 
@@ -255,13 +252,15 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
   vector<vector<token_t>> params;
   if (!parse_macro_params(mf, &params)) return false;
   vector<token_t> tokens = mf.substitute_and_unroll(params, herr);
-  open_buffers.emplace_back(mf.name, otk, std::move(tokens));
+  push_buffer(mf.name, otk, std::move(tokens));
   return true;
 }
 
 string lexer::read_preprocessor_args() {
   for (;;) {
-    while (cfile.at() == ' ' or cfile.at() == '\t') if (!cfile.advance()) return "";
+    while (cfile.at() == ' ' or cfile.at() == '\t') {
+      if (!cfile.advance()) return "";
+    }
     if (cfile.at() == '/') {
       if (cfile.next() == '/') { skip_comment(cfile); return ""; }
       if (cfile.at() == '*') { skip_multiline_comment(cfile); continue; }
@@ -311,24 +310,32 @@ string lexer::read_preprocessor_args() {
   return res;
 }
 
+vector<string> debug_list;
+class DebugSeer {
+ public:
+  DebugSeer(const token_vector &toks) {
+    string enqueue;
+    for (const token_t &tok : toks) enqueue += tok.to_string() + " ";
+    debug_list.push_back(enqueue);
+  }
+  DebugSeer(string_view str) {
+    debug_list.emplace_back(str);
+  }
+  ~DebugSeer() {
+    debug_list.pop_back();
+  }
+};
+
 #ifdef DEBUG_MODE
-/// This function will be passed signals
+/// This function will be passed signals and will respond to them appropriately.
 static void donothing(int) {}
 #endif
+
+#define E_MATCHED_IF "matching #if already has an #else"
 
 // Optional AST rendering
 #include <General/debug_macros.h>
 
-/**
-  @section Implementation
-  
-  For the preprocessor's implementation, we switch gears a bit. The preprocessor needs
-  to be the fastest aspect of the entire parser, as directives are everywhere. As such,
-  it operates on a hacked-up switch statement using a whole heap of gotos, designed to
-  support a specific set of macros. Inserting a new directive into this switch is still
-  simple enough, but unlike other aspects of the parser, is not as trivial as a single
-  function call. Don't gripe; originally I was going to use a perfect hash.
-**/
 void lexer::handle_preprocessor() {
   top:
   bool variadic = false; // Whether this function is variadic
@@ -438,10 +445,13 @@ void lexer::handle_preprocessor() {
             i += 2; while (is_useless(argstr[++i]));
             variadic = true;
             if (argstr[i] == ')') break;
-            herr->error(cfile, "Expected closing parenthesis at this point; further parameters not allowed following variadic");
+            herr->error(cfile, "Expected closing parenthesis at this point; "
+                        "further parameters not allowed following variadic");
           }
-          else
-            herr->error(cfile, "Expected comma or closing parenthesis at this point");
+          else {
+            herr->error(cfile,
+                        "Expected comma or closing parenthesis at this point");
+          }
         }
         
         if (!mins.second) { // If no insertion was made; ie, the macro existed already.
@@ -450,13 +460,13 @@ void lexer::handle_preprocessor() {
           mins.first->second = nullptr;
         }
         mins.first->second = std::make_shared<const macro_type>(
-            mins.first->first, std::move(paramlist),
-            std::move(tokenize(argstrs.substr(++i), herr)),
-            variadic);
+            mins.first->first, std::move(paramlist), variadic,
+            std::move(tokenize(cfile.name, argstrs.substr(++i), herr)),
+            herr);
       } else {
         while (is_useless(argstr[i])) ++i;
         mins.first->second = std::make_shared<const macro_type>(
-            mins.first->first, tokenize(argstrs.substr(i), herr));
+            mins.first->first, tokenize(cfile.name, argstrs.substr(i), herr));
       }
     } break;
     case_error: {
@@ -469,10 +479,14 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elif directive; no matching #if");
         else {
-          if (conditionals.back().is_true)
-            conditionals.back().is_true = conditionals.back().can_be_true = false;
-          else {
-            if (conditionals.back().can_be_true) {
+          if (conditionals.back().seen_else) {
+            herr->error(cfile, "Unexpected #elif directive: " E_MATCHED_IF);
+          }
+          if (conditionals.back().is_true) {
+            conditionals.back().is_true = false;
+            conditionals.back().parents_true = false;
+          } else {
+            if (conditionals.back().parents_true) {
               conditionals.pop_back();
               goto case_if;
             }
@@ -483,10 +497,14 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elifdef directive; no matching #if");
         else {
-          if (conditionals.back().is_true)
-            conditionals.back().is_true = conditionals.back().can_be_true = false;
-          else {
-            if (conditionals.back().can_be_true) {
+          if (conditionals.back().seen_else) {
+            herr->error(cfile, "Unexpected #elifdef directive: " E_MATCHED_IF);
+          }
+          if (conditionals.back().is_true) {
+            conditionals.back().is_true = false;
+            conditionals.back().parents_true = false;
+          } else {
+            if (conditionals.back().parents_true) {
               conditionals.pop_back();
               goto case_ifdef;
             }
@@ -497,10 +515,14 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elifndef directive; no matching #if");
         else {
-          if (conditionals.back().is_true)
-            conditionals.back().is_true = conditionals.back().can_be_true = false;
-          else {
-            if (conditionals.back().can_be_true) {
+          if (conditionals.back().seen_else) {
+            herr->error(cfile, "Unexpected #elifdef directive: " E_MATCHED_IF);
+          }
+          if (conditionals.back().is_true) {
+            conditionals.back().is_true = false;
+            conditionals.back().parents_true = false;
+          } else {
+            if (conditionals.back().parents_true) {
               conditionals.pop_back();
               goto case_ifndef;
             }
@@ -511,10 +533,9 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #else directive; no matching #if");
         else {
-          if (conditionals.back().is_true)
-            conditionals.back().is_true = conditionals.back().can_be_true = false;
-          else
-            conditionals.back().is_true = conditionals.back().can_be_true;
+          conditionals.back().is_true =
+              conditionals.back().parents_true && !conditionals.back().is_true;
+          conditionals.back().seen_else = true;
         }
       break;
     case_endif:
@@ -527,11 +548,11 @@ void lexer::handle_preprocessor() {
         if (conditionals.empty() or conditionals.back().is_true) {
           token_t tok;
           token_vector toks;
-          while ((tok = get_token()).type != TT_ENDOFCODE
-                              && tok.type != TTM_NEWLINE) {
+          while (tok = read_token(cfile, herr),
+                 tok.type != TT_ENDOFCODE && tok.type != TTM_NEWLINE) {
             toks.push_back(tok);
           }
-          lexer l(std::move(toks), herr);
+          lexer l(std::move(toks), *this);
           AST a = parse_expression(&l);
           render_ast(a, "if_directives");
           if (!a.eval({herr, tok}))
@@ -606,7 +627,8 @@ void lexer::handle_preprocessor() {
           if (fnfind[i] == match) { fnfind.erase(i); break; }
         
         if (files.size() > 9000) {
-          herr->error(cfile, "Nested include count is OVER NINE THOUSAAAAAAAAND. Not including another.");
+          herr->error(cfile, "Nested include count is OVER NINE THOUSAAAAAAND. "
+                             "Not including another.");
           break;
         }
         
@@ -630,8 +652,10 @@ void lexer::handle_preprocessor() {
         if (!incfile.is_open()) {
           herr->error(cfile, "Could not find " + fnfind.substr(1));
           if (chklocal) cerr << "  Checked " << path << endl;
-          for (size_t i = 0; !incfile.is_open() and i < builtin->search_dir_count(); ++i)
+          for (size_t i = 0; !incfile.is_open()
+                             && i < builtin->search_dir_count(); ++i) {
             cerr << "  Checked " << builtin->search_dir(i) << endl;
+          }
           break;
         }
         
@@ -640,6 +664,7 @@ void lexer::handle_preprocessor() {
         cfile = std::move(incfile);
       } break;
     case_line:
+      // TODO: Handle line directives.
       break;
     case_pragma:
         #ifdef DEBUG_MODE
@@ -697,7 +722,12 @@ void lexer::handle_preprocessor() {
   
   failout:
     while (is_letterd(cfile.at()) && cfile.advance());
-    herr->error(cfile, "Invalid preprocessor directive `%s'", cfile.slice(pspos));
+    string_view directive = cfile.slice(pspos);
+    if (is_numeric(directive)) {
+      // TODO: Handle line directives.
+    } else {
+      herr->error(cfile, "Invalid preprocessor directive `%s'", directive);
+    }
     if (!cfile.eof())
       while (cfile.at() != '\n' && cfile.at() != '\r' && cfile.advance());
 }
@@ -707,6 +737,31 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
     static int number_of_times_GDB_has_dropped_its_ass = 0;
     ++number_of_times_GDB_has_dropped_its_ass;
   #endif
+  
+  if (cfile.pos < cfile.length) { // Sanity check the stupid reader.
+    if (cfile.pos < cfile.validated_pos) {
+      herr->error(cfile, "Someone rewound the file.");
+      cfile.validated_lnum = cfile.validated_lpos = cfile.validated_pos = 0;
+    }
+    for (; cfile.validated_pos < cfile.pos; ++cfile.validated_pos) {
+      if (cfile[cfile.validated_pos] == '\n' ||
+              (cfile[cfile.validated_pos] == '\r' &&
+               cfile.at(cfile.validated_pos + 1) != '\n')) {
+        ++cfile.validated_lnum;
+        cfile.validated_lpos = cfile.validated_pos + 1;
+      }
+    }
+    if (cfile.lnum != cfile.validated_lnum ||
+        cfile.lpos != cfile.validated_lpos) {
+      herr->error(
+          cfile, "At line " + to_string(cfile.validated_lnum) + ", position " +
+                  to_string(cfile.pos - cfile.validated_lpos) + ", the reader "
+                  "believes it is at line " + to_string(cfile.lnum) +
+                  ", position " + to_string(cfile.pos - cfile.lpos) + "...");
+      cfile.lnum = cfile.validated_lnum;
+      cfile.lpos = cfile.validated_lpos;
+    }
+  }
   
   // Dear C++ committee: do you know what would be exponentially more awesome
   // than this line? Just declaring a normal fucking function, please and thanks
@@ -727,9 +782,9 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
       if (!cfile.advance()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
     }
     
-    //==============================================================================================
-    //====: Check for and handle comments. :========================================================
-    //==============================================================================================
+    //==========================================================================
+    //====: Check for and handle comments. :====================================
+    //==========================================================================
     
     const size_t spos = cfile.tell();
     switch (cfile.getc()) {
@@ -744,13 +799,14 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
     }
     
     default:
-    //==============================================================================================
-    //====: Not at a comment. See if we're at an identifier. :======================================
-    //==============================================================================================
+    //==========================================================================
+    //====: Not at a comment. See if we're at an identifier. :==================
+    //==========================================================================
     
-    if (is_letter(cfile[spos])) {  // Check if we're at an identifier or keyword.
+    if (is_letter(cfile[spos])) {
       while (!cfile.eof() && is_letterd(cfile.at())) cfile.advance();
-      if (cfile.tell() - spos <= 2 && (cfile.at() == '\'' || cfile.at() == '"')) {
+      if (cfile.tell() - spos <= 2 &&
+          (cfile.at() == '\'' || cfile.at() == '"')) {
         auto prefix = parse_string_prefix(cfile.slice(spos));
         if (prefix.valid) {
           if (prefix.raw) {
@@ -766,19 +822,21 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
     
     goto unknown;
     
-    //==============================================================================================
-    //====: Not at an identifier. Maybe at a number? :==============================================
-    //==============================================================================================
+    //==========================================================================
+    //====: Not at an identifier. Maybe at a number? :==========================
+    //==========================================================================
     
     case '0': { // Check if the number is hexadecimal, binary, or octal.
       // TODO: Handle apostrophes.
-      if (cfile.at() == 'x' || cfile.at() == 'X') { // Check if the number is hexadecimal.
+      // Check if the number is hexadecimal.
+      if (cfile.at() == 'x' || cfile.at() == 'X') {
         // Here, it is hexadecimal.
         while (cfile.advance() && is_hexdigit(cfile.at()));
         skip_integer_suffix(cfile);
         return mktok(TT_HEXLITERAL, spos, cfile.tell() - spos);
       }
-      if (cfile.at() == 'b' || cfile.at() == 'B') { // Check if the number is Binary.
+      // Check if the number is Binary.
+      if (cfile.at() == 'b' || cfile.at() == 'B') {
         // In this case, it's binary
         while (cfile.advance() && is_hexdigit(cfile.at()));
         skip_integer_suffix(cfile);
@@ -806,16 +864,18 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
         while (cfile.advance() and is_digit(cfile.at()));
       if (cfile.at() == 'e' or cfile.at() == 'E') { // Accept exponents
         if (cfile.next() == '-') cfile.advance();
-        if (cfile.eof()) herr->error(cfile, "Numeric literal truncated and end of file.");
+        if (cfile.eof()) {
+          herr->error(cfile, "Numeric literal truncated and end of file.");
+        }
         else while (is_digit(cfile.at()) && cfile.advance());
       }
       skip_integer_suffix(cfile);
       return mktok(TT_DECLITERAL, spos, cfile.tell()  -spos);
     }
     
-    //==============================================================================================
-    //====: Not at a number. Find out where we are. :===============================================
-    //==============================================================================================
+    //==========================================================================
+    //====: Not at a number. Find out where we are. :===========================
+    //==========================================================================
     
       case ';':
         return mktok(TT_SEMICOLON, spos, 1);
@@ -966,19 +1026,24 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
         continue;
       
       case '"': {
-        skip_string(cfile, '"', herr);
+        if (!cfile.take('"')) skip_string(cfile, '"', herr);
         return mktok(TT_STRINGLITERAL, spos, cfile.tell() - spos);
       }
       
       case '\'': {
-        skip_string(cfile, '\'', herr);
+        if (cfile.at() == '\'') {
+          herr->error(cfile, "Zero-length character literal");
+        } else {
+          skip_string(cfile, '\'', herr);
+        }
         return mktok(TT_CHARLITERAL, spos, cfile.tell() - spos);
       }
       
       unknown: {
         char errbuf[320];
-        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'", (int)cfile[spos], cfile[spos]);
-        herr->error(errbuf);
+        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'",
+                (int)cfile[spos], cfile[spos]);
+        herr->error(cfile, errbuf);
         return mktok(TT_INVALID, spos, 1);
       }
     }
@@ -988,10 +1053,9 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
   return mktok(TT_INVALID, cfile.tell(), 0);
 }
 
-token_vector jdi::tokenize(std::string_view str, error_handler *herr) {
+token_vector jdi::tokenize(string fname, string_view str, error_handler *herr) {
   token_vector res;
-  llreader read;
-  read.encapsulate(str);
+  llreader read(fname, str, false);
   for (token_t tk = read_token(read, herr); tk.type != TT_ENDOFCODE;
                tk = read_token(read, herr))
     res.push_back(tk);
@@ -1022,11 +1086,11 @@ bool lexer::handle_macro(token_t &identifier) {
     }
   }
   
-  keyword_map::iterator kwit = keywords.find(fn);
-  if (kwit != keywords.end()) {
+  keyword_map::iterator kwit = builtin->keywords.find(fn);
+  if (kwit != builtin->keywords.end()) {
     if (kwit->second == TT_INVALID) {
-      mi = kludge_map.find(fn);
-      if (mi == kludge_map.end()) {
+      mi = builtin->kludge_map.find(fn);
+      if (mi == builtin->kludge_map.end()) {
         cerr << "SYSTEM ERROR! KEYWORD `" << fn
              << "' IS DEFINED AS INVALID" << endl;
         return false;
@@ -1043,6 +1107,25 @@ bool lexer::handle_macro(token_t &identifier) {
     return false;
   }
   
+  translate_identifier(identifier);
+  return false;
+}
+
+bool lexer::translate_identifier(token_t &identifier) {
+  if (identifier.type != TT_IDENTIFIER) return false;
+  string fn = identifier.content.toString();
+  keyword_map::iterator kwit = builtin->keywords.find(fn);
+  if (kwit != builtin->keywords.end()) {
+    if (kwit->second == TT_INVALID) {
+      // TODO(CXX11): Delete the kludge map, then delete this.
+      cerr << "SYSTEM ERROR! KEYWORD `" << fn
+           << "' SHOULD HAVE BEEN HANDLED IN KLUDGE MAP" << endl;
+      return false;
+    }
+    identifier.type = kwit->second;
+    return false;
+  }
+  
   tf_iter tfit = builtin_declarators.find(fn);
   if (tfit != builtin_declarators.end()) {
     if (tfit->second->usage  & UF_PRIMITIVE) {
@@ -1050,7 +1133,7 @@ bool lexer::handle_macro(token_t &identifier) {
       identifier.def = tfit->second->def;
     } else {
       identifier.type = TT_DECFLAG;
-      identifier.def = (definition*)tfit->second;
+      identifier.tflag = tfit->second;
     }
     return false;
   }
@@ -1065,9 +1148,13 @@ token_t lexer::preprocess_and_read_token() {
         pop_buffer();
         continue;
       }
-      return (*buffered_tokens)[buffer_pos++];
+      if (open_buffers.back().is_rewind) {
+        return (*buffered_tokens)[buffer_pos++];
+      }
+      res = (*buffered_tokens)[buffer_pos++];
+      if (res.type == TT_IDENTIFIER && handle_macro(res)) continue;
+      return res;
     }
-    
     do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
     if (res.type == TT_IDENTIFIER) {
       if (handle_macro(res)) continue;
@@ -1109,7 +1196,7 @@ token_t lexer::get_token_in_scope(jdi::definition_scope *scope) {
   return res;
 }
 
-void lexer::push_buffer(token_vector &&buf) {
+void lexer::push_buffer(OpenBuffer &&buf) {
   assert(open_buffers.empty() == !buffered_tokens);
   if (buffered_tokens) {
     assert(open_buffers.empty() == !buffered_tokens);
@@ -1118,6 +1205,11 @@ void lexer::push_buffer(token_vector &&buf) {
   open_buffers.emplace_back(std::move(buf));
   buffered_tokens = &open_buffers.back().tokens;
   buffer_pos = 0;
+}
+
+void lexer::push_rewind_buffer(OpenBuffer &&buf) {
+  push_buffer(std::move(buf));
+  open_buffers.back().is_rewind = true;
 }
 
 void lexer::pop_buffer() {
@@ -1168,96 +1260,26 @@ bool lexer::pop_file() {
   return false;
 }
 
-macro_map lexer::kludge_map;
-lexer::keyword_map lexer::keywords;
-
 lexer::lexer(macro_map &pmacros, error_handler *err):
-    herr(err), macros(pmacros) {
-  if (keywords.empty()) {
-    keywords["asm"] = TT_ASM;
-    keywords["__asm"] = TT_ASM;
-    keywords["__asm__"] = TT_ASM;
-    keywords["class"] = TT_CLASS;
-    keywords["decltype"] = TT_DECLTYPE;
-    keywords["typeid"] = TT_TYPEID;
-    keywords["enum"] = TT_ENUM;
-    keywords["extern"] = TT_EXTERN;
-    keywords["namespace"] = TT_NAMESPACE;
-    keywords["operator"] = TT_OPERATORKW;
-    keywords["private"] = TT_PRIVATE;
-    keywords["protected"] = TT_PROTECTED;
-    keywords["public"] = TT_PUBLIC;
-    keywords["friend"] = TT_FRIEND;
-    keywords["sizeof"] = TT_SIZEOF;
-    keywords["__is_empty"] = TT_ISEMPTY;
-    keywords["__is_pod"] = TT_ISEMPTY; // FIXME: yeah, this is a hack
-    keywords["struct"] = TT_STRUCT;
-    keywords["template"] = TT_TEMPLATE;
-    keywords["typedef"] = TT_TYPEDEF;
-    keywords["typename"] = TT_TYPENAME;
-    keywords["union"] = TT_UNION;
-    keywords["using"] = TT_USING;
-    keywords["new"] = TT_NEW;
-    keywords["delete"] = TT_DELETE;
-    
-    keywords["const_cast"] = TT_CONST_CAST;
-    keywords["static_cast"] = TT_STATIC_CAST;
-    keywords["dynamic_cast"] = TT_DYNAMIC_CAST;
-    keywords["reinterpret_cast"] = TT_REINTERPRET_CAST;
-    
-    keywords["auto"] = TT_AUTO;
-    keywords["alignas"] = TT_ALIGNAS;
-    keywords["alignof"] = TT_ALIGNOF;
-    keywords["constexpr"] = TT_CONSTEXPR;
-    keywords["noexcept"] = TT_NOEXCEPT;
-    keywords["static_assert"] = TT_STATIC_ASSERT;
-    
-    // GNU Extensions
-    keywords["__attribute__"] = TT_INVALID;
-    keywords["__extension__"] = TT_INVALID;
-    keywords["__typeof__"] = TT_INVALID;
-    keywords["__typeof"] = TT_INVALID;
-   // keywords["__restrict"] = TT_INVALID;
-    
-    // MinGW Fuckery
-    keywords["__MINGW_IMPORT"] = TT_INVALID;
-    
-    // C++ Extensions
-    keywords["false"] = TT_INVALID;
-    keywords["true"] = TT_INVALID;
-    
-    string x(1,'x');
-    kludge_map.clear();
-    context::global_macros().swap(kludge_map);
-    builtin->add_macro_func("__attribute__", x, string(), false);
-    builtin->add_macro_func("__typeof__", x, string("int"), false);
-    builtin->add_macro_func("__typeof", x, string("int"), false);
-    builtin->add_macro("__extension__", string());
-    builtin->add_macro("__MINGW_IMPORT", string());
-    builtin->add_macro("false", string(1,'0'));
-    builtin->add_macro("true", string(1,'1'));
-    context::global_macros().swap(kludge_map);
-  }
-}
+    herr(err), macros(pmacros), builtin(&builtin_context()) {}
 
 lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
     lexer(pmacros, err) {
   cfile.consume(input);
 }
 
-static macro_map no_macros;
-lexer::lexer(token_vector &&tokens, error_handler *err):
-    lexer(no_macros, err) {
+// static macro_map no_macros;
+// lexer::lexer(token_vector &&tokens, error_handler *err): lexer(no_macros, err) {
+//   push_buffer(std::move(tokens));
+// }
+lexer::lexer(token_vector &&tokens, const lexer &other):
+    lexer(other.macros, other.herr) {
   push_buffer(std::move(tokens));
 }
 
 lexer::~lexer() {}
 
-void lexer::cleanup() {
-  keywords.clear();
-  kludge_map.clear();
-}
-
 #undef cfile
 
-lexer::condition::condition(bool t, bool cbt): is_true(t), can_be_true(cbt) {}
+lexer::condition::condition(bool t, bool pst):
+    is_true(t), seen_else(false), parents_true(pst) {}

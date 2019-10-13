@@ -38,7 +38,7 @@ using namespace jdi;
   call, \c handle_scope(), and then the other members of the derived \c context_parser
   class in \c jdi, which will be called from handle_scope.
 */
-int jdi::context::parse_stream(llreader &cfile) {
+int jdi::Context::parse_stream(llreader &cfile) {
   if (parse_open) { // Make sure we're not still parsing anything
     herr->error("Attempted to invoke parser while parse is in progress in another thread");
     return -1;

@@ -41,6 +41,7 @@ namespace jdi {
 #include <General/llreader.h>
 #include <System/token.h>
 #include <System/macros.h>
+#include <API/context.h>
 
 namespace jdi {
   using std::string;
@@ -75,24 +76,34 @@ namespace jdi {
   /// 2. Our Lexer can be constructed to supply a fixed collection of tokens.
   /// 3. Rewinding is trivial, as previously-read tokens can just be re-stacked.
   struct OpenBuffer {
-    /// If this buffer belongs to a macro, this describes it.
-    std::optional<EnteredMacro> macro_info;
     /// Tokens in the macro or other buffer (may be owned by someone else!)
     const token_vector &tokens;
+    /// If this buffer belongs to a macro, this describes it.
+    std::optional<EnteredMacro> macro_info;
     /// Allows us to own the above vector.
     token_vector assembled_token_data;
     /// Scratch space: how far the lexer advanced in this buffer before pushing
     /// a new one and switching to it.
     size_t buf_pos = 0;
+    /// Denotes that this buffer was already preprocessed fully.
+    bool is_rewind = false;
 
+    OpenBuffer(const OpenBuffer&) = delete;
     OpenBuffer(string macro, token_t origin, const std::vector<token_t> *tokens_):
-        macro_info({macro, origin}), tokens(*tokens_) {}
+        tokens(*tokens_), macro_info({macro, origin}) {}
     OpenBuffer(string macro, token_t origin, std::vector<token_t> &&tokens_):
-        macro_info({macro, origin}), tokens(assembled_token_data),
+        tokens(assembled_token_data), macro_info({macro, origin}), 
         assembled_token_data(std::move(tokens_)) {}
     OpenBuffer(token_vector &&tokens_):
-        macro_info(), tokens(assembled_token_data),
+        tokens(assembled_token_data), macro_info(), 
         assembled_token_data(tokens_) {}
+
+    OpenBuffer(OpenBuffer &&other):
+        tokens(&other.tokens == &other.assembled_token_data
+               ? assembled_token_data : other.tokens),
+        macro_info(std::move(other.macro_info)),
+        assembled_token_data(std::move(other.assembled_token_data)),
+        buf_pos(other.buf_pos), is_rewind(other.is_rewind) {}
   };
 
   /**
@@ -105,8 +116,9 @@ namespace jdi {
   */
   token_t read_token(llreader &cfile, error_handler *herr);
 
-  /// Tokenizes a string with no preprocessing. Does not return whitespace tokens.
-  token_vector tokenize(std::string_view str, error_handler *herr);
+  /// Tokenizes a string with no preprocessing. All words are identifiers.
+  /// Will return preprocessing tokens, except for whitespace tokens.
+  token_vector tokenize(string fname, string_view str, error_handler *herr);
 
   /**
   Basic lexing/preprocessing unit; polled by all systems for tokens.
@@ -163,6 +175,8 @@ namespace jdi {
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
 
     std::set<string> visited_files; ///< For record and reporting purposes only.
+    
+    Context *const builtin;
 
     /// Private base constructor.
     lexer(macro_map &pmacros, error_handler *herr);
@@ -178,6 +192,9 @@ namespace jdi {
     /// Tests the given identifier token against currently-defined macros, and
     /// handles expanding it if it is defined and usable in this context.
     bool handle_macro(token_t &identifier);
+
+    /// Converts an identifier token into an appropriate keyword token.
+    bool translate_identifier(token_t &identifier);
 
     /// Function used by the preprocessor to read in macro parameters in compliance with ISO.
     string read_preprocessor_args();
@@ -213,11 +230,19 @@ namespace jdi {
 
     /// Storage mechanism for conditionals, such as `\#if`, `\#ifdef`, and `\#ifndef`.
     struct condition {
-      /// True if code in this layer is to be parsed
+      /// True if code in this region is to be parsed
       /// (the condition that was given is true).
       bool is_true;
-      /// True if an `else` statement or the like can set is_true to true.
-      bool can_be_true;
+      /// Indicates that we've seen an else statement already.
+      /// If true, this branch must be terminated with an #endif.
+      /// This will not be set to true when `elif` or similar are encountered.
+      /// In that case, the current condition will be popped, and a new one will
+      /// be pushed. In this new condition, `seen_else` will still be false.
+      bool seen_else;
+      /// Indicates whether the enclosing conditionals were all true.
+      /// This prevents if 1 X else if 0 Y else Z from being X and Z,
+      /// without having to iterate the entire hierarchy each time.
+      bool parents_true;
       /// Convenience constructor.
       condition(bool, bool);
     };
@@ -242,7 +267,16 @@ namespace jdi {
                       This file will be manipulated by the system.
       @param fname    The name of the file that was first opened.
     **/
-    lexer(token_vector &&tokens, error_handler *herr);
+    //lexer(token_vector &&tokens, error_handler *herr);
+    /**
+      Consumes a token_vector, returning only the tokens in the vector before
+      returning END_OF_CODE. Does macro expansion using the macros in the given
+      lexer. 
+      @param input    The file from which to read definitions.
+                      This file will be manipulated by the system.
+      @param fname    The name of the file that was first opened.
+    **/
+    lexer(token_vector &&tokens, const lexer &basis);
     /** Destructor; free the attached macro lexer. **/
     ~lexer();
 
@@ -284,35 +318,30 @@ namespace jdi {
         if (buffer.empty()) return;
         token_vector buf;
         buf.swap(buffer);
-        lex->push_buffer(std::move(buf));
+        lex->push_rewind_buffer(std::move(buf));
       }
     };
 
-    /// Push some tokens onto this lexer.
-    void push_buffer(token_vector &&buf);
+    /// Push a buffer of tokens onto this lexer.
+    void push_buffer(OpenBuffer &&buf);
+
+    /// Push a buffer of tokens onto this lexer, and mark them preprocessed.
+    void push_rewind_buffer(OpenBuffer &&buf);
+
+    /// Push any construction of an OpenBuffer onto this lexer.
+    template<typename... Args> void push_buffer(Args... args) {
+      push_buffer(OpenBuffer(std::move(args)...));
+    }
 
     /// Pop the current top buffer.
     void pop_buffer();
 
-    // ============================================================================================
-    // == Static Configuration Storage ============================================================
-    // ============================================================================================
-    
-    /// Map of string to token type; a map-of-keywords type.
-    typedef std::map<string,TOKEN_TYPE> keyword_map;
-    /// List of C++ keywords, mapped to the type of their token.
-    /// This list is assumed to contain tokens whose contents are unambiguous;
-    /// one string maps to one token, and vice-versa.
-    static keyword_map keywords;
-    /// This is a map of macros to add bare-minimal support for a number of
-    /// compiler-specific builtins.
-    static macro_map kludge_map;
+    // =========================================================================
+    // == Configuration Storage ================================================
+    // =========================================================================
 
     /// Retrieve this lexer's error handler
     error_handler *get_error_handler() { return herr; }
-
-    /// Static cleanup function; safe to call without a matching init.
-    static void cleanup();
   };
 }
 

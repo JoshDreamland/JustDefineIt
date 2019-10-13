@@ -53,12 +53,18 @@ void llreader::encapsulate(string_view contents) {
   data = contents.data();
   length = contents.length();
   mode = FT_ALIAS;
+  pos = 0;
+  lpos = 0;
+  lnum = 0;
 }
 void llreader::copy(string_view contents) {
   length = contents.length();
   char* buf = new char[length + 1];
   memcpy(buf, contents.data(), length);
-  pos = buf[length] = 0;
+  buf[length] = 0;
+  pos = 0;
+  lpos = 0;
+  lnum = 0;
   mode = FT_BUFFER;
   data = buf;
 }
@@ -77,11 +83,19 @@ inline string fn_path(const char *fn) {
   return last == fn? dot : string(fn, last);
 }
 
-llreader::llreader(): pos(0), length(0), lpos(0), lnum(0), data(NULL), mode(FT_CLOSED) {}
+llreader::llreader(): pos(0), length(0), lpos(0), lnum(0), data(NULL),
+                      name(""), mode(FT_CLOSED) {}
 llreader::llreader(llreader &&other): llreader() { consume(other); }
 llreader::llreader(const char* filename): llreader() { open(filename); }
-llreader::llreader(std::string bname, std::string contents): pos(0), length(0),  lpos(0), lnum(0), data(NULL), name(bname), mode(FT_CLOSED) { copy(contents); }
-llreader::llreader(std::string bname, std::string_view contents, bool copy_): pos(0), length(0),  lpos(0), lnum(0), data(NULL), name(bname), mode(FT_CLOSED) { copy_ ? copy(contents) : encapsulate(contents); }
+llreader::llreader(std::string bname, std::string contents): pos(0), length(0), 
+    lpos(0), lnum(0), data(NULL), name(bname), mode(FT_CLOSED) {
+  copy(contents);
+}
+llreader::llreader(std::string bname, std::string_view contents, bool copy_):
+    pos(0), length(0),  lpos(0), lnum(0), data(nullptr), name(bname),
+    mode(FT_CLOSED) {
+  copy_ ? copy(contents) : encapsulate(contents);
+}
 llreader::~llreader() { close(); }
 
 void llreader::open(const char* filename) {
@@ -121,6 +135,16 @@ void llreader::open(const char* filename) {
   ::close(fd);
 #endif
   name = filename;
+
+  pos = 0;
+  lpos = 0;
+  lnum = 0;
+
+# ifndef NOVALIDATE_LINE_NUMBERS
+  validated_pos = 0;
+  validated_lpos = 0;
+  validated_lnum = 0;
+# endif
 }
 
 void llreader::alias(const char* buffer, size_t len) {
@@ -131,6 +155,13 @@ void llreader::alias(const char* buffer, size_t len) {
   mode = FT_ALIAS;
   pos = 0, length = len;
   data = buffer;
+  name = "<user buffer>";
+
+# ifndef NOVALIDATE_LINE_NUMBERS
+  validated_pos = 0;
+  validated_lpos = 0;
+  validated_lnum = 0;
+# endif
 }
 
 void llreader::alias(const llreader &llread) {
@@ -139,9 +170,18 @@ void llreader::alias(const llreader &llread) {
       cerr << "ERROR! Leaked a file in alias(llreader)." << endl;
   #endif
   mode = FT_ALIAS;
-  pos = llread.pos, length = llread.length;
+  length = llread.length;
+  pos = llread.pos;
   data = llread.data;
   name = llread.name;
+  lpos = llread.lpos;
+  lnum = llread.lnum;
+
+# ifndef NOVALIDATE_LINE_NUMBERS
+  validated_pos = 0;
+  validated_lpos = 0;
+  validated_lnum = 0;
+# endif
 }
 
 void llreader::consume(char* buffer, size_t len) {
@@ -152,6 +192,13 @@ void llreader::consume(char* buffer, size_t len) {
   mode = FT_BUFFER;
   pos = 0, length = len;
   data = buffer;
+  name = "<copy of user buffer>";
+
+# ifndef NOVALIDATE_LINE_NUMBERS
+  validated_pos = 0;
+  validated_lpos = 0;
+  validated_lnum = 0;
+# endif
 }
 
 llreader &llreader::operator=(llreader &&other) {
@@ -166,12 +213,20 @@ void llreader::consume(llreader& whom) {
   #endif
   mode = whom.mode;
   pos = whom.pos;
+  lpos = whom.lpos;
+  lnum = whom.lnum;
   length = whom.length;
   data = whom.data;
   whom.mode = FT_CLOSED;
   whom.length = 0;
   whom.data = NULL;
   name = whom.name;
+
+# ifndef NOVALIDATE_LINE_NUMBERS
+  validated_pos = 0;
+  validated_lpos = 0;
+  validated_lnum = 0;
+# endif
 }
 
 void llreader::close() {
@@ -196,4 +251,27 @@ void llreader::close() {
 
 bool llreader::is_open() {
   return mode != FT_CLOSED;
+}
+
+void llreader::skip_whitespace() {
+  while (pos < length) switch (data[pos]) {
+    case '\r': {
+      if (++pos < length && data[pos] == '\n') ++pos;
+      ++lnum;
+      lpos = pos;
+      continue;
+    }
+    case '\n': {
+      ++lnum;
+      lpos = ++pos;
+      continue;
+    }
+    case ' ': case '\t': case '\v': case '\f': {
+      ++pos;
+      continue;
+    }
+    // XXX: There are about a hundred other cases to handle here,
+    // but unicode whitespace is currently forbidden in the standard.
+    default: return;
+  }
 }

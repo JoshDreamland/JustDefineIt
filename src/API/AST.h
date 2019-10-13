@@ -431,10 +431,15 @@ namespace jdi {
     void report_errorf(const jdi::token_t &token, string err);
     void report_warning(const jdi::token_t &token, string err);
     
-    jdi::AST_Node *root; ///< The first node in our AST--The last operation that will be performed.
+    /// The first node in our AST--The last operation that will be performed.
+    jdi::AST_Node *root;
     
-    // State flags
-    bool tt_greater_is_op; ///< True if the greater-than symbol is to be interpreted as an operator.
+    // State flags =============================================================
+    
+    /// True if the greater-than symbol is to be interpreted as an operator.
+    bool tt_greater_is_op = false;
+    /// True if undeclared identifiers are expected and should be treated as 0.
+    bool treat_identifiers_as_zero = false;
     
     /* * Handle a binary operator. Errors if the operator represented by the token cannot
         be used as a binary operator.

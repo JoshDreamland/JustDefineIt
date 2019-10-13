@@ -23,6 +23,7 @@ using namespace std;
 #include <API/user_tokens.h>
 #include <General/llreader.h>
 #include <General/quickstack.h>
+#include <System/builtins.h>
 
 #ifdef linux
   #include <sys/time.h>
@@ -39,7 +40,7 @@ using namespace std;
 using namespace jdi;
 
 void test_expression_evaluator();
-void name_type(string type, context &ct);
+void name_type(string type, Context &ct);
 
 static void putcap(string cap) {
   cout << endl << endl << endl << endl;
@@ -48,7 +49,7 @@ static void putcap(string cap) {
   cout << "============================================================================" << endl << endl;
 }
 
-void do_cli(context &ct);
+void do_cli(Context &ct);
 
 // Returns the number of elements to insert into v1 at i to make it match v2.
 // If elements are instead missing from v2, a negative number is returned.
@@ -81,7 +82,7 @@ static void test_lexer_16_3_3() {
   )";
 
   llreader basic("test macro", tcase, false);
-  context butts;
+  Context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
   lexer lex(basic, buttMacros, def_error_handler);
@@ -100,7 +101,7 @@ static void test_lexer_mathcat() {
   )";
 
   llreader basic("test macro", tcase, false);
-  context butts;
+  Context butts;
   macro_map buttMacros = butts.get_macros();
   token_t token;
   lexer lex(basic, buttMacros, def_error_handler);
@@ -124,16 +125,13 @@ const char* tname[TT_INVALID + 1];
 }*/
 
 int main() {
-  cout << "Hello" << endl;
-  initialize();
-  cout << endl << endl;
-  
   putcap("Test simple macros");
-  builtin->add_macro("scalar_macro","simple value");
-  builtin->add_macro_func("simple_function","Takes no parameters");
-  builtin->add_macro_func("one_arg_function","x","(1/(1-(x)))",false);
-  builtin->add_macro_func("two_arg_function","a","b","(-(b)/(2*(a)))",false);
-  builtin->add_macro_func("variadic_three_arg_function","a","b","c","printf(a,b,c)",true);
+  Context &builtin = builtin_context();
+  builtin.add_macro("scalar_macro","simple value");
+  builtin.add_macro_func("simple_function","Takes no parameters");
+  builtin.add_macro_func("one_arg_function","x","(1/(1-(x)))",false);
+  builtin.add_macro_func("two_arg_function","a","b","(-(b)/(2*(a)))",false);
+  builtin.add_macro_func("variadic_three_arg_function","a","b","c","printf(a,b,c)",true);
   //builtin->output_macros();
   
   putcap("Metrics");
@@ -163,31 +161,31 @@ int main() {
          << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
   }
   
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1/x86_64-pc-linux-gnu");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/../../../../include/c++/8.1.1/backward");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/include");
-  builtin->add_search_directory("/usr/local/include");
-  builtin->add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/8.1.1/include-fixed");
-  builtin->add_search_directory("/usr/include");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/../../../../include/c++/9.1.0");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/../../../../include/c++/9.1.0/x86_64-pc-linux-gnu");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/../../../../include/c++/9.1.0/backward");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/include");
+  builtin.add_search_directory("/usr/local/include");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/include-fixed");
+  builtin.add_search_directory("/usr/include");
 
-  builtin->add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
-  builtin->add_search_directory("/home/josh/.enigma/");
+  builtin.add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
+  builtin.add_search_directory("/home/josh/.enigma/");
 
   llreader macro_reader("test/defines_linux.txt");
   
   if (macro_reader.is_open())
-    builtin->parse_stream(macro_reader);
+    builtin.parse_stream(macro_reader);
   else
     cout << "ERROR: Could not open GCC macro file for parse!" << endl;
   
   putcap("Test type reading");
-  name_type("int", *builtin);
-  name_type("int*", *builtin);
-  name_type("int&", *builtin);
-  name_type("int&()", *builtin);
-  name_type("int(*)()", *builtin);
-  name_type("int&(*)()", *builtin);
+  name_type("int", builtin);
+  name_type("int*", builtin);
+  name_type("int&", builtin);
+  name_type("int&()", builtin);
+  name_type("int(*)()", builtin);
+  name_type("int&(*)()", builtin);
   
   // write_tokens();
   
@@ -197,7 +195,7 @@ int main() {
   if (false) {
     string tcase = "#define butts 1\n#if 2 > 1 && butts\n  int x;\n#endif\n";
     llreader basic("test case", tcase, false);
-    context butts;
+    Context butts;
     macro_map buttMacros = butts.get_macros();
     token_t token;
     lexer lex(basic, buttMacros, def_error_handler);
@@ -207,10 +205,21 @@ int main() {
     token = lex.get_token(); cout << token.to_string() << endl;
     return 0;
   }
+  /*
+  This is the command I use to generate the test data for this system.
+  Tweak it to use your own code input and source locations.
+  
+  gcc -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/ -E \
+      /home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp \
+      -o Projects/JustDefineIt/shellmain-pp.cc && \
+      (cpp -dM -x c++ --std=c++03 -E /dev/null \
+           > /home/josh/Projects/JustDefineIt/test/defines_linux.txt);
+  */
   if (true) {
     vector<int> tokens, tokens2;
+    size_t correct = 0, incorrect = 0;
     if (true) {
-      context butts;
+      Context butts;
       // g++ --std=c++03 -E ~/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp
       //   -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/
       //   -DJUST_DEFINE_IT_RUN > Projects/JustDefineIt/shellmain-pp.cc
@@ -223,15 +232,12 @@ int main() {
     }
     bool had_diff = false;
     if (true) {
-      context butts;
+      Context butts;
       llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         size_t p = tokens.size();
-        if (p == 53315) {
-          cerr << "BOOBIES!" << endl;
-        }
         tokens.push_back(token.type);
         if (!had_diff && p < tokens2.size() && tokens[p] != tokens2[p]) {
           cerr << p << endl;
@@ -241,6 +247,7 @@ int main() {
                               + token_t::get_name((TOKEN_TYPE) tokens2[p]) + ".");
           had_diff = true;
         }
+        ++(had_diff? incorrect : correct);
       }
     }
     for (size_t i = 0; i < tokens.size() && i < tokens2.size(); ++i) {
@@ -261,6 +268,7 @@ int main() {
         printf("%2d : %2d  -  %d\n", a, b, ndiffs);
       ndiffs += diff;
     }
+    printf("Final stats: %lu correct, %lu incorrect\n", correct, incorrect);
     return 0;
   }
   
@@ -270,7 +278,7 @@ int main() {
   if (f.is_open())
   {
     /* */
-    context enigma;
+    Context enigma;
     start_time(ts);
     int res = enigma.parse_stream(f);
     end_time(te,tel);
@@ -303,7 +311,7 @@ int main() {
 
 #include <Parser/context_parser.h>
 
-void name_type(string type, context &ct) {
+void name_type(string type, Context &ct) {
   llreader llr("type string", type, type.length());
   macro_map undamageable = ct.get_macros();
   lexer c_lex(llr, undamageable, def_error_handler);
@@ -325,7 +333,7 @@ static char getch() {
 #include <System/lex_cpp.h>
 #include <General/parse_basics.h>
 
-void do_cli(context &ct)
+void do_cli(Context &ct)
 {
   putcap("Command Line Interface");
   char c = ' ';

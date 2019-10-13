@@ -78,6 +78,8 @@ namespace jdi {
     decpair(definition* *def, bool inserted);
   };
   
+  class typeflag;
+  
   /// Map type to contain definitions to remap along with the definition with which it will be replaced
   typedef std::map<const definition*, definition*> remap_set;
   typedef remap_set::const_iterator remap_citer;

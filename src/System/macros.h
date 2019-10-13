@@ -51,16 +51,17 @@ namespace jdi {
     @struct macro_type
     @brief  A generic structure representing a macro in memory.
     
-    This is the base class beneath \c macro_scalar and \c macro_function. It should not
-    be instantiated purely, as it does not contain any accessible value; its only purpose
-    is for storing different types of macros together. \
+    This is the base class beneath \c macro_scalar and \c macro_function.
+    It should not be instantiated purely, as it does not contain any accessible
+    value; its only purpose is for storing different types of macros together.
   **/
   struct macro_type {
     /** 
       Argument count, or -1 if not a function.
       Hence, a value of -1 implies that this is an instance of macro_scalar.
       Otherwise, this is an instance of macro_function.
-      If this value is greater than the size of the argument vector in the macro_function, then the function is variadic.
+      If this value is greater than the size of the argument vector in the
+      macro_function, then the function is variadic.
     **/
     const bool is_function, is_variadic;
     /// A copy of the name of this macro.
@@ -80,19 +81,31 @@ namespace jdi {
         ARGUMENT,
         PASTE
       };
+      struct TokenSpan {
+        size_t begin, end;
+      };
+      struct ArgumentIndex {
+        size_t index;
+      };
+      struct Paste {};
       TAG tag;
       union {
-        struct {
-          size_t begin, end;
-        } token_span;
-        struct {
-          size_t index;
-        } argument;
+        TokenSpan token_span;
+        ArgumentIndex argument;
+        Paste paste;
       };
+      FuncComponent(TokenSpan span): tag(TOKEN_SPAN), token_span(span) {}
+      FuncComponent(ArgumentIndex arg_index): tag(ARGUMENT), argument(arg_index) {}
+      FuncComponent(Paste): tag(PASTE) {}
     };
 
     /// Semantic cache of the replacement list of our function-like macro.
     vector<FuncComponent> parts;
+
+    /// Build the components vector from the given value vector.
+    static vector<FuncComponent>
+        componentize(const token_vector &tokens, const vector<string> &params,
+                     error_handler *herr);
 
     /// Expand this macro function, given arguments.
     token_vector substitute_and_unroll(const vector<token_vector> &args,
@@ -100,26 +113,36 @@ namespace jdi {
     
     /// Convert this macro to a string
     string toString() const;
+    /// Returns the name of this macro, including the parameter list for
+    /// function-like macros.
+    string NameAndPrototype() const;
     
-    /// Default constructor; construct a zero-parameter macro function with the given value.
-    macro_type(const string &n, vector<token_t> &&definiens);
+    /// Default constructor; defines an object-like macro with the given value.
+    macro_type(const string &n, vector<token_t> &&definiens):
+        is_function(false), is_variadic(false), name(n), params(),
+        value(std::move(definiens)) {}
+
     /** Construct a macro function taking the arguments in arg_list.
         This function parses the given value based on the argument list.
-        @param name      The name of this macro.
+        @param name_     The name of this macro.
         @param arg_list  Contains the arguments to be copied in.
-        @param value     The value that will be assigned to this macro function. 
-                         The constructor will automatically parse and expand
-                         this value according to convention.
         @param variadic  Determines if an additional parameter should be created
                          to store all excess arguments.
+        @param definiens The value that will be assigned to this macro function. 
+                         The constructor will automatically parse and expand
+                         this value according to convention.
         @param herr      The error handler to receive any errors.
         @note
-          If \p arg_list is empty, and \p variadic is false, the behavior is the same as the default constructor. 
+          If \p arg_list is empty, and \p variadic is false, the behavior is the
+          same as the default constructor. 
     **/
-    macro_type(string_view name, vector<string> &&arg_list,
-               vector<token_t> &&definiens, bool variadic = false);
+    macro_type(string_view name_, vector<string> &&arg_list, bool variadic,
+               vector<token_t> &&definiens, error_handler *herr):
+        is_function(true), is_variadic(variadic), name(name_),
+        params(std::move(arg_list)), value(std::move(definiens)),
+        parts(componentize(value, params, herr)) {}
     
-    ~macro_type();
+    ~macro_type() {}
   };
   
   /** Map type used for storing macros. Sharing reduces copy times when cloning

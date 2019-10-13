@@ -50,54 +50,14 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
   if (!scope) scope = ctex->global.get();
   
   if (token.type != TT_DECLARATOR) {
-    if (token.type != TT_DECFLAG) {
-      if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_ENUM or token.type == TT_UNION) {
-        rdef = token.type == TT_ENUM?  (definition*)handle_enum(scope,token,0): 
-               token.type == TT_UNION? (definition*)handle_union(scope,token,0) : (definition*)handle_class(scope,token,0);
+    if (token.type == TT_DECFLAG) {
+      const typeflag *tf = (typeflag*) token.def;
+      if (!tf) {
+        token.report_errorf(
+            herr, "Internal error: DECFLAG token (%s) does not have type "
+                  "information attached.");
+        tf = builtin_declarators["volatile"];
       }
-      else if (token.type == TT_DEFINITION)
-      {
-        rdef = read_qualified_definition(token, scope);
-        if (!rdef) {
-          token.report_errorf(herr, "Expected type name here before %s");
-          return NULL;
-        }
-        if (!(rdef->flags & DEF_TYPENAME)) {
-          if (rdef->flags & DEF_HYPOTHETICAL)
-            ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
-          else if (rdef->flags & DEF_TEMPPARAM)
-            ((definition_tempparam*)rdef)->must_be_class = true;
-          else if ((rdef->name == constructor_name || rdef->name[0] == '~') && rdef->flags & DEF_FUNCTION) {
-            // TODO: This block's a little tacky. It replaces ctor/dtor types with void and expects caller to perform this check again; DEF_CTOR/DTOR would speed things up
-            full_type res(builtin_type__void);
-            res.refs.ndef = rdef;
-            return res;
-          }
-          else {
-            token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type (" + flagnames(rdef->flags) + ")");
-            return NULL;
-          }
-        }
-      }
-      else if (token.type == TT_ELLIPSIS) {
-        rdef = builtin_type__va_list;
-        token = lex->get_token_in_scope(scope);
-      }
-      else if (token.type == TT_TYPENAME) {
-        token = lex->get_token_in_scope(scope);
-        if (not(rdef = handle_hypothetical(scope, token, DEF_TYPENAME)))
-          return full_type();
-      }
-      else {
-        if (token.type == TT_IDENTIFIER)
-          token.report_error(herr,"Type name expected here; `" + token.content.toString() + "' is not declared");
-        else
-          token.report_errorf(herr,"Type name expected here before %s");
-        return full_type();
-      }
-    }
-    else {
-      typeflag *const tf = ((typeflag*)token.def);
       if (tf->usage & UF_PRIMITIVE) {
         (tf->usage == UF_PRIMITIVE? rdef : overridable_type) = tf->def,
         swif = tf->flagbit;
@@ -108,6 +68,49 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
         rflags = tf->flagbit;
       }
       token = lex->get_token_in_scope(scope);
+    } else if (token.type == TT_CLASS || token.type == TT_STRUCT
+            || token.type == TT_ENUM  || token.type == TT_UNION) {
+      rdef = token.type == TT_ENUM?  (definition*) handle_enum(scope,  token, 0)
+           : token.type == TT_UNION? (definition*) handle_union(scope, token, 0)
+                                   : (definition*) handle_class(scope, token, 0);
+    } else if (token.type == TT_DEFINITION) {
+      rdef = read_qualified_definition(token, scope);
+      if (!rdef) {
+        token.report_errorf(herr, "Expected type name here before %s");
+        return NULL;
+      }
+      if (!(rdef->flags & DEF_TYPENAME)) {
+        if (rdef->flags & DEF_HYPOTHETICAL) {
+          ((definition_hypothetical*)rdef)->required_flags |= DEF_TYPENAME;
+        } else if (rdef->flags & DEF_TEMPPARAM) {
+          ((definition_tempparam*)rdef)->must_be_class = true;
+        } else if ((rdef->name == constructor_name || rdef->name[0] == '~')
+               &&  (rdef->flags & DEF_FUNCTION)) {
+          // TODO: This block's a little tacky. It replaces ctor/dtor types with void and expects caller to perform this check again; DEF_CTOR/DTOR would speed things up
+          full_type res(builtin_type__void);
+          res.refs.ndef = rdef;
+          return res;
+        } else {
+          token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type (" + flagnames(rdef->flags) + ")");
+          return NULL;
+        }
+      }
+    }
+    else if (token.type == TT_ELLIPSIS) {
+      rdef = builtin_type__va_list;
+      token = lex->get_token_in_scope(scope);
+    }
+    else if (token.type == TT_TYPENAME) {
+      token = lex->get_token_in_scope(scope);
+      if (not(rdef = handle_hypothetical(scope, token, DEF_TYPENAME)))
+        return full_type();
+    }
+    else {
+      if (token.type == TT_IDENTIFIER)
+        token.report_error(herr,"Type name expected here; `" + token.content.toString() + "' is not declared");
+      else
+        token.report_errorf(herr,"Type name expected here before %s");
+      return full_type();
     }
   }
   else

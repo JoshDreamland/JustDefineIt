@@ -54,7 +54,7 @@ namespace jdi {
   
   enum TOKEN_TYPE {
     TT_DECLARATOR = GLOSS(GTT_DECLARATOR), ///< Primitive type catch-it-all.
-    TT_DECFLAG,    ///< Phrases which can be used multiple times in a declaration as flags, like const, unsigned, long.
+    TT_DECFLAG,    ///< Modifiers and storage specifiers, like const, unsigned, long.
     TT_TYPENAME,   ///< The `typename` keyword.
     TT_INLINE,     ///< The `inline` keyword.
     TT_EXTERN,     ///< The `extern` keyword.
@@ -173,15 +173,25 @@ namespace jdi {
     TT_INVALID = GLOSS(GTT_INVALID) ///< Invalid token; read failed.
   };
   
-  #ifdef DEBUG_MODE
-    /// A debug listing of token descriptions by value ID
-    extern const char* TOKEN_TYPE_NAME[];
-  #endif
-  
   struct token_t;
 }
 
+namespace std {
+  string to_string(jdi::TOKEN_TYPE type);
+  string to_string(const jdi::token_t &token);
+}
 
+namespace jdi {
+  static inline
+  std::ostream &operator<<(std::ostream &stream, jdi::TOKEN_TYPE type) {
+    return stream << std::to_string(type);
+  }
+
+  static inline
+  std::ostream &operator<<(std::ostream &stream, const jdi::token_t &token) {
+    return stream << std::to_string(token);
+  }
+}
 
 //=========================================================================================================
 //===: Implementation carries extended dependencies:=======================================================
@@ -192,6 +202,7 @@ namespace jdi {
 
 namespace jdi {
   using std::string;
+  using std::string_view;
   
   /**
     A structure for representing complete info about a token.
@@ -213,25 +224,24 @@ namespace jdi {
       return (GLOSS_TOKEN_TYPE) (type >> 4);
     }
     
-    /// Construct a new, invalid token.
-    token_t();
-    
     /// Log the name of the file from which this token was read.
-    volatile const char* file;
+    string file;
     /// Log the line on which this token was named in the file.
     int linenum;
     /// We are logging positions for precise error reporting.
     int pos;
-    // TODO: DELETEME
-    #define full_token_constructor_parameters int, const char*, int, int
-    #define token_basics(type,filename,line,pos) type,filename,line,pos
     
-    std::string get_filename() const { return (const char*) file; }
+    std::string get_filename() const { return file; }
     int get_line_number()      const { return linenum; }
     int get_line_position()    const { return pos; }
     
-    /// Construct a new token without origin information.
-    token_t(TOKEN_TYPE t, const char* fn, int l);
+    union {
+      /// For types, namespace-names, etc., the definition by which the type
+      /// of this token was determined.
+      definition *def;
+      /// For TT_DECFLAG, the typeflag lookup for this token.
+      typeflag *tflag;
+    };
     
     /// Structure containing a pointer inside a string, and a length, representing a substring.
     struct content {
@@ -257,6 +267,9 @@ namespace jdi {
         return *cached_str;
       }
       
+      /// Return this content as a string_view.
+      string_view view() const { return {(const char*) str, len}; }
+      
       /// Copy another token's content, handling ownership.
       void copy(const content&);
       /// Copy another token's content, handling ownership.
@@ -264,6 +277,7 @@ namespace jdi {
       
       inline content() {}
       inline content(const char *s, int l): str(s), len(l) {}
+      inline content(std::string_view sv): str(sv.data()), len(sv.length()) {}
       inline content(const string *s):
           str(s->data()), len(s->length()), cached_str(s) {}
       inline content(string &&s): owned_str(std::move(s)) {
@@ -271,6 +285,8 @@ namespace jdi {
         len = owned_str.length();
         cached_str = &owned_str;
       }
+      template<size_t n>
+      inline content(const char (&sv)[n]): str(sv), len(n) {}
 
       content(const content &other) { copy(other); }
       content(content &&other) { consume(std::move(other)); }
@@ -284,15 +300,33 @@ namespace jdi {
       }
     } content;
     
-    /// For types, namespace-names, etc., the definition by which the type of this token was determined.
-    definition* def;
+    void validate() const;
     
-    /// Construct a token with the requested amount of information.
-    token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p));
+    /// Construct a new, invalid token.
+    token_t():
+        type(TT_INVALID), file("<no file>"), linenum(0), pos(-1), def(nullptr),
+        content("default token") { validate(); }
     /// Construct a token with extra information regarding its content.
-    token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), const char*, int);
+    token_t(TOKEN_TYPE t, const char* fn, int l, int p,
+            const char *content_data, size_t content_length):
+        type(t), file(fn), linenum(l), pos(p), def(nullptr),
+        content(content_data, content_length) { validate(); }
+    /// Construct a token with extra information regarding its content.
+    token_t(TOKEN_TYPE t, const char* fn, int l, int p, string_view cntnt):
+        type(t), file(fn), linenum(l), pos(p), def(nullptr), content(cntnt) {
+             validate(); }
     /// Construct a token with extra information regarding its definition.
-    token_t(token_basics(TOKEN_TYPE t, const char* fn, int l, int p), definition*);
+    token_t(TOKEN_TYPE t, const char* fn, int l, int p,
+            definition *d, string_view name):
+        type(t), file(fn), linenum(l), pos(p), def(d), content(name) {
+            validate();
+    }
+    /// Construct a DECFLAG token with extra information about its meaning.
+    token_t(TOKEN_TYPE t, const char* fn, int l, int p,
+            typeflag *tf, string_view name):
+        type(t), file(fn), linenum(l), pos(p), tflag(tf), content(name) {
+            validate();
+    }
     
     /**
       Pass error information to an error handler.

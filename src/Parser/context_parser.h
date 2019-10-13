@@ -87,7 +87,7 @@ namespace jdi {
     jdi::context_parser from an allocated jdi::context is valid.
   **/
   class context_parser {
-    context *ctex;  ///< The original context we are parsing into.
+    Context *ctex;  ///< The original context we are parsing into.
     lexer *lex;  ///< The lexer which all methods and all calls therefrom will poll for tokens.
     error_handler *herr;  ///< The error handler to which errors and warnings will be reported.
     AST_Builder *astbuilder;  ///< Used to build ASTs at any time during parse.
@@ -100,9 +100,9 @@ namespace jdi {
     
     /// Constructs, temporarily consuming a context. Do not use the input
     /// context while this parser is active.
-    context_parser(context* ctex, llreader &cfile);
+    context_parser(Context* ctex, llreader &cfile);
     /// Legacy. Allows construction for use with a simple AST_Builder.
-    context_parser(context* ctex, lexer *lex);
+    context_parser(Context* ctex, lexer *lex);
     // /// Construct without copying
     // context_parser(error_handler* herr);
     /// Destructs, returning data to the original context.

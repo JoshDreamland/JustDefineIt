@@ -5,7 +5,7 @@
 		<Option title="JustDefineIt" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="Documentation/;test/;" />
+		<Option virtualFolders="Documentation/;test/;src/Parser/handlers/;" />
 		<Build>
 			<Target title="Debug">
 				<Option output="bin/Debug/JustDefineIt" prefix_auto="1" extension_auto="1" />
@@ -15,6 +15,7 @@
 				<Compiler>
 					<Add option="-std=c++1z" />
 					<Add option="-g" />
+					<Add option="-D_GLIBCXX_DEBUG" />
 					<Add option="-DDEBUG_MODE" />
 				</Compiler>
 			</Target>
@@ -26,6 +27,7 @@
 				<Compiler>
 					<Add option="-std=c++1z" />
 					<Add option="-g" />
+					<Add option="-D_GLIBCXX_DEBUG" />
 					<Add option="-DDEBUG_MODE" />
 					<Add option="-DRENDER_ASTS" />
 				</Compiler>
@@ -57,6 +59,23 @@
 				</Compiler>
 				<Linker>
 					<Add option="-pg" />
+				</Linker>
+			</Target>
+			<Target title="Test">
+				<Option output="bin/Debug/JustDefineIt" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-std=c++1z" />
+					<Add option="-g" />
+					<Add option="-D_GLIBCXX_DEBUG" />
+					<Add option="-DDEBUG_MODE" />
+					<Add directory="./test" />
+				</Compiler>
+				<Linker>
+					<Add library="gtest" />
+					<Add library="gtest_main" />
 				</Linker>
 			</Target>
 		</Build>
@@ -98,9 +117,6 @@
 		<Unit filename="src/API/error_context.h" />
 		<Unit filename="src/API/error_reporting.cpp" />
 		<Unit filename="src/API/error_reporting.h" />
-		<Unit filename="src/API/jdi.cpp" />
-		<Unit filename="src/API/jdi.h" />
-		<Unit filename="src/API/lexer_interface.h" />
 		<Unit filename="src/API/parse_config.h" />
 		<Unit filename="src/API/user_tokens.cpp" />
 		<Unit filename="src/API/user_tokens.h" />
@@ -164,8 +180,21 @@
 		<Unit filename="src/System/token.cpp" />
 		<Unit filename="src/System/token.h" />
 		<Unit filename="src/System/type_usage_flags.h" />
+		<Unit filename="test/Lexer/lexer_test.cc">
+			<Option target="Test" />
+		</Unit>
 		<Unit filename="test/MAIN.cc">
-			<Option virtualFolder="test/" />
+			<Option virtualFolder="src/Parser/handlers/" />
+			<Option target="Debug" />
+			<Option target="Debug-Render" />
+			<Option target="Release" />
+			<Option target="Profile" />
+		</Unit>
+		<Unit filename="test/Testing/error_handler.h">
+			<Option target="Test" />
+		</Unit>
+		<Unit filename="test/Testing/matchers.h">
+			<Option target="Test" />
 		</Unit>
 		<Unit filename="test/defines_linux.txt">
 			<Option virtualFolder="test/" />

@@ -41,7 +41,7 @@
 #include <memory>
 
 namespace jdi {
-  class context;
+  class Context;
 }
 namespace jdi {
   class context_parser;
@@ -65,6 +65,9 @@ namespace jdi
   using std::shared_ptr;
   using std::unique_ptr;
   
+  /// Map of string to token type; a map-of-keywords type.
+  typedef std::map<string, TOKEN_TYPE> keyword_map;
+  
   /**
     @class context
     @brief A class representing a context for manipulation.
@@ -74,9 +77,7 @@ namespace jdi
     
     @see context.h
   **/
-  
-  class context
-  {
+  class Context {
     bool parse_open; ///< True if we're already parsing something
     friend class jdi::AST;
     friend class jdi::context_parser;
@@ -88,7 +89,7 @@ namespace jdi
     
     error_handler *herr;
     
-  public:
+   public:
     set<definition*> variadics; ///< Set of variadic types.
     
     size_t search_dir_count(); ///< Return the number of search directories
@@ -134,8 +135,8 @@ namespace jdi
     
     void reset(); ///< Reset back to the built-ins; delete all parsed definitions
     void reset_all(); ///< Reset everything, dumping all built-ins as well as all parsed definitions
-    void copy(const context &ct); ///< Copy the contents of another context.
-    void swap(context &ct); ///< Swap contents with another context.
+    void copy(const Context &ct); ///< Copy the contents of another context.
+    void swap(Context &ct); ///< Swap contents with another context.
     
     /** Load standard built-in types, such as int. 
         This function is really only for use with the built-in context.
@@ -145,6 +146,11 @@ namespace jdi
         This function is really only for use with the built-in context.
     **/
     void load_gnu_builtins();
+    
+    /** Sets the error handler to use when parsing macros or code. */
+    void set_error_handler(error_handler *herr_) {
+      herr = herr_;
+    }
     
     void output_types(ostream &out = cout); ///< Print a list of scoped-in types.
     void output_macro(string macroname, ostream &out = cout); ///< Print a single macro to a given stream.
@@ -162,6 +168,14 @@ namespace jdi
     /// Get a non-const reference to the global macro set.
     static macro_map &global_macros();
     
+    /// List of C++ keywords, mapped to the type of their token.
+    /// This list is assumed to contain tokens whose contents are unambiguous;
+    /// one string maps to one token, and vice-versa.
+    keyword_map keywords;
+    /// This is a map of macros to add bare-minimal support for a number of
+    /// compiler-specific builtins.
+    macro_map kludge_map;
+    
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
     **/
@@ -172,7 +186,7 @@ namespace jdi
         You may specify an error handler to use in this constructor, or you may
         assign one later using `set_error_handler(herr)`.
     **/
-    context(error_handler *herr = def_error_handler);
+    Context(error_handler *herr = def_error_handler);
     
     
     /** Construct with essentially nothing. This constructor circumvents the copy process. It has
@@ -187,22 +201,17 @@ namespace jdi
         
         @param disregarded  Disregarded. The parameter is there only to distinguish this constructor.
     **/
-    context(int disregarded);
+    Context(int disregarded);
     
     /** Copy constructor.
         Overrides the C++ default copy constructor with a version meant to simplify
         building off of existing contexts. Simply constructs and duplicates the passed
         context instead of the builtin context.
     **/
-    context(const context&);
-    
-    /** Sets the error handler to use when parsing macros or code. */
-    void set_error_handler(error_handler *herr_) {
-      herr = herr_;
-    }
+    Context(const Context&);
     
     /** A simple destructor to clean up after the definition loading. **/
-    ~context() = default;
+    ~Context() = default;
   };
 }
 

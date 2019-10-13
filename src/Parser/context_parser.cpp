@@ -26,7 +26,7 @@
 using std::cerr; using std::endl;
 
 namespace jdi {
-  context_parser::context_parser(context *ctex_, llreader &cfile):
+  context_parser::context_parser(Context *ctex_, llreader &cfile):
       ctex(ctex_), lex(new lexer(cfile, ctex_->macros, ctex_->herr)),
       herr(ctex_->herr), astbuilder(new AST_Builder(this)) {
     if (ctex->parse_open) {
@@ -36,7 +36,7 @@ namespace jdi {
     else
       ctex->parse_open = true;
   }
-  context_parser::context_parser(context *ctex_, lexer *lex_):
+  context_parser::context_parser(Context *ctex_, lexer *lex_):
       ctex(ctex_), lex(lex_),
       herr(lex_->get_error_handler()), astbuilder(new AST_Builder(this)) {
     if (ctex->parse_open) {

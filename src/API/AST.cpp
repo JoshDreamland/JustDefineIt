@@ -103,12 +103,9 @@ namespace jdi {
           full_type ft = cparse->read_type(token, search_scope); // Read the full set of declarators
           track(ft.toString());
           myroot = new AST_Node_Type(ft);
-          token_basics(
-              void(),
-              myroot->filename = (const char*)token.file,
-              myroot->linenum = token.linenum,
-              myroot->pos = token.pos
-            );
+          myroot->filename = token.get_filename();
+          myroot->linenum = token.linenum;
+          myroot->pos = token.pos;
           handled_basics = read_next = true;
         } break;
       
@@ -176,7 +173,8 @@ namespace jdi {
         ct = token.content.toString();
         symbol& op = symbols[ct];
         if (not(op.type & ST_UNARY_PRE)) {
-          token.report_error(herr,"Operator cannot be used as unary prefix");
+          token.report_error(herr, "Operator " + ct
+                             + " cannot be used as unary prefix");
           return NULL;
         }
         track(ct);
@@ -186,7 +184,9 @@ namespace jdi {
       } break;
       
       case TT_GREATERTHAN: case TT_LESSTHAN: case TT_COLON:
-        token.report_error(herr, ast->tt_greater_is_op? "Expected expression here before greater-than operator" : "Expected expression here before closing triangle bracket");
+        token.report_error(herr, ast->tt_greater_is_op
+            ? "Expected expression here before greater-than operator"
+            : "Expected expression here before closing triangle bracket");
         return NULL;
       
       case TT_SCOPE:
@@ -407,13 +407,12 @@ namespace jdi {
       case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
         return NULL;
     }
-    if (!handled_basics)
-      token_basics(
-        myroot->type = at,
-        myroot->filename = (const char*)token.file,
-        myroot->linenum = token.linenum,
-        myroot->pos = token.pos
-      );
+    if (!handled_basics) {
+      myroot->type = at;
+      myroot->filename = token.get_filename();
+      myroot->linenum = token.linenum;
+      myroot->pos = token.pos;
+    }
     if (!read_next)
       token = get_next_token();
     
@@ -551,9 +550,7 @@ namespace jdi {
               return left_node;
             }
             left_node = new AST_Node_Binary(left_node,right,op);
-            break;
-          }
-          if (s.type & ST_TERNARY) {
+          } else if (s.type & ST_TERNARY) {
             if (s.prec_binary < prec_min)
               return left_node;
             string ct(token.content.toString());
@@ -582,13 +579,20 @@ namespace jdi {
             }
             
             left_node = new AST_Node_Ternary(left_node,exptrue,expfalse,ct);
-            break;
-          }
-          if (s.type & ST_UNARY_POST) {
+          } else if (s.type & ST_UNARY_POST) {
             if (s.prec_unary_post < prec_min)
               return left_node;
             left_node = new AST_Node_Unary(left_node, op, false); 
             token = get_next_token();
+          } else {
+            if (s.type & ST_UNARY_PRE) {
+              token.report_error(herr, "Expected binary operator before unary "
+                                 "`" + op + "` operator...");
+            } else {
+              token.report_error(herr, "Symbol `" + op +
+                                 "` is known, but has no operator type...");
+            }
+            return left_node;
           }
         }
         break;
@@ -637,11 +641,9 @@ namespace jdi {
                 if (!ant) {
                   delete left_node;
                   left_node = ant = new AST_Node_Type(ft);
-                  token_basics(void(),
-                    left_node->filename = (const char*)token.file,
-                    left_node->linenum = token.linenum,
-                    left_node->pos = token.pos
-                  );
+                  left_node->filename = token.get_filename();
+                  left_node->linenum = token.linenum;
+                  left_node->pos = token.pos;
                 }
               }
               else {
@@ -658,12 +660,9 @@ namespace jdi {
                 nr->content = nr->cast_type.toString();
                 delete left_node;
                 left_node = nr;
-                token_basics(
-                  void(),
-                  left_node->filename = (const char*)token.file,
-                  left_node->linenum = token.linenum,
-                  left_node->pos = token.pos
-                );
+                left_node->filename = token.get_filename();
+                left_node->linenum = token.linenum;
+                left_node->pos = token.pos;
                 track(string(")"));
               }
               break;
@@ -821,7 +820,12 @@ namespace jdi {
       return value(content);
     if (type == AT_CHRLITERAL)
       return value(parselong(content));
-    errc.report_error("Evaluating unknown node type");
+    if (type == AT_IDENTIFIER) {
+      if (true) return value(0L);  // TODO: Pass this in the error context? Let AST_Node reference AST?
+      errc.report_error("Evaluation error: `" + content + "` is undeclared");
+      return value();
+    }
+    errc.report_error("Evaluating unknown node type " + std::to_string(type));
     return value();
   }
   value AST_Node_Definition::eval(const error_context &errc) const {
@@ -1372,7 +1376,7 @@ namespace jdi {
       lex(ctp->lex), herr(ctp->herr), cparse(ctp), search_scope(NULL) {}
 
   AST parse_expression(lexer *lex) {
-    context ctex;
+    Context ctex;
     context_parser ctp(&ctex, lex);
     AST_Builder ab(&ctp);
     AST res;
