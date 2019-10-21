@@ -54,11 +54,13 @@ inline vector<token_t> parse_macro(const string &definiendum, const string &defi
 }
 void Context::add_macro(string definiendum, string definiens) {
   macros[definiendum] = new_macro(definiendum,
-                                  parse_macro(definiendum, definiens, herr));
+                                  parse_macro(definiendum, definiens, herr),
+                                  herr);
 }
 void Context::add_macro_func(string definiendum, string definiens) {
   macros[definiendum] = new_macro(definiendum,
-                                  parse_macro(definiendum, definiens, herr));
+                                  parse_macro(definiendum, definiens, herr),
+                                  herr);
 }
 void Context::add_macro_func(string definiendum, string p1, string definiens, bool variadic) {
   vector<string> arglist;

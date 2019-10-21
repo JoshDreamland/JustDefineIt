@@ -17,8 +17,7 @@
 #include <iostream>
 #include <iomanip>
 #include <unistd.h>
-using namespace std;
-#include <API/jdi.h>
+
 #include <API/AST.h>
 #include <API/user_tokens.h>
 #include <General/llreader.h>
@@ -38,6 +37,7 @@ using namespace std;
 #include <System/lex_cpp.h>
 
 using namespace jdi;
+using namespace std;
 
 void test_expression_evaluator();
 void name_type(string type, Context &ct);
@@ -72,43 +72,6 @@ static inline int compute_diff(const vector<int> &v1, const vector<int> &v2, siz
   return window < 512 ? compute_diff(v1, v2, ind, window * 2) : 0;
 }
 
-static void test_lexer_16_3_3() {
-  string tcase = R"(
-    #define hash_hash # ## #
-    #define mkstr(a) # a
-    #define in_between(a) mkstr(a)
-    #define join(c, d) in_between(c hash_hash d)
-    join(x, y)
-  )";
-
-  llreader basic("test macro", tcase, false);
-  Context butts;
-  macro_map buttMacros = butts.get_macros();
-  token_t token;
-  lexer lex(basic, buttMacros, def_error_handler);
-  token = lex.get_token(); cout << token.to_string() << endl;
-  // Should be the literal string "x ## y"
-}
-
-static void test_lexer_mathcat() {
-  string tcase = R"(
-    #define __CONCAT(x, y) x ## y
-    #define __SIMD_DECL(function) __CONCAT (__DECL_SIMD_, function)
-    #define __MATHCALL_VEC(function, suffix) 	\
-      __SIMD_DECL (__MATH_PRECNAME (function, suffix))
-    #define __MATH_PRECNAME(name,r)	__CONCAT(name,r)
-    __MATHCALL_VEC()
-  )";
-
-  llreader basic("test macro", tcase, false);
-  Context butts;
-  macro_map buttMacros = butts.get_macros();
-  token_t token;
-  lexer lex(basic, buttMacros, def_error_handler);
-  token = lex.get_token(); cout << token.to_string() << endl;
-  // Should be the literal string "x ## y"
-}
-
 #include <fstream>
 const char* tname[TT_INVALID + 1];
 /*static void write_tokens() {
@@ -123,6 +86,24 @@ const char* tname[TT_INVALID + 1];
   f << "END OF STREAM" << endl;
   f.close();
 }*/
+
+
+/*
+This is the command I use to generate the test data for this system.
+Tweak it to use your own code input and source locations.
+
+gcc -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/ -E \
+    /home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp \
+    -o /home/josh/Projects/JustDefineIt/shellmain-pp.cc && \
+    (cpp -dM -x c++ --std=c++03 -E /dev/null \
+         > /home/josh/Projects/JustDefineIt/test/defines_linux.txt);
+
+You can run this (with locale=LC_ALL) to generate the include directory list
+used below:
+
+gcc -E -x c++ --std=c++03 -v /dev/null 2>&1 | \
+    sed -n '/#include ..... search starts here:/,/End of search list[.]/p'
+*/
 
 int main() {
   putcap("Test simple macros");
@@ -161,12 +142,12 @@ int main() {
          << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
   }
   
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/../../../../include/c++/9.1.0");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/../../../../include/c++/9.1.0/x86_64-pc-linux-gnu");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/../../../../include/c++/9.1.0/backward");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/include");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/x86_64-pc-linux-gnu");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/backward");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include");
   builtin.add_search_directory("/usr/local/include");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.1.0/include-fixed");
+  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include-fixed");
   builtin.add_search_directory("/usr/include");
 
   builtin.add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
@@ -190,8 +171,6 @@ int main() {
   // write_tokens();
   
   putcap("Test lexer");
-  test_lexer_16_3_3();
-  test_lexer_mathcat();
   if (false) {
     string tcase = "#define butts 1\n#if 2 > 1 && butts\n  int x;\n#endif\n";
     llreader basic("test case", tcase, false);
@@ -205,16 +184,7 @@ int main() {
     token = lex.get_token(); cout << token.to_string() << endl;
     return 0;
   }
-  /*
-  This is the command I use to generate the test data for this system.
-  Tweak it to use your own code input and source locations.
-  
-  gcc -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/ -E \
-      /home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp \
-      -o Projects/JustDefineIt/shellmain-pp.cc && \
-      (cpp -dM -x c++ --std=c++03 -E /dev/null \
-           > /home/josh/Projects/JustDefineIt/test/defines_linux.txt);
-  */
+
   if (true) {
     vector<int> tokens, tokens2;
     size_t correct = 0, incorrect = 0;

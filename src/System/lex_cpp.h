@@ -87,8 +87,12 @@ namespace jdi {
     size_t buf_pos = 0;
     /// Denotes that this buffer was already preprocessed fully.
     bool is_rewind = false;
+    /// When true, do not allow popping this buffer during normal parsing.
+    /// This is used to do nested lexing/preprocessing operations within the
+    /// preprocessing logic. More buffers can be pushed on and subsequently
+    /// popped off, but this buffer can only be popped manually.
+    bool is_frozen = false;
 
-    OpenBuffer(const OpenBuffer&) = delete;
     OpenBuffer(string macro, token_t origin, const std::vector<token_t> *tokens_):
         tokens(*tokens_), macro_info({macro, origin}) {}
     OpenBuffer(string macro, token_t origin, std::vector<token_t> &&tokens_):
@@ -97,13 +101,18 @@ namespace jdi {
     OpenBuffer(token_vector &&tokens_):
         tokens(assembled_token_data), macro_info(), 
         assembled_token_data(tokens_) {}
+    OpenBuffer(const token_vector *tokens_):
+        tokens(*tokens_), macro_info(), assembled_token_data() {}
 
+    OpenBuffer(const OpenBuffer&) = delete;
     OpenBuffer(OpenBuffer &&other):
         tokens(&other.tokens == &other.assembled_token_data
                ? assembled_token_data : other.tokens),
         macro_info(std::move(other.macro_info)),
         assembled_token_data(std::move(other.assembled_token_data)),
-        buf_pos(other.buf_pos), is_rewind(other.is_rewind) {}
+        buf_pos(other.buf_pos),
+        is_rewind(other.is_rewind),
+        is_frozen(other.is_frozen) {}
   };
 
   /**
@@ -174,8 +183,10 @@ namespace jdi {
 
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
 
+    // std::set<string> visited_macros; ///< Cache over macro names in open_buffers.
     std::set<string> visited_files; ///< For record and reporting purposes only.
-    
+
+    /// Pointer to the context we're parsing definitions into.
     Context *const builtin;
 
     /// Private base constructor.
@@ -213,14 +224,6 @@ namespace jdi {
     /// @param mf   The macro function to parse
     /// @return Returns whether parameters were encountered and parsed.
     bool parse_macro_function(const token_t &otk, const macro_type &mf);
-    /// Parse for parameters to a given macro function, if there are any.
-    /// This call should be made while the position is just after the macro
-    /// name. That is, the next token should be an opening parenthesis.
-    /// If not, this method will return immediately.
-    /// @param mf    The macro function to parse.
-    /// @param dest  The vector to receive the individual parameters [out].
-    /// @return Returns whether parameters were encountered and parsed.
-    bool parse_macro_params(const macro_type &mf, vector<vector<token_t>>* dest);
     /// Check if we're currently inside a macro by the given name.
     bool inside_macro(string_view macro_name) const;
 
@@ -247,6 +250,11 @@ namespace jdi {
       condition(bool, bool);
     };
 
+    /// Retrieve the next token from the underlying file or current buffer.
+    /// No *additional* preprocessing will be performed, but this token may come
+    /// from inside a replacement list expansion or rewind buffer.
+    token_t read_raw();
+
     /// Internal logic to handle preprocessing and fetching a token, as well
     /// as reading tokens off the current buffer, if needed.
     token_t preprocess_and_read_token();
@@ -261,22 +269,23 @@ namespace jdi {
     **/
     lexer(llreader& input, macro_map &pmacros, error_handler *herr);  // TODO: Have Lexer own pmacros.
     /**
-      Consumes a token_vector, returning only the tokens in the vector before
-      returning END_OF_CODE.
-      @param input    The file from which to read definitions.
-                      This file will be manipulated by the system.
-      @param fname    The name of the file that was first opened.
-    **/
-    //lexer(token_vector &&tokens, error_handler *herr);
-    /**
-      Consumes a token_vector, returning only the tokens in the vector before
+      Consumes a token_vector, processing only the tokens in the vector before
       returning END_OF_CODE. Does macro expansion using the macros in the given
-      lexer. 
+      lexer.
       @param input    The file from which to read definitions.
                       This file will be manipulated by the system.
       @param fname    The name of the file that was first opened.
     **/
     lexer(token_vector &&tokens, const lexer &basis);
+    /**
+      Aliases a token_vector, processing only the tokens in the vector before
+      returning END_OF_CODE. Does macro expansion using the macros in the given
+      lexer.
+      @param input    The file from which to read definitions.
+                      This file will be manipulated by the system.
+      @param fname    The name of the file that was first opened.
+    **/
+    lexer(const token_vector *tokens, const lexer &basis);
     /** Destructor; free the attached macro lexer. **/
     ~lexer();
 
@@ -328,13 +337,17 @@ namespace jdi {
     /// Push a buffer of tokens onto this lexer, and mark them preprocessed.
     void push_rewind_buffer(OpenBuffer &&buf);
 
-    /// Push any construction of an OpenBuffer onto this lexer.
-    template<typename... Args> void push_buffer(Args... args) {
-      push_buffer(OpenBuffer(std::move(args)...));
-    }
+    /// Push a buffer onto this lexer, and freeze it. (See notes above.)
+    void push_frozen_buffer(OpenBuffer &&buf);
 
     /// Pop the current top buffer.
-    void pop_buffer();
+    bool pop_buffer();
+
+    /// Pop the frozen buffer you just pushed.
+    /// Will report an error if a buffer was pushed onto it and not popped.
+    /// There is no pop_rewind_buffer because rewind buffers are normal buffers
+    /// except they are not rescanned. A rewind buffer can technically be frozen.
+    void pop_frozen_buffer();
 
     // =========================================================================
     // == Configuration Storage ================================================

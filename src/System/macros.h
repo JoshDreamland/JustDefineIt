@@ -78,25 +78,46 @@ namespace jdi {
     struct FuncComponent {
       enum TAG {
         TOKEN_SPAN = 1,
-        ARGUMENT,
-        PASTE
+        RAW_ARGUMENT,
+        EXPANDED_ARGUMENT,
+        PASTE,
+        STRINGIFY,
+        VA_ARGS,
+        VA_OPT
       };
       struct TokenSpan {
         size_t begin, end;
       };
-      struct ArgumentIndex {
+      struct Argument {
         size_t index;
       };
+      struct RawArgument : Argument {};
+      struct ExpandedArgument : Argument {};
+      struct Stringify : Argument {};
       struct Paste {};
+      struct VAArgs {};
+      struct VAOpt {};
+
       TAG tag;
       union {
         TokenSpan token_span;
-        ArgumentIndex argument;
-        Paste paste;
+        Argument raw_expanded_or_stringify_argument;
+        RawArgument raw_argument;
+        ExpandedArgument expanded_argument;
+        Stringify stringify;
       };
-      FuncComponent(TokenSpan span): tag(TOKEN_SPAN), token_span(span) {}
-      FuncComponent(ArgumentIndex arg_index): tag(ARGUMENT), argument(arg_index) {}
-      FuncComponent(Paste): tag(PASTE) {}
+
+      FuncComponent(TokenSpan span):
+          tag(TOKEN_SPAN), token_span(span) {}
+      FuncComponent(RawArgument arg_index):
+          tag(RAW_ARGUMENT), raw_argument(arg_index) {}
+      FuncComponent(ExpandedArgument arg_index):
+          tag(EXPANDED_ARGUMENT), expanded_argument(arg_index) {}
+      FuncComponent(Stringify arg_index):
+          tag(STRINGIFY), stringify(arg_index) {}
+      FuncComponent(Paste):  tag(PASTE)   {}
+      FuncComponent(VAArgs): tag(VA_ARGS) {}
+      FuncComponent(VAOpt):  tag(VA_OPT)  {}
     };
 
     /// Semantic cache of the replacement list of our function-like macro.
@@ -109,8 +130,13 @@ namespace jdi {
 
     /// Expand this macro function, given arguments.
     token_vector substitute_and_unroll(const vector<token_vector> &args,
+                                       const vector<token_vector> &args_evald,
                                        error_handler *herr) const;
-    
+
+    /// Handle concatenations (##) in replacement lists for object-like macros.
+    static token_vector evaluate_concats(token_vector &&replacement_list,
+                                         error_handler *herr);
+
     /// Convert this macro to a string
     string toString() const;
     /// Returns the name of this macro, including the parameter list for
@@ -118,9 +144,9 @@ namespace jdi {
     string NameAndPrototype() const;
     
     /// Default constructor; defines an object-like macro with the given value.
-    macro_type(const string &n, vector<token_t> &&definiens):
+    macro_type(const string &n, vector<token_t> &&definiens, error_handler *h):
         is_function(false), is_variadic(false), name(n), params(),
-        value(std::move(definiens)) {}
+        value(evaluate_concats(std::move(definiens), h)) {}
 
     /** Construct a macro function taking the arguments in arg_list.
         This function parses the given value based on the argument list.

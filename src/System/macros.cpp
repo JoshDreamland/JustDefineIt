@@ -74,9 +74,28 @@ vector<macro_type::FuncComponent> macro_type::componentize(
       auto found = params_by_name.find(tokens[i].content.view());
       if (found != params_by_name.end()) {
         if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
-        res.push_back(FuncComponent::ArgumentIndex{found->second});
+        if ((i + 1 < tokens.size() && tokens[i + 1].type == TTM_CONCAT) ||
+            (i > 0 && tokens[i - 1].type == TTM_CONCAT)) {
+          res.push_back(FuncComponent::RawArgument{found->second});
+        } else {
+          res.push_back(FuncComponent::ExpandedArgument{found->second});
+        }
         e = i + 1;
       }
+    } else if (tokens[i].type == TTM_TOSTRING) {
+      if (i + 1 >= tokens.size() || tokens[i + 1].type != TT_IDENTIFIER) {
+        herr->error(tokens[i], "# must be followed by a parameter name");
+        continue;
+      }
+      if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
+      auto found = params_by_name.find(tokens[++i].content.view());
+      if (found == params_by_name.end()) {
+        herr->error(tokens[i], "# must be followed by a parameter name; " +
+                    tokens[i].content.toString() + " is not a parameter");
+        continue;
+      }
+      res.push_back(FuncComponent::Stringify{found->second});
+      e = i + 1;
     }
   }
   if (e < tokens.size())
@@ -95,6 +114,23 @@ static token_t paste_tokens(token_t left, token_t right, error_handler *herr) {
   return res;
 }
 
+token_vector macro_type::evaluate_concats(token_vector &&replacement_list,
+                                          error_handler *herr) {
+  size_t left = 0;
+  for (size_t i = 1; i < replacement_list.size(); ++i) {
+    if (replacement_list[i].type == TTM_CONCAT) {
+      if (++i >= replacement_list.size()) break;
+      replacement_list[left] =
+          paste_tokens(replacement_list[left], replacement_list[i],herr);
+    } else if (++left < i) {
+      replacement_list[left] = replacement_list[i];
+    }
+  }
+  // Conditional handles the zero-size case.
+  if (++left < replacement_list.size()) replacement_list.resize(left);
+  return replacement_list;
+}
+
 static void append_or_paste(token_vector &dest,
                             token_vector::const_iterator begin,
                             token_vector::const_iterator end,
@@ -108,13 +144,23 @@ static void append_or_paste(token_vector &dest,
 }
 
 token_vector macro_type::substitute_and_unroll(
-    const vector<token_vector> &args, error_handler *herr) const {
+    const vector<token_vector> &args, const vector<token_vector> &args_evald,
+    error_handler *herr) const {
   token_vector res;
   bool paste_next = false;
   if (args.size() < params.size()) {
     herr->error("Too few arguments to macro " + NameAndPrototype() +
                 ": wanted " + std::to_string(params.size()) +
                 ", got " + std::to_string(args.size()));
+  }
+  if (args.size() > params.size()) {
+    if (!is_variadic) {
+      herr->error("Too many arguments to macro " + NameAndPrototype() +
+                  ": wanted " + std::to_string(params.size()) +
+                  ", got " + std::to_string(args.size()));
+    } else if (args.size() != params.size() + 1) {
+      herr->error("Internal error: variadic macro passed too many arguments");
+    }
   }
   for (const FuncComponent &part : parts) {
     switch (part.tag) {
@@ -124,22 +170,61 @@ token_vector macro_type::substitute_and_unroll(
                         paste_next, herr);
         paste_next = false;
         break;
-      case FuncComponent::ARGUMENT:
-        if (part.argument.index >= args.size()) {
-          if (part.argument.index >= params.size()) {
-            herr->error("Internal error: "
-                        "Macro function built with bad argument references.");
+      case FuncComponent::RAW_ARGUMENT:
+      case FuncComponent::EXPANDED_ARGUMENT:
+      case FuncComponent::STRINGIFY: {
+        const size_t ind = part.raw_expanded_or_stringify_argument.index;
+        if (ind >= args.size()) {
+          if (ind >= params.size()) {
+            herr->error(
+                "Internal error: Macro function built with bad argument "
+                "references. Index " + std::to_string(ind) + " out of bounds "
+                "(only " + std::to_string(params.size()) + " params defined).");
           }
+          paste_next = false;
           continue;
         }
-        append_or_paste(res, args[part.argument.index].begin(),
-                             args[part.argument.index].end(),
-                        paste_next, herr);
+        if (part.tag == FuncComponent::STRINGIFY) {
+          string str;
+          for (const token_t &tok : args[ind])
+            str += tok.content.toString();
+          str = quote(str);
+          string name_str = "#" + params[ind];
+          token_vector vec{token_t(TT_STRINGLITERAL, name_str.c_str(), 0, 0, std::move(str))};
+          append_or_paste(res, vec.begin(), vec.end(), paste_next, herr);
+          paste_next = false;
+          break;
+        }
+        const token_vector &vec =
+            part.tag == FuncComponent::EXPANDED_ARGUMENT
+                ? args_evald[ind] : args[ind];
+        append_or_paste(res, vec.begin(), vec.end(), paste_next, herr);
         paste_next = false;
         break;
+      }
       case FuncComponent::PASTE:
         paste_next = true;
         break;
+      case FuncComponent::VA_ARGS:
+        if (args.size() == params.size() + 1) {
+          append_or_paste(res, args[params.size()].begin(),
+                               args[params.size()].end(),
+                          paste_next, herr);
+        } else {
+          token_vector empty;
+          append_or_paste(res, empty.begin(), empty.end(), paste_next, herr);
+        }
+        break;
+      case FuncComponent::VA_OPT: {
+        token_vector opt;
+        if (args.size() == params.size() + 1 && !args[params.size()].empty()) {
+          opt.push_back(token_t(TT_COMMA, "__VA_OPT__", 0, 0, ",", 1));
+        } else {
+          token_vector empty;
+          append_or_paste(res, empty.begin(), empty.end(), paste_next, herr);
+        }
+        break;
+      }
       default:
         herr->error("Internal error: Macro function component unknown...");
     }

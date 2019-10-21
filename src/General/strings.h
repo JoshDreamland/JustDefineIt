@@ -26,6 +26,7 @@
 #define STRINGS__H
 
 #include <string>
+#include <string_view>
 
 namespace jdi {
 
@@ -58,6 +59,22 @@ namespace jdi {
 
   static inline std::string format(std::string_view text) {
     return std::string(text);
+  }
+
+  static inline std::string quote(std::string_view str) {
+    std::string res;
+    res.reserve(str.length() * 2 + 2);
+    res += '"';
+    for (char c : str) switch (c) {
+      case '\r': res += "\\r"; break;
+      case '\n': res += "\\n"; break;
+      case '\\': res += "\\\\"; break;
+      case '\"': res += "\\\""; break;
+      case '\'': res += "\\\'"; break;
+      default: res += c;
+    }
+    res += '"';
+    return res;
   }
 }
 

@@ -37,6 +37,7 @@
 #include <cstring>
 #include <csignal>
 #include <filesystem>
+#include <unordered_map>
 
 
 using namespace jdi;
@@ -189,48 +190,6 @@ static inline bool skip_rstring(llreader &cfile, error_handler *herr) {
   return !cfile.eof();
 }
 
-bool lexer::parse_macro_params(const macro_type &mf, vector<token_vector> *out) {
-  cfile.skip_whitespace();
-  
-  if (cfile.at() != '(') return false;
-  cfile.advance();
-
-  vector<token_vector> res;
-  res.reserve(mf.params.size());
-  
-  // Read the parameters into our argument vector
-  int too_many_args = 0;
-  for (int nestcnt = 1;;) {
-    token_t tok = read_token(cfile, herr);
-    if (cfile.eof()) {
-      lex_error(herr, cfile, "Unterminated parameters to macro function");
-      return false;
-    }
-    if (tok.type == TT_LEFTPARENTH) ++nestcnt;
-    if (tok.type == TT_RIGHTPARENTH) {
-      if (!--nestcnt) break;
-    }
-    if (res.empty()) res.emplace_back();
-    if (tok.type == TT_COMMA && nestcnt == 1) {
-      if (res.size() < mf.params.size()) {
-        res.emplace_back();
-        continue;
-      } else if (!mf.is_variadic) {
-        ++too_many_args;
-      }
-    }
-    res.back().push_back(tok);
-  }
-  if (too_many_args) {
-    herr->error(cfile, "Too many arguments to macro function `%s`; expected %s but got %s", 
-                mf.name, mf.params.size(), mf.params.size() + too_many_args);
-  }
-  out->swap(res);
-  return true;
-}
-
-// This is so much more convenient as a helper, where no comment is required
-// and we don't need to store a bool outside our loop.
 bool lexer::inside_macro(string_view name) const {
   for (const auto &buf : open_buffers)
     if (buf.macro_info && buf.macro_info->name == name)
@@ -240,19 +199,68 @@ bool lexer::inside_macro(string_view name) const {
 
 bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
   if (inside_macro(mf.name))
-    return true;
-  
-  size_t spos = cfile.pos, slpos = cfile.lpos, sline = cfile.lnum;
-  cfile.skip_whitespace(); // Move to the next "token"
-  if (cfile.eof() or cfile.at() != '(') {
-    cfile.pos = spos, cfile.lpos = slpos, cfile.lnum = sline;
+    return false;
+
+  token_t maybe_paren = read_raw();
+  if (maybe_paren.type != TT_LEFTPARENTH) {
+    if (maybe_paren.type == TT_ENDOFCODE) return false;
+    push_buffer(token_vector{maybe_paren});
     return false;
   }
-  
-  vector<vector<token_t>> params;
-  if (!parse_macro_params(mf, &params)) return false;
-  vector<token_t> tokens = mf.substitute_and_unroll(params, herr);
-  push_buffer(mf.name, otk, std::move(tokens));
+
+  vector<token_vector> args;
+  args.reserve(mf.params.size());
+
+  // Read the parameters into our argument vector
+  int too_many_args = 0;
+  for (int nestcnt = 1;;) {
+    token_t tok = read_raw();
+    if (cfile.eof()) {
+      lex_error(herr, cfile, "Unterminated parameters to macro function");
+      return false;
+    }
+    if (tok.type == TT_LEFTPARENTH) ++nestcnt;
+    if (tok.type == TT_RIGHTPARENTH) {
+      if (!--nestcnt) break;
+    }
+    if (args.empty()) args.emplace_back();
+    if (tok.type == TT_COMMA && nestcnt == 1) {
+      if (args.size() < mf.params.size()) {
+        args.emplace_back();
+        continue;
+      } else if (!mf.is_variadic) {
+        ++too_many_args;
+      }
+    }
+    args.back().push_back(tok);
+  }
+
+  // Briefly. What we've done above is read the raw tokens for each argument.
+  // These will be substituted for parameters that are arguments to `##` or `#`.
+  // But parameters that appear raw in the replacement list are substituted with
+  // a fully-evaluated version, "as if they formed the rest of the preprocessing
+  // file with no other preprocessing tokens being available." (cpp.subst.1.2)
+
+  if (too_many_args) {
+    herr->error(cfile, "Too many arguments to macro function `%s`; "
+                       "expected %s but got %s",
+                mf.name, mf.params.size(), mf.params.size() + too_many_args);
+  }
+
+  vector<token_vector> evald;
+  evald.reserve(args.size());
+  for (const token_vector &arg : args) {
+    push_frozen_buffer(&arg);
+    token_vector &v = evald.emplace_back();
+    for (token_t t = preprocess_and_read_token(); t.type != TT_ENDOFCODE;
+                 t = preprocess_and_read_token()) {
+      v.push_back(t);
+    }
+    pop_frozen_buffer();
+  }
+
+  token_vector tokens = mf.substitute_and_unroll(args, evald, herr);
+  push_buffer({mf.name, otk, std::move(tokens)});
   return true;
 }
 
@@ -466,7 +474,8 @@ void lexer::handle_preprocessor() {
       } else {
         while (is_useless(argstr[i])) ++i;
         mins.first->second = std::make_shared<const macro_type>(
-            mins.first->first, tokenize(cfile.name, argstrs.substr(i), herr));
+            mins.first->first, tokenize(cfile.name, argstrs.substr(i), herr),
+            herr);
       }
     } break;
     case_error: {
@@ -552,7 +561,9 @@ void lexer::handle_preprocessor() {
                  tok.type != TT_ENDOFCODE && tok.type != TTM_NEWLINE) {
             toks.push_back(tok);
           }
-          lexer l(std::move(toks), *this);
+          // Using a second lexer here makes it so we don't have to fuck around
+          // with our rewind buffers to stop them from recording macros.
+          lexer l(&toks, *this);
           AST a = parse_expression(&l);
           render_ast(a, "if_directives");
           if (!a.eval({herr, tok}))
@@ -774,12 +785,16 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
     if (cfile.eof()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
     
     // Skip all whitespace
-    while (is_useless(cfile.at())) {
-      if (cfile.at() == '\n' || cfile.at() == '\r') {
-        cfile.take_newline();
-        return mktok(TTM_NEWLINE, cfile.tell(), 0);
-      }
-      if (!cfile.advance()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
+    if (is_useless(cfile.at())) {
+      size_t spos = cfile.tell();
+      do {
+        if (cfile.at() == '\n' || cfile.at() == '\r') {
+          cfile.take_newline();
+          return mktok(TTM_NEWLINE, spos, cfile.tell() - spos);
+        }
+        if (!cfile.advance()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
+      } while (is_useless(cfile.at()));
+      // TODO: return whitespace marker.
     }
     
     //==========================================================================
@@ -788,7 +803,6 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
     
     const size_t spos = cfile.tell();
     switch (cfile.getc()) {
-    // Skip all whitespace
     
     case '/': {
       if (cfile.at() == '*') { skip_multiline_comment(cfile); continue; }
@@ -1062,6 +1076,20 @@ token_vector jdi::tokenize(string fname, string_view str, error_handler *herr) {
   return res;
 }
 
+enum class LexerKeyword {
+  FILENAME,
+  LINE,
+  FUNC,
+  FUNC_PRETTY,
+};
+static const unordered_map<string, LexerKeyword> kLexerKeywords {
+  { "__FILE__", LexerKeyword::FILENAME },
+  { "__LINE__", LexerKeyword::LINE },
+  { "__FUNCTION__", LexerKeyword::FUNC },
+  { "__func__", LexerKeyword::FUNC },
+  { "__PRETTY_FUNCTION__", LexerKeyword::FUNC_PRETTY },
+};
+
 bool lexer::handle_macro(token_t &identifier) {
   if (identifier.type != TT_IDENTIFIER) {
     herr->error(identifier, "Internal error: Not an identifier: %s",
@@ -1085,7 +1113,31 @@ bool lexer::handle_macro(token_t &identifier) {
       }
     }
   }
-  
+
+  auto lexit = kLexerKeywords.find(fn);
+  if (lexit != kLexerKeywords.end()) switch (lexit->second) {
+    case LexerKeyword::FILENAME: {
+      // The current token was probably defined in a macro.
+      // Prefer the name of the currently-open file.
+      identifier.content = quote(cfile.is_open() ? cfile.name : identifier.file);
+      identifier.type = TT_STRINGLITERAL;
+      return false;
+    }
+    case LexerKeyword::LINE: {
+      // The current token was probably defined in a macro.
+      // Prefer the name of the currently-open file.
+      identifier.content =
+          std::to_string(cfile.is_open() ? cfile.lnum : identifier.linenum);
+      identifier.type = TT_DECLITERAL;
+      return false;
+    }
+    case LexerKeyword::FUNC:
+    case LexerKeyword::FUNC_PRETTY:
+    default:
+      herr->error(identifier, "Internal error: Keyword %s not handled",
+                  identifier.content.view());
+  }
+
   keyword_map::iterator kwit = builtin->keywords.find(fn);
   if (kwit != builtin->keywords.end()) {
     if (kwit->second == TT_INVALID) {
@@ -1140,12 +1192,32 @@ bool lexer::translate_identifier(token_t &identifier) {
   return false;
 }
 
+// XXX: This can probably be used as the basis of preprocess_and_read_token
+token_t lexer::read_raw() {
+  while (buffered_tokens) {
+    if (buffer_pos >= buffered_tokens->size()) {
+      if (!pop_buffer()) {
+        return token_t(TT_ENDOFCODE, cfile.name.c_str(), cfile.lnum,
+                       cfile.tell() - cfile.lpos, "", 0);
+      }
+      continue;
+    }
+    return (*buffered_tokens)[buffer_pos++];
+  }
+  token_t res;
+  do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
+  return res;
+}
+
 token_t lexer::preprocess_and_read_token() {
   token_t res;
   for (;;) {
     if (buffered_tokens) {
       if (buffer_pos >= buffered_tokens->size()) {
-        pop_buffer();
+        if (!pop_buffer()) {
+          return token_t(TT_ENDOFCODE, cfile.name.c_str(), cfile.lnum,
+                         cfile.tell() - cfile.lpos, "", 0);
+        }
         continue;
       }
       if (open_buffers.back().is_rewind) {
@@ -1212,9 +1284,15 @@ void lexer::push_rewind_buffer(OpenBuffer &&buf) {
   open_buffers.back().is_rewind = true;
 }
 
-void lexer::pop_buffer() {
+void lexer::push_frozen_buffer(OpenBuffer &&buf) {
+  push_buffer(std::move(buf));
+  open_buffers.back().is_frozen = true;
+}
+
+bool lexer::pop_buffer() {
   assert(open_buffers.empty() == !buffered_tokens);
   assert(buffered_tokens);
+  if (open_buffers.back().is_frozen) return false;
   open_buffers.pop_back();
   if (open_buffers.empty()) {
     buffered_tokens = nullptr;
@@ -1222,6 +1300,26 @@ void lexer::pop_buffer() {
     buffered_tokens = &open_buffers.back().tokens;
     buffer_pos = open_buffers.back().buf_pos;
   }
+  return true;
+}
+
+void lexer::pop_frozen_buffer() {
+  if (open_buffers.empty()) {
+    herr->error("Internal error: A frozen buffer was somehow popped.");
+    return;
+  }
+  if (!open_buffers.back().is_frozen) {
+    herr->error("Internal error: the current buffer is not frozen. "
+                "Some tokens were not consumed.");
+    for (auto it = open_buffers.rbegin(); it != open_buffers.rend(); ++it) {
+      if (it->is_frozen) {
+        while (pop_buffer());
+        break;
+      }
+    }
+  }
+  open_buffers.back().is_frozen = false;
+  pop_buffer();
 }
 
 bool lexer::pop_file() {
@@ -1275,6 +1373,10 @@ lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
 lexer::lexer(token_vector &&tokens, const lexer &other):
     lexer(other.macros, other.herr) {
   push_buffer(std::move(tokens));
+}
+lexer::lexer(const token_vector *tokens, const lexer &other):
+    lexer(other.macros, other.herr) {
+  push_buffer(tokens);
 }
 
 lexer::~lexer() {}
