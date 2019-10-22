@@ -62,13 +62,20 @@ static inline void skip_comment(llreader &cfile) {
   }
 }
 
+/// Skips a multiline (/**/) comment. Invoke when at() == '*'.
 static inline void skip_multiline_comment(llreader &cfile) {
-  cfile.pos += 2; // Skip two chars so we don't break on /*/
-  do {
-    if (cfile.eof()) return;
-    if (cfile.at() == '\n' or cfile.at() == '\r') cfile.take_newline();
-  } while (cfile.getc() != '*' or cfile.at() != '/');
-  cfile.advance();
+  cfile.advance(); // Skip another char so we don't break on /*/
+  for (;;) {
+    if (cfile.eof()) {
+      return;
+    } else if (cfile.at() == '\n' || cfile.at() == '\r') {
+      cfile.take_newline();
+    } else if (cfile.take('*')) {
+      if (cfile.take('/')) return;
+    } else {
+      cfile.advance();
+    }
+  }
 }
 
 // Skips an integer-suffix (u, ul, ull, l, lu, ll, llu)

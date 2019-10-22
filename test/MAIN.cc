@@ -167,23 +167,6 @@ int main() {
   name_type("int&()", builtin);
   name_type("int(*)()", builtin);
   name_type("int&(*)()", builtin);
-  
-  // write_tokens();
-  
-  putcap("Test lexer");
-  if (false) {
-    string tcase = "#define butts 1\n#if 2 > 1 && butts\n  int x;\n#endif\n";
-    llreader basic("test case", tcase, false);
-    Context butts;
-    macro_map buttMacros = butts.get_macros();
-    token_t token;
-    lexer lex(basic, buttMacros, def_error_handler);
-    token = lex.get_token(); cout << token.to_string() << endl;
-    token = lex.get_token(); cout << token.to_string() << endl;
-    token = lex.get_token(); cout << token.to_string() << endl;
-    token = lex.get_token(); cout << token.to_string() << endl;
-    return 0;
-  }
 
   if (true) {
     vector<int> tokens, tokens2;

@@ -8,6 +8,7 @@
 #define TOKEN(type) token_t(type, __FILE__, __LINE__, 0)
 
 using ::testing::Eq;
+using ::testing::AllOf;
 
 namespace jdi {
 
@@ -162,9 +163,8 @@ TEST(LexerTest, ISO_n4727_19_3_3) {
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
-  token_t token = lex.get_token();
-  ASSERT_THAT(token, HasType(TT_STRINGLITERAL));
-  EXPECT_THAT(token.content.toString(), Eq("\"x ## y\""));
+  ASSERT_THAT(lex.get_token(),
+              AllOf(HasType(TT_STRINGLITERAL), HasContent("\"x ## y\"")));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
@@ -182,18 +182,12 @@ TEST(LexerTest, AnnoyingSubstitutionOrder) {
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
-  token_t token = lex.get_token();
-  ASSERT_THAT(token, HasType(TT_IDENTIFIER));
-  EXPECT_THAT(token.content.toString(), Eq("id__LINE__"));
-
-  token = lex.get_token();
-  ASSERT_THAT(token, HasType(TT_IDENTIFIER));
-  EXPECT_THAT(token.content.toString(), Eq("id__LINE__"));
-
-  token = lex.get_token();
-  ASSERT_THAT(token, HasType(TT_IDENTIFIER));
-  EXPECT_THAT(token.content.toString(), Eq("id6"));
-
+  ASSERT_THAT(lex.get_token(),
+              AllOf(HasType(TT_IDENTIFIER), HasContent("id__LINE__")));
+  ASSERT_THAT(lex.get_token(),
+              AllOf(HasType(TT_IDENTIFIER), HasContent("id__LINE__")));
+  ASSERT_THAT(lex.get_token(),
+              AllOf(HasType(TT_IDENTIFIER), HasContent("id6")));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
@@ -211,10 +205,48 @@ TEST(LexerTest, InducesTears) {
   macro_map no_macros;
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
+  ASSERT_THAT(lex.get_token(),
+              AllOf(HasType(TT_STRINGLITERAL), HasContent(kTragedy)));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
 
-  token_t token = lex.get_token();
-  ASSERT_THAT(token, HasType(TT_STRINGLITERAL));
-  EXPECT_THAT(token.content.toString(), Eq(kTragedy));
+TEST(LexerTest, LineNumbering) {
+  constexpr char kTestCase[] = R"(// Comment
+1/*
+
+multiline comment
+
+*/2/*/
+
+antagonistic multiline comment
+
+/*/3/**
+
+multiline doc comment
+
+**/4/**/5)";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("1")));
+  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("2")));
+  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("3")));
+  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("4")));
+  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("5")));
+  ASSERT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, LineNumbering2) {
+  constexpr char kTestCase[] = R"(
+)";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  ASSERT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
 }  // namespace jdi
