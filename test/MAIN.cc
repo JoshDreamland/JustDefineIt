@@ -93,15 +93,15 @@ This is the command I use to generate the test data for this system.
 Tweak it to use your own code input and source locations.
 
 gcc -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/ -E \
-    /home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp \
+    --std=c++2a /home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp \
     -o /home/josh/Projects/JustDefineIt/shellmain-pp.cc && \
-    (cpp -dM -x c++ --std=c++03 -E /dev/null \
+    (cpp -dM -x c++ --std=c++2a -E /dev/null \
          > /home/josh/Projects/JustDefineIt/test/defines_linux.txt);
 
 You can run this (with locale=LC_ALL) to generate the include directory list
 used below:
 
-gcc -E -x c++ --std=c++03 -v /dev/null 2>&1 | \
+gcc -E -x c++ --std=c++2a -v /dev/null 2>&1 | \
     sed -n '/#include ..... search starts here:/,/End of search list[.]/p'
 */
 

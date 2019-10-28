@@ -156,11 +156,8 @@ static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
       if (cfile.next() == EOF) {
         lex_error(herr, cfile, "You can't escape the file ending, jackwagon.");
         return false;
-      } else if (cfile.at() == '\n') {
-        ++cfile.lnum, cfile.lpos = cfile.pos;
-      } else if (cfile.at() == '\r') {
-        cfile.take("\n");
-        ++cfile.lnum, cfile.lpos = cfile.pos; 
+      } else if (cfile.take_newline()) {
+        continue;
       }
     } else if (cfile.at() == '\n' or cfile.at() == '\r') {
       lex_error(herr, cfile, "Unterminated string literal");
@@ -175,7 +172,8 @@ static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
   return true;
 }
 
-/// Invoked while the reader is at the opening quote.
+/// Invoked while the reader is at the opening quote. Terminates with the reader
+/// at the closing quote.
 static inline bool skip_rstring(llreader &cfile, error_handler *herr) {
   // Read delimeter
   bool warned = false;
@@ -190,11 +188,12 @@ static inline bool skip_rstring(llreader &cfile, error_handler *herr) {
     }
   }
   const string delim = ")"s + string{cfile.slice(spos + 1)};
-  if (!cfile.skip(delim.length())) return false;
-  while ((cfile.at() != '"'
-        || cfile.slice(cfile.tell() - delim.length(), cfile.tell() - 1) != delim)
-        && cfile.advance());
-  return !cfile.eof();
+  while (cfile.smart_advance()) {
+    if (cfile.at() != '"') continue;
+    string_view d = cfile.slice(cfile.tell() - delim.length(), cfile.tell());
+    if (d == delim) return true;
+  }
+  return false;
 }
 
 bool lexer::inside_macro(string_view name) const {
@@ -350,6 +349,127 @@ static void donothing(int) {}
 
 // Optional AST rendering
 #include <General/debug_macros.h>
+
+/// Helper for performing conditional item removal/replacement in a vector.
+/// Allows iteration of items in a vector and removal of items, in one pass.
+/// Most of this class' utility is its destructor.
+template<class T> struct VectorCompact {
+  std::vector<T> &vec;
+  size_t left = 0, right = 0;
+
+  operator bool() const { return right < vec.size(); }
+
+  void next() {
+    if (left < right) vec[left] = vec[right];
+    ++left, ++right;
+  }
+  bool has_next(size_t n = 1) const { return right < vec.size() - n; }
+  T &peek_next(size_t n = 1) { return vec[right + n]; }
+
+  void drop() { ++right; }
+  void replace(const T &with) { vec[right] = with; }
+  void replace(T &&with) { vec[right] = std::move(with); }
+  T &at() { return vec[right]; }
+
+  VectorCompact(std::vector<T> &v): vec(v) {}
+  ~VectorCompact() {
+    if (left < right) while (right < vec.size()) next();
+    vec.resize(left);
+  }
+};
+
+enum class PreprocessorCond {
+  DEFINED = 1,
+  HAS_INCLUDE,
+  HAS_CPP_ATTRIBUTES
+};
+
+const map<string, PreprocessorCond> kPreprocessorCond {
+  {"defined", PreprocessorCond::DEFINED},
+  {"__has_include", PreprocessorCond::HAS_INCLUDE},
+  {"__has_cpp_attribute", PreprocessorCond::HAS_CPP_ATTRIBUTES},
+};
+
+const map<string, long> kAttributeSupportDate {
+  { "assert", 201806L },
+  { "carries_dependency", 200809L },
+  { "deprecated", 201309L },
+  { "ensures", 201806L },
+  { "expects", 201806L },
+  { "fallthrough", 201603L },
+  { "likely", 201803L },
+  { "maybe_unused", 201603L },
+  { "no_unique_address", 201803L },
+  { "nodiscard", 201603L },
+  { "noreturn", 200809L },
+  { "unlikely", 201803L },
+};
+
+// Preprocesses a token buffer to be passed to an #if condition, handling
+// conditional constructs like defined() and __has_cpp_attribute().
+static void preprocess_for_if_expression(
+    token_vector &toks, const macro_map &macros, error_handler *herr) {
+  for (VectorCompact<token_t> tpack(toks); tpack; ) {
+    token_t &tok = tpack.at();
+    if (tok.type != TT_IDENTIFIER) { tpack.next(); continue; }
+    auto cond = kPreprocessorCond.find(tok.content.toString());
+    if (cond == kPreprocessorCond.end())  { tpack.next(); continue; }
+
+    if (!tpack.has_next()) break;
+    token_t &next = tpack.peek_next();
+
+    switch (cond->second) {
+      case PreprocessorCond::DEFINED: {
+        if (next.type == TT_IDENTIFIER) {
+          auto m = macros.find(next.content.toString());
+          tok.content = m != macros.end() ? "1" : "0";
+          tok.type = TT_DECLITERAL;
+          tpack.next();  // Take the modified "defined" keyword.
+          tpack.drop();  // Drop the identifier.
+          continue;
+        }
+        if (next.type == TT_LEFTPARENTH && tpack.has_next(2)) {
+          const token_t &id = tpack.peek_next(2);
+          if (id.type != TT_IDENTIFIER) {
+            herr->error(id, "Expected identifier for `defined()` expression.");
+            continue;
+          }
+          auto m = macros.find(id.content.toString());
+          tok.content = m != macros.end() ? "1" : "0";
+          tok.type = TT_DECLITERAL;
+          tpack.next();  // Take the modified "defined" keyword.
+          tpack.drop();  // Drop the left parenthesis.
+          tpack.drop();  // Drop the identifier.
+          if (!tpack || tpack.at().type != TT_RIGHTPARENTH) {
+            herr->error(id, "Expected closing parenthesis after identifier "
+                            " in `defined()` expression.");
+          }
+          continue;
+        }
+        herr->error(next, "Expected identifier or parenthesized identifier for "
+                          "`defined` expression.");
+        tpack.next();
+        continue;
+      }
+      case PreprocessorCond::HAS_INCLUDE: {
+        herr->error(tok, "Internal error: has_next not implemented");
+        tpack.next();
+        continue;
+      }
+      case PreprocessorCond::HAS_CPP_ATTRIBUTES: {
+        herr->error(tok, "Internal error: has_next not implemented");
+        tpack.next();
+        continue;
+      }
+      default: {
+        herr->error(tok, "Internal error: Unknown conditional %s",
+                    tok.content.view());
+        tpack.next();
+        continue;
+      }
+    }
+  }
+}
 
 void lexer::handle_preprocessor() {
   top:
@@ -562,18 +682,29 @@ void lexer::handle_preprocessor() {
       break;
     case_if:
         if (conditionals.empty() or conditionals.back().is_true) {
-          token_t tok;
           token_vector toks;
-          while (tok = read_token(cfile, herr),
-                 tok.type != TT_ENDOFCODE && tok.type != TTM_NEWLINE) {
+          for (token_t tok; tok = read_token(cfile, herr),
+              tok.type != TT_ENDOFCODE && tok.type != TTM_NEWLINE; ) {
             toks.push_back(tok);
           }
+
+          preprocess_for_if_expression(toks, macros, herr);
+
+          // Since both the current user of this lexer *and* the AST builder
+          // are likely to be using rewind buffers, just make a new lexer.
+          //
           // Using a second lexer here makes it so we don't have to fuck around
-          // with our rewind buffers to stop them from recording macros.
+          // with our rewind buffers to stop them from recording macros. Above,
+          // we don't have that problem because the macro system never calls
+          // directly into the lexer. Here, we just need a device that feeds
+          // a sequence of tokens into things. It's called a lexer. Since
+          // facilities used in the AST builder require unbounded lookahead,
+          // it's easiest just to use the system we have.
           lexer l(&toks, *this);
+
           AST a = parse_expression(&l);
           render_ast(a, "if_directives");
-          if (!a.eval({herr, tok}))
+          if (!a.eval({herr, toks[0]}))
             conditionals.push_back(condition(0,1));
           else
             conditionals.push_back(condition(1,0));

@@ -149,6 +149,7 @@ class llreader {
   int peek_next() { return pos + 1 < length ? data[pos + 1] : EOF; }
   bool eof() const { return pos >= length; }
   bool advance() { return ++pos < length; }
+  bool smart_advance() { return take_newline() || advance(); }
   bool skip(size_t count) { return (pos += count) < length; }
   bool at_newline() const { return data[pos] == '\n' || data[pos] == '\r'; }
 

@@ -163,7 +163,7 @@ TEST(LexerTest, ISO_n4727_19_3_3) {
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
-  ASSERT_THAT(lex.get_token(),
+  EXPECT_THAT(lex.get_token(),
               AllOf(HasType(TT_STRINGLITERAL), HasContent("\"x ## y\"")));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
@@ -182,11 +182,11 @@ TEST(LexerTest, AnnoyingSubstitutionOrder) {
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
-  ASSERT_THAT(lex.get_token(),
+  EXPECT_THAT(lex.get_token(),
               AllOf(HasType(TT_IDENTIFIER), HasContent("id__LINE__")));
-  ASSERT_THAT(lex.get_token(),
+  EXPECT_THAT(lex.get_token(),
               AllOf(HasType(TT_IDENTIFIER), HasContent("id__LINE__")));
-  ASSERT_THAT(lex.get_token(),
+  EXPECT_THAT(lex.get_token(),
               AllOf(HasType(TT_IDENTIFIER), HasContent("id6")));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
@@ -230,23 +230,74 @@ multiline doc comment
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
-  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("1")));
-  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("2")));
-  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("3")));
-  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("4")));
-  ASSERT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("5")));
-  ASSERT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("1")));
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("2")));
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("3")));
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("4")));
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("5")));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
-TEST(LexerTest, LineNumbering2) {
-  constexpr char kTestCase[] = R"(
-)";
+TEST(LexerTest, StringLiterals) {
+  constexpr char kTestCase[] = R"cpp("string\
+'\"literal\"'"1'c'R"raaw(
+raw "string literal")"
+gotcha, bitch)raaw";R"(normal raw string") with a twist)";
+)cpp";
 
   macro_map no_macros;
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
-  ASSERT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_CHARLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
+TEST(LexerTest, DefinedExpressions) {
+  constexpr char kTestCase[] = R"cpp(#define foo
+#if defined foo && ! defined bar
+#if defined bar
+fail
+#else
+100
+#endif
+#else
+"fail"
+#endif
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("100")));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, DefinedExpressionsWithParenths) {
+  constexpr char kTestCase[] = R"cpp(#define foo
+#if defined ( foo ) && ! defined ( bar )
+#if defined ( bar )
+fail
+#else
+100
+#endif
+#else
+"fail"
+#endif
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("100")));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
 }  // namespace jdi
