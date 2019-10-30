@@ -754,23 +754,6 @@ namespace jdi {
         ? lex->get_token_in_scope(search_scope)
         : lex->get_token();
   }
-  
-  
-  //===========================================================================================================================
-  //=: Public API :============================================================================================================
-  //===========================================================================================================================
-  
-  int AST_Builder::parse_expression(AST *ast, int prec) {
-    token_t token = get_next_token();
-    if ((ast->root = parse_expression(ast, token, prec)))
-      return 0;
-    return 1;
-  }
-  
-  int AST_Builder::parse_expression(AST *ast, token_t &token, definition_scope *scope, int precedence) {
-    search_scope = scope;
-    return !(ast->root = parse_expression(ast, token, precedence));
-  }
 
   //===========================================================================================================================
   //=: Evaluators :============================================================================================================
@@ -1321,10 +1304,16 @@ namespace jdi {
     if (root)
       root->remap(n);
   }
+
   //===========================================================================================================================
   //=: Everything else :=======================================================================================================
   //===========================================================================================================================
-  
+
+  int AST_Builder::parse_expression(AST *ast, token_t &token, definition_scope *scope, int precedence) {
+    search_scope = scope;
+    return !(ast->root = parse_expression(ast, token, precedence));
+  }
+
   void AST::clear() {
     delete root;
     #ifdef DEBUG_MODE
@@ -1375,12 +1364,19 @@ namespace jdi {
   AST_Builder::AST_Builder(context_parser *ctp):
       lex(ctp->lex), herr(ctp->herr), cparse(ctp), search_scope(NULL) {}
 
-  AST parse_expression(lexer *lex) {
+  AST parse_expression(lexer *lex, error_handler *herr, token_t *token) {
     Context ctex;
     context_parser ctp(&ctex, lex);
     AST_Builder ab(&ctp);
     AST res;
-    ab.parse_expression(&res);
+    token_t tok = lex->get_token();
+    ab.parse_expression(&res, tok, nullptr, 0);
+    if (token)
+      *token = tok;
+    else if (tok.type != TT_ENDOFCODE) {
+      herr->error(tok, "Extra tokens at end of expression: unhandled %s",
+                  tok.to_string());
+    }
     return res;
   }
 }

@@ -150,6 +150,8 @@ static inline void lex_error(error_handler *herr, const llreader &cfile, string_
   herr->error(msg, cfile.name, cfile.lnum, cfile.pos - cfile.lpos);
 }
 
+/// Invoked while the reader is *PAST* the opening quote. Terminates with the
+/// reader at the closing quote.
 static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
   while (cfile.next() != EOF && cfile.at() != qc) {
     if (cfile.at() == '\\') {
@@ -221,8 +223,8 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
   int too_many_args = 0;
   for (int nestcnt = 1;;) {
     token_t tok = read_raw();
-    if (cfile.eof()) {
-      lex_error(herr, cfile, "Unterminated parameters to macro function");
+    if (tok.type == TT_ENDOFCODE) {
+      herr->error(maybe_paren, "Unterminated parameters to macro function");
       return false;
     }
     if (tok.type == TT_LEFTPARENTH) ++nestcnt;
@@ -306,7 +308,7 @@ string lexer::read_preprocessor_args() {
       }
     }
     if (cfile.at() == '\'' || cfile.at() == '"') {
-      skip_string(cfile, cfile.getc(), herr);
+      skip_string(cfile, cfile.at(), herr);
     } else if (cfile.at() == '\\') {
       if (!cfile.advance()) break;
       cfile.take_newline();
@@ -440,10 +442,12 @@ static void preprocess_for_if_expression(
           tpack.next();  // Take the modified "defined" keyword.
           tpack.drop();  // Drop the left parenthesis.
           tpack.drop();  // Drop the identifier.
+          // Expect a right parenthesis.
           if (!tpack || tpack.at().type != TT_RIGHTPARENTH) {
             herr->error(id, "Expected closing parenthesis after identifier "
                             " in `defined()` expression.");
           }
+          tpack.drop();  // Drop the right parenthesis.
           continue;
         }
         herr->error(next, "Expected identifier or parenthesized identifier for "
@@ -548,7 +552,7 @@ void lexer::handle_preprocessor() {
       }
       const size_t nsi = i;
       while (is_letterd(argstr[++i]));
-      pair<macro_iter, bool> mins = macros.insert(pair<string,macro_type*>(argstrs.substr(nsi,i-nsi),NULL));
+      auto mins = macros.insert({argstrs.substr(nsi, i - nsi), nullptr});
       
       if (argstr[i] == '(') {
         vector<string> paramlist;
@@ -702,8 +706,16 @@ void lexer::handle_preprocessor() {
           // it's easiest just to use the system we have.
           lexer l(&toks, *this);
 
-          AST a = parse_expression(&l);
+          token_t endofcode;
+          AST a = parse_expression(&l, herr, &endofcode);
           render_ast(a, "if_directives");
+
+          if (endofcode.type != TT_ENDOFCODE) {
+            herr->error(cfile, "Extra tokens at end of conditional: "
+                        "%s not handled.", endofcode.to_string());
+            herr->error(endofcode, "Extraneous token read from here.");
+          }
+
           if (!a.eval({herr, toks[0]}))
             conditionals.push_back(condition(0,1));
           else

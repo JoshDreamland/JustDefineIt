@@ -572,13 +572,7 @@ namespace jdi {
     **/
     AST_Node* parse_unary_pre_or_literal(AST* ast, jdi::token_t& token);
     
-    public:
-    /** Parse in an expression, building an AST.
-        @param prec  The lower-bound precedence; default is 0 (precedence::all)
-        @return  This function will return 0 if no error has occurred, or nonzero otherwise.
-    **/
-    int parse_expression(AST* ast, int prec = 0);
-    
+   public:
     /** Parse in an expression, building an AST, with scope information, starting with the given token.
         @param token  A buffer for the first unhandled token. [out]
         @param scope  The scope from which values of definitions will be read. [in]
@@ -594,8 +588,10 @@ namespace jdi {
   };
 
   /// Read and parse an expression from the given lexer. The expression cannot
-  /// reference anything apart from builtints.
-  AST parse_expression(lexer *lex);
+  /// reference anything apart from builtins. The first unconsumed token will
+  /// be written to the given token. If the given token is null, an error will
+  /// be logged for unconsumed tokens, instead.
+  AST parse_expression(lexer *lex, error_handler *herr, token_t *token);
 }  // namespace jdi
 
 #include <System/symbols.h>

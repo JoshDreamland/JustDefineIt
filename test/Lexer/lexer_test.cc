@@ -105,6 +105,23 @@ TEST(LexerTest, ConditionalWithMacroExpansion) {
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
+TEST(LexerTest, ConditionalWithMacroFunction) {
+  constexpr char kTestCase[] = R"cpp(
+# define TEST_LT(left, right) \
+	left > right
+#if TEST_LT (4,3)
+  "success"
+#endif
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
 // Tests a simple not expression with a macro.
 constexpr char kCppWithNot[] = R"cpp(
 #define butts 1
@@ -150,7 +167,7 @@ TEST(LexerTest, UncalledMacroFuncLeftAlone) {
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
-TEST(LexerTest, ISO_n4727_19_3_3) {
+TEST(LexerTest, ISO_n4800_14_3_3) {
   constexpr char kTestCase[] = R"(
     #define hash_hash # ## #
     #define mkstr(a) # a
@@ -242,7 +259,7 @@ TEST(LexerTest, StringLiterals) {
   constexpr char kTestCase[] = R"cpp("string\
 '\"literal\"'"1'c'R"raaw(
 raw "string literal")"
-gotcha, bitch)raaw";R"(normal raw string") with a twist)";
+gotcha, bitch)raaw";R"(normal raw string") with a twist)";"":R"()";
 )cpp";
 
   macro_map no_macros;
@@ -254,6 +271,10 @@ gotcha, bitch)raaw";R"(normal raw string") with a twist)";
   EXPECT_THAT(lex.get_token(), HasType(TT_CHARLITERAL));
   EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
   EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_COLON));
   EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
   EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
@@ -300,4 +321,39 @@ fail
   EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_DECLITERAL), HasContent("100")));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
+
+TEST(LexerTest, DefinedExpressionsChain) {
+  constexpr char kTestCase[] = R"cpp(#define foo
+#if defined ( one ) || defined ( two ) || defined ( red ) || defined ( foo )
+pass
+#endif
+;
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), AllOf(HasType(TT_IDENTIFIER), HasContent("pass")));
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+// FIXME: this isn't an odd place. A lot of bits of JDI just assumed that
+// skipping past string literals would be easy peasy lemon squeezy, but then
+// C++11 made it difficult difficult lemon difficult
+TEST(LexerTest, StringsInOddPlaces) {
+  constexpr char kTestCase[] = R"cpp(
+#define foo ""
+foo
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
 }  // namespace jdi

@@ -14,6 +14,7 @@
 */
 
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <unistd.h>
@@ -53,18 +54,20 @@ void do_cli(Context &ct);
 
 // Returns the number of elements to insert into v1 at i to make it match v2.
 // If elements are instead missing from v2, a negative number is returned.
-static inline int compute_diff(const vector<int> &v1, const vector<int> &v2, size_t ind, size_t window = 16) {
+static inline int compute_diff(
+    const vector<token_t> &v1, const vector<token_t> &v2,
+    size_t ind, size_t window = 16) {
   if (ind + window > v1.size() || ind + window > v2.size()) {
     int candoff = v2.size() - v1.size();
-    if (candoff > 0 && v1[ind] == v2[ind + candoff]) return candoff;
-    if (candoff < 0 && v1[ind - candoff] == v2[ind]) return candoff;
+    if (candoff > 0 && v1[ind].type == v2[ind + candoff].type) return candoff;
+    if (candoff < 0 && v1[ind - candoff].type == v2[ind].type) return candoff;
     return 0;
   }
   const size_t hwindow = window / 2;
   const size_t qwindow = window / 4;
   for (size_t o = 0; o <= hwindow; ++o) {
     for (size_t i = 0; i < hwindow; ++i) {
-      if (v1[ind + o + i] != v2[ind + qwindow + i]) goto continue2;
+      if (v1[ind + o + i].type != v2[ind + qwindow + i].type) goto continue2;
     }
     return qwindow - o;
     continue2: ;
@@ -169,7 +172,7 @@ int main() {
   name_type("int&(*)()", builtin);
 
   if (true) {
-    vector<int> tokens, tokens2;
+    vector<token_t> tokens, tokens2;
     size_t correct = 0, incorrect = 0;
     if (true) {
       Context butts;
@@ -180,7 +183,7 @@ int main() {
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
-        tokens2.push_back(token.type);
+        tokens2.push_back(token);
       }
     }
     bool had_diff = false;
@@ -191,31 +194,32 @@ int main() {
       lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         size_t p = tokens.size();
-        tokens.push_back(token.type);
-        if (!had_diff && p < tokens2.size() && tokens[p] != tokens2[p]) {
+        tokens.push_back(token);
+        if (!had_diff && p < tokens2.size() && (tokens[p].type != tokens2[p].type || tokens[p].content.view() != tokens2[p].content.view())) {
           cerr << p << endl;
           token.report_errorf(def_error_handler,
                               "Token differs from golden set! Read "
                               + token.to_string() + ", expected "
-                              + token_t::get_name((TOKEN_TYPE) tokens2[p]) + ".");
+                              + token_t::get_name((TOKEN_TYPE) tokens2[p].type) + ".");
+          tokens2[p].report_error(def_error_handler,"Note: golden token declared here.");
           had_diff = true;
         }
         ++(had_diff? incorrect : correct);
       }
     }
     for (size_t i = 0; i < tokens.size() && i < tokens2.size(); ++i) {
-      if (tokens[i] == tokens2[i]) continue;
+      if (tokens[i].type == tokens2[i].type) continue;
       int off = compute_diff(tokens, tokens2, i);
       size_t ins = 0;
       if (!off) { i += 16; continue; }
-      if (off > 0) tokens.insert(tokens.begin() + i, ins = (size_t) off,  -1337);
-      if (off < 0) tokens2.insert(tokens2.begin() + i, ins = (size_t) -off, -1337);
+      if (off > 0) tokens.insert(tokens.begin() + i, ins = (size_t) off,  token_t((TOKEN_TYPE) -1337, "bullshit token", 0, 0, "bullshit", 8));
+      if (off < 0) tokens2.insert(tokens2.begin() + i, ins = (size_t) -off, token_t((TOKEN_TYPE) -1337, "bullshit token", 0, 0, "bullshit", 8));
       i += ins;
     }
     int ndiffs = 0;
     for (size_t i = 0; i < tokens.size() || i < tokens2.size(); ++i) {
-      int a = i < tokens.size()?  tokens[i]  : TT_ENDOFCODE;
-      int b = i < tokens2.size()? tokens2[i] : TT_ENDOFCODE;
+      int a = i < tokens.size()?  tokens[i].type  : TT_ENDOFCODE;
+      int b = i < tokens2.size()? tokens2[i].type : TT_ENDOFCODE;
       const bool diff = a != b;
       if (diff and not ndiffs)
         printf("%2d : %2d  -  %d\n", a, b, ndiffs);
@@ -282,7 +286,6 @@ static char getch() {
   return c;
 }
 
-#include <cstring>
 #include <System/lex_cpp.h>
 #include <General/parse_basics.h>
 
