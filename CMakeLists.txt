@@ -92,30 +92,50 @@ include_directories("src/")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(WARNING_FLAGS
+  "-Wshadow \
+  -Winit-self \
+  -Wredundant-decls \
+  -Wcast-align \
+  -Wundef \
+  -Wfloat-equal \
+  -Wunreachable-code \
+  -Wmissing-declarations \
+  -Wmissing-include-dirs \
+  -Wswitch-enum \
+  -Wswitch-default \
+  -Wmain \
+  -pedantic-errors \
+  -pedantic \
+  -Wextra \
+  -Wall \
+  -Werror"
+)
+
 # Debug
 add_executable("Debug" ${JDI_HDRS} ${JDI_SRCS} "test/MAIN.cc")
 set_target_properties("Debug" PROPERTIES OUTPUT_NAME "JustDefineIt")
 set_target_properties("Debug" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Debug")
-set_target_properties("Debug" PROPERTIES COMPILE_FLAGS "-g -D_GLIBCXX_DEBUG -DDEBUG_MODE")
+set_target_properties("Debug" PROPERTIES COMPILE_FLAGS "${WARNING_FLAGS} -g -D_GLIBCXX_DEBUG -DDEBUG_MODE")
 
 # Debug Render
 add_executable("Debug-Render" ${JDI_HDRS} ${JDI_SRCS} "test/MAIN.cc")
 set_target_properties("Debug-Render" PROPERTIES OUTPUT_NAME "JustDefineIt")
 set_target_properties("Debug-Render" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Debug-Render")
-set_target_properties("Debug-Render" PROPERTIES COMPILE_FLAGS "-g -D_GLIBCXX_DEBUG -DDEBUG_MODE -DRENDER_ASTS")
+set_target_properties("Debug-Render" PROPERTIES COMPILE_FLAGS "${WARNING_FLAGS} -g -D_GLIBCXX_DEBUG -DDEBUG_MODE -DRENDER_ASTS")
 
 # Release
 add_executable("Release" ${JDI_HDRS} ${JDI_SRCS} "test/MAIN.cc")
 set_target_properties("Release" PROPERTIES OUTPUT_NAME "JustDefineIt")
 set_target_properties("Release" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Release")
-set_target_properties("Release" PROPERTIES COMPILE_FLAGS "-fomit-frame-pointer -fexpensive-optimizations -O3")
+set_target_properties("Release" PROPERTIES COMPILE_FLAGS "${WARNING_FLAGS} -fomit-frame-pointer -fexpensive-optimizations -O3")
 set_target_properties("Release" PROPERTIES LINK_FLAGS "-s")
 
 # Profile
 add_executable("Profile" ${JDI_HDRS} ${JDI_SRCS} "test/MAIN.cc")
 set_target_properties("Profile" PROPERTIES OUTPUT_NAME "JustDefineIt")
 set_target_properties("Profile" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Profile")
-set_target_properties("Profile" PROPERTIES COMPILE_FLAGS "-pg -g")
+set_target_properties("Profile" PROPERTIES COMPILE_FLAGS "${WARNING_FLAGS} -pg -g")
 set_target_properties("Profile" PROPERTIES LINK_FLAGS "-pg")
 
 # Test
@@ -131,5 +151,5 @@ add_executable("Test" ${JDI_HDRS} ${JDI_SRCS} ${TESTING_SRCS})
 target_include_directories("Test" PRIVATE "test/")
 set_target_properties("Test" PROPERTIES OUTPUT_NAME "JustDefineIt")
 set_target_properties("Test" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/Test")
-set_target_properties("Test" PROPERTIES COMPILE_FLAGS "-g -D_GLIBCXX_DEBUG -DDEBUG_MODE")
+set_target_properties("Test" PROPERTIES COMPILE_FLAGS "${WARNING_FLAGS} -g -D_GLIBCXX_DEBUG -DDEBUG_MODE")
 target_link_libraries("Test" GTest::GTest GTest::Main)
