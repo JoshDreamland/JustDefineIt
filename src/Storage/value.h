@@ -42,15 +42,10 @@ namespace jdi {
     This structure can contain any value defined in \enum VT.
   **/
   struct value {
-    /** This union contains the actual data for each type.
-    **/
-    union {
-      double d; ///< Any data stored as a floating point.
-      long i; ///< Any data stored as an integer.
-      const char* s; ///< Any data stored as a string. This value must be deleted if replaced or destructed.
-    } val; ///< The value storage for this structure.
+    long double real;  ///< Numeric values, including unsigned longs.
+    std::string str;  ///< String values.
     
-    VT type; ///< The type of our value. This little bugger is the reason we can't just be a big union.
+    VT type;
     
     bool operator==(const value& value) const; ///< Test for strict equality, including type.
     bool operator!=(const value& value) const; ///< Test against strict equality, including type.
@@ -58,16 +53,29 @@ namespace jdi {
     bool operator<=(const value& value) const; ///< Test a strict less-than or equal inequality, including type.
     bool operator>(const value& value) const; ///< Test a strict greater-than inequality, including type.
     bool operator<(const value& value) const; ///< Test a strict less-than inequality, including type.
-    
-    value(); ///< Construct a new, invalid value with no type (VT_NONE).
-    value(double v); ///< Construct a new value representing a double.
-    value(long v); ///< Construct a new value representing an integer.
-    value(const char* v); ///< Construct a new value consuming and representing a const char*. Once you pass a const char*, it belongs to this class.
-    value(std::string v); ///< Construct a new value representing a copy of the passed string. This operates in O(N).
-    value(const value& v); ///< Copy a value. Handles allocation issues.
-    value(const VT& t); ///< Construct with only a value type
-    ~value(); ///< Default destructor; handles freeing any strings.
-    
+
+    /// Construct a new, invalid value with no type (VT_NONE).
+    value();
+    /// Construct a new value representing a double.
+    value(float v);
+    value(double v);
+    value(long double v);
+    /// Construct a new value representing an integer.
+    value(signed v);
+    value(signed long v);
+    value(signed long long v);
+    /// Construct a new value representing an unsigned integer.
+    value(unsigned v);
+    value(unsigned long v);
+    value(unsigned long long v);
+    /// Construct a new value representing a copy of the passed string.
+    /// This operates in O(N).
+    value(std::string v);
+    /// Copy a value. Handles allocation issues.
+    value(const value& v);
+    /// Construct with the default value of the given type.
+    value(const VT& t);
+
     value &operator=(const value&) = delete;
     value &operator=(value&&);
     
@@ -77,7 +85,7 @@ namespace jdi {
     operator long() const; ///< Cast to a long int, returning zero if no valid cast exists.
     operator double() const; ///< Cast to a double, returning zero if no valid cast exists.
     operator bool() const; ///< Cast to a boolean, returning false if no valid cast exists, true if this is a non-empty string.
-    operator const char* () const; ///< Cast to a const char*, returning NULL if no valid cast exists. @warning May be null. @warning Do not free.
+    operator std::string_view() const; ///< Cast to a string_view, returning NULL if no valid cast exists.
   };
 }
 

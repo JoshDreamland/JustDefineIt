@@ -463,7 +463,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
           }
           render_ast(ast, "ArrayBounds");
           value as = ast.eval(error_context(herr, token));
-          size_t boundsize = (as.type == VT_INTEGER)? as.val.i : ref_stack::node_array::nbound;
+          size_t boundsize = (as.type == VT_INTEGER)? (long) as : ref_stack::node_array::nbound;
           refs.push_array(boundsize);
         }
         else

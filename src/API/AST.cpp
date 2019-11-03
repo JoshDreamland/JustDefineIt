@@ -89,6 +89,16 @@ inline long parselong(string s) {
   return res;
 }
 
+static value strtoval(const string &str, int radix) {
+  bool is_unsigned = false;
+  for (char c : str) if (c == 'u' || c == 'U') {
+    is_unsigned = true;
+    break;
+  }
+  return is_unsigned ? value(strtoull(str.c_str(), nullptr, radix))
+                     : value(strtoll(str.c_str(),  nullptr, radix));
+}
+
 namespace jdi {
   AST_Node* AST_Builder::parse_expression(AST* ast, token_t &token, int prec_min) {
     string ct;
@@ -790,15 +800,15 @@ namespace jdi {
       }
       if (content.find('.', 0) != string::npos)
         return value(atof(content.c_str()));
-      return value(atol(content.c_str()));
+      return strtoval(content, 10);
     }
     if (type == AT_OCTLITERAL) {
       if (content.length() == 1)
         goto dec_literal; // A single octal digit is no different from a decimal digit
-      return value(strtol(content.c_str(),NULL,8));
+      return strtoval(content, 16);
     }
     if (type == AT_HEXLITERAL)
-      return value(strtol(content.c_str(),NULL,16));
+      return strtoval(content, 16);
     if (type == AT_STRLITERAL)
       return value(content);
     if (type == AT_CHRLITERAL)

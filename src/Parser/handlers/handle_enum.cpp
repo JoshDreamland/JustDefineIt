@@ -110,7 +110,7 @@ definition_enum* context_parser::handle_enum(definition_scope *scope, token_t& t
         #else
           token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given");
         #endif
-        this_value = value(++this_value.val.i);
+        this_value = value(++this_value.real);
       }
       else {
         this_value = std::move(v);
@@ -130,7 +130,7 @@ definition_enum* context_parser::handle_enum(definition_scope *scope, token_t& t
     else
       token.report_error(herr, "Redeclatation of constant `" + classname + "' in enumeration");
     
-    ++this_value.val.i;
+    ++this_value.real;
     
     if (token.type == TT_COMMA)
       token = read_next_token(scope);
