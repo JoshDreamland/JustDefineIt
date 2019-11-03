@@ -40,9 +40,29 @@
 #include <filesystem>
 #include <unordered_map>
 
+#ifdef DEBUG_MODE
+/// This function will be passed signals and will respond to them appropriately.
+static void donothing(int) {}
+#endif
+
+#define E_MATCHED_IF "matching #if already has an #else"
+
+// Optional AST rendering
+#include <General/debug_macros.h>
 
 using namespace jdi;
 using namespace std;
+
+
+//==============================================================================
+//====: Helpers. Helpers everywhere. :==========================================
+//==============================================================================
+//                                                                            ==
+//  These are from older JDI. The preprocessor still performs some redundant  ==
+//  lexing, like skipping comments between preprocessor names and meaningful  ==
+//  tokens. It reuses these helpers. So for now, just keep them here.         ==
+//                                                                            ==
+//==============================================================================
 
 /// Returns true if the given character is not a word character (/\w/).
 static inline bool strbw(char s) { return !is_letterd(s); }
@@ -147,28 +167,24 @@ void lexer::enter_macro(const token_t &otk, const macro_type &macro) {
   push_buffer({macro.name, otk, &macro.value});
 }
 
-static inline void lex_error(error_handler *herr, const llreader &cfile, string_view msg) {
-  herr->error(msg, cfile.name, cfile.lnum, cfile.pos - cfile.lpos);
-}
-
 /// Invoked while the reader is *PAST* the opening quote. Terminates with the
 /// reader at the closing quote.
 static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
   while (cfile.next() != EOF && cfile.at() != qc) {
     if (cfile.at() == '\\') {
       if (cfile.next() == EOF) {
-        lex_error(herr, cfile, "You can't escape the file ending, jackwagon.");
+        herr->error(cfile, "You can't escape the file ending, jackwagon.");
         return false;
       } else if (cfile.take_newline()) {
         continue;
       }
     } else if (cfile.at() == '\n' or cfile.at() == '\r') {
-      lex_error(herr, cfile, "Unterminated string literal");
+      herr->error(cfile, "Unterminated string literal");
       return false;
     }
   }
   if (cfile.eof() or cfile.at() != qc) {
-    lex_error(herr, cfile, "Unterminated string literal");
+    herr->error(cfile, "Unterminated string literal");
     return false;
   }
   cfile.advance();
@@ -198,6 +214,356 @@ static inline bool skip_rstring(llreader &cfile, error_handler *herr) {
   }
   return false;
 }
+
+
+
+/*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+████▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀████████████████████████████████████████████████
+████ Basic Lexer Implementation ████████████████████████████████████████████████
+████▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄████████████████████████████████████████████████
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  */
+
+token_t jdi::read_token(llreader &cfile, error_handler *herr) {
+  #ifdef DEBUG_MODE
+    static int number_of_times_GDB_has_dropped_its_ass = 0;
+    ++number_of_times_GDB_has_dropped_its_ass;
+  #endif
+
+  if (cfile.pos < cfile.length) { // Sanity check the stupid reader.
+    if (cfile.pos < cfile.validated_pos) {
+      herr->error(cfile, "Someone rewound the file.");
+      cfile.validated_lnum = cfile.validated_lpos = cfile.validated_pos = 0;
+    }
+    for (; cfile.validated_pos < cfile.pos; ++cfile.validated_pos) {
+      if (cfile[cfile.validated_pos] == '\n' ||
+              (cfile[cfile.validated_pos] == '\r' &&
+               cfile.at(cfile.validated_pos + 1) != '\n')) {
+        ++cfile.validated_lnum;
+        cfile.validated_lpos = cfile.validated_pos + 1;
+      }
+    }
+    if (cfile.lnum != cfile.validated_lnum ||
+        cfile.lpos != cfile.validated_lpos) {
+      herr->error(
+          cfile, "At line " + to_string(cfile.validated_lnum) + ", position " +
+                  to_string(cfile.pos - cfile.validated_lpos) + ", the reader "
+                  "believes it is at line " + to_string(cfile.lnum) +
+                  ", position " + to_string(cfile.pos - cfile.lpos) + "...");
+      cfile.lnum = cfile.validated_lnum;
+      cfile.lpos = cfile.validated_lpos;
+    }
+  }
+
+  // Dear C++ committee: do you know what would be exponentially more awesome
+  // than this line? Just declaring a normal fucking function, please and thanks
+  auto mktok = [&cfile](TOKEN_TYPE tp, size_t pos, int length) -> token_t {
+    return token_t(tp, cfile.name.c_str(), cfile.lnum, pos - cfile.lpos,
+                   cfile + pos, length);
+  };
+
+  for (;;) {  // Loop until we find something or hit world's end
+    if (cfile.eof()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
+
+    // Skip all whitespace
+    if (is_useless(cfile.at())) {
+      size_t spos = cfile.tell();
+      do {
+        if (cfile.at() == '\n' || cfile.at() == '\r') {
+          cfile.take_newline();
+          return mktok(TTM_NEWLINE, spos, cfile.tell() - spos);
+        }
+        if (!cfile.advance()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
+      } while (is_useless(cfile.at()));
+      // TODO: return whitespace marker.
+    }
+
+    //==========================================================================
+    //====: Check for and handle comments. :====================================
+    //==========================================================================
+
+    const size_t spos = cfile.tell();
+    switch (cfile.getc()) {
+
+    case '/': {
+      if (cfile.at() == '*') { skip_multiline_comment(cfile); continue; }
+      if (cfile.at() == '/') { skip_comment(cfile); continue; }
+      if (cfile.at() == '=')
+        return mktok(TT_DIVIDE_ASSIGN, ++cfile.pos - 2, 2);
+      return mktok(TT_SLASH, cfile.pos - 1, 1);
+    }
+
+    default:
+    //==========================================================================
+    //====: Not at a comment. See if we're at an identifier. :==================
+    //==========================================================================
+
+    if (is_letter(cfile[spos])) {
+      while (!cfile.eof() && is_letterd(cfile.at())) cfile.advance();
+      if (cfile.tell() - spos <= 2 &&
+          (cfile.at() == '\'' || cfile.at() == '"')) {
+        auto prefix = parse_string_prefix(cfile.slice(spos));
+        if (prefix.valid) {
+          if (prefix.raw) {
+            if (skip_rstring(cfile, herr)) cfile.advance();
+            return mktok(TT_STRINGLITERAL, spos, cfile.tell() - spos);
+          }
+          skip_string(cfile, cfile.at(), herr);
+          return mktok(TT_CHARLITERAL, spos, cfile.tell() - spos);
+        }
+      }
+      return mktok(TT_IDENTIFIER, spos, cfile.tell() - spos);
+    }
+
+    goto unknown;
+
+    //==========================================================================
+    //====: Not at an identifier. Maybe at a number? :==========================
+    //==========================================================================
+
+    case '0': { // Check if the number is hexadecimal, binary, or octal.
+      // TODO: Handle apostrophes.
+      // Check if the number is hexadecimal.
+      if (cfile.at() == 'x' || cfile.at() == 'X') {
+        // Here, it is hexadecimal.
+        while (cfile.advance() && is_hexdigit(cfile.at()));
+        skip_integer_suffix(cfile);
+        return mktok(TT_HEXLITERAL, spos, cfile.tell() - spos);
+      }
+      // Check if the number is Binary.
+      if (cfile.at() == 'b' || cfile.at() == 'B') {
+        // In this case, it's binary
+        while (cfile.advance() && is_hexdigit(cfile.at()));
+        skip_integer_suffix(cfile);
+        return mktok(TT_BINLITERAL, spos, cfile.tell() - spos);
+      }
+      // Turns out, it's octal.
+      if (cfile.eof() || !is_octdigit(cfile.at())) {
+        // Literal 0. According to ISO, this is octal, because a decimal literal
+        // does not start with zero, while octal literals begin with 0 and
+        // consist of octal digits.
+        return mktok(TT_OCTLITERAL, spos, 1);
+      }
+      while (cfile.advance() && is_octdigit(cfile.at()));
+      skip_integer_suffix(cfile);
+      return mktok(TT_OCTLITERAL, spos, cfile.tell() - spos);
+    }
+
+    case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8':
+    case '9': {
+      // Turns out, it's decimal.
+      handle_decimal:
+      while (!cfile.eof() and is_digit(cfile.at())) cfile.advance();
+      if (cfile.at() == '.')
+        while (cfile.advance() and is_digit(cfile.at()));
+      if (cfile.at() == 'e' or cfile.at() == 'E') { // Accept exponents
+        if (cfile.next() == '-') cfile.advance();
+        if (cfile.eof()) {
+          herr->error(cfile, "Numeric literal truncated and end of file.");
+        }
+        else while (is_digit(cfile.at()) && cfile.advance());
+      }
+      skip_integer_suffix(cfile);
+      return mktok(TT_DECLITERAL, spos, cfile.tell()  -spos);
+    }
+
+    //==========================================================================
+    //====: Not at a number. Find out where we are. :===========================
+    //==========================================================================
+
+      case ';':
+        return mktok(TT_SEMICOLON, spos, 1);
+      case ',':
+        return mktok(TT_COMMA, spos, 1);
+      case '+':
+        if (cfile.at() == '+') {
+          cfile.advance();
+          return mktok(TT_INCREMENT, spos, 2);
+        }
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_ADD_ASSIGN, spos, 2);
+        }
+        return mktok(TT_PLUS, spos, 1);
+      case '-':
+        if (cfile.at() == '-') {
+          cfile.advance();
+          return mktok(TT_DECREMENT, spos, 2);
+        }
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_SUBTRACT_ASSIGN, spos, 2);
+        }
+        if (cfile.at() == '>') {
+          cfile.advance();
+          return mktok(TT_ARROW, spos, 2);
+        }
+        return mktok(TT_MINUS, spos, 1);
+      case '=':
+        if (cfile.at() == cfile[spos]) {
+          cfile.advance();
+          return mktok(TT_EQUAL_TO, spos, 2);
+        }
+        return mktok(TT_EQUAL, spos, 1);
+      case '&':
+        if (cfile.at() == '&') {
+          cfile.advance();
+          return mktok(TT_AMPERSANDS, spos, 2);
+        }
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_AND_ASSIGN, spos, 2);
+        }
+        return mktok(TT_AMPERSAND, spos, 1);
+      case '|':
+        if (cfile.at() == '|') {
+          cfile.advance();
+          return mktok(TT_PIPES, spos, 2);
+        }
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_OR_ASSIGN, spos, 2);
+        }
+        return mktok(TT_PIPE, spos, 1);
+      case '~':
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_NEGATE_ASSIGN, spos, 2);
+        }
+        return mktok(TT_TILDE, spos, 1);
+      case '!':
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_NOT_EQUAL_TO, spos, 2);
+        }
+        return mktok(TT_NOT, spos, 1);
+      case '%':
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_MODULO_ASSIGN, spos, 2);
+        }
+        return mktok(TT_MODULO, spos, 1);
+      case '*':
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_MULTIPLY_ASSIGN, spos, 2);
+        }
+        return mktok(TT_STAR, spos, 1);
+      case '^':
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_XOR_ASSIGN, spos, 2);
+        }
+        return mktok(TT_NOT, spos, 1);
+      case '>':
+        if (cfile.at() == '>') {
+          cfile.advance();
+          return mktok(TT_RSHIFT, spos, 2);
+        }
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_GREATER_EQUAL, spos, 2);
+        }
+        return mktok(TT_GREATERTHAN, spos, 1);
+      case '<':
+        if (cfile.at() == '<') {
+          cfile.advance();
+          return mktok(TT_LSHIFT, spos, 2);
+        }
+        if (cfile.at() == '=') {
+          cfile.advance();
+          return mktok(TT_LESS_EQUAL, spos, 2);
+        }
+        return mktok(TT_LESSTHAN, spos, 1);
+      case ':':
+        if (cfile.at() == cfile[spos]) {
+          cfile.advance();
+          return mktok(TT_SCOPE, spos, 2);
+        }
+        return mktok(TT_COLON, spos, 1);
+      case '?':
+        return mktok(TT_QUESTIONMARK, spos, 1);
+
+      case '.':
+          if (is_digit(cfile.at()))
+            goto handle_decimal;
+          else if (cfile.at() == '.') {
+            if (cfile.peek_next() == '.') {
+              cfile.skip(2);
+              return mktok(TT_ELLIPSIS, spos, 3);
+            }
+          }
+          if (cfile.at() == '*') {
+            cfile.advance();
+            return mktok(TT_DOT_STAR, spos, 1);
+          }
+        return mktok(TT_DOT, spos, 1);
+
+      case '(': return mktok(TT_LEFTPARENTH,  spos, 1);
+      case '[': return mktok(TT_LEFTBRACKET,  spos, 1);
+      case '{': return mktok(TT_LEFTBRACE,    spos, 1);
+      case '}': return mktok(TT_RIGHTBRACE,   spos, 1);
+      case ']': return mktok(TT_RIGHTBRACKET, spos, 1);
+      case ')': return mktok(TT_RIGHTPARENTH, spos, 1);
+
+      case '#':
+        if (cfile.at() == '#') {
+          cfile.advance();
+          return mktok(TTM_CONCAT, spos, 2);
+        }
+        return mktok(TTM_TOSTRING, spos, 1);
+
+      case '\\':
+        // ISO Translation phase 2
+        if (cfile.at() != '\n' || cfile.at() != '\r')
+          cfile.take_newline();
+        continue;
+
+      case '"': {
+        if (!cfile.take('"')) skip_string(cfile, '"', herr);
+        return mktok(TT_STRINGLITERAL, spos, cfile.tell() - spos);
+      }
+
+      case '\'': {
+        if (cfile.at() == '\'') {
+          herr->error(cfile, "Zero-length character literal");
+        } else {
+          skip_string(cfile, '\'', herr);
+        }
+        return mktok(TT_CHARLITERAL, spos, cfile.tell() - spos);
+      }
+
+      unknown: {
+        char errbuf[320];
+        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'",
+                (int)cfile[spos], cfile[spos]);
+        herr->error(cfile, errbuf);
+        return mktok(TT_INVALID, spos, 1);
+      }
+    }
+  }
+
+  herr->error(cfile, "UNREACHABLE BLOCK REACHED");
+  return mktok(TT_INVALID, cfile.tell(), 0);
+}
+
+/*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+████▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀████████████████████████████████████████
+████ Preprocessing Lexer Implementation ████████████████████████████████████████
+████▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄████████████████████████████████████████
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  */
 
 bool lexer::inside_macro(string_view name) const {
   for (const auto &buf : open_buffers)
@@ -343,16 +709,6 @@ class DebugSeer {
   }
 };
 
-#ifdef DEBUG_MODE
-/// This function will be passed signals and will respond to them appropriately.
-static void donothing(int) {}
-#endif
-
-#define E_MATCHED_IF "matching #if already has an #else"
-
-// Optional AST rendering
-#include <General/debug_macros.h>
-
 /// Helper for performing conditional item removal/replacement in a vector.
 /// Allows iteration of items in a vector and removal of items, in one pass.
 /// Most of this class' utility is its destructor.
@@ -476,6 +832,12 @@ static void preprocess_for_if_expression(
   }
 }
 
+/* ************************************************************************** *\
+████▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀██████████████████████████████████████████████████
+████ Main preprocessor unit.  ██████████████████████████████████████████████████
+████▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄██████████████████████████████████████████████████
+\* ************************************************************************** */
+
 void lexer::handle_preprocessor() {
   top:
   bool variadic = false; // Whether this function is variadic
@@ -491,7 +853,7 @@ void lexer::handle_preprocessor() {
         if (cfile.take("ndif") && strbw(cfile.at())) goto case_endif;
         goto failout;
       }
-      if (cfile.at() == 'l') { 
+      if (cfile.at() == 'l') {
         if (cfile.next() == 's') {
           if (cfile.next() == 'e') {
             cfile.advance();
@@ -539,7 +901,7 @@ void lexer::handle_preprocessor() {
       goto failout;
     default: goto failout;
   }
-  
+
   while (false) {  // This is an improvised switch statement; allows "break" to work.
     case_define: {
       string argstrs = read_preprocessor_args();
@@ -554,7 +916,7 @@ void lexer::handle_preprocessor() {
       const size_t nsi = i;
       while (is_letterd(argstr[++i]));
       auto mins = macros.insert({argstrs.substr(nsi, i - nsi), nullptr});
-      
+
       if (argstr[i] == '(') {
         vector<string> paramlist;
         while (is_useless(argstr[++i]));
@@ -575,11 +937,11 @@ void lexer::handle_preprocessor() {
           const size_t si = i;
           while (is_letterd(argstr[++i]));
           paramlist.push_back(argstrs.substr(si, i-si));
-          
+
           while (is_useless(argstr[i])) ++i;
           if (argstr[i] == ')') break;
           if (argstr[i] == ',') { while (is_useless(argstr[++i])); continue; }
-          
+
           // Handle variadic macros (if we are at ...)
           if (argstr[i] == '.' and argstr[i+1] == '.' and argstr[i+2] == '.') {
             i += 2; while (is_useless(argstr[++i]));
@@ -593,7 +955,7 @@ void lexer::handle_preprocessor() {
                         "Expected comma or closing parenthesis at this point");
           }
         }
-        
+
         if (!mins.second) { // If no insertion was made; ie, the macro existed already.
         //  if ((size_t)mins.first->second->argc != paramlist.size())
         //    herr->warning("Redeclaring macro function `" + mins.first->first + '\'', filename, line, pos-lpos);
@@ -771,11 +1133,11 @@ void lexer::handle_preprocessor() {
         bool incnext;
         if (true) incnext = false;
         else { case_include_next: incnext = true; }
-        
+
         string fnfind = read_preprocessor_args();
         if (!conditionals.empty() and !conditionals.back().is_true)
       break;
-        
+
         bool chklocal = false;
         char match = '>';
         if (!incnext and fnfind[0] == '"')
@@ -787,13 +1149,13 @@ void lexer::handle_preprocessor() {
         fnfind[0] = '/';
         for (size_t i = 0; i < fnfind.length(); ++i)
           if (fnfind[i] == match) { fnfind.erase(i); break; }
-        
+
         if (files.size() > 9000) {
           herr->error(cfile, "Nested include count is OVER NINE THOUSAAAAAAND. "
                              "Not including another.");
           break;
         }
-        
+
         string incfn, fdir;
         llreader incfile;
         const string path = filesystem::path(cfile.name).parent_path();
@@ -820,7 +1182,7 @@ void lexer::handle_preprocessor() {
           }
           break;
         }
-        
+
         files.emplace_back(std::move(cfile));
         visited_files.insert(incfn);
         cfile = std::move(incfile);
@@ -845,7 +1207,7 @@ void lexer::handle_preprocessor() {
     case_undef:
         if (!conditionals.empty() and !conditionals.back().is_true)
           break;
-        
+
         cfile.skip_whitespace();
         if (!is_letter(cfile.at()))
           herr->error(cfile, "Expected macro identifier at this point");
@@ -865,7 +1227,7 @@ void lexer::handle_preprocessor() {
   }
   if (conditionals.empty() or conditionals.back().is_true)
     return;
-  
+
   // skip_to_macro:
   while (!cfile.eof()) {
     if (is_useless(cfile.at())) {
@@ -881,7 +1243,7 @@ void lexer::handle_preprocessor() {
   }
   herr->error(cfile, "Expected closing preprocessors before end of code");
   return;
-  
+
   failout:
     while (is_letterd(cfile.at()) && cfile.advance());
     string_view directive = cfile.slice(pspos);
@@ -892,330 +1254,6 @@ void lexer::handle_preprocessor() {
     }
     if (!cfile.eof())
       while (cfile.at() != '\n' && cfile.at() != '\r' && cfile.advance());
-}
-
-token_t jdi::read_token(llreader &cfile, error_handler *herr) {
-  #ifdef DEBUG_MODE
-    static int number_of_times_GDB_has_dropped_its_ass = 0;
-    ++number_of_times_GDB_has_dropped_its_ass;
-  #endif
-  
-  if (cfile.pos < cfile.length) { // Sanity check the stupid reader.
-    if (cfile.pos < cfile.validated_pos) {
-      herr->error(cfile, "Someone rewound the file.");
-      cfile.validated_lnum = cfile.validated_lpos = cfile.validated_pos = 0;
-    }
-    for (; cfile.validated_pos < cfile.pos; ++cfile.validated_pos) {
-      if (cfile[cfile.validated_pos] == '\n' ||
-              (cfile[cfile.validated_pos] == '\r' &&
-               cfile.at(cfile.validated_pos + 1) != '\n')) {
-        ++cfile.validated_lnum;
-        cfile.validated_lpos = cfile.validated_pos + 1;
-      }
-    }
-    if (cfile.lnum != cfile.validated_lnum ||
-        cfile.lpos != cfile.validated_lpos) {
-      herr->error(
-          cfile, "At line " + to_string(cfile.validated_lnum) + ", position " +
-                  to_string(cfile.pos - cfile.validated_lpos) + ", the reader "
-                  "believes it is at line " + to_string(cfile.lnum) +
-                  ", position " + to_string(cfile.pos - cfile.lpos) + "...");
-      cfile.lnum = cfile.validated_lnum;
-      cfile.lpos = cfile.validated_lpos;
-    }
-  }
-  
-  // Dear C++ committee: do you know what would be exponentially more awesome
-  // than this line? Just declaring a normal fucking function, please and thanks
-  auto mktok = [&cfile](TOKEN_TYPE tp, size_t pos, int length) -> token_t {
-    return token_t(tp, cfile.name.c_str(), cfile.lnum, pos - cfile.lpos,
-                   cfile + pos, length);
-  };
-  
-  for (;;) {  // Loop until we find something or hit world's end
-    if (cfile.eof()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
-    
-    // Skip all whitespace
-    if (is_useless(cfile.at())) {
-      size_t spos = cfile.tell();
-      do {
-        if (cfile.at() == '\n' || cfile.at() == '\r') {
-          cfile.take_newline();
-          return mktok(TTM_NEWLINE, spos, cfile.tell() - spos);
-        }
-        if (!cfile.advance()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
-      } while (is_useless(cfile.at()));
-      // TODO: return whitespace marker.
-    }
-    
-    //==========================================================================
-    //====: Check for and handle comments. :====================================
-    //==========================================================================
-    
-    const size_t spos = cfile.tell();
-    switch (cfile.getc()) {
-    
-    case '/': {
-      if (cfile.at() == '*') { skip_multiline_comment(cfile); continue; }
-      if (cfile.at() == '/') { skip_comment(cfile); continue; }
-      if (cfile.at() == '=') 
-        return mktok(TT_DIVIDE_ASSIGN, ++cfile.pos - 2, 2);
-      return mktok(TT_SLASH, cfile.pos - 1, 1);
-    }
-    
-    default:
-    //==========================================================================
-    //====: Not at a comment. See if we're at an identifier. :==================
-    //==========================================================================
-    
-    if (is_letter(cfile[spos])) {
-      while (!cfile.eof() && is_letterd(cfile.at())) cfile.advance();
-      if (cfile.tell() - spos <= 2 &&
-          (cfile.at() == '\'' || cfile.at() == '"')) {
-        auto prefix = parse_string_prefix(cfile.slice(spos));
-        if (prefix.valid) {
-          if (prefix.raw) {
-            if (skip_rstring(cfile, herr)) cfile.advance();
-            return mktok(TT_STRINGLITERAL, spos, cfile.tell() - spos);
-          }
-          skip_string(cfile, cfile.at(), herr);
-          return mktok(TT_CHARLITERAL, spos, cfile.tell() - spos);
-        }
-      }
-      return mktok(TT_IDENTIFIER, spos, cfile.tell() - spos);
-    }
-    
-    goto unknown;
-    
-    //==========================================================================
-    //====: Not at an identifier. Maybe at a number? :==========================
-    //==========================================================================
-    
-    case '0': { // Check if the number is hexadecimal, binary, or octal.
-      // TODO: Handle apostrophes.
-      // Check if the number is hexadecimal.
-      if (cfile.at() == 'x' || cfile.at() == 'X') {
-        // Here, it is hexadecimal.
-        while (cfile.advance() && is_hexdigit(cfile.at()));
-        skip_integer_suffix(cfile);
-        return mktok(TT_HEXLITERAL, spos, cfile.tell() - spos);
-      }
-      // Check if the number is Binary.
-      if (cfile.at() == 'b' || cfile.at() == 'B') {
-        // In this case, it's binary
-        while (cfile.advance() && is_hexdigit(cfile.at()));
-        skip_integer_suffix(cfile);
-        return mktok(TT_BINLITERAL, spos, cfile.tell() - spos);
-      }
-      // Turns out, it's octal.
-      if (cfile.eof() || !is_octdigit(cfile.at())) {
-        // Literal 0. According to ISO, this is octal, because a decimal literal
-        // does not start with zero, while octal literals begin with 0 and
-        // consist of octal digits.
-        return mktok(TT_OCTLITERAL, spos, 1);
-      }
-      while (cfile.advance() && is_octdigit(cfile.at()));
-      skip_integer_suffix(cfile);
-      return mktok(TT_OCTLITERAL, spos, cfile.tell() - spos);
-    }
-    
-    case '1': case '2': case '3': case '4':
-    case '5': case '6': case '7': case '8':
-    case '9': {
-      // Turns out, it's decimal.
-      handle_decimal:
-      while (!cfile.eof() and is_digit(cfile.at())) cfile.advance();
-      if (cfile.at() == '.')
-        while (cfile.advance() and is_digit(cfile.at()));
-      if (cfile.at() == 'e' or cfile.at() == 'E') { // Accept exponents
-        if (cfile.next() == '-') cfile.advance();
-        if (cfile.eof()) {
-          herr->error(cfile, "Numeric literal truncated and end of file.");
-        }
-        else while (is_digit(cfile.at()) && cfile.advance());
-      }
-      skip_integer_suffix(cfile);
-      return mktok(TT_DECLITERAL, spos, cfile.tell()  -spos);
-    }
-    
-    //==========================================================================
-    //====: Not at a number. Find out where we are. :===========================
-    //==========================================================================
-    
-      case ';':
-        return mktok(TT_SEMICOLON, spos, 1);
-      case ',':
-        return mktok(TT_COMMA, spos, 1);
-      case '+':
-        if (cfile.at() == '+') {
-          cfile.advance();
-          return mktok(TT_INCREMENT, spos, 2);
-        }
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_ADD_ASSIGN, spos, 2);
-        }
-        return mktok(TT_PLUS, spos, 1);
-      case '-':
-        if (cfile.at() == '-') {
-          cfile.advance();
-          return mktok(TT_DECREMENT, spos, 2);
-        }
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_SUBTRACT_ASSIGN, spos, 2);
-        }
-        if (cfile.at() == '>') {
-          cfile.advance();
-          return mktok(TT_ARROW, spos, 2);
-        }
-        return mktok(TT_MINUS, spos, 1);
-      case '=':
-        if (cfile.at() == cfile[spos]) {
-          cfile.advance();
-          return mktok(TT_EQUAL_TO, spos, 2);
-        }
-        return mktok(TT_EQUAL, spos, 1);
-      case '&':
-        if (cfile.at() == '&') {
-          cfile.advance();
-          return mktok(TT_AMPERSANDS, spos, 2);
-        }
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_AND_ASSIGN, spos, 2);
-        }
-        return mktok(TT_AMPERSAND, spos, 1);
-      case '|':
-        if (cfile.at() == '|') {
-          cfile.advance();
-          return mktok(TT_PIPES, spos, 2);
-        }
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_OR_ASSIGN, spos, 2);
-        }
-        return mktok(TT_PIPE, spos, 1);
-      case '~':
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_NEGATE_ASSIGN, spos, 2);
-        }
-        return mktok(TT_TILDE, spos, 1);
-      case '!':
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_NOT_EQUAL_TO, spos, 2);
-        }
-        return mktok(TT_NOT, spos, 1);
-      case '%':
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_MODULO_ASSIGN, spos, 2);
-        }
-        return mktok(TT_MODULO, spos, 1);
-      case '*':
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_MULTIPLY_ASSIGN, spos, 2);
-        }
-        return mktok(TT_STAR, spos, 1);
-      case '^':
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_XOR_ASSIGN, spos, 2);
-        }
-        return mktok(TT_NOT, spos, 1);
-      case '>':
-        if (cfile.at() == '>') {
-          cfile.advance();
-          return mktok(TT_RSHIFT, spos, 2);
-        }
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_GREATER_EQUAL, spos, 2);
-        }
-        return mktok(TT_GREATERTHAN, spos, 1);
-      case '<':
-        if (cfile.at() == '<') {
-          cfile.advance();
-          return mktok(TT_LSHIFT, spos, 2);
-        }
-        if (cfile.at() == '=') {
-          cfile.advance();
-          return mktok(TT_LESS_EQUAL, spos, 2);
-        }
-        return mktok(TT_LESSTHAN, spos, 1);
-      case ':':
-        if (cfile.at() == cfile[spos]) {
-          cfile.advance();
-          return mktok(TT_SCOPE, spos, 2);
-        }
-        return mktok(TT_COLON, spos, 1);
-      case '?':
-        return mktok(TT_QUESTIONMARK, spos, 1);
-      
-      case '.':
-          if (is_digit(cfile.at()))
-            goto handle_decimal;
-          else if (cfile.at() == '.') {
-            if (cfile.peek_next() == '.') {
-              cfile.skip(2);
-              return mktok(TT_ELLIPSIS, spos, 3);
-            }
-          }
-          if (cfile.at() == '*') {
-            cfile.advance();
-            return mktok(TT_DOT_STAR, spos, 1);
-          }
-        return mktok(TT_DOT, spos, 1);
-      
-      case '(': return mktok(TT_LEFTPARENTH,  spos, 1);
-      case '[': return mktok(TT_LEFTBRACKET,  spos, 1);
-      case '{': return mktok(TT_LEFTBRACE,    spos, 1);
-      case '}': return mktok(TT_RIGHTBRACE,   spos, 1);
-      case ']': return mktok(TT_RIGHTBRACKET, spos, 1);
-      case ')': return mktok(TT_RIGHTPARENTH, spos, 1);
-      
-      case '#':
-        if (cfile.at() == '#') {
-          cfile.advance();
-          return mktok(TTM_CONCAT, spos, 2);
-        }
-        return mktok(TTM_TOSTRING, spos, 1);
-      
-      case '\\':
-        // ISO Translation phase 2
-        if (cfile.at() != '\n' || cfile.at() != '\r')
-          cfile.take_newline();
-        continue;
-      
-      case '"': {
-        if (!cfile.take('"')) skip_string(cfile, '"', herr);
-        return mktok(TT_STRINGLITERAL, spos, cfile.tell() - spos);
-      }
-      
-      case '\'': {
-        if (cfile.at() == '\'') {
-          herr->error(cfile, "Zero-length character literal");
-        } else {
-          skip_string(cfile, '\'', herr);
-        }
-        return mktok(TT_CHARLITERAL, spos, cfile.tell() - spos);
-      }
-      
-      unknown: {
-        char errbuf[320];
-        sprintf(errbuf, "Unrecognized symbol (char)0x%02X '%c'",
-                (int)cfile[spos], cfile[spos]);
-        herr->error(cfile, errbuf);
-        return mktok(TT_INVALID, spos, 1);
-      }
-    }
-  }
-  
-  herr->error(cfile, "UNREACHABLE BLOCK REACHED");
-  return mktok(TT_INVALID, cfile.tell(), 0);
 }
 
 token_vector jdi::tokenize(string fname, string_view str, error_handler *herr) {
