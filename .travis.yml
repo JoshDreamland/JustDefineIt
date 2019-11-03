@@ -1,0 +1,26 @@
+os: linux
+group: travis_latest
+compiler: gcc
+language: cpp
+dist: bionic
+
+
+before_install:
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get -q update
+
+install:
+  - sudo apt-get -y install libgtest-dev g++-9
+  - mkdir /tmp/gtest && pushd /tmp/gtest
+  - cmake /usr/src/gtest
+  - make
+  - sudo make install
+  - popd
+
+env:
+  - CXX=g++-9
+
+script:
+  - cmake CMakeLists.txt
+  - make
+  - bin/Test/JustDefineIt
