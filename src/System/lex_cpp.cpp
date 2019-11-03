@@ -34,6 +34,7 @@
 #include <Parser/context_parser.h>
 #include <System/builtins.h>
 
+#include <cassert>
 #include <cstring>
 #include <csignal>
 #include <filesystem>
@@ -838,7 +839,7 @@ void lexer::handle_preprocessor() {
           }
         }
         #else
-          read_preprocessor_args(herr);
+          read_preprocessor_args();
         #endif
       break;
     case_undef:
@@ -1054,21 +1055,21 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
           cfile.advance();
           return mktok(TT_ADD_ASSIGN, spos, 2);
         }
-        return mktok(TT_ADD_ASSIGN, spos, 1);
+        return mktok(TT_PLUS, spos, 1);
       case '-':
-        if (cfile.at() == '+') {
+        if (cfile.at() == '-') {
           cfile.advance();
-          return mktok(TT_INCREMENT, spos, 2);
+          return mktok(TT_DECREMENT, spos, 2);
         }
         if (cfile.at() == '=') {
           cfile.advance();
-          return mktok(TT_ADD_ASSIGN, spos, 2);
+          return mktok(TT_SUBTRACT_ASSIGN, spos, 2);
         }
         if (cfile.at() == '>') {
           cfile.advance();
           return mktok(TT_ARROW, spos, 2);
         }
-        return mktok(TT_ADD_ASSIGN, spos, 1);
+        return mktok(TT_MINUS, spos, 1);
       case '=':
         if (cfile.at() == cfile[spos]) {
           cfile.advance();
