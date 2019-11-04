@@ -326,8 +326,9 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
       
       case TT_NOEXCEPT: case TT_TYPEID:
-      
-      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID: case TTM_COMMENT: case TTM_NEWLINE:
+
+      case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
+      case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:
       default:
         token.report_errorf(herr, "Unexpected %s in this scope");
         break;
@@ -338,4 +339,3 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
     token = read_next_token(scope);
   }
 }
-      

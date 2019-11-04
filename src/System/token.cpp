@@ -141,17 +141,18 @@ static struct token_info_c {
       TKD(TT_COMMA,            "',' token");
       TKD(TT_SEMICOLON,        "';' token");
 
-      TKD(TT_STRINGLITERAL,    "string literal");
-      TKD(TT_CHARLITERAL,      "character literal");
-      TKD(TT_DECLITERAL,       "decimal literal");
-      TKD(TT_HEXLITERAL,       "hexadecimal literal");
-      TKD(TT_OCTLITERAL,       "octal literal");
-      TKD(TT_BINLITERAL,       "binary literal");
+      TKD(TT_STRINGLITERAL,    "string literal %s");
+      TKD(TT_CHARLITERAL,      "character literal %s");
+      TKD(TT_DECLITERAL,       "decimal literal %s");
+      TKD(TT_HEXLITERAL,       "hexadecimal literal %s");
+      TKD(TT_OCTLITERAL,       "octal literal %s");
+      TKD(TT_BINLITERAL,       "binary literal %s");
 
       TKD(TTM_CONCAT,          "`##' token");
       TKD(TTM_TOSTRING,        "`#' token");
       TKD(TTM_COMMENT,         "...comment(?)");
       TKD(TTM_NEWLINE,         "...newline(?)");
+      TKD(TTM_WHITESPACE,      "...whitespace(?)");
 
       TKD(TT_NEW,              "`new' keyword");
       TKD(TT_DELETE,           "`delete' keyword");

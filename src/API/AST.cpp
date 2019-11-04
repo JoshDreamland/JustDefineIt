@@ -143,7 +143,8 @@ namespace jdi {
         } break;
       
       case TT_OPERATORKW:
-        token.report_error(herr,"Please refer to operators in their binary format; explicit use of operator functions not presently supported.");
+        token.report_error(herr, "Please refer to operators in their binary form; "
+                           "explicit use of operator functions not presently supported.");
         break;
       
       case TT_TYPENAME: {
@@ -410,8 +411,9 @@ namespace jdi {
       #include <User/token_cases.h>
         token.report_errorf(herr, "Expected expression before %s");
         return NULL;
-      
-      case TTM_CONCAT: case TTM_TOSTRING: case TTM_COMMENT: case TTM_NEWLINE:
+
+      case TTM_CONCAT: case TTM_TOSTRING:
+      case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:
         token.report_error(herr, "Illogical token type returned!");
         return NULL;
       case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
@@ -752,8 +754,9 @@ namespace jdi {
       case TT_NOEXCEPT:
       #include <User/token_cases.h>
       return left_node;
-      
-      case TTM_CONCAT: case TTM_TOSTRING: case TTM_COMMENT: case TTM_NEWLINE: case TT_INVALID:
+
+      case TTM_CONCAT: case TTM_TOSTRING: case TTM_COMMENT:
+      case TTM_WHITESPACE:case TTM_NEWLINE: case TT_INVALID:
       default: return left_node;
     }
     return parse_binary_or_unary_post(ast, token, left_node, prec_min);

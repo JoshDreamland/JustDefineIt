@@ -72,6 +72,7 @@ static inline bool is_numeric(string_view sv) {
   return sv.size();
 }
 
+/// Skips to the next newline, terminating at the newline character.
 static inline void skip_comment(llreader &cfile) {
   if (ALLOW_MULTILINE_COMMENTS) {
     while (cfile.advance() && cfile.at() != '\n' && cfile.at() != '\r')
@@ -163,8 +164,8 @@ static inline StringPrefixFlags parse_string_prefix(string_view pre) {
 }
 
 void lexer::enter_macro(const token_t &otk, const macro_type &macro) {
-  if (macro.value.empty()) return;
-  push_buffer({macro.name, otk, &macro.value});
+  if (macro.optimized_value.empty()) return;
+  push_buffer({macro.name, otk, &macro.optimized_value});
 }
 
 /// Invoked while the reader is *PAST* the opening quote. Terminates with the
@@ -280,7 +281,7 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
         }
         if (!cfile.advance()) return mktok(TT_ENDOFCODE, cfile.tell(), 0);
       } while (is_useless(cfile.at()));
-      // TODO: return whitespace marker.
+      return mktok(TTM_WHITESPACE, spos, cfile.tell() - spos);
     }
 
     //==========================================================================
@@ -291,11 +292,18 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
     switch (cfile.getc()) {
 
     case '/': {
-      if (cfile.at() == '*') { skip_multiline_comment(cfile); continue; }
-      if (cfile.at() == '/') { skip_comment(cfile); continue; }
-      if (cfile.at() == '=')
-        return mktok(TT_DIVIDE_ASSIGN, ++cfile.pos - 2, 2);
-      return mktok(TT_SLASH, cfile.pos - 1, 1);
+      if (cfile.at() == '*') {
+        skip_multiline_comment(cfile);
+        return mktok(TTM_WHITESPACE, spos, cfile.tell() - spos);
+      }
+      if (cfile.at() == '/') {
+        skip_comment(cfile);
+        return mktok(TTM_WHITESPACE, spos, cfile.tell() - spos);
+      }
+      if (cfile.take('=')) {
+        return mktok(TT_DIVIDE_ASSIGN, spos, 2);
+      }
+      return mktok(TT_SLASH, spos, 1);
     }
 
     default:
@@ -791,6 +799,7 @@ static void preprocess_for_if_expression(
           const token_t &id = tpack.peek_next(2);
           if (id.type != TT_IDENTIFIER) {
             herr->error(id, "Expected identifier for `defined()` expression.");
+            tpack.next();  // Take it as-is.
             continue;
           }
           auto m = macros.find(id.content.toString());
@@ -808,7 +817,7 @@ static void preprocess_for_if_expression(
           continue;
         }
         herr->error(next, "Expected identifier or parenthesized identifier for "
-                          "`defined` expression.");
+                          "`defined` expression before %s", next.to_string());
         tpack.next();
         continue;
       }
@@ -1052,7 +1061,7 @@ void lexer::handle_preprocessor() {
           token_vector toks;
           for (token_t tok; tok = read_token(cfile, herr),
               tok.type != TT_ENDOFCODE && tok.type != TTM_NEWLINE; ) {
-            toks.push_back(tok);
+            if (!tok.preprocesses_away()) toks.push_back(tok);
           }
 
           preprocess_for_if_expression(toks, macros, herr);
@@ -1394,7 +1403,7 @@ token_t lexer::read_raw() {
     return (*buffered_tokens)[buffer_pos++];
   }
   token_t res;
-  do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
+  do res = read_token(cfile, herr); while (res.preprocesses_away());
   return res;
 }
 
@@ -1416,7 +1425,7 @@ token_t lexer::preprocess_and_read_token() {
       if (res.type == TT_IDENTIFIER && handle_macro(res)) continue;
       return res;
     }
-    do res = read_token(cfile, herr); while (res.type == TTM_NEWLINE);
+    do res = read_token(cfile, herr); while (res.preprocesses_away());
     if (res.type == TT_IDENTIFIER) {
       if (handle_macro(res)) continue;
     } else if (res.type == TTM_CONCAT) {

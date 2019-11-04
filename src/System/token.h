@@ -28,6 +28,8 @@
 #include <vector>
 
 namespace jdi {
+  constexpr int kGlossBits = 5;
+
   enum GLOSS_TOKEN_TYPE {
     GTT_DECLARATOR,     ///< Type names and modifiers.
     GTT_CONSTRUCT,      ///< Tokens like class, struct, enum, union, namespace.
@@ -50,7 +52,7 @@ namespace jdi {
   };
   
   /// Used when defining `TOKEN_TYPE`s to choose a specific token value based on a gloss token value.
-  constexpr int GLOSS(int gloss_token) { return gloss_token << 5; }
+  constexpr int GLOSS(int gloss_token) { return gloss_token << kGlossBits; }
   
   enum TOKEN_TYPE {
     TT_DECLARATOR = GLOSS(GTT_DECLARATOR), ///< Primitive type catch-it-all.
@@ -165,6 +167,7 @@ namespace jdi {
     
     TTM_CONCAT = GLOSS(GTT_PREPROCESSOR), ///< A macro-only token meaning the concatenation of two tokens to form a new token, `##`.
     TTM_TOSTRING, ///< A macro-only token meaning the value of a parameter, treated as a string literal, `#`.
+    TTM_WHITESPACE, ///< A comment, including the symbols that delimit the comment (excluding any newline).
     TTM_COMMENT, ///< A comment, including the symbols that delimit the comment (excluding any newline).
     TTM_NEWLINE, ///< A newline, which has semantic meaning in preprocessor directives.
     
@@ -220,8 +223,8 @@ namespace jdi {
   **/
   struct token_t {
     TOKEN_TYPE type; ///< The type of this token
-    inline GLOSS_TOKEN_TYPE gloss_type() {
-      return (GLOSS_TOKEN_TYPE) (type >> 4);
+    inline GLOSS_TOKEN_TYPE gloss_type() const {
+      return (GLOSS_TOKEN_TYPE) (type >> kGlossBits);
     }
     
     /// Log the name of the file from which this token was read.
@@ -301,6 +304,15 @@ namespace jdi {
     } content;
     
     void validate() const;
+
+    /// Returns whether this token preprocesses to nothing.
+    /// This includes whitespace and comments.
+    bool preprocesses_away() const {
+      return gloss_type() == GTT_PREPROCESSOR && (
+          type == TTM_NEWLINE    ||
+          type == TTM_WHITESPACE ||
+          type == TTM_COMMENT);
+    }
     
     /// Construct a new, invalid token.
     token_t():

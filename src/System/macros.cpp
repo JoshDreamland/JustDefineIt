@@ -48,8 +48,9 @@ string macro_type::NameAndPrototype() const {
 
 string macro_type::toString() const {
   string res = "#define " + NameAndPrototype() + " \\\n";
-  for (size_t i = 0; i < value.size(); ++i)
-    res += "  " + value[i].to_string() + (i + 1 < value.size()? "\\\n" : "");
+  for (size_t i = 0; i < raw_value.size(); ++i)
+    res += "  " + raw_value[i].to_string()
+        + (i + 1 < raw_value.size()? "\\\n" : "");
   return res;
 }
 
@@ -131,6 +132,17 @@ token_vector macro_type::evaluate_concats(token_vector &&replacement_list,
   return replacement_list;
 }
 
+token_vector macro_type::strip_blanks(const token_vector &replacement_list) {
+  token_vector res;
+  res.reserve(replacement_list.size());
+  for (const token_t &tok : replacement_list) {
+    if (tok.type == TT_ENDOFCODE)
+      cout << "What the fuck." << endl;
+    if (!tok.preprocesses_away()) res.push_back(tok);
+  }
+  return res;
+}
+
 static void append_or_paste(token_vector &dest,
                             token_vector::const_iterator begin,
                             token_vector::const_iterator end,
@@ -165,8 +177,8 @@ token_vector macro_type::substitute_and_unroll(
   for (const FuncComponent &part : parts) {
     switch (part.tag) {
       case FuncComponent::TOKEN_SPAN:
-        append_or_paste(res, value.begin() + part.token_span.begin,
-                             value.begin() + part.token_span.end,
+        append_or_paste(res, optimized_value.begin() + part.token_span.begin,
+                             optimized_value.begin() + part.token_span.end,
                         paste_next, herr);
         paste_next = false;
         break;
