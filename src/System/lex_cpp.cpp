@@ -368,10 +368,6 @@ template<class T> struct VectorCompact {
   }
   bool has_next(size_t n = 1) const { return right < vec.size() - n; }
   T &peek_next(size_t n = 1) { return vec[right + n]; }
-
-  void drop() { ++right; }
-  void replace(const T &with) { vec[right] = with; }
-  void replace(T &&with) { vec[right] = std::move(with); }
   T &at() { return vec[right]; }
 
   VectorCompact(std::vector<T> &v): vec(v) {}
@@ -518,8 +514,10 @@ void lexer::handle_preprocessor() {
       }
       if (cfile.at() == 'n') {
         cfile.advance();
-        if (cfile.take("clude_next") && strbw(cfile.at())) goto case_include_next;
-        if (cfile.take("clude") && strbw(cfile.at()))      goto case_include;
+        if (cfile.take("clude")) {
+          if (strbw(cfile.at())) goto case_include;
+          if (cfile.take("_next") && strbw(cfile.at()) goto case_include_next;
+        }
         goto failout;
       }
       if (cfile.take("mport") && strbw(cfile.at())) goto case_import;
