@@ -518,8 +518,8 @@ void lexer::handle_preprocessor() {
       }
       if (cfile.at() == 'n') {
         cfile.advance();
-        if (cfile.take("clude") && strbw(cfile.at()))      goto case_include;
         if (cfile.take("clude_next") && strbw(cfile.at())) goto case_include_next;
+        if (cfile.take("clude") && strbw(cfile.at()))      goto case_include;
         goto failout;
       }
       if (cfile.take("mport") && strbw(cfile.at())) goto case_import;
