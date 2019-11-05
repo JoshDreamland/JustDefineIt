@@ -17,6 +17,7 @@
 #include <cstring>
 #include <iostream>
 #include <iomanip>
+#include <filesystem>
 #include <unistd.h>
 
 #include <API/AST.h>
@@ -39,9 +40,11 @@
 
 using namespace jdi;
 using namespace std;
+namespace fs = std::filesystem;
 
 void test_expression_evaluator();
 void name_type(string type, Context &ct);
+std::vector<std::string> get_gcc_include_paths(int standard);
 
 static void putcap(string cap) {
   cout << endl << endl << endl << endl;
@@ -108,7 +111,81 @@ gcc -E -x c++ --std=c++2a -v /dev/null 2>&1 | \
     sed -n '/#include ..... search starts here:/,/End of search list[.]/p'
 */
 
-int main() {
+inline std::string get_cpp_standard_str(int standard) {
+  std::string std_str;
+  switch (standard) {
+    case 98: std_str = "c++89"; break;
+    case 03: std_str = "c++03"; break;
+    case 11: std_str = "c++11"; break;
+    case 14: std_str = "c++14"; break;
+    case 17: std_str = "c++17"; break;
+    case 20: std_str = "c++2a"; break;
+    default: std_str = "c++11"; break;
+  }
+  return std_str;
+}
+
+
+std::vector<std::string> get_gcc_include_paths(int standard) {
+
+  std::string std_str = get_cpp_standard_str(standard);
+  std::vector<std::string> include_paths;
+
+  if (std::system(("gcc -E -x c++ --std=" + std_str + " -v /dev/null 2>&1 &> /tmp/jdi/search_dirs.txt").c_str()) == 0 ) {
+    std::ifstream search_dirs_f("/tmp/jdi/search_dirs.txt");
+    std::string line;
+
+    bool search_dirs = false;
+    std::cout << "System include paths: " << std::endl;
+    while(std::getline(search_dirs_f, line)) {
+      if (line == "End of search list.") search_dirs = false;
+       
+      if (search_dirs) {
+        std::cout << "  " << line << std::endl;
+        include_paths.push_back(line.substr(1, line.length()));
+      }
+      
+      if (line == "#include <...> search starts here:") search_dirs = true;
+    }
+  }
+
+  return include_paths;
+}
+
+int main(int argc, char** argv) {
+  
+  fs::path enigma_path;
+  bool skip_parser = true;
+  int cpp_std = 11;
+  if (argc != 4) {
+    std::cerr << "Usage: JustDefineIt <c++std> </path/to/enigma> <skip parser>" << std::endl;
+    return -1;
+  } else {
+    // ensure place to write stuffs exists
+    if (!fs::create_directory("/tmp/jdi") && !fs::exists("/tmp/jdi")) {
+      std::cerr << "Failed to create working directory: /tmp/jdi" << std::endl;
+      return -1;
+    }
+
+    enigma_path = argv[2];
+    if (!fs::exists(enigma_path)) { 
+      std::cerr << "could not locate enigma at: " << enigma_path << std::endl;
+      return -1;
+    }
+
+    skip_parser = stoi(argv[3], NULL, 10);
+    cpp_std = stoi(argv[1], NULL, 10);
+
+    std::cout << "Attemping parse of the " << get_cpp_standard_str(cpp_std)  << " standard" << std::endl << std::endl;
+
+    // generate enigma preprocess
+    std::cout << "Generating enigma headers" << std::endl;
+    if (std::system(("pushd " + enigma_path.string() + " && ./emake --list &> /dev/null && popd").c_str()) != 0) {
+      std::cerr << "Failed to generate enigma headers. Bye" << std::endl;
+      return -1;
+    }
+  }
+  
   putcap("Test simple macros");
   Context &builtin = builtin_context();
   builtin.add_macro("scalar_macro","simple value");
@@ -144,19 +221,17 @@ int main() {
     cout <<     "  [" << setw(w) << b.toString()
          << "]  <  [" << setw(w) << b.toString() << "]: " << (b < b) << endl;
   }
-  
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/x86_64-pc-linux-gnu");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0/backward");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include");
-  builtin.add_search_directory("/usr/local/include");
-  builtin.add_search_directory("/usr/lib/gcc/x86_64-pc-linux-gnu/9.2.0/include-fixed");
-  builtin.add_search_directory("/usr/include");
 
-  builtin.add_search_directory("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL");
-  builtin.add_search_directory("/home/josh/.enigma/");
+  for (const std::string& p : get_gcc_include_paths(cpp_std)) builtin.add_search_directory(p);
 
-  llreader macro_reader("test/defines_linux.txt");
+  builtin.add_search_directory(enigma_path.string() + "/ENIGMAsystem/SHELL");
+  builtin.add_search_directory("/tmp/ENIGMA");
+
+  if (std::system(("cpp -dM -x c++ --std=" + get_cpp_standard_str(cpp_std) + " -E /dev/null > /tmp/jdi/defines.txt").c_str()) != 0) {
+    std::cerr << "Failed to generate gcc defines. Bye" << std::endl;
+    return -1;
+  }
+  llreader macro_reader("/tmp/jdi/defines.txt");
   
   if (macro_reader.is_open())
     builtin.parse_stream(macro_reader);
@@ -171,7 +246,7 @@ int main() {
   name_type("int(*)()", builtin);
   name_type("int&(*)()", builtin);
 
-  if (true) {
+  if (skip_parser) {
     vector<token_t> tokens, tokens2;
     size_t correct = 0, incorrect = 0;
     if (true) {
@@ -189,7 +264,7 @@ int main() {
     bool had_diff = false;
     if (true) {
       Context butts;
-      llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");
+      llreader f((enigma_path.string() + "/ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -230,7 +305,7 @@ int main() {
   }
   
   putcap("Test parser");
-  llreader f("/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp");
+  llreader f((enigma_path.string() + "/ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
   
   if (f.is_open())
   {
@@ -417,14 +492,14 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
   value v = ast.eval(dec);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_00.svg");
+  ast.writeSVG("/tmp/jdi/AST_00.svg");
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   cp.get_AST_builder()->parse_expression(&ast);
   v = ast.eval(dec);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_01.svg");
+  ast.writeSVG("/tmp/jdi/AST_01.svg");
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
@@ -433,7 +508,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
   v = ast.eval(dec);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_02.svg");
+  ast.writeSVG("/tmp/jdi/AST_02.svg");
   cout << v.val.i << endl;
   
   ast.clear(); dlex.clear();
@@ -443,7 +518,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_03.svg");
+  ast.writeSVG("/tmp/jdi/AST_03.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
   
@@ -454,7 +529,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator(jdi::TT_MINUS, "-",1);
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_04.svg");
+  ast.writeSVG("/tmp/jdi/AST_04.svg");
   v = ast.eval(dec); dlex.clear();
   cout << v.val.i << endl;
   
@@ -468,7 +543,7 @@ void test_expression_evaluator() {
   dlex << create_token_dec_literal("1",1);
   token_t token;
   cp.get_AST_builder()->parse_expression(&ast);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_05.svg");
+  ast.writeSVG("/tmp/jdi/AST_05.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
   
@@ -507,7 +582,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("1",1);
   cp.get_AST_builder()->parse_expression(&ast);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_06.svg");
+  ast.writeSVG("/tmp/jdi/AST_06.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
   
@@ -532,7 +607,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("1",1);
   cp.get_AST_builder()->parse_expression(&ast);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_07.svg");
+  ast.writeSVG("/tmp/jdi/AST_07.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
   
@@ -559,7 +634,7 @@ void test_expression_evaluator() {
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
   dlex << create_token_dec_literal("4",1);
   cp.get_AST_builder()->parse_expression(&ast);
-  ast.writeSVG("/home/josh/Desktop/RecursiveAST/AST_08.svg");
+  ast.writeSVG("/tmp/jdi/AST_08.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
 }
