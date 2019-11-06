@@ -54,6 +54,16 @@ string macro_type::toString() const {
   return res;
 }
 
+constexpr char kConcatenationError[] =
+    "Concatenation marker cannot appear at either end of a replacement list.";
+
+inline bool meaningful_span(const token_vector &tokens, size_t b, size_t e) {
+  for (auto i = b; i < e; ++i) {
+    if (!tokens[i].preprocesses_away()) return true;
+  }
+  return false;
+}
+
 vector<macro_type::FuncComponent> macro_type::componentize(
     const token_vector &tokens, const vector<string> &params,
     error_handler *herr) {
@@ -68,15 +78,25 @@ vector<macro_type::FuncComponent> macro_type::componentize(
                                "end of a replacement list.");
         continue;
       }
-      if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
+      // Don't push spans CONCAT would always discard.
+      if (meaningful_span(tokens, e, i))
+        res.push_back(FuncComponent::TokenSpan{e, i});
       res.push_back(FuncComponent::Paste{});
-      e = i + 1;
+      while (++i < tokens.size() && tokens[i].preprocesses_away());
+      e = i--;
     } else if (tokens[i].type == TT_IDENTIFIER) {
       auto found = params_by_name.find(tokens[i].content.view());
       if (found != params_by_name.end()) {
         if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
-        if ((i + 1 < tokens.size() && tokens[i + 1].type == TTM_CONCAT) ||
-            (i > 0 && tokens[i - 1].type == TTM_CONCAT)) {
+        // Check if either neighboring token is CONCAT.
+        // We already know if the previous was CONCAT, because we'll have
+        // a PASTE at the end of our result vector. We must still look ahead.
+        size_t j = i;  // First, find next non-whitespace token.
+        while (++j < tokens.size() && tokens[j].preprocesses_away());
+        // If the next meaningful token is CONCAT, or our last operation is
+        // PASTE, we use the raw argument token vector.
+        if ((j < tokens.size() && tokens[j].type == TTM_CONCAT) ||
+            (!res.empty() && res.back().tag == FuncComponent::PASTE)) {
           res.push_back(FuncComponent::RawArgument{found->second});
         } else {
           res.push_back(FuncComponent::ExpandedArgument{found->second});
@@ -84,12 +104,15 @@ vector<macro_type::FuncComponent> macro_type::componentize(
         e = i + 1;
       }
     } else if (tokens[i].type == TTM_TOSTRING) {
-      if (i + 1 >= tokens.size() || tokens[i + 1].type != TT_IDENTIFIER) {
+      size_t j = i;
+      while (++j < tokens.size() && tokens[j].preprocesses_away());
+      if (j >= tokens.size() || tokens[j].type != TT_IDENTIFIER) {
         herr->error(tokens[i], "# must be followed by a parameter name");
         continue;
       }
       if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
-      auto found = params_by_name.find(tokens[++i].content.view());
+      i = j;
+      auto found = params_by_name.find(tokens[i].content.view());
       if (found == params_by_name.end()) {
         herr->error(tokens[i], "# must be followed by a parameter name; " +
                     tokens[i].content.toString() + " is not a parameter");
@@ -104,7 +127,8 @@ vector<macro_type::FuncComponent> macro_type::componentize(
   return res;
 }
 
-static token_t paste_tokens(token_t left, token_t right, error_handler *herr) {
+static token_t paste_tokens(
+    const token_t &left, const token_t &right, error_handler *herr) {
   string buf = left.content.toString() + right.content.toString();
   llreader read("token concatenation", buf, false);
   token_t res = read_token(read, herr);
@@ -115,30 +139,24 @@ static token_t paste_tokens(token_t left, token_t right, error_handler *herr) {
   return res;
 }
 
-token_vector macro_type::evaluate_concats(token_vector &&replacement_list,
+token_vector macro_type::evaluate_concats(const token_vector &replacement_list,
                                           error_handler *herr) {
-  size_t left = 0;
-  for (size_t i = 1; i < replacement_list.size(); ++i) {
-    if (replacement_list[i].type == TTM_CONCAT) {
-      if (++i >= replacement_list.size()) break;
-      replacement_list[left] =
-          paste_tokens(replacement_list[left], replacement_list[i],herr);
-    } else if (++left < i) {
-      replacement_list[left] = replacement_list[i];
-    }
-  }
-  // Conditional handles the zero-size case.
-  if (++left < replacement_list.size()) replacement_list.resize(left);
-  return replacement_list;
-}
-
-token_vector macro_type::strip_blanks(const token_vector &replacement_list) {
   token_vector res;
   res.reserve(replacement_list.size());
-  for (const token_t &tok : replacement_list) {
-    if (tok.type == TT_ENDOFCODE)
-      cout << "What the fuck." << endl;
-    if (!tok.preprocesses_away()) res.push_back(tok);
+  for (size_t i = 0; i < replacement_list.size(); ++i) {
+    if (replacement_list[i].type == TTM_CONCAT) {
+      const size_t cat_at = i;
+      while (++i < replacement_list.size() &&
+             replacement_list[i].preprocesses_away());
+      while (!res.empty() && res.back().preprocesses_away()) res.pop_back();
+      if (i >= replacement_list.size() || res.empty()) {
+        herr->error(replacement_list[cat_at], kConcatenationError);
+        break;
+      }
+      res.back() = paste_tokens(res.back(), replacement_list[i], herr);
+    } else {
+      res.push_back(replacement_list[i]);
+    }
   }
   return res;
 }
@@ -149,8 +167,12 @@ static void append_or_paste(token_vector &dest,
                             bool paste, error_handler *herr) {
   if (begin == end) return;
   if (paste) {
-    token_t &left = dest.back();
-    left = paste_tokens(left, *begin++, herr);
+    while (!dest.empty() && dest.back().preprocesses_away()) dest.pop_back();
+    while (begin != end && begin->preprocesses_away()) ++begin;
+    if (!dest.empty() && begin != end) {
+      token_t &left = dest.back();
+      left = paste_tokens(left, *begin++, herr);
+    }
   }
   dest.insert(dest.end(), begin, end);
 }
@@ -177,8 +199,8 @@ token_vector macro_type::substitute_and_unroll(
   for (const FuncComponent &part : parts) {
     switch (part.tag) {
       case FuncComponent::TOKEN_SPAN:
-        append_or_paste(res, optimized_value.begin() + part.token_span.begin,
-                             optimized_value.begin() + part.token_span.end,
+        append_or_paste(res, raw_value.begin() + part.token_span.begin,
+                             raw_value.begin() + part.token_span.end,
                         paste_next, herr);
         paste_next = false;
         break;

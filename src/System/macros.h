@@ -71,7 +71,7 @@ namespace jdi {
 
     /// The definiens of this macro, as a series of preprocessor tokens.
     token_vector raw_value;
-    /// The definiens of this macro, with preprocessing tokens elided.
+    /// For object-like macros, a copy of raw_value with any CONCATs evaluated.
     token_vector optimized_value;
 
     /// Caches meaning for chunks of the replacement list of macro functions.
@@ -134,12 +134,8 @@ namespace jdi {
                                        error_handler *herr) const;
 
     /// Handle concatenations (##) in replacement lists for object-like macros.
-    static token_vector evaluate_concats(token_vector &&replacement_list,
+    static token_vector evaluate_concats(const token_vector &replacement_list,
                                          error_handler *herr);
-    /// Strip whitespace tokens to allow direct use as token buffers in lexers.
-    /// In function-like macros, simplifies preprocessing and reduces the number
-    /// of TokenSpan components needed to copy only meaningful tokens.
-    static token_vector strip_blanks(const token_vector &replacement_list);
 
     /// Convert this macro to a string
     string toString() const;
@@ -151,7 +147,7 @@ namespace jdi {
     macro_type(const string &n, vector<token_t> &&definiens, error_handler *h):
         is_function(false), is_variadic(false), name(n), params(),
         raw_value(std::move(definiens)),
-        optimized_value(evaluate_concats(strip_blanks(raw_value), h)) {}
+        optimized_value(evaluate_concats(raw_value, h)) {}
 
     /** Construct a macro function taking the arguments in arg_list.
         This function parses the given value based on the argument list.
@@ -171,8 +167,7 @@ namespace jdi {
                vector<token_t> &&definiens, error_handler *herr):
         is_function(true), is_variadic(variadic), name(name_),
         params(std::move(arg_list)), raw_value(std::move(definiens)),
-        optimized_value(strip_blanks(raw_value)),
-        parts(componentize(optimized_value, params, herr)) {}
+        parts(componentize(raw_value, params, herr)) {}
     
     ~macro_type() {}
   };

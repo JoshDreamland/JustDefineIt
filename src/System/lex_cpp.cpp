@@ -584,11 +584,18 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
   if (inside_macro(mf.name))
     return false;
 
-  token_t maybe_paren = read_raw();
-  if (maybe_paren.type != TT_LEFTPARENTH) {
-    if (maybe_paren.type == TT_ENDOFCODE) return false;
-    push_buffer(token_vector{maybe_paren});
-    return false;
+  /* Find a parenthesis or exit. */
+  token_t maybe_paren = read_raw(); {
+    token_vector maybe_rewind;
+    while (maybe_paren.preprocesses_away()) {
+      maybe_rewind.push_back(maybe_paren);
+      maybe_paren = read_raw();
+    }
+    if (maybe_paren.type != TT_LEFTPARENTH) {
+      maybe_rewind.push_back(maybe_paren);
+      push_buffer(std::move(maybe_rewind));
+      return false;
+    }
   }
 
   vector<token_vector> args;
@@ -615,7 +622,16 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
         ++too_many_args;
       }
     }
-    args.back().push_back(tok);
+    // XXX: It would be nice to offer a flag to preserve comments in this case.
+    // Removing these tokens here and below is necessary unless we handle this
+    // trimming in TOSTRING during macro expansion.
+    if (!args.back().empty() || !tok.preprocesses_away())
+      args.back().push_back(tok);
+  }
+
+  // Strip trailing whitespace in arguments.
+  for (token_vector &arg : args) {
+    while (!arg.empty() && arg.back().preprocesses_away()) arg.pop_back();
   }
 
   // Briefly. What we've done above is read the raw tokens for each argument.
@@ -1404,9 +1420,7 @@ token_t lexer::read_raw() {
     }
     return (*buffered_tokens)[buffer_pos++];
   }
-  token_t res;
-  do res = read_token(cfile, herr); while (res.preprocesses_away());
-  return res;
+  return read_token(cfile, herr);
 }
 
 token_t lexer::preprocess_and_read_token() {
@@ -1451,6 +1465,7 @@ token_t lexer::preprocess_and_read_token() {
 
 token_t lexer::get_token() {
   token_t token = preprocess_and_read_token();
+  while (token.preprocesses_away()) token = preprocess_and_read_token();
   if (lookahead_buffer) lookahead_buffer->push_back(token);
   return token;
 }

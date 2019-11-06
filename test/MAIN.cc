@@ -131,6 +131,7 @@ std::vector<std::string> get_gcc_include_paths(int standard) {
   std::string std_str = get_cpp_standard_str(standard);
   std::vector<std::string> include_paths;
 
+  std::filesystem::create_directories("/tmp/jdi");
   if (std::system(("gcc -E -x c++ --std=" + std_str + " -v /dev/null 2>&1 &> /tmp/jdi/search_dirs.txt").c_str()) == 0 ) {
     std::ifstream search_dirs_f("/tmp/jdi/search_dirs.txt");
     std::string line;
@@ -147,19 +148,22 @@ std::vector<std::string> get_gcc_include_paths(int standard) {
       
       if (line == "#include <...> search starts here:") search_dirs = true;
     }
-  }
+  } else exit(1);
 
   return include_paths;
 }
 
+inline
+const char *first_not_null(const char *a, const char *b) { return a? a : b; }
+
 int main(int argc, char** argv) {
-  
-  fs::path enigma_path;
+  fs::path home = first_not_null(getenv("HOME"), "/tmp/");
+  fs::path enigma_path = home/"Projects/ENIGMA";
+  fs::path enigma_temp = home/".enigma";
   bool skip_parser = true;
-  int cpp_std = 11;
+  int cpp_std = 20;
   if (argc != 4) {
     std::cerr << "Usage: JustDefineIt <c++std> </path/to/enigma> <skip parser>" << std::endl;
-    return -1;
   } else {
     // ensure place to write stuffs exists
     if (!fs::create_directory("/tmp/jdi") && !fs::exists("/tmp/jdi")) {
@@ -224,8 +228,8 @@ int main(int argc, char** argv) {
 
   for (const std::string& p : get_gcc_include_paths(cpp_std)) builtin.add_search_directory(p);
 
-  builtin.add_search_directory(enigma_path.string() + "/ENIGMAsystem/SHELL");
-  builtin.add_search_directory("/tmp/ENIGMA");
+  builtin.add_search_directory((enigma_path/"ENIGMAsystem/SHELL").string());
+  builtin.add_search_directory(enigma_temp.c_str());
 
   if (std::system(("cpp -dM -x c++ --std=" + get_cpp_standard_str(cpp_std) + " -E /dev/null > /tmp/jdi/defines.txt").c_str()) != 0) {
     std::cerr << "Failed to generate gcc defines. Bye" << std::endl;
@@ -264,7 +268,7 @@ int main(int argc, char** argv) {
     bool had_diff = false;
     if (true) {
       Context butts;
-      llreader f((enigma_path.string() + "/ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
+      llreader f((enigma_path/"ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, def_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -305,7 +309,7 @@ int main(int argc, char** argv) {
   }
   
   putcap("Test parser");
-  llreader f((enigma_path.string() + "/ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
+  llreader f((enigma_path/"ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
   
   if (f.is_open())
   {

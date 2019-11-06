@@ -29,7 +29,8 @@ TEST(LexerTest, BasicTokenization) {
 }
 TEST(LexerTest, StringLiteralBehavior) {
   macro_map no_macros;
-  llreader read("test_input", R"cpp("hello,"    ""    " world!")cpp", false);
+  constexpr char kTestCase[] = R"cpp("hello,"    ""    " world!")cpp";
+  llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
   
   EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
