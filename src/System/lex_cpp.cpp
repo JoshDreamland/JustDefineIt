@@ -863,74 +863,49 @@ static void preprocess_for_if_expression(
 ████▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄██████████████████████████████████████████████████
 \* ************************************************************************** */
 
+enum class PreprocessorDirective {
+  UNKNOWN, DEFINE, ENDIF, ELSE, ELIF, ELIFDEF, ELIFNDEF, ERROR, IF, IFDEF,
+  IFNDEF, IMPORT, INCLUDE, INCLUDE_NEXT, LINE, PRAGMA, UNDEF, USING, WARNING
+};
+
+const std::unordered_map<std::string_view, PreprocessorDirective>
+kPreprocessorDirectives {
+  {"define", PreprocessorDirective::DEFINE},
+  {"endif", PreprocessorDirective::ENDIF},
+  {"else", PreprocessorDirective::ELSE},
+  {"elif", PreprocessorDirective::ELIF},
+  {"elifdef", PreprocessorDirective::ELIFDEF},
+  {"elifndef", PreprocessorDirective::ELIFNDEF},
+  {"error", PreprocessorDirective::ERROR},
+  {"if", PreprocessorDirective::IF},
+  {"ifdef", PreprocessorDirective::IFDEF},
+  {"ifndef", PreprocessorDirective::IFNDEF},
+  {"import", PreprocessorDirective::IMPORT},
+  {"include", PreprocessorDirective::INCLUDE},
+  {"include_next", PreprocessorDirective::INCLUDE_NEXT},
+  {"line", PreprocessorDirective::LINE},
+  {"pragma", PreprocessorDirective::PRAGMA},
+  {"undef", PreprocessorDirective::UNDEF},
+  {"using", PreprocessorDirective::USING},
+  {"warning", PreprocessorDirective::WARNING},
+};
+
 void lexer::handle_preprocessor() {
   top:
-  bool variadic = false; // Whether this function is variadic
-  while ((cfile.at() == ' ' || cfile.at() == '\t') && cfile.advance());
-  const size_t pspos = cfile.tell();
-  switch (cfile.getc())
-  {
-    case 'd':
-      if (cfile.take("efine") && strbw(cfile.at())) goto case_define;
-      goto failout;
-    case 'e':
-      if (cfile.at() == 'n') {
-        if (cfile.take("ndif") && strbw(cfile.at())) goto case_endif;
-        goto failout;
-      }
-      if (cfile.at() == 'l') {
-        if (cfile.next() == 's') {
-          if (cfile.next() == 'e') {
-            cfile.advance();
-            goto case_else;
-          }
-          goto failout;
-        }
-        if (cfile.at() == 'i' && cfile.next() == 'f') {
-          if (strbw(cfile.next())) goto case_elif;
-          if (cfile.take("def") && strbw(cfile.at()))  goto case_elifdef;
-          if (cfile.take("ndef") && strbw(cfile.at())) goto case_elifndef;
-        }
-        goto failout;
-      }
-      if (cfile.take("rror") && strbw(cfile.at())) goto case_error;
-      goto failout;
-    case 'i':
-      if (cfile.at() == 'f')
-      {
-        if (strbw(cfile.next())) goto case_if;
-        if (cfile.take("def") && strbw(cfile.at()))  goto case_ifdef;
-        if (cfile.take("ndef") && strbw(cfile.at())) goto case_ifndef;
-        goto failout;
-      }
-      if (cfile.at() == 'n') {
-        cfile.advance();
-        if (cfile.take("clude")) {
-          if (strbw(cfile.at())) goto case_include;
-          if (cfile.take("_next") && strbw(cfile.at())) goto case_include_next;
-        }
-        goto failout;
-      }
-      if (cfile.take("mport") && strbw(cfile.at())) goto case_import;
-      goto failout;
-    case 'l':
-      if (cfile.take("ine") && strbw(cfile.at())) goto case_line;
-      goto failout;
-    case 'p':
-      if (cfile.take("ragma") && strbw(cfile.at())) goto case_pragma;
-      goto failout;
-    case 'u':
-      if (cfile.take("ndef") && strbw(cfile.at())) goto case_undef;
-      if (cfile.take("sing") && strbw(cfile.at())) goto case_using;
-      goto failout;
-    case 'w':
-      if (cfile.take("arning") && strbw(cfile.at())) goto case_warning;
-      goto failout;
-    default: goto failout;
+  token_t tk = read_token(cfile, herr);
+  while (tk.preprocesses_away()) tk = read_token(cfile, herr);
+  if (tk.type != TT_IDENTIFIER &&
+      tk.type != TT_DECLITERAL && tk.type != TT_OCTLITERAL) {
+    herr->error(tk, "Expected preprocessor directive; found %s",
+                tk.to_string());
+    return;
   }
-
-  while (false) {  // This is an improvised switch statement; allows "break" to work.
-    case_define: {
+  auto directive_str = tk.content.view();
+  auto directive = kPreprocessorDirectives.find(directive_str);
+  switch (directive == kPreprocessorDirectives.end()
+              ? PreprocessorDirective::UNKNOWN : directive->second) {
+    case PreprocessorDirective::DEFINE: {
+      bool variadic = false; // Whether this function is variadic
       string argstrs = read_preprocessor_args();
       const char* argstr = argstrs.c_str();
       if (!conditionals.empty() and !conditionals.back().is_true)
@@ -999,13 +974,13 @@ void lexer::handle_preprocessor() {
             herr);
       }
     } break;
-    case_error: {
+    case PreprocessorDirective::ERROR: {
         string emsg = read_preprocessor_args();
         if (conditionals.empty() or conditionals.back().is_true)
           herr->error(cfile, "#error " + emsg);
       } break;
       break;
-    case_elif:
+    case PreprocessorDirective::ELIF:
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elif directive; no matching #if");
         else {
@@ -1023,7 +998,7 @@ void lexer::handle_preprocessor() {
           }
         }
       break;
-    case_elifdef:
+    case PreprocessorDirective::ELIFDEF:
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elifdef directive; no matching #if");
         else {
@@ -1041,7 +1016,7 @@ void lexer::handle_preprocessor() {
           }
         }
       break;
-    case_elifndef:
+    case PreprocessorDirective::ELIFNDEF:
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #elifndef directive; no matching #if");
         else {
@@ -1059,7 +1034,7 @@ void lexer::handle_preprocessor() {
           }
         }
       break;
-    case_else:
+    case PreprocessorDirective::ELSE:
         if (conditionals.empty())
           herr->error(cfile, "Unexpected #else directive; no matching #if");
         else {
@@ -1068,13 +1043,13 @@ void lexer::handle_preprocessor() {
           conditionals.back().seen_else = true;
         }
       break;
-    case_endif:
+    case PreprocessorDirective::ENDIF:
         if (conditionals.empty())
           return
            herr->error(cfile, "Unexpected #endif directive: no open conditionals.");
         conditionals.pop_back();
       break;
-    case_if:
+    case PreprocessorDirective::IF: case_if:
         if (conditionals.empty() or conditionals.back().is_true) {
           token_vector toks;
           for (token_t tok; tok = read_token(cfile, herr),
@@ -1114,7 +1089,7 @@ void lexer::handle_preprocessor() {
         else
           conditionals.push_back(condition(0,0));
       break;
-    case_ifdef: {
+    case PreprocessorDirective::IFDEF: case_ifdef: {
         cfile.skip_whitespace();
         if (!is_letter(cfile.at())) {
           herr->error(cfile, "Expected identifier to check against macros");
@@ -1134,7 +1109,7 @@ void lexer::handle_preprocessor() {
         else
           conditionals.push_back(condition(0,0));
       } break;
-    case_ifndef: {
+    case PreprocessorDirective::IFNDEF: case_ifndef: {
         cfile.skip_whitespace();
         if (!is_letter(cfile.at())) {
           herr->error(cfile, "Expected identifier to check against macros");
@@ -1154,12 +1129,12 @@ void lexer::handle_preprocessor() {
         else
           conditionals.push_back(condition(0,0));
       } break;
-    case_import:
+    case PreprocessorDirective::IMPORT:
       break;
-    case_include: {
+    case PreprocessorDirective::INCLUDE: {
         bool incnext;
         if (true) incnext = false;
-        else { case_include_next: incnext = true; }
+        else { case PreprocessorDirective::INCLUDE_NEXT: incnext = true; }
 
         string fnfind = read_preprocessor_args();
         if (!conditionals.empty() and !conditionals.back().is_true)
@@ -1214,10 +1189,10 @@ void lexer::handle_preprocessor() {
         visited_files.insert(incfn);
         cfile = std::move(incfile);
       } break;
-    case_line:
+    case PreprocessorDirective::LINE:
       // TODO: Handle line directives.
       break;
-    case_pragma:
+    case PreprocessorDirective::PRAGMA:
         #ifdef DEBUG_MODE
         {
           string n = read_preprocessor_args();
@@ -1231,7 +1206,7 @@ void lexer::handle_preprocessor() {
           read_preprocessor_args();
         #endif
       break;
-    case_undef:
+    case PreprocessorDirective::UNDEF:
         if (!conditionals.empty() and !conditionals.back().is_true)
           break;
 
@@ -1244,43 +1219,35 @@ void lexer::handle_preprocessor() {
           macros.erase((string) cfile.slice(nspos));  // TODO(C++20): remove cast
         }
       break;
-    case_using:
+    case PreprocessorDirective::USING:
       break;
-    case_warning: {
+    case PreprocessorDirective::WARNING: {
         string wmsg = read_preprocessor_args();
         if (conditionals.empty() or conditionals.back().is_true)
           herr->warning(cfile, "#warning " + wmsg);
       } break;
+    case PreprocessorDirective::UNKNOWN:
+    default:
+      while (is_letterd(cfile.at()) && cfile.advance());
+      if (is_numeric(directive_str)) {
+        // TODO: Handle line directives.
+      } else {
+        herr->error(cfile, "Invalid preprocessor directive `%s`",
+                    directive_str);
+      }
+      if (!cfile.eof())
+        while (cfile.at() != '\n' && cfile.at() != '\r' && cfile.advance());
   }
   if (conditionals.empty() or conditionals.back().is_true)
     return;
 
   // skip_to_macro:
-  while (!cfile.eof()) {
-    if (is_useless(cfile.at())) {
-      cfile.skip_whitespace();
-    } else if (cfile.at() == '/') {
-      skip_comment(cfile);
-    } else if (cfile.at() == '#') {
-      cfile.advance();
-      goto top;
-    } else {
-      cfile.advance();
-    }
-  }
+  do {
+    tk = read_token(cfile, herr);
+    if (tk.type == TTM_TOSTRING) goto top;
+  } while (tk.type != TT_ENDOFCODE);
   herr->error(cfile, "Expected closing preprocessors before end of code");
   return;
-
-  failout:
-    while (is_letterd(cfile.at()) && cfile.advance());
-    string_view directive = cfile.slice(pspos);
-    if (is_numeric(directive)) {
-      // TODO: Handle line directives.
-    } else {
-      herr->error(cfile, "Invalid preprocessor directive `%s'", directive);
-    }
-    if (!cfile.eof())
-      while (cfile.at() != '\n' && cfile.at() != '\r' && cfile.advance());
 }
 
 token_vector jdi::tokenize(string fname, string_view str, error_handler *herr) {
