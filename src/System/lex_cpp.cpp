@@ -861,8 +861,8 @@ static void preprocess_for_if_expression(
             fName = fName.substr(1, fName.length()-2); // Remove quotes
             tk = tpack.at();
             tpack.drop(); // Drop the string
-          } else herr->error(tk, "Expected < or string literal in `__has_include()` expression before %s", tpack.peek_next().to_string());
-        } else herr->error(tk, "Expected `(` after `__has_include` before %s", tpack.peek_next().to_string());
+          } else herr->error(tk, "Expected < or string literal in `__has_include()` expression before %s", tk.to_string());
+        } else herr->error(tk, "Expected `(` after `__has_include` before %s", tk.to_string());
 
         if (tpack && tpack.at().type == TT_RIGHTPARENTH) {
             token_t& t = tpack.at();
@@ -870,7 +870,7 @@ static void preprocess_for_if_expression(
             t.type = TT_DECLITERAL;
         } else herr->error(tk, "Expected closing parenthesis after include in `__has_include()` expression");
         
-        //herr->error(next, fName); // (print filename) delete me
+        herr->error(next, fName); // (print filename) delete me
 
         tpack.next();
         continue;
