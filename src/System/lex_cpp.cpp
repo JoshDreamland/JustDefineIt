@@ -764,12 +764,14 @@ template<class T> struct VectorCompact {
 enum class PreprocessorCond {
   DEFINED = 1,
   HAS_INCLUDE,
+  HAS_INCLUDE_NEXT,
   HAS_CPP_ATTRIBUTES
 };
 
 const map<string, PreprocessorCond> kPreprocessorCond {
   {"defined", PreprocessorCond::DEFINED},
   {"__has_include", PreprocessorCond::HAS_INCLUDE},
+  {"__has_include_next", PreprocessorCond::HAS_INCLUDE_NEXT},
   {"__has_cpp_attribute", PreprocessorCond::HAS_CPP_ATTRIBUTES},
 };
 
@@ -794,6 +796,7 @@ static void preprocess_for_if_expression(
     token_vector &toks, const macro_map &macros, error_handler *herr) {
   for (VectorCompact<token_t> tpack(toks); tpack; ) {
     token_t &tok = tpack.at();
+
     if (tok.type != TT_IDENTIFIER) { tpack.next(); continue; }
     auto cond = kPreprocessorCond.find(tok.content.toString());
     if (cond == kPreprocessorCond.end())  { tpack.next(); continue; }
@@ -837,8 +840,38 @@ static void preprocess_for_if_expression(
         tpack.next();
         continue;
       }
+      case PreprocessorCond::HAS_INCLUDE_NEXT:
       case PreprocessorCond::HAS_INCLUDE: {
-        herr->error(tok, "Internal error: has_next not implemented");
+        string fName;
+        token_t& tk = tpack.at();
+        tpack.drop(); // Drop the identifier
+        if (tpack && tpack.at().type == TT_LEFTPARENTH) {
+          tk = tpack.at();
+          tpack.drop(); // Drop the opening parenthesis.
+          if (tpack && tpack.at().type == TT_LESSTHAN) {
+            tpack.drop(); // Drop the opening <
+            while (tpack && tpack.at().type != TT_GREATERTHAN) {
+              fName += tpack.at().content.toString();
+              tpack.drop();
+            }
+            tk = tpack.at();
+            tpack.drop(); // Drop closing >
+          } else if(tpack && tpack.at().type == TT_STRINGLITERAL) {
+            fName = tpack.at().content.toString();
+            fName = fName.substr(1, fName.length()-2); // Remove quotes
+            tk = tpack.at();
+            tpack.drop(); // Drop the string
+          } else herr->error(tk, "Expected < or string literal in `__has_include()` expression before %s", tk.to_string());
+        } else herr->error(tk, "Expected `(` after `__has_include` before %s", tk.to_string());
+
+        if (tpack && tpack.at().type == TT_RIGHTPARENTH) {
+            token_t& t = tpack.at();
+            t.content = "0"; // file_exists(fName here)
+            t.type = TT_DECLITERAL;
+        } else herr->error(tk, "Expected closing parenthesis after include in `__has_include()` expression");
+        
+        herr->error(next, fName); // (print filename) delete me
+
         tpack.next();
         continue;
       }
