@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
   //builtin->output_macros();
   
   putcap("Metrics");
-  cout << "sizeof(jdi::macro_type):        " << sizeof(jdi::macro_type) << endl
+  cout << "sizeof(jdi::macro_type):         " << sizeof(jdi::macro_type) << endl
        << "sizeof(jdi::definition):         " << sizeof(jdi::definition) << endl
        << "sizeof(jdi::ref_stack):          " << sizeof(jdi::ref_stack) << endl
        << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl

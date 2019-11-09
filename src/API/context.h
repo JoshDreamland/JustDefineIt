@@ -92,8 +92,8 @@ namespace jdi
    public:
     set<definition*> variadics; ///< Set of variadic types.
     
-    size_t search_dir_count(); ///< Return the number of search directories
-    string search_dir(size_t index); ///< Return the search directory with the given index, in [0, search_dir_count).
+    size_t search_dir_count() const; ///< Return the number of search directories
+    string search_dir(size_t index) const; ///< Return the search directory with the given index, in [0, search_dir_count).
     
     /** Add a type name to this context
         The type will be added as a primitive. To add a typedef, use \c jdi::context::add_typedef().

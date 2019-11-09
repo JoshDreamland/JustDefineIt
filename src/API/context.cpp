@@ -284,5 +284,5 @@ Context::Context(error_handler *herr_):
 }
 Context::Context(int): parse_open(false), global(new definition_scope()) { }
 
-size_t Context::search_dir_count() { return search_directories.size(); }
-string Context::search_dir(size_t index) { return search_directories[index]; }
+size_t Context::search_dir_count() const { return search_directories.size(); }
+string Context::search_dir(size_t index) const { return search_directories[index]; }

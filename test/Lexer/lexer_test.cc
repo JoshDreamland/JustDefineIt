@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <System/lex_cpp.h>
+#include <System/builtins.h>
 #include <Testing/error_handler.h>
 #include <Testing/matchers.h>
 
@@ -371,6 +372,31 @@ TEST(LexerTest, BoundariesInComparisonTests) {
   lexer lex(read, no_macros, error_constitutes_failure);
 
   EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, HasIncludeBasics) {
+  constexpr char kTestCase[] = R"cpp(
+#if __has_include(<success.h>)
+	hooray
+#else
+	"fail"
+#endif
+
+#if __has_include(<made_up_header.h>)
+  "double fail"
+#else
+  1337
+#endif
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+  builtin_context().add_search_directory("test/test_data");
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 

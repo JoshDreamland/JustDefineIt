@@ -790,9 +790,30 @@ const map<string, long> kAttributeSupportDate {
   { "unlikely", 201803L },
 };
 
+// Performs a search for an include file, returning the first
+// successfully-opened file.
+static llreader try_find_and_open(const llreader &cfile, const Context *ctx,
+    string_view fnfind, bool check_local, bool find_next) {
+  llreader incfile;
+  filesystem::path incfn, fdir;
+  filesystem::path cur_path = filesystem::path(cfile.name).parent_path();
+  if (check_local)
+    incfile.open((incfn = cur_path / fnfind).c_str());
+  for (size_t i = 0; !incfile.is_open() && i < ctx->search_dir_count(); ++i) {
+    if (!find_next) {
+      incfile.open((incfn = (fdir = ctx->search_dir(i)) / fnfind).c_str());
+    } else {
+      // Linear search for this directory in include_next.
+      find_next = cur_path != ctx->search_dir(i);
+    }
+  }
+  return incfile;
+}
+
 // Preprocesses a token buffer to be passed to an #if condition, handling
 // conditional constructs like defined() and __has_cpp_attribute().
 static void preprocess_for_if_expression(
+    const llreader &cfile, const Context *ctx,
     token_vector &toks, const macro_map &macros, error_handler *herr) {
   for (VectorCompact<token_t> tpack(toks); tpack; ) {
     token_t &tok = tpack.at();
@@ -840,9 +861,15 @@ static void preprocess_for_if_expression(
         tpack.next();
         continue;
       }
-      case PreprocessorCond::HAS_INCLUDE_NEXT:
       case PreprocessorCond::HAS_INCLUDE: {
-        string fName;
+        bool incnext;
+        if ((incnext = false)) {  // Do not "fix": Handle both directives.
+          case PreprocessorCond::HAS_INCLUDE_NEXT:
+          incnext = true;
+        }
+
+        string fnfind;
+        bool chklocal = false;
         token_t& tk = tpack.at();
         tpack.drop(); // Drop the identifier
         if (tpack && tpack.at().type == TT_LEFTPARENTH) {
@@ -851,26 +878,37 @@ static void preprocess_for_if_expression(
           if (tpack && tpack.at().type == TT_LESSTHAN) {
             tpack.drop(); // Drop the opening <
             while (tpack && tpack.at().type != TT_GREATERTHAN) {
-              fName += tpack.at().content.toString();
+              fnfind += tpack.at().content.view();
               tpack.drop();
             }
             tk = tpack.at();
             tpack.drop(); // Drop closing >
           } else if(tpack && tpack.at().type == TT_STRINGLITERAL) {
-            fName = tpack.at().content.toString();
-            fName = fName.substr(1, fName.length()-2); // Remove quotes
+            // Bit of a hack: remove quotes.
+            // TODO: Replace with token.evaluate_string_literal(), or something.
+            string_view v = tpack.at().content.view();
+            fnfind = v.substr(1, v.length() - 2);
             tk = tpack.at();
+            chklocal = true;
             tpack.drop(); // Drop the string
-          } else herr->error(tk, "Expected < or string literal in `__has_include()` expression before %s", tk.to_string());
-        } else herr->error(tk, "Expected `(` after `__has_include` before %s", tk.to_string());
+          } else {
+            herr->error(tk, "Expected < or string literal in `__has_include()` "
+                            "expression before %s", tk.to_string());
+          }
+        } else {
+          herr->error(tk, "Expected `(` after `__has_include` before %s",
+                      tk.to_string());
+        }
 
         if (tpack && tpack.at().type == TT_RIGHTPARENTH) {
             token_t& t = tpack.at();
-            t.content = "0"; // file_exists(fName here)
+            t.content = try_find_and_open(cfile, ctx, fnfind, chklocal, incnext)
+                            .is_open() ? "1" : "0";
             t.type = TT_DECLITERAL;
-        } else herr->error(tk, "Expected closing parenthesis after include in `__has_include()` expression");
-        
-        herr->error(next, fName); // (print filename) delete me
+        } else {
+          herr->error(tk, "Expected closing parenthesis after include in "
+                          "`__has_include()` expression");
+        }
 
         tpack.next();
         continue;
@@ -1090,7 +1128,7 @@ void lexer::handle_preprocessor() {
             if (!tok.preprocesses_away()) toks.push_back(tok);
           }
 
-          preprocess_for_if_expression(toks, macros, herr);
+          preprocess_for_if_expression(cfile, builtin, toks, macros, herr);
 
           // Since both the current user of this lexer *and* the AST builder
           // are likely to be using rewind buffers, just make a new lexer.
@@ -1169,9 +1207,9 @@ void lexer::handle_preprocessor() {
         if (true) incnext = false;
         else { case PreprocessorDirective::INCLUDE_NEXT: incnext = true; }
 
-        string fnfind = read_preprocessor_args();
-        if (!conditionals.empty() and !conditionals.back().is_true)
-      break;
+        string include_args = read_preprocessor_args();
+        string_view fnfind = include_args;
+        if (!conditionals.empty() && !conditionals.back().is_true) break;
 
         bool chklocal = false;
         char match = '>';
@@ -1181,9 +1219,10 @@ void lexer::handle_preprocessor() {
           herr->error(cfile, "Expected filename inside <> or \"\" delimiters");
           break;
         }
-        fnfind[0] = '/';
-        for (size_t i = 0; i < fnfind.length(); ++i)
-          if (fnfind[i] == match) { fnfind.erase(i); break; }
+        for (size_t i = 1; i < fnfind.length(); ++i) if (fnfind[i] == match) {
+          fnfind = fnfind.substr(1, i - 1);
+          break;
+        }
 
         if (files.size() > 9000) {
           herr->error(cfile, "Nested include count is OVER NINE THOUSAAAAAAND. "
@@ -1191,36 +1230,16 @@ void lexer::handle_preprocessor() {
           break;
         }
 
-        string incfn, fdir;
-        llreader incfile;
-        const string path = filesystem::path(cfile.name).parent_path();
-        if (chklocal)
-          incfile.open((incfn = path + fnfind).c_str());
-        for (size_t i = 0; i < builtin->search_dir_count(); ++i) {
-          if (incfile.is_open()) break;
-          if (!incnext) {
-            // cout << "fnfind:" << endl;
-            // cout << "  [" << fnfind.length() << "]\"" << fnfind << '"' << endl;
-            // cout << "  [" << builtin->search_dir(i).length() << "]\"" << builtin->search_dir(i) << '"' << endl;
-            // cout << "  cat: " << flush << (builtin->search_dir(i) + fnfind) << endl;
-            incfile.open((incfn = (fdir = builtin->search_dir(i)) + fnfind).c_str());
-          }
-          else
-            incnext = path != builtin->search_dir(i);
-        }
+        llreader incfile =
+            try_find_and_open(cfile, builtin, fnfind, chklocal, incnext);
         if (!incfile.is_open()) {
-          herr->error(cfile, "Could not find " + fnfind.substr(1));
-          if (chklocal) cerr << "  Checked " << path << endl;
-          for (size_t i = 0; !incfile.is_open()
-                             && i < builtin->search_dir_count(); ++i) {
-            cerr << "  Checked " << builtin->search_dir(i) << endl;
-          }
-          break;
+          herr->error(cfile, incnext ? "Could not find next %s"
+                                     : "Could not find %s", fnfind);
         }
 
         files.emplace_back(std::move(cfile));
-        visited_files.insert(incfn);
-        cfile = std::move(incfile);
+        visited_files.insert(incfile.name);
+        cfile.consume(incfile);
       } break;
     case PreprocessorDirective::LINE:
       // TODO: Handle line directives.
