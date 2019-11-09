@@ -183,20 +183,21 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
 #include <General/debug_macros.h>
 
 enum parenth_type { PT_FUNCTION, PT_GROUPORINIT, PT_INITIALIZERS, PT_NA };
-static parenth_type parenths_type(lexer *lex, definition_scope *scope, lexer::look_ahead &lb, token_t &token, context_parser *cp, error_handler *herr)
-{
+static parenth_type parenths_type(lexer *lex, definition_scope *scope,
+                                  token_t &token, context_parser *cp,
+                                  error_handler *herr) {
   if (token.type == TT_LEFTPARENTH)
   {
     bool seen_type = false, seen_comma = false;
-    token_t *backt = &lb.push(token = lex->get_token_in_scope(scope));
+    token = lex->get_token_in_scope(scope);
     
     bool read_next = false;
-    for (; token.type != TT_RIGHTPARENTH; backt = &lb.push(read_next? token : (token = lex->get_token_in_scope(scope))))
-    {
+    for (; token.type != TT_RIGHTPARENTH; read_next ? void()
+         : (token = lex->get_token_in_scope(scope), void())) {
       read_next = false;
       if (token.type == TT_LEFTPARENTH) {
         if (!seen_type) {
-          parenth_type res = parenths_type(lex, scope, lb, token, cp, herr);
+          parenth_type res = parenths_type(lex, scope, token, cp, herr);
           return res == PT_INITIALIZERS || seen_comma? PT_INITIALIZERS : PT_GROUPORINIT;
         }
         break;
@@ -206,7 +207,7 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lexer::lo
       }
       else if (token.type == TT_DEFINITION) {
         definition* bd = cp->read_qualified_definition(token, scope);
-        if (bd && (backt->def = bd)->flags & DEF_TYPENAME)
+        if (bd && (token.def = bd)->flags & DEF_TYPENAME)
           seen_type = true;
         else if (bd && bd->flags & DEF_TEMPLATE && bd->name == scope->name)
           seen_type = true;
@@ -242,21 +243,30 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope, lexer::lo
   }
   else {
     while (token.type != TT_ENDOFCODE) {
-    lb.push(token = lex->get_token_in_scope(scope));
-    if (token.type == TT_LEFTPARENTH) {
-      parenths_type(lex, scope, lb, token, cp, herr);
-      if (token.type != TT_RIGHTPARENTH) return token.report_errorf(herr, "Expected closing parenthesis before %s"), PT_NA;
-    }
-    else if (token.type == TT_LEFTBRACKET) {
-      parenths_type(lex, scope, lb, token, cp, herr);
-      if (token.type != TT_RIGHTBRACKET) return token.report_errorf(herr, "Expected closing bracket before %s"), PT_NA;
-    }
-    else if (token.type == TT_LEFTBRACE) {
-      parenths_type(lex, scope, lb, token, cp, herr);
-      if (token.type != TT_RIGHTBRACKET) return token.report_errorf(herr, "Expected closing brace before %s"), PT_NA;
-    }
-    else if (token.type == TT_RIGHTPARENTH or token.type == TT_RIGHTBRACKET or token.type == TT_RIGHTBRACE)
-      return PT_NA;
+      token = lex->get_token_in_scope(scope);
+      if (token.type == TT_LEFTPARENTH) {
+        parenths_type(lex, scope, token, cp, herr);
+        if (token.type != TT_RIGHTPARENTH) {
+          token.report_errorf(herr, "Expected closing parenthesis before %s");
+          return PT_NA;
+        }
+      }
+      else if (token.type == TT_LEFTBRACKET) {
+        parenths_type(lex, scope, token, cp, herr);
+        if (token.type != TT_RIGHTBRACKET) {
+          token.report_errorf(herr, "Expected closing bracket before %s");
+          return PT_NA;
+        }
+      }
+      else if (token.type == TT_LEFTBRACE) {
+        parenths_type(lex, scope, token, cp, herr);
+        if (token.type != TT_RIGHTBRACKET) {
+          token.report_errorf(herr, "Expected closing brace before %s");
+          return PT_NA;
+        }
+      }
+      else if (token.type == TT_RIGHTPARENTH or token.type == TT_RIGHTBRACKET or token.type == TT_RIGHTBRACE)
+        return PT_NA;
     }
     return PT_NA;
   }
@@ -291,7 +301,9 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
   static int number_of_times_GDB_dropped_its_ass = 0;
   number_of_times_GDB_dropped_its_ass++;
   #endif
-  
+
+  SET_MAXIMUM_RECURSIONS(100);
+
   for (;;)
   {
     switch (token.type)
@@ -303,7 +315,7 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
         fix_scope fs(ft.refs.ndef, scope);
         
         lexer::look_ahead lb(lex);
-        bool is_func = parenths_type(lex, fs.scope, lb, token, this, herr) == PT_FUNCTION;
+        bool is_func = parenths_type(lex, fs.scope, token, this, herr) == PT_FUNCTION;
         
         lb.rewind();
         token = lex->get_token();

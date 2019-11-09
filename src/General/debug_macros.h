@@ -29,29 +29,54 @@
 #ifndef _DEBUG_MACROS__H
 #define _DEBUG_MACROS__H
 
-#define render_ast(AST, cat) //Do nothing
+#define render_ast(AST, cat) // Do nothing
 
 #ifdef DEBUG_MODE
   
-  #ifndef DEBUG_OUTPUT_PATH
-    #define DEBUG_OUTPUT_PATH "/home/josh/Desktop"
-  #endif
-  
-  #include <assert.h>
-  #define dbg_assert(x) assert(x)
-  #define DBG_TERNARY(x,y) x
-  
-  #include <API/AST_forward.h>
-  void render_ast_nd(jdi::AST& ast, std::string cat);
+#ifndef DEBUG_OUTPUT_PATH
+#define DEBUG_OUTPUT_PATH "/home/josh/Desktop"
+#endif
 
-#else // NOT DEBUG_MODE
+#include <assert.h>
+#define dbg_assert(x) assert(x)
+#define DBG_TERNARY(x,y) x
 
-  #define dbg_assert(x)
-  #define DBG_TERNARY(x,y) y
-  #define render_ast_nd(x, y) void()
+#include <API/AST_forward.h>
+void render_ast_nd(jdi::AST& ast, std::string cat);
 
-#endif // DEBUG_MODE ELSE
-#endif // Guard
+namespace jdi_debug {
+
+class RecursionHelper {
+  size_t &count;
+  const size_t max;
+ public:
+  RecursionHelper(size_t &static_variable, size_t maximum_recursions):
+      count(static_variable), max(maximum_recursions) {
+    if (++count > max) asm("int3");
+  }
+  ~RecursionHelper() { --count; }
+};
+
+}
+
+#define SUPERMACROCAT(x, y) x ## y
+#define MACROCAT(x, y) SUPERMACROCAT(x, y)
+#define SET_MAXIMUM_RECURSIONS(k)                                              \
+  constexpr size_t MACROCAT(max_recursions_, __LINE__) = (k);                  \
+  static size_t MACROCAT(current_recursions_, __LINE__) = 0;                   \
+  jdi_debug::RecursionHelper MACROCAT(recursion_helper_, __LINE__)(            \
+      MACROCAT(current_recursions_, __LINE__),                                 \
+      MACROCAT(max_recursions_, __LINE__))
+
+#else  // NOT DEBUG_MODE
+
+#define dbg_assert(x)
+#define DBG_TERNARY(x,y) y
+#define render_ast_nd(x, y) void()
+#define SET_MAXIMUM_RECURSIONS(k)
+
+#endif  // DEBUG_MODE ELSE
+#endif  // Guard
 
 #ifndef _DEBUG_MACROS__H__RENDER_ASTS
   #if defined(RENDER_ASTS) && defined(_AST__H__DEBUG)
@@ -61,4 +86,3 @@
     void render_ast(jdi::AST& ast, std::string cat);
   #endif
 #endif
-
