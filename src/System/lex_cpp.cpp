@@ -761,35 +761,6 @@ template<class T> struct VectorCompact {
   }
 };
 
-enum class PreprocessorCond {
-  DEFINED = 1,
-  HAS_INCLUDE,
-  HAS_INCLUDE_NEXT,
-  HAS_CPP_ATTRIBUTES
-};
-
-const map<string, PreprocessorCond> kPreprocessorCond {
-  {"defined", PreprocessorCond::DEFINED},
-  {"__has_include", PreprocessorCond::HAS_INCLUDE},
-  {"__has_include_next", PreprocessorCond::HAS_INCLUDE_NEXT},
-  {"__has_cpp_attribute", PreprocessorCond::HAS_CPP_ATTRIBUTES},
-};
-
-const map<string, long> kAttributeSupportDate {
-  { "assert", 201806L },
-  { "carries_dependency", 200809L },
-  { "deprecated", 201309L },
-  { "ensures", 201806L },
-  { "expects", 201806L },
-  { "fallthrough", 201603L },
-  { "likely", 201803L },
-  { "maybe_unused", 201603L },
-  { "no_unique_address", 201803L },
-  { "nodiscard", 201603L },
-  { "noreturn", 200809L },
-  { "unlikely", 201803L },
-};
-
 // Performs a search for an include file, returning the first
 // successfully-opened file.
 static llreader try_find_and_open(const llreader &cfile, const Context *ctx,
@@ -810,123 +781,6 @@ static llreader try_find_and_open(const llreader &cfile, const Context *ctx,
   return incfile;
 }
 
-// Preprocesses a token buffer to be passed to an #if condition, handling
-// conditional constructs like defined() and __has_cpp_attribute().
-static void preprocess_for_if_expression(
-    const llreader &cfile, const Context *ctx,
-    token_vector &toks, const macro_map &macros, error_handler *herr) {
-  for (VectorCompact<token_t> tpack(toks); tpack; ) {
-    token_t &tok = tpack.at();
-
-    if (tok.type != TT_IDENTIFIER) { tpack.next(); continue; }
-    auto cond = kPreprocessorCond.find(tok.content.toString());
-    if (cond == kPreprocessorCond.end())  { tpack.next(); continue; }
-
-    if (!tpack.has_next()) break;
-    token_t &next = tpack.peek_next();
-
-    switch (cond->second) {
-      case PreprocessorCond::DEFINED: {
-        if (next.type == TT_IDENTIFIER) {
-          auto m = macros.find(next.content.toString());
-          tok.content = m != macros.end() ? "1" : "0";
-          tok.type = TT_DECLITERAL;
-          tpack.next();  // Take the modified "defined" keyword.
-          tpack.drop();  // Drop the identifier.
-          continue;
-        }
-        if (next.type == TT_LEFTPARENTH && tpack.has_next(2)) {
-          const token_t &id = tpack.peek_next(2);
-          if (id.type != TT_IDENTIFIER) {
-            herr->error(id, "Expected identifier for `defined()` expression.");
-            tpack.next();  // Take it as-is.
-            continue;
-          }
-          auto m = macros.find(id.content.toString());
-          tok.content = m != macros.end() ? "1" : "0";
-          tok.type = TT_DECLITERAL;
-          tpack.next();  // Take the modified "defined" keyword.
-          tpack.drop();  // Drop the left parenthesis.
-          tpack.drop();  // Drop the identifier.
-          // Expect a right parenthesis.
-          if (!tpack || tpack.at().type != TT_RIGHTPARENTH) {
-            herr->error(id, "Expected closing parenthesis after identifier "
-                            " in `defined()` expression.");
-          }
-          tpack.drop();  // Drop the right parenthesis.
-          continue;
-        }
-        herr->error(next, "Expected identifier or parenthesized identifier for "
-                          "`defined` expression before %s", next.to_string());
-        tpack.next();
-        continue;
-      }
-      case PreprocessorCond::HAS_INCLUDE: {
-        bool incnext;
-        if ((incnext = false)) {  // Do not "fix": Handle both directives.
-          case PreprocessorCond::HAS_INCLUDE_NEXT:
-          incnext = true;
-        }
-
-        string fnfind;
-        bool chklocal = false;
-        token_t& tk = tpack.at();
-        tpack.drop(); // Drop the identifier
-        if (tpack && tpack.at().type == TT_LEFTPARENTH) {
-          tk = tpack.at();
-          tpack.drop(); // Drop the opening parenthesis.
-          if (tpack && tpack.at().type == TT_LESSTHAN) {
-            tpack.drop(); // Drop the opening <
-            while (tpack && tpack.at().type != TT_GREATERTHAN) {
-              fnfind += tpack.at().content.view();
-              tpack.drop();
-            }
-            tk = tpack.at();
-            tpack.drop(); // Drop closing >
-          } else if(tpack && tpack.at().type == TT_STRINGLITERAL) {
-            // Bit of a hack: remove quotes.
-            // TODO: Replace with token.evaluate_string_literal(), or something.
-            string_view v = tpack.at().content.view();
-            fnfind = v.substr(1, v.length() - 2);
-            tk = tpack.at();
-            chklocal = true;
-            tpack.drop(); // Drop the string
-          } else {
-            herr->error(tk, "Expected < or string literal in `__has_include()` "
-                            "expression before %s", tk.to_string());
-          }
-        } else {
-          herr->error(tk, "Expected `(` after `__has_include` before %s",
-                      tk.to_string());
-        }
-
-        if (tpack && tpack.at().type == TT_RIGHTPARENTH) {
-            token_t& t = tpack.at();
-            t.content = try_find_and_open(cfile, ctx, fnfind, chklocal, incnext)
-                            .is_open() ? "1" : "0";
-            t.type = TT_DECLITERAL;
-        } else {
-          herr->error(tk, "Expected closing parenthesis after include in "
-                          "`__has_include()` expression");
-        }
-
-        tpack.next();
-        continue;
-      }
-      case PreprocessorCond::HAS_CPP_ATTRIBUTES: {
-        herr->error(tok, "Internal error: has_next not implemented");
-        tpack.next();
-        continue;
-      }
-      default: {
-        herr->error(tok, "Internal error: Unknown conditional %s",
-                    tok.content.view());
-        tpack.next();
-        continue;
-      }
-    }
-  }
-}
 
 /* ************************************************************************** *\
 ████▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀██████████████████████████████████████████████████
@@ -1125,10 +979,8 @@ void lexer::handle_preprocessor() {
           token_vector toks;
           for (token_t tok; tok = read_token(cfile, herr),
               tok.type != TT_ENDOFCODE && tok.type != TTM_NEWLINE; ) {
-            if (!tok.preprocesses_away()) toks.push_back(tok);
+            toks.push_back(tok);
           }
-
-          preprocess_for_if_expression(cfile, builtin, toks, macros, herr);
 
           // Since both the current user of this lexer *and* the AST builder
           // are likely to be using rewind buffers, just make a new lexer.
@@ -1141,6 +993,7 @@ void lexer::handle_preprocessor() {
           // facilities used in the AST builder require unbounded lookahead,
           // it's easiest just to use the system we have.
           lexer l(&toks, *this);
+          l.evaluate_cpp_cond_ = true;
 
           token_t endofcode;
           AST a = parse_expression(&l, herr, &endofcode);
@@ -1316,6 +1169,14 @@ enum class LexerKeyword {
   LINE,
   FUNC,
   FUNC_PRETTY,
+
+  // Do not add cpp.cond keywords above this line, nor non-cpp.cond keywords
+  // below it. Used to quickly check if we're evaluating these.
+  CPP_COND_BEGIN,
+  DEFINED,
+  HAS_INCLUDE,
+  HAS_INCLUDE_NEXT,
+  HAS_CPP_ATTRIBUTES
 };
 static const unordered_map<string, LexerKeyword> kLexerKeywords {
   { "__FILE__", LexerKeyword::FILENAME },
@@ -1323,6 +1184,25 @@ static const unordered_map<string, LexerKeyword> kLexerKeywords {
   { "__FUNCTION__", LexerKeyword::FUNC },
   { "__func__", LexerKeyword::FUNC },
   { "__PRETTY_FUNCTION__", LexerKeyword::FUNC_PRETTY },
+  { "defined", LexerKeyword::DEFINED },
+  { "__has_include", LexerKeyword::HAS_INCLUDE },
+  {"__has_include_next", LexerKeyword::HAS_INCLUDE_NEXT},
+  {"__has_cpp_attribute", LexerKeyword::HAS_CPP_ATTRIBUTES},
+};
+
+const map<string, long> kAttributeSupportDate {
+  { "assert", 201806L },
+  { "carries_dependency", 200809L },
+  { "deprecated", 201309L },
+  { "ensures", 201806L },
+  { "expects", 201806L },
+  { "fallthrough", 201603L },
+  { "likely", 201803L },
+  { "maybe_unused", 201603L },
+  { "no_unique_address", 201803L },
+  { "nodiscard", 201603L },
+  { "noreturn", 200809L },
+  { "unlikely", 201803L },
 };
 
 bool lexer::handle_macro(token_t &identifier) {
@@ -1350,7 +1230,9 @@ bool lexer::handle_macro(token_t &identifier) {
   }
 
   auto lexit = kLexerKeywords.find(fn);
-  if (lexit != kLexerKeywords.end()) switch (lexit->second) {
+  if (lexit != kLexerKeywords.end() &&
+      (evaluate_cpp_cond_ || lexit->second < LexerKeyword::CPP_COND_BEGIN))
+      switch (lexit->second) {
     case LexerKeyword::FILENAME: {
       // The current token was probably defined in a macro.
       // Prefer the name of the currently-open file.
@@ -1366,9 +1248,77 @@ bool lexer::handle_macro(token_t &identifier) {
       identifier.type = TT_DECLITERAL;
       return false;
     }
+    case LexerKeyword::DEFINED: {
+      token_t tok = read_raw_non_empty();
+      bool need_paren = false;
+      if (tok.type == TT_LEFTPARENTH) {
+        tok = read_raw_non_empty();
+        need_paren = true;
+      }
+      if (tok.type != TT_IDENTIFIER) {
+        herr->error(tok, "Expected identifier for `defined` expression; got %s",
+                    tok.to_string());
+        identifier.type = TT_DECLITERAL;
+        identifier.content = "0";
+        return false;
+      }
+
+      auto m = macros.find(tok.content.toString());
+      identifier.type = TT_DECLITERAL;
+      identifier.content = m != macros.end() ? "1" : "0";
+
+      if (need_paren && (tok = read_raw_non_empty()).type != TT_RIGHTPARENTH) {
+        herr->error(tok, "Expected closing parenthesis to `defined` expression "
+                         "here before %s", tok.to_string());
+      }
+      return false;
+    }
+    case LexerKeyword::HAS_INCLUDE: {
+      bool incnext;
+      if ((incnext = false)) {  // Do not "fix": Handle both expressions.
+        case LexerKeyword::HAS_INCLUDE_NEXT:
+        incnext = true;
+      }
+
+      string fnfind;
+      bool chklocal = false;
+      token_t tok = read_raw_non_empty();
+      if (tok.type == TT_LEFTPARENTH) {
+        tok = read_raw_non_empty();
+        if (tok.type == TT_LESSTHAN) {
+          while ((tok = read_raw_non_empty()).type != TT_GREATERTHAN) {
+            if (tok.type == TT_ENDOFCODE) break;
+            fnfind += tok.content.view();
+          }
+        } else if(tok.type == TT_STRINGLITERAL) {
+          string_view v = tok.content.view();
+          // Bit of a hack: remove quotes.
+          // TODO: Replace with token.evaluate_string_literal(), or something.
+          fnfind = v.substr(1, v.length() - 2);
+          chklocal = true;
+        } else {
+          herr->error(tok, "Expected < or string literal in `__has_include()` "
+                           "expression before %s", tok.to_string());
+        }
+      } else {
+        herr->error(tok, "Expected `(` after `__has_include` before %s",
+                    tok.to_string());
+      }
+
+      if ((tok = read_raw_non_empty()).type != TT_RIGHTPARENTH) {
+        herr->error(tok, "Expected closing parenthesis after include path in "
+                         "`__has_include()` expression");
+      }
+      identifier.content =
+          try_find_and_open(cfile, builtin, fnfind, chklocal, incnext).is_open()
+              ? "1" : "0";
+      identifier.type = TT_DECLITERAL;
+      return false;
+    }
     case LexerKeyword::FUNC:
     case LexerKeyword::FUNC_PRETTY:
-    default:
+    case LexerKeyword::HAS_CPP_ATTRIBUTES:
+    default: case LexerKeyword::CPP_COND_BEGIN:
       herr->error(identifier, "Internal error: Keyword %s not handled",
                   identifier.content.view());
   }
@@ -1440,6 +1390,12 @@ token_t lexer::read_raw() {
     return (*buffered_tokens)[buffer_pos++];
   }
   return read_token(cfile, herr);
+}
+
+token_t lexer::read_raw_non_empty() {
+  token_t res = read_raw();
+  while (res.preprocesses_away()) res = read_raw();
+  return res;
 }
 
 token_t lexer::preprocess_and_read_token() {
@@ -1600,7 +1556,7 @@ lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
   cfile.consume(input);
 }
 
-// static macro_map no_macros;
+static macro_map no_macros;
 // lexer::lexer(token_vector &&tokens, error_handler *err): lexer(no_macros, err) {
 //   push_buffer(std::move(tokens));
 // }
@@ -1611,6 +1567,10 @@ lexer::lexer(token_vector &&tokens, const lexer &other):
 lexer::lexer(const token_vector *tokens, const lexer &other):
     lexer(other.macros, other.herr) {
   push_buffer(tokens);
+}
+lexer::lexer(const token_vector *tokens, error_handler *err):
+    lexer(no_macros, err) {
+  push_rewind_buffer(tokens);
 }
 
 lexer::~lexer() {}

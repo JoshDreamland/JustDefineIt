@@ -189,6 +189,11 @@ namespace jdi {
     /// Pointer to the context we're parsing definitions into.
     Context *const builtin;
 
+    /// Indicates whether Cpp.Cond expressions (eg, defined, __has_include) are
+    /// to be evaluated. Otherwise, the tokens will be treated as normal
+    /// identifiers.
+    bool evaluate_cpp_cond_ = false;
+
     /// Private base constructor.
     lexer(macro_map &pmacros, error_handler *herr);
 
@@ -250,10 +255,14 @@ namespace jdi {
       condition(bool, bool);
     };
 
-    /// Retrieve the next token from the underlying file or current buffer.
+    /// Retrieves the next token from the underlying file or current buffer.
     /// No *additional* preprocessing will be performed, but this token may come
     /// from inside a replacement list expansion or rewind buffer.
     token_t read_raw();
+
+    /// Similar to read_raw, but will not return tokens that preprocess to
+    /// nothing (eg, TTM_NEWLINE, TTM_WHITESPACE, TTM_COMMENT).
+    token_t read_raw_non_empty();
 
     /// Internal logic to handle preprocessing and fetching a token, as well
     /// as reading tokens off the current buffer, if needed.
@@ -265,7 +274,8 @@ namespace jdi {
                         This file will be manipulated by the system.
         @param pmacros  A \c jdi::macro_map which will receive
                         (and be probed for) macros.
-        @param fname    The name of the file that was first opened.
+        @param herr     An error handler that will receive lexing and
+                        preprocessing errors.
     **/
     lexer(llreader& input, macro_map &pmacros, error_handler *herr);  // TODO: Have Lexer own pmacros.
     /**
@@ -274,7 +284,8 @@ namespace jdi {
       lexer.
       @param input    The file from which to read definitions.
                       This file will be manipulated by the system.
-      @param fname    The name of the file that was first opened.
+      @param basis    A reference lexer to pilfer context and macro information
+                      from, as well as an error handler.
     **/
     lexer(token_vector &&tokens, const lexer &basis);
     /**
@@ -283,9 +294,20 @@ namespace jdi {
       lexer.
       @param input    The file from which to read definitions.
                       This file will be manipulated by the system.
-      @param fname    The name of the file that was first opened.
+      @param basis    A reference lexer to pilfer context and macro information
+                      from, as well as an error handler.
     **/
     lexer(const token_vector *tokens, const lexer &basis);
+    /**
+      Aliases a token_vector, processing only the tokens in the vector before
+      returning END_OF_CODE. Treats these tokens as gospel, returning them as-is
+      (except for whitespace and comment tokens).
+      @param input    The file from which to read definitions.
+                      This file will be manipulated by the system.
+      @param herr     An error handler that will receive any errors that might
+                      occur during replay. In general, this should go unused.
+    **/
+    lexer(const token_vector *tokens, error_handler *herr);
     /** Destructor; free the attached macro lexer. **/
     ~lexer();
 

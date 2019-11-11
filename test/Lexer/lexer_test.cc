@@ -400,4 +400,96 @@ TEST(LexerTest, HasIncludeBasics) {
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
+TEST(LexerTest, HasIncludeInsideMacro) {
+  constexpr char kTestCase[] = R"cpp(
+#define expr1 __has_include(<success.h>)
+#define expr2 __has_include(<made_up_header.h>)
+
+#if expr1
+	hooray
+#else
+	"fail"
+#endif
+
+#if expr2
+  "double fail"
+#else
+  1337
+#endif
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+  builtin_context().add_search_directory("test/test_data");
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, DeferredInsanity) {
+  constexpr char kTestCase[] = R"cpp(
+#define foo defined bar
+
+#if foo
+  "fail"
+#else
+	hooray
+#endif
+
+#define bar
+
+#if foo
+	1337
+#else
+  "double fail"
+#endif
+
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, ExpressInsanity) {
+  // This test verifies that the lexer isn't handling Cpp.Cond expressions
+  // before preprocessing #if expressions or after, but instead *during*.
+  // Handling them before will cause expr1 to fail, either because `defined foo`
+  // was false when expr1 was declared. Handling them after will fail because
+  // `foo` will be preprocessed to nothing.
+  constexpr char kTestCase[] = R"cpp(
+#define expr1 defined foo
+#define expr2 __has_include(<success.h>)
+#define foo
+
+#if expr1
+	hooray
+#else
+  "fail"
+#endif
+
+#if expr2
+	1337
+#else
+  "double fail"
+#endif
+
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+  builtin_context().add_search_directory("test/test_data");
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
 }  // namespace jdi
