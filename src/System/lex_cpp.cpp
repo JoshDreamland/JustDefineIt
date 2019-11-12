@@ -1186,7 +1186,9 @@ static const unordered_map<string, LexerKeyword> kLexerKeywords {
   { "__PRETTY_FUNCTION__", LexerKeyword::FUNC_PRETTY },
   { "defined", LexerKeyword::DEFINED },
   { "__has_include", LexerKeyword::HAS_INCLUDE },
+  { "__has_include__", LexerKeyword::HAS_INCLUDE },  // GNU spelling
   {"__has_include_next", LexerKeyword::HAS_INCLUDE_NEXT},
+  {"__has_include_next__", LexerKeyword::HAS_INCLUDE_NEXT},  // GNU spelling
   {"__has_cpp_attribute", LexerKeyword::HAS_CPP_ATTRIBUTES},
 };
 

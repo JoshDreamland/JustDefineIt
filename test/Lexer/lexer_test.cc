@@ -400,8 +400,27 @@ TEST(LexerTest, HasIncludeBasics) {
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
+TEST(LexerTest, HasIncludeBasicsWithQuotes) {
+  constexpr char kTestCase[] = R"cpp(
+#if __has_include("success.h")
+	hooray
+#else
+	"fail"
+#endif
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+  builtin_context().add_search_directory("test/test_data");
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
 TEST(LexerTest, HasIncludeInsideMacro) {
   constexpr char kTestCase[] = R"cpp(
+#define success failure  // Try to trip up the tokenizer.
 #define expr1 __has_include(<success.h>)
 #define expr2 __has_include(<made_up_header.h>)
 
