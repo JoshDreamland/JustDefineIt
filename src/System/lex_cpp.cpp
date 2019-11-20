@@ -600,6 +600,7 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
 
   vector<token_vector> args;
   args.reserve(mf.params.size());
+  if (!mf.params.empty()) args.emplace_back();
 
   // Read the parameters into our argument vector
   int too_many_args = 0;
