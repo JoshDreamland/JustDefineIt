@@ -126,16 +126,16 @@ namespace jdi {
     /// Build the components vector from the given value vector.
     static vector<FuncComponent>
         componentize(const token_vector &tokens, const vector<string> &params,
-                     error_handler *herr);
+                     ErrorHandler *herr);
 
     /// Expand this macro function, given arguments.
     token_vector substitute_and_unroll(const vector<token_vector> &args,
                                        const vector<token_vector> &args_evald,
-                                       error_handler *herr) const;
+                                       ErrorContext errc) const;
 
     /// Handle concatenations (##) in replacement lists for object-like macros.
     static token_vector evaluate_concats(const token_vector &replacement_list,
-                                         error_handler *herr);
+                                         ErrorHandler *herr);
 
     /// Convert this macro to a string
     string toString() const;
@@ -144,7 +144,7 @@ namespace jdi {
     string NameAndPrototype() const;
     
     /// Default constructor; defines an object-like macro with the given value.
-    macro_type(const string &n, vector<token_t> &&definiens, error_handler *h):
+    macro_type(const string &n, vector<token_t> &&definiens, ErrorHandler *h):
         is_function(false), is_variadic(false), name(n), params(),
         raw_value(std::move(definiens)),
         optimized_value(evaluate_concats(raw_value, h)) {}
@@ -164,7 +164,7 @@ namespace jdi {
           same as the default constructor. 
     **/
     macro_type(string_view name_, vector<string> &&arg_list, bool variadic,
-               vector<token_t> &&definiens, error_handler *herr):
+               vector<token_t> &&definiens, ErrorHandler *herr):
         is_function(true), is_variadic(variadic), name(name_),
         params(std::move(arg_list)), raw_value(std::move(definiens)),
         parts(componentize(raw_value, params, herr)) {}

@@ -121,7 +121,9 @@
 		<Unit filename="src/API/user_tokens.cpp" />
 		<Unit filename="src/API/user_tokens.h" />
 		<Unit filename="src/General/debug_macros.cpp" />
-		<Unit filename="src/General/debug_macros.h" />
+		<Unit filename="src/General/debug_macros.h">
+			<Option virtualFolder="test/" />
+		</Unit>
 		<Unit filename="src/General/llreader.cpp" />
 		<Unit filename="src/General/llreader.h" />
 		<Unit filename="src/General/parse_basics.cpp" />

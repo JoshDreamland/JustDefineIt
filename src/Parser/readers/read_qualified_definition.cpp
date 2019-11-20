@@ -85,7 +85,7 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
           if (k.is_dependent())
             res = handle_dependent_tempinst(scope, token, dt, k, 0);
           else
-            res =  dt->instantiate(k, error_context(herr, token));
+            res =  dt->instantiate(k, ErrorContext(herr, token));
           if (token.type != TT_GREATERTHAN)
             token.report_errorf(herr, "Expected closing triangle bracket before %s");
           token = lex->get_token_in_scope(scope);

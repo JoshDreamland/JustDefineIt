@@ -75,7 +75,8 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
       full_type ft = read_operatorkw_cast_type(token, scope);
       if (!ft.def)
         return 1;
-      res = scope->overload_function("(cast)", ft, inherited_flags, token, herr);
+      res = scope->overload_function("(cast)", ft, inherited_flags,
+                                     herr->at(token));
       return !res;
     }
     else if (_inline && token.type == TT_NAMESPACE) { 
@@ -143,7 +144,7 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
           arg_key k(temp->params.size());
           if (read_template_parameters(k, temp,token, scope))
             return 1;
-          d = temp->instantiate(k, error_context(herr, token));
+          d = temp->instantiate(k, ErrorContext(herr, token));
           if (!d) return 1;
           token = read_next_token(scope);
           goto rescope;
@@ -177,7 +178,7 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
     if (ins.inserted) { // If we successfully inserted,
       insert_anyway:
       res = (!tp.refs.empty() && tp.refs.top().type == ref_stack::RT_FUNCTION)?
-        (((definition_function*)(ins.def = new definition_function(tp.refs.name,scope,inherited_flags)))->overload(tp, inherited_flags, herr)):
+        (((definition_function*) (ins.def = new definition_function(tp.refs.name,scope,inherited_flags)))->overload(tp, inherited_flags, herr->at(token))):
         ((ins.def = new definition_typed(tp.refs.name,scope,tp.def,&tp.refs,tp.flags,DEF_TYPED | inherited_flags)));
     }
     else // Well, uh-oh. We didn't insert anything. This is non-fatal, and will not leak, so no harm done.
@@ -196,12 +197,14 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
           return 4;
         }
         definition_function* func = (definition_function*)ins.def;
-        res = func->overload(tp, inherited_flags, herr);
+        res = func->overload(tp, inherited_flags, herr->at(token));
       }
       else if (not(ins.def->flags & DEF_TYPED)) {
         if (ins.def->flags & DEF_TEMPLATE and !tp.refs.empty() and tp.refs.top().type == ref_stack::RT_FUNCTION) {
-          definition_function* func = new definition_function(tp.refs.name,scope,tp.def,tp.refs,tp.flags,DEF_TYPED | inherited_flags);
-          func->overload((definition_template*)ins.def, herr);
+          definition_function* func = new definition_function(
+              tp.refs.name, scope, tp.def, tp.refs, tp.flags,
+              DEF_TYPED | DEF_FUNCTION | inherited_flags, token, herr);
+          func->overload((definition_template*) ins.def, herr->at(token));
           res = ins.def = func;
         }
         else {
@@ -223,7 +226,7 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
         return 4;
       }
       definition_function* func = (definition_function*)res;
-      res = func->overload(tp, inherited_flags, herr);
+      res = func->overload(tp, inherited_flags, herr->at(token));
     }
     // cout << "Implementing " << res->name << std::endl;
   }
@@ -257,7 +260,7 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
           }
           AST bitcountexp;
           astbuilder->parse_expression(&bitcountexp, token = read_next_token(scope), scope, precedence::comma+1);
-          value bc = bitcountexp.eval(error_context(herr, token));
+          value bc = bitcountexp.eval(ErrorContext(herr, token));
           if (bc.type != VT_INTEGER) {
             token.report_error(herr,"Bit count is not an integer");
             FATAL_RETURN(1);

@@ -5,15 +5,18 @@
 
 namespace {
 
-class ErrorConstitutesFailure : public jdi::error_handler {
-  void error(std::string_view err, std::string_view filename, int line, int pos) final {
+class ErrorConstitutesFailure : public jdi::ErrorHandler {
+  void error(std::string_view err, jdi::SourceLocation sloc) final {
     ADD_FAILURE() << "Underlying code reported an error: " << err
-                  << " (at " << filename << ":" << line << ":" << pos << ")";
+                  << " (at " << sloc.filename << ":" << sloc.line << ":"
+                  << sloc.pos << ")";
   }
-  void warning(std::string_view err, std::string_view filename, int line, int pos) final {
+  void warning(std::string_view err, jdi::SourceLocation sloc) final {
     ADD_FAILURE() << "Underlying code reported a warning: " << err
-                  << " (at " << filename << ":" << line << ":" << pos << ")";
+                  << " (at " << sloc.filename << ":" << sloc.line << ":"
+                  << sloc.pos << ")";
   }
+  void info(std::string_view, int, jdi::SourceLocation) final {}
 } *error_constitutes_failure = new ErrorConstitutesFailure;
 
 }  // namespace

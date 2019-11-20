@@ -73,10 +73,11 @@ namespace jdi {
     @param argk    The key that was read in.
     @param argnum  The number of parameters that were read; this is less than or equal to the given key's size.
     @param temp    The template to check the parameters against and read defaults from.
-    @param token   A token used for error reporting.
-    @param herr    The error handler to receive errors.
+    @param errc    Used to report any detected errors.
   */
-  int check_read_template_parameters(arg_key &argk, size_t argnum, definition_template *temp, const token_t &token, error_handler *herr);
+  int check_read_template_parameters(arg_key &argk, size_t argnum,
+                                     definition_template *temp,
+                                     ErrorContext errc);
   
   /**
     @class context_parser
@@ -89,14 +90,14 @@ namespace jdi {
   class context_parser {
     Context *ctex;  ///< The original context we are parsing into.
     lexer *lex;  ///< The lexer which all methods and all calls therefrom will poll for tokens.
-    error_handler *herr;  ///< The error handler to which errors and warnings will be reported.
+    ErrorHandler *herr;  ///< The error handler to which errors and warnings will be reported.
     AST_Builder *astbuilder;  ///< Used to build ASTs at any time during parse.
     friend class jdi::AST_Builder;
     
    public:
     inline lexer *get_lex() const { return lex; }
     inline AST_Builder *get_AST_builder() const { return astbuilder; }
-    inline error_handler *get_herr() const { return herr; }
+    inline ErrorHandler *get_herr() const { return herr; }
     
     /// Constructs, temporarily consuming a context. Do not use the input
     /// context while this parser is active.
@@ -104,7 +105,7 @@ namespace jdi {
     /// Legacy. Allows construction for use with a simple AST_Builder.
     context_parser(Context* ctex, lexer *lex);
     // /// Construct without copying
-    // context_parser(error_handler* herr);
+    // context_parser(ErrorHandler* herr);
     /// Destructs, returning data to the original context.
     ~context_parser();
     

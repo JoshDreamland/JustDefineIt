@@ -181,16 +181,16 @@ namespace std {
 
 #include <cstdio>
 
-void token_t::report_error(error_handler *herr, std::string error) const {
+void token_t::report_error(ErrorHandler *herr, std::string error) const {
   if (herr) {
-    herr->error(error, get_filename(), linenum, pos);
+    herr->error(error, *this);
   } else {
     perror("NULL ERROR HANDLER PASSED TO REPORT METHOD\n");
     perror((error + "\n").c_str());
   }
 }
 
-void token_t::report_errorf(error_handler *herr, std::string error) const {
+void token_t::report_errorf(ErrorHandler *herr, std::string error) const {
   string str = to_string();
   for (size_t f = 0; (f = error.find("%s", f)) != string::npos; f += str.length())
     error.replace(f, 2, str);
@@ -205,9 +205,9 @@ std::string token_t::to_string() const {
     str.replace(f, 2, string((const char*) content.str, content.len));
   return str;
 }
-void token_t::report_warning(error_handler *herr, std::string error) const {
+void token_t::report_warning(ErrorHandler *herr, std::string error) const {
   if (herr) {
-    herr->warning(error, get_filename(), linenum, pos);
+    herr->warning(error, *this);
   } else {
     perror("NULL ERROR HANDLER PASSED TO WARNING METHOD\n");
     perror((error + "\n").c_str());

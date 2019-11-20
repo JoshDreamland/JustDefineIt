@@ -66,9 +66,9 @@ namespace jdi {
   // is not itself protected or private. Only specific overloads, which actually have a prototype, may be private or protected.
   // XXX: Should all flags be discarded in this manner?
   
-  definition_function::definition_function(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): 
+  definition_function::definition_function(string n, definition* p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs, SourceLocation sloc, ErrorHandler *herr): 
     definition(n, p, (flgs | DEF_FUNCTION) &~(DEF_PRIVATE | DEF_PROTECTED)) {
-    overload(tp, rf, typeflags, flgs, NULL, def_error_handler);
+    overload(tp, rf, typeflags, flgs, NULL, herr->at(sloc));
   }
   definition_function::definition_function(string n, definition* p, int flgs): 
     definition(n, p, (flgs | DEF_FUNCTION) &~(DEF_PRIVATE | DEF_PROTECTED)) {}
@@ -76,13 +76,16 @@ namespace jdi {
   definition_overload::definition_overload(string n, definition *p, definition* tp, const ref_stack &rf, unsigned int typeflags, int flgs): 
     definition_typed(n, p, tp, rf, typeflags, (flgs & ~(DEF_FUNCTION)) | DEF_OVERLOAD), implementation(NULL) {}
   
-  definition_overload *definition_function::overload(definition *tp, const ref_stack &rf, unsigned int typeflags, unsigned int addflags, void *implementation, error_handler *herr) {
+  definition_overload *definition_function::overload(
+      definition *tp, const ref_stack &rf, unsigned int typeflags,
+      unsigned int addflags, void *implementation, ErrorContext errc) {
     arg_key key(rf);
     pair<overload_iter, bool> ins = overloads.insert(pair<arg_key,definition_overload*>(key, NULL));
     if (!ins.second) {
       if (implementation) {
         if (ins.first->second->implementation) {
-          herr->error("Reimplementation of function; old implementation discarded");
+          errc.error(
+              "Reimplementation of function; old implementation discarded");
           delete_function_implementation(ins.first->second->implementation);
           FATAL_RETURN(NULL);
           ins.first->second->implementation = implementation;
@@ -95,49 +98,55 @@ namespace jdi {
     
     return ins.first->second;
   }
-  definition_overload *definition_function::overload(const full_type &ft, unsigned int addflags, error_handler *herr) {
-    return overload(ft.def, ft.refs, ft.flags, addflags, NULL, herr);
+  definition_overload *definition_function::overload(
+      const full_type &ft, unsigned int addflags, ErrorContext errc) {
+    return overload(ft.def, ft.refs, ft.flags, addflags, NULL, errc);
   }
   
-  void definition_function::overload(definition_template* ovrl, error_handler *) {
+  void definition_function::overload(definition_template* ovrl, ErrorContext) {
     // FIXME: This could push a forward declaration and an actual implementation
     template_overloads.push_back(ovrl);
   }
   
-  definition_overload* definition_scope::overload_function(string fname, full_type &ft, unsigned inflags, const jdi::token_t& errtok, error_handler *herr) {
+  definition_overload* definition_scope::overload_function(
+        string fname, full_type &ft, unsigned inflags, ErrorContext errc) {
     definition_function *df;
     definition_overload *dov;
-    decpair dp = declare(fname, NULL);
+    decpair dp = declare(fname, nullptr);
     if (dp.inserted)
       dp.def = df = new definition_function(fname, this, inflags);
     else {
       if (dp.def->flags & DEF_FUNCTION)
         df = (definition_function*)dp.def;
       else {
-        errtok.report_error(herr, "Cannot redeclare `" + fname + "' as function in this scope");
-        return NULL;
+        errc.error() << "Cannot redeclare " << PQuote(fname)
+                     << " as function in this scope";
+        return nullptr;
       }
     }
     
-    dov = df->overload(ft, inflags, herr);
+    dov = df->overload(ft, inflags, errc);
     return dov;
   }
   
-  definition_function* definition_scope::overload_function(string fname, definition_template* dtemp, unsigned inflags, const jdi::token_t& errtok, error_handler *herr) {
+  definition_function* definition_scope::overload_function(
+      string fname, definition_template* dtemp, unsigned inflags,
+      ErrorContext errc) {
     definition_function *df;
-    decpair dp = declare(fname, NULL);
+    decpair dp = declare(fname, nullptr);
     if (dp.inserted)
       dp.def = df = new definition_function(fname, this, inflags);
     else {
       if (dp.def->flags & DEF_FUNCTION)
         df = (definition_function*)dp.def;
       else {
-        errtok.report_error(herr, "Cannot redeclare `" + fname + "' as function in this scope");
-        return NULL;
+        errc.error() << "Cannot redeclare " << PQuote(fname)
+                     << " as function in this scope";
+        return nullptr;
       }
     }
     
-    df->overload(dtemp, herr);
+    df->overload(dtemp, errc);
     return df;
   }
   
@@ -171,8 +180,8 @@ namespace jdi {
     for (using_node* n = using_front; n; n = n->next)
       if ((res = n->use->find_local(sname)))
         return res;
-    if (parent == NULL)
-      return NULL;
+    if (parent == nullptr)
+      return nullptr;
     return parent->look_up(sname);
   }
   definition *definition_class::look_up(string sname) {
@@ -188,8 +197,8 @@ namespace jdi {
     for (vector<ancestor>::iterator ait = ancestors.begin(); ait != ancestors.end(); ++ait)
       if ((res = ait->def->find_local(sname)))
         return res;
-    if (parent == NULL)
-      return NULL;
+    if (parent == nullptr)
+      return nullptr;
     return parent->look_up(sname);
   }
   definition *definition_scope::find_local(string sname) {
@@ -338,7 +347,7 @@ namespace jdi {
   
   static int nest_count = 0;
   struct nest_ { nest_() { ++nest_count; } ~nest_() { --nest_count; } };
-  definition* definition_template::instantiate(const arg_key& key, const error_context &errc) {
+  definition* definition_template::instantiate(const arg_key& key, const ErrorContext &errc) {
     if (nest_count >= 128) {
       cerr << "Maximum nested template depth of 128 (GCC default) exceeded. Bailing." << endl;
       return NULL;
@@ -373,7 +382,9 @@ namespace jdi {
       }
       size_t keyc = key.size();
       if (keyc != params.size()) {
-        errc.report_error("Attempt to instantiate template with an incorrect number of parameters; passed " + value(long(key.end() - key.begin())).toString() + ", required " + value(long(params.size())).toString());
+        errc.error() << "Attempt to instantiate template with an incorrect number of parameters; "
+                     << "passed " << (key.end() - key.begin())
+                     <<  ", required " << params.size();
         FATAL_RETURN(NULL);
       }
       
@@ -497,12 +508,12 @@ namespace jdi {
   //======: Sizeof functions :==============================================================================
   //========================================================================================================
   
-  value definition::size_of(const error_context &errc) {
-    errc.report_warning("Taking size of bare definition");
+  value definition::size_of(const ErrorContext &errc) {
+    errc.warning("Taking size of bare definition");
     return 0L;
   }
 
-  value definition_class::size_of(const error_context &errc) {
+  value definition_class::size_of(const ErrorContext &errc) {
     value sz = 0L;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME))
@@ -526,16 +537,16 @@ namespace jdi {
     return sz;
   }
 
-  value definition_enum::size_of(const error_context &errc) {
+  value definition_enum::size_of(const ErrorContext &errc) {
     return type->size_of(errc);
   }
 
-  value definition_function::size_of(const error_context &errc) {
-    errc.report_error("Computing size of function");
+  value definition_function::size_of(const ErrorContext &errc) {
+    errc.error("Computing size of function");
     return 0L;
   }
 
-  value definition_scope::size_of(const error_context &errc) {
+  value definition_scope::size_of(const ErrorContext &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME)) {
@@ -546,16 +557,16 @@ namespace jdi {
     return (long)sz;
   }
 
-  value definition_template::size_of(const error_context &errc) {
-    errc.report_error("Attempt to take size of template `" + name + "'");
+  value definition_template::size_of(const ErrorContext &errc) {
+    errc.error() << "Attempt to take size of template " << PQuote(name);
     return 0L;
   }
 
-  value definition_typed::size_of(const error_context &errc) {
+  value definition_typed::size_of(const ErrorContext &errc) {
     return type? type->size_of(errc) : value(0L);
   }
 
-  value definition_union::size_of(const error_context &errc) {
+  value definition_union::size_of(const ErrorContext &errc) {
     size_t sz = 0;
     for (defiter it = members.begin(); it != members.end(); ++it)
       if (not(it->second->flags & DEF_TYPENAME))
@@ -563,11 +574,11 @@ namespace jdi {
     return (long)sz;
   }
   
-  value definition_atomic::size_of(const error_context &) {
+  value definition_atomic::size_of(const ErrorContext &) {
     return (long)sz;
   }
   
-  value definition_hypothetical::size_of(const error_context &) {
+  value definition_hypothetical::size_of(const ErrorContext &) {
     return VT_DEPENDENT;
   }
   

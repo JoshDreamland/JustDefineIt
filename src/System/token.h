@@ -228,15 +228,15 @@ namespace jdi {
     }
     
     /// Log the name of the file from which this token was read.
-    string file;
+    std::string file;
     /// Log the line on which this token was named in the file.
-    int linenum;
+    size_t linenum;
     /// We are logging positions for precise error reporting.
-    int pos;
+    size_t pos;
     
-    std::string get_filename() const { return file; }
-    int get_line_number()      const { return linenum; }
-    int get_line_position()    const { return pos; }
+    std::string_view get_filename() const { return file; }
+    size_t get_line_number()        const { return linenum; }
+    size_t get_line_position()      const { return pos; }
     
     union {
       /// For types, namespace-names, etc., the definition by which the type
@@ -319,22 +319,22 @@ namespace jdi {
         type(TT_INVALID), file("<no file>"), linenum(0), pos(-1), def(nullptr),
         content("default token") { validate(); }
     /// Construct a token with extra information regarding its content.
-    token_t(TOKEN_TYPE t, const char* fn, int l, int p,
+    token_t(TOKEN_TYPE t, string_view fn, int l, int p,
             const char *content_data, size_t content_length):
         type(t), file(fn), linenum(l), pos(p), def(nullptr),
         content(content_data, content_length) { validate(); }
     /// Construct a token with extra information regarding its content.
-    token_t(TOKEN_TYPE t, const char* fn, int l, int p, string_view cntnt):
+    token_t(TOKEN_TYPE t, string_view fn, int l, int p, string_view cntnt):
         type(t), file(fn), linenum(l), pos(p), def(nullptr), content(cntnt) {
              validate(); }
     /// Construct a token with extra information regarding its definition.
-    token_t(TOKEN_TYPE t, const char* fn, int l, int p,
+    token_t(TOKEN_TYPE t, string_view fn, int l, int p,
             definition *d, string_view name):
         type(t), file(fn), linenum(l), pos(p), def(d), content(name) {
             validate();
     }
     /// Construct a DECFLAG token with extra information about its meaning.
-    token_t(TOKEN_TYPE t, const char* fn, int l, int p,
+    token_t(TOKEN_TYPE t, string_view fn, int l, int p,
             typeflag *tf, string_view name):
         type(t), file(fn), linenum(l), pos(p), tflag(tf), content(name) {
             validate();
@@ -343,25 +343,25 @@ namespace jdi {
     /**
       Pass error information to an error handler.
       If no information is available, then zeros are copied in its place.
-      @param herr  The error_handler which will receive this notification.
+      @param herr  The ErrorHandler which will receive this notification.
       @param error The text of the error.
     **/
-    void report_error(error_handler *herr, std::string error) const;
+    void report_error(ErrorHandler *herr, std::string error) const;
     /**
       Pass error information to an error handler, inserting token name.
       If no information is available, then zeros are copied in its place.
       The token is inserted in place of any %s in the error string.
-      @param herr  The error_handler which will receive this notification.
+      @param herr  The ErrorHandler which will receive this notification.
       @param error The text of the error; use %s for token name.
     **/
-    void report_errorf(error_handler *herr, std::string error) const;
+    void report_errorf(ErrorHandler *herr, std::string error) const;
     /**
       Pass error information to an error handler.
       If no information is available, then zeros are copied in its place.
-      @param herr  The error_handler which will receive this notification.
+      @param herr  The ErrorHandler which will receive this notification.
       @param error The text of the error.
     **/
-    void report_warning(error_handler *herr, std::string error) const;
+    void report_warning(ErrorHandler *herr, std::string error) const;
     
     /// Comparatively-slow method to represent this token as a human-readable string.
     std::string to_string() const;

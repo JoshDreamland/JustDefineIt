@@ -228,11 +228,11 @@ namespace jdi {
     return it == remap.end()? x : (dc*)it->second;
   }
   
-  void definition::remap(remap_set &n, const error_context &) {
+  void definition::remap(remap_set &n, const ErrorContext &) {
     parent = filter(parent, n);
   }
   
-  void definition_scope::remap(remap_set &n, const error_context &errc) {
+  void definition_scope::remap(remap_set &n, const ErrorContext &errc) {
     definition::remap(n, errc);
     // cout << "Scope `" << name << "' has " << dec_order.size() << " ordered members" << endl;
     for (orditer it = dec_order.begin(); it != dec_order.end(); ++it) {
@@ -262,7 +262,7 @@ namespace jdi {
     }
   }
   
-  void definition_class::remap(remap_set &n, const error_context &errc) {
+  void definition_class::remap(remap_set &n, const ErrorContext &errc) {
     definition_scope::remap(n, errc);
     for (vector<ancestor>::iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
       ancestor& an = *it;
@@ -281,18 +281,23 @@ namespace jdi {
             else if ((ancc->remap(n, errc), ex = n.find(ancc)) != n.end())
               ancc = ex->second;
             else {
-              errc.report_warning("Can't fully evaluate ancestor for class `" + name + "': no resolution for " + ancc->toString());
+              errc.warning() << "Can't fully evaluate ancestor for class "
+                             << PQuote(name) << ": no resolution for " << *ancc;
               break;
             }
           }
           else break;
         
-        if (!ancc)
-          errc.report_error("ERROR! Replacing ancestor `" + an.def->name + "' with bad typedef!");
-        else if (not(ancc->flags & DEF_CLASS))
-          errc.report_error("ERROR! Replacing ancestor `" + an.def->name + "' with non-class `" + ancc->name + "' (" + flagnames(ancc->flags) + ")");
-        else
+        if (!ancc) {
+          errc.error() << "ERROR! Replacing ancestor " << PQuote(an.def->name)
+                       << " with bad typedef!";
+        } else if (not(ancc->flags & DEF_CLASS)) {
+          errc.error() << "ERROR! Replacing ancestor " << PQuote(an.def->name)
+                       << " with non-class " << PQuote(ancc->name)
+                       << " (" << flagnames(ancc->flags) << ")";
+        } else {
           an.def = (definition_class*)ancc;
+        }
       }
     }
     for (set<definition*>::iterator fiter = friends.begin(); fiter != friends.end(); ) {
@@ -305,10 +310,10 @@ namespace jdi {
     }
   }
   
-  void definition_enum::remap(remap_set& n, const error_context &errc) {
+  void definition_enum::remap(remap_set& n, const ErrorContext &errc) {
     #ifdef DEBUG_MODE
     if (n.find(type) != n.end()) {
-      errc.report_warning("Why are you replacing `" + type->name + "'?");
+      errc.warning() << "Why are you replacing " << PQuote(type->name) << "?";
     }
     #endif
     type = filter(type, n);
@@ -319,12 +324,14 @@ namespace jdi {
         it->def->remap(n, errc);
         if (it->ast) { // FIXME: This doesn't keep counting after a successful remap!
           value cache = it->def->value_of;
-          it->ast->remap(n);
+          it->ast->remap(n, errc);
           it->def->value_of = it->ast->eval(errc);
           if (it->def->value_of.type == VT_DEPENDENT)
-            errc.report_warning("Enumeration value still dependent after remap");
+            errc.warning("Enumeration value still dependent after remap");
           else {
-            cout << "Refactored " << it->ast->toString() << ": " << cache.toString() << " → " << it->def->value_of.toString() << endl;
+            cout << "Refactored " << it->ast->toString() << ": "
+                 << cache.toString() << " → " << it->def->value_of.toString()
+                 << endl;
             delete it->ast;
             it->ast = NULL;
           }
@@ -337,7 +344,7 @@ namespace jdi {
     }
   }
   
-  void definition_function::remap(remap_set& n, const error_context &errc) {
+  void definition_function::remap(remap_set& n, const ErrorContext &errc) {
     definition::remap(n, errc);
     for (overload_iter it = overloads.begin(); it != overloads.end(); ++it) {
       remap_citer rit = n.find(it->second);
@@ -348,15 +355,15 @@ namespace jdi {
     }
   }
   
-  void definition_overload::remap(remap_set& n, const error_context &errc) {
+  void definition_overload::remap(remap_set& n, const ErrorContext &errc) {
     definition_typed::remap(n, errc);
     // TODO: remap_function_implementation();
   }
   
-  void definition_template::remap(remap_set &n, const error_context &errc) {
+  void definition_template::remap(remap_set &n, const ErrorContext &errc) {
     for (vector<definition_tempparam*>::iterator it = params.begin(); it != params.end(); ++it)
       if ((*it)->default_assignment)
-        (*it)->default_assignment->remap(n);
+        (*it)->default_assignment->remap(n, errc);
     for (institer it = instantiations.begin(); it != instantiations.end(); ++it)
       it->second->def->remap(n, errc);
     for (speciter it = specializations.begin(); it != specializations.end(); ++it)
@@ -365,13 +372,12 @@ namespace jdi {
       def->remap(n, errc);
   }
   
-  void definition_tempparam::remap(remap_set &n, const error_context &errc) {
+  void definition_tempparam::remap(remap_set&, const ErrorContext &errc) {
     // TODO: Implement
-    errc.report_warning("Not implemented: tempparam::remap");
-    (void)n;
+    errc.warning("Not implemented: tempparam::remap");
   }
   
-  void definition_typed::remap(remap_set &n, const error_context &errc) {
+  void definition_typed::remap(remap_set &n, const ErrorContext &errc) {
     remap_set::const_iterator ex = n.find(type);
     if (ex != n.end())
       type = ex->second;
@@ -385,14 +391,14 @@ namespace jdi {
     definition::remap(n, errc);
   }
   
-  void definition_union::remap(remap_set &n, const error_context &errc) {
+  void definition_union::remap(remap_set &n, const ErrorContext &errc) {
     definition_scope::remap(n, errc);
   }
   
-  void definition_atomic::remap(remap_set &n, const error_context &errc) { definition::remap(n, errc); }
+  void definition_atomic::remap(remap_set &n, const ErrorContext &errc) { definition::remap(n, errc); }
   
-  void definition_hypothetical::remap(remap_set &n, const error_context &errc) {
-    def->remap(n);
+  void definition_hypothetical::remap(remap_set &n, const ErrorContext &errc) {
+    def->remap(n, errc);
     full_type ft = def->coerce(errc);
     
     if (ft.def && ft.def != arg_key::abstract) {
@@ -405,7 +411,7 @@ namespace jdi {
     }
   }
   
-  void arg_key::remap(const remap_set &r, const error_context &errc) {
+  void arg_key::remap(const remap_set &r, const ErrorContext &errc) {
     for (node* n = values; n != endv; ++n)
       if (n->type == AKT_FULLTYPE) {
         n->ft().def = filter(n->ft().def, r);
@@ -414,7 +420,7 @@ namespace jdi {
       else if (n->av().ast) {
         AST *ao = n  -> av().ast;
         AST *a  = ao -> duplicate();
-        a->remap(r);
+        a->remap(r, errc);
         value v = a->eval(errc);
         if (v.type != VT_DEPENDENT) {
           n->av().ast = NULL;
@@ -422,9 +428,9 @@ namespace jdi {
           delete ao;
         }
         else {
-          errc.report_error("No dice in unrolling template expression\n"
-                            "original expression: " + ao->toString() + "\n"
-                            "evaluated expression: " + a->toString());
+          errc.error() << "No dice in unrolling template expression\n"
+                       << "original expression: " << *ao << "\n"
+                       << "evaluated expression: " << *a;
         }
         delete a;
       }
@@ -440,88 +446,120 @@ namespace jdi {
     return new AST(root->duplicate());
   }
 
-} namespace jdi {
-  
-  AST_Node *AST_Node            ::duplicate() const { return new AST_Node(content, type);                         }
-  AST_Node *AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);  }
-  AST_Node *AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
-  AST_Node *AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(dup(operand), negate);           }
-  AST_Node *AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def, content);               }
-  AST_Node *AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt);       }
-  AST_Node *AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(dup(operand), cast_type);          }
-  AST_Node *AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content); }
-  AST_Node *AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(dup(exp), dup(left), dup(right), content); }
-  AST_Node *AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound);       }
-  AST_Node *AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array);            }
-  AST_Node *AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index));       }
-  
-  AST_Node *AST_Node_Parameters ::duplicate() const {
-    AST_Node_Parameters *res = new AST_Node_Parameters();
-    res->func = dup(func);
-    res->params.reserve(params.size());
-    for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
-      res->params.push_back(dup(*p));
-    return res;
-  }
-  AST_Node *AST_Node_TempInst   ::duplicate() const {
-    AST_Node_TempInst *res = new AST_Node_TempInst(temp->duplicate(), content);
-    res->params.reserve(params.size());
-    for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
-      res->params.push_back(dup(*p));
-    return res;
-  }
-  AST_Node *AST_Node_TempKeyInst::duplicate() const {
-    return new AST_Node_TempKeyInst(temp, key);
-  }
-  AST_Node *AST_Node_Array      ::duplicate() const {
-    AST_Node_Array *res = new AST_Node_Array();
-    res->elements.reserve(elements.size());
-    for (vector<AST_Node*>::const_iterator e = elements.begin(); e != elements.end(); ++e)
-      res->elements.push_back(dup(*e));
-    return res;
-  }
-  
-  //========================================================================================================
-  //======: AST Node Re-map Functions :=====================================================================
-  //========================================================================================================
-  
-  template<class c> void nremap(c *x, const remap_set &n) {
-    if (x)
-      x->remap(n);
-    else
-      cerr << "Why is this null?" << endl;
-  }
-  
-  void AST_Node            ::remap(const remap_set&)   {  }
-  void AST_Node_Scope      ::remap(const remap_set& n) { AST_Node_Binary::remap(n);  }
-  void AST_Node_Unary      ::remap(const remap_set& n) { nremap(operand, n);         }
-  void AST_Node_sizeof     ::remap(const remap_set& n) { nremap(operand, n);         }
-  void AST_Node_Definition ::remap(const remap_set& n) { def = filter(def, n);       }
-  void AST_Node_Type       ::remap(const remap_set& n) { dec_type.def  = filter(dec_type.def,  n); }
-  void AST_Node_Cast       ::remap(const remap_set& n) { cast_type.def = filter(cast_type.def, n); }
-  void AST_Node_Binary     ::remap(const remap_set& n) { nremap(left, n); nremap(right, n);        }
-  void AST_Node_Ternary    ::remap(const remap_set& n) { nremap(left, n); nremap(right, n); nremap(exp, n); }
-  void AST_Node_new        ::remap(const remap_set& n) { alloc_type.def = filter(alloc_type.def, n); nremap(position, n); nremap(bound, n); }
-  void AST_Node_delete     ::remap(const remap_set& n) { AST_Node_Unary::remap(n);          }
-  void AST_Node_Subscript  ::remap(const remap_set& n) { nremap(left, n); nremap(index, n); }
-  
-  void AST_Node_Parameters ::remap(const remap_set& n) {
-    nremap(func, n);
-    for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
-      (*p)->remap(n);
-  }
-  void AST_Node_TempInst   ::remap(const remap_set& n) {
-    temp->remap(n);
-    for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
-      (*p)->remap(n);
-  }
-  void AST_Node_TempKeyInst::remap(const remap_set& n) {
-    temp = filter(temp, n);
-    key.remap(n, error_context(def_error_handler, "Internal Remapping Operation", 0, 0));
-  }
-  void AST_Node_Array      ::remap(const remap_set& n) {
-    for (vector<AST_Node*>::iterator e = elements.begin(); e != elements.end(); ++e)
-      (*e)->remap(n);
-  }
-  
+}
+
+namespace jdi {
+
+AST_Node *AST_Node            ::duplicate() const { return new AST_Node(content, type);                                       }
+AST_Node *AST_Node_Scope      ::duplicate() const { return new AST_Node_Scope(dup(left), dup(right), content);                }
+AST_Node *AST_Node_Unary      ::duplicate() const { return new AST_Node_Unary(dup(operand), content, prefix, AST_Node::type); }
+AST_Node *AST_Node_sizeof     ::duplicate() const { return new AST_Node_sizeof(dup(operand), negate);                         }
+AST_Node *AST_Node_Definition ::duplicate() const { return new AST_Node_Definition(def, content);                             }
+AST_Node *AST_Node_Type       ::duplicate() const { full_type dt(dec_type); return new AST_Node_Type(dt);                     }
+AST_Node *AST_Node_Cast       ::duplicate() const { return new AST_Node_Cast(dup(operand), cast_type);                        }
+AST_Node *AST_Node_Binary     ::duplicate() const { return new AST_Node_Binary(dup(left), dup(right), content);               }
+AST_Node *AST_Node_Ternary    ::duplicate() const { return new AST_Node_Ternary(dup(exp), dup(left), dup(right), content);    }
+AST_Node *AST_Node_new        ::duplicate() const { return new AST_Node_new(alloc_type, position, bound);                     }
+AST_Node *AST_Node_delete     ::duplicate() const { return new AST_Node_delete(dup(operand), array);                          }
+AST_Node *AST_Node_Subscript  ::duplicate() const { return new AST_Node_Subscript(dup(left), dup(index));                     }
+
+AST_Node *AST_Node_Parameters ::duplicate() const {
+  AST_Node_Parameters *res = new AST_Node_Parameters();
+  res->func = dup(func);
+  res->params.reserve(params.size());
+  for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
+    res->params.push_back(dup(*p));
+  return res;
+}
+AST_Node *AST_Node_TempInst   ::duplicate() const {
+  AST_Node_TempInst *res = new AST_Node_TempInst(temp->duplicate(), content);
+  res->params.reserve(params.size());
+  for (vector<AST_Node*>::const_iterator p = params.begin(); p != params.end(); ++p)
+    res->params.push_back(dup(*p));
+  return res;
+}
+AST_Node *AST_Node_TempKeyInst::duplicate() const {
+  return new AST_Node_TempKeyInst(temp, key);
+}
+AST_Node *AST_Node_Array      ::duplicate() const {
+  AST_Node_Array *res = new AST_Node_Array();
+  res->elements.reserve(elements.size());
+  for (vector<AST_Node*>::const_iterator e = elements.begin(); e != elements.end(); ++e)
+    res->elements.push_back(dup(*e));
+  return res;
+}
+
+
+
+//========================================================================================================
+//======: AST Node Re-map Functions :=====================================================================
+//========================================================================================================
+
+template<class c> void nremap(c *x, const remap_set &n, ErrorContext errc) {
+  if (x)
+    x->remap(n, errc);
+  else
+    errc.error() << "Why is this null?";
+}
+
+void AST_Node::remap(const remap_set&, ErrorContext) {}
+void AST_Node_Scope::remap(const remap_set& n, ErrorContext errc) {
+  AST_Node_Binary::remap(n, errc);
+}
+void AST_Node_Unary::remap(const remap_set& n, ErrorContext errc) {
+  nremap(operand, n, errc);
+}
+void AST_Node_sizeof::remap(const remap_set& n, ErrorContext errc) {
+  nremap(operand, n, errc);
+}
+void AST_Node_Definition::remap(const remap_set& n, ErrorContext) {
+  def = filter(def, n);
+}
+void AST_Node_Type::remap(const remap_set& n, ErrorContext) {
+  dec_type.def  = filter(dec_type.def,  n);
+}
+void AST_Node_Cast::remap(const remap_set& n, ErrorContext) {
+  cast_type.def = filter(cast_type.def, n);
+}
+void AST_Node_Binary::remap(const remap_set& n, ErrorContext errc) {
+  nremap(left, n, errc);
+  nremap(right, n, errc);
+}
+void AST_Node_Ternary::remap(const remap_set& n, ErrorContext errc) {
+  nremap(left, n, errc);
+  nremap(right, n, errc);
+  nremap(exp, n, errc);
+}
+void AST_Node_new::remap(const remap_set& n, ErrorContext errc) {
+  alloc_type.def = filter(alloc_type.def, n);
+  nremap(position, n, errc);
+  nremap(bound, n, errc);
+}
+void AST_Node_delete::remap(const remap_set& n, ErrorContext errc) {
+  AST_Node_Unary::remap(n, errc);
+}
+void AST_Node_Subscript::remap(const remap_set& n, ErrorContext errc) {
+  nremap(left, n, errc);
+  nremap(index, n, errc);
+}
+
+void AST_Node_Parameters::remap(const remap_set& n, ErrorContext errc) {
+  nremap(func, n, errc);
+  for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
+    (*p)->remap(n, errc);
+}
+void AST_Node_TempInst::remap(const remap_set& n, ErrorContext errc) {
+  temp->remap(n, errc);
+  for (vector<AST_Node*>::iterator p = params.begin(); p != params.end(); ++p)
+    (*p)->remap(n, errc);
+}
+void AST_Node_TempKeyInst::remap(const remap_set& n, ErrorContext errc) {
+  temp = filter(temp, n);
+  key.remap(n, errc);
+}
+void AST_Node_Array::remap(const remap_set& n, ErrorContext errc) {
+  for (vector<AST_Node*>::iterator e = elements.begin(); e != elements.end(); ++e)
+    (*e)->remap(n, errc);
+}
+
 }

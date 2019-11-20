@@ -123,11 +123,11 @@ namespace jdi {
   handles the first (file character mapping), and this routine handles the second
   and third. The data is not physically modified for any of these phases.
   */
-  token_t read_token(llreader &cfile, error_handler *herr);
+  token_t read_token(llreader &cfile, ErrorHandler *herr);
 
   /// Tokenizes a string with no preprocessing. All words are identifiers.
   /// Will return preprocessing tokens, except for whitespace tokens.
-  token_vector tokenize(string fname, string_view str, error_handler *herr);
+  token_vector tokenize(string fname, string_view str, ErrorHandler *herr);
 
   /**
   Basic lexing/preprocessing unit; polled by all systems for tokens.
@@ -167,7 +167,7 @@ namespace jdi {
     llreader cfile;  ///< The current file being read.
     std::vector<OpenFile> files; ///< The files we have open, in the order we entered them.
     std::vector<OpenBuffer> open_buffers; ///< Buffers of tokens to consume.
-    error_handler *herr;  ///< Error handler for problems during lex.
+    ErrorHandler *herr;  ///< Error handler for problems during lex.
 
     /// Our conditional levels (one for each nested `\#if*`)
     vector<condition> conditionals;
@@ -184,7 +184,9 @@ namespace jdi {
     macro_map &macros; ///< Reference to the \c jdi::macro_map which will be used to store and retrieve macros.
 
     // std::set<string> visited_macros; ///< Cache over macro names in open_buffers.
-    std::set<string> visited_files; ///< For record and reporting purposes only.
+    /// For record and reporting purposes. String views are created into this
+    /// collection. Do NOT blindly replace this with a flat hash map.
+    std::set<string> visited_files;
 
     /// Pointer to the context we're parsing definitions into.
     Context *const builtin;
@@ -195,7 +197,7 @@ namespace jdi {
     bool evaluate_cpp_cond_ = false;
 
     /// Private base constructor.
-    lexer(macro_map &pmacros, error_handler *herr);
+    lexer(macro_map &pmacros, ErrorHandler *herr);
 
     /**
       Utility function designed to handle the preprocessor directive
@@ -277,7 +279,7 @@ namespace jdi {
         @param herr     An error handler that will receive lexing and
                         preprocessing errors.
     **/
-    lexer(llreader& input, macro_map &pmacros, error_handler *herr);  // TODO: Have Lexer own pmacros.
+    lexer(llreader& input, macro_map &pmacros, ErrorHandler *herr);  // TODO: Have Lexer own pmacros.
     /**
       Consumes a token_vector, processing only the tokens in the vector before
       returning END_OF_CODE. Does macro expansion using the macros in the given
@@ -307,7 +309,7 @@ namespace jdi {
       @param herr     An error handler that will receive any errors that might
                       occur during replay. In general, this should go unused.
     **/
-    lexer(const token_vector *tokens, error_handler *herr);
+    lexer(const token_vector *tokens, ErrorHandler *herr);
     /** Destructor; free the attached macro lexer. **/
     ~lexer();
 
@@ -333,7 +335,9 @@ namespace jdi {
       }
       ~look_ahead() {
         if (lex->lookahead_buffer != &buffer) {
-          lex->herr->error("LOGIC ERROR: lookahead buffer is not owned");
+          SourceLocation sloc("jdi::look_ahead::~look_ahead",
+                              SourceLocation::npos, SourceLocation::npos);
+          lex->herr->error(sloc, "LOGIC ERROR: lookahead buffer is not owned");
           abort();
         }
         lex->lookahead_buffer = prev_buffer;
@@ -376,7 +380,7 @@ namespace jdi {
     // =========================================================================
 
     /// Retrieve this lexer's error handler
-    error_handler *get_error_handler() { return herr; }
+    ErrorHandler *get_error_handler() { return herr; }
   };
 }
 

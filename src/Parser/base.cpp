@@ -40,12 +40,13 @@ using namespace jdi;
 */
 int jdi::Context::parse_stream(llreader &cfile) {
   if (parse_open) { // Make sure we're not still parsing anything
-    herr->error("Attempted to invoke parser while parse is in progress in another thread");
+    herr->error(cfile) <<
+        "Attempted to invoke parser while parse is in progress in another thread";
     return -1;
   }
   
   if (!herr)
-    herr = def_error_handler;
+    herr = default_error_handler;
   
   int res;
   {

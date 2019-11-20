@@ -87,7 +87,7 @@ namespace jdi
     vector<string> search_directories; ///< A list of #include directories in the order they will be searched.
     unique_ptr<definition_scope> global; ///< The global scope represented in this context.
     
-    error_handler *herr;
+    ErrorHandler *herr;
     
    public:
     set<definition*> variadics; ///< Set of variadic types.
@@ -148,7 +148,7 @@ namespace jdi
     void load_gnu_builtins();
     
     /** Sets the error handler to use when parsing macros or code. */
-    void set_error_handler(error_handler *herr_) {
+    void set_error_handler(ErrorHandler *herr_) {
       herr = herr_;
     }
     
@@ -186,7 +186,7 @@ namespace jdi
         You may specify an error handler to use in this constructor, or you may
         assign one later using `set_error_handler(herr)`.
     **/
-    Context(error_handler *herr = def_error_handler);
+    Context(ErrorHandler *herr = default_error_handler);
     
     
     /** Construct with essentially nothing. This constructor circumvents the copy process. It has

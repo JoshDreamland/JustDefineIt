@@ -143,6 +143,7 @@ set(TESTING_SRCS
   "test/Testing/error_handler.h" 
   "test/Testing/matchers.h"
   "test/Lexer/lexer_test.cc"
+  "test/General/error_handler_test.cc"
 )
 
 find_package(GTest REQUIRED)

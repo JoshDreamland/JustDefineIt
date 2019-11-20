@@ -42,7 +42,7 @@
   @param scope  The scope from which definitions can be read.
   @param herr   The error handler to which errors can be reported.
 */
-extern void* (*handle_function_implementation)(jdi::lexer *lex, jdi::token_t &token, jdi::definition_scope *scope, jdi::error_handler *herr);
+extern void* (*handle_function_implementation)(jdi::lexer *lex, jdi::token_t &token, jdi::definition_scope *scope, jdi::ErrorHandler *herr);
 /**
   Function pointer to handle parsing constructor initializer lists.
   This function will be invoked with token.type = TT_COLON.
@@ -53,7 +53,7 @@ extern void* (*handle_function_implementation)(jdi::lexer *lex, jdi::token_t &to
   @param scope  The scope from which definitions can be read.
   @param herr   The error handler to which errors can be reported.
 */
-extern void* (*handle_constructor_initializers)(jdi::lexer *lex, jdi::token_t &token, jdi::definition_scope *scope, jdi::error_handler *herr);
+extern void* (*handle_constructor_initializers)(jdi::lexer *lex, jdi::token_t &token, jdi::definition_scope *scope, jdi::ErrorHandler *herr);
 
 /**
   Function pointer to handle freeing function code content as allocated by a corresponding

@@ -22,6 +22,7 @@
 #ifndef _VALUE__H
 #define _VALUE__H
 #include <string>
+#include <ostream>
 
 namespace jdi {
   /**
@@ -87,6 +88,10 @@ namespace jdi {
     operator bool() const; ///< Cast to a boolean, returning false if no valid cast exists, true if this is a non-empty string.
     operator std::string_view() const; ///< Cast to a string_view, returning NULL if no valid cast exists.
   };
+
+  inline std::ostream &operator<<(std::ostream &stream, const value &val) {
+    return stream << val.toString();
+  }
 }
 
 #endif

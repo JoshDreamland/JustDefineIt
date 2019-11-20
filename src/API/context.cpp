@@ -44,7 +44,7 @@ void Context::read_macros(const char* filename)
   // TODO: IMPLEMENT
   in.close();
 }
-inline vector<token_t> parse_macro(const string &definiendum, const string &definiens, error_handler *herr) {
+inline vector<token_t> parse_macro(const string &definiendum, const string &definiens, ErrorHandler *herr) {
   llreader str_reader(definiendum, definiens, false);
   vector<token_t> tokens;
   for (token_t t;
@@ -153,7 +153,7 @@ void Context::copy(const Context &ct)
 {
   remap_set n;
   ct.global->copy(global.get(), n);
-  ct.global->remap(n, error_context(def_error_handler, "Internal Copy Operation", 0, 0));
+  ct.global->remap(n, ErrorContext(herr, {"Internal Copy Operation", 0, 0}));
   
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
@@ -173,8 +173,10 @@ void Context::swap(Context &ct) {
     ct.global.swap(global);
     macros.swap(ct.macros);
     variadics.swap(ct.variadics);
+  } else {
+    herr->error({"Internal Swap Operation", 0, 0})
+        << "ERROR! Cannot swap context while parse is active!";
   }
-  else cerr << "ERROR! Cannot swap context while parse is active" << endl;
 }
 
 macro_map &Context::global_macros() {
@@ -278,7 +280,7 @@ void Context::output_definitions(ostream &out) {
   out << global->toString();
 }
 
-Context::Context(error_handler *herr_):
+Context::Context(ErrorHandler *herr_):
     parse_open(false), global(new definition_scope()), herr(herr_) {
   copy(builtin_context());
 }

@@ -185,7 +185,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
 enum parenth_type { PT_FUNCTION, PT_GROUPORINIT, PT_INITIALIZERS, PT_NA };
 static parenth_type parenths_type(lexer *lex, definition_scope *scope,
                                   token_t &token, context_parser *cp,
-                                  error_handler *herr) {
+                                  ErrorHandler *herr) {
   if (token.type == TT_LEFTPARENTH)
   {
     bool seen_type = false, seen_comma = false;
@@ -475,7 +475,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
             return 1;
           }
           render_ast(ast, "ArrayBounds");
-          value as = ast.eval(error_context(herr, token));
+          value as = ast.eval(ErrorContext(herr, token));
           size_t boundsize = (as.type == VT_INTEGER)? (long) as : ref_stack::node_array::nbound;
           refs.push_array(boundsize);
         }

@@ -260,7 +260,7 @@ int main(int argc, char** argv) {
       //   -DJUST_DEFINE_IT_RUN > Projects/JustDefineIt/shellmain-pp.cc
       llreader f("shellmain-pp.cc");
       macro_map buttMacros = butts.get_macros();
-      lexer lex(f, buttMacros, def_error_handler);
+      lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         tokens2.push_back(token);
       }
@@ -270,17 +270,17 @@ int main(int argc, char** argv) {
       Context butts;
       llreader f((enigma_path/"ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
       macro_map buttMacros = butts.get_macros();
-      lexer lex(f, buttMacros, def_error_handler);
+      lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
         size_t p = tokens.size();
         tokens.push_back(token);
         if (!had_diff && p < tokens2.size() && (tokens[p].type != tokens2[p].type || tokens[p].content.view() != tokens2[p].content.view())) {
           cerr << p << endl;
-          token.report_errorf(def_error_handler,
+          token.report_errorf(default_error_handler,
                               "Token differs from golden set! Read "
                               + token.to_string() + ", expected "
                               + token_t::get_name((TOKEN_TYPE) tokens2[p].type) + ".");
-          tokens2[p].report_error(def_error_handler,"Note: golden token declared here.");
+          tokens2[p].report_error(default_error_handler,"Note: golden token declared here.");
           had_diff = true;
         }
         ++(had_diff? incorrect : correct);
@@ -325,7 +325,7 @@ int main(int argc, char** argv) {
       cout << endl << "====[------------------------------ FAILURE. ------------------------------]====" << endl << endl;
     else
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
-    cout << "Parse completed with " << def_error_handler->error_count << " errors and " << def_error_handler->warning_count << " warnings." << endl;
+    cout << "Parse completed with " << default_error_handler->error_count << " errors and " << default_error_handler->warning_count << " warnings." << endl;
     
     do_cli(enigma);
     /*/
@@ -350,7 +350,7 @@ int main(int argc, char** argv) {
 void name_type(string type, Context &ct) {
   llreader llr("type string", type, type.length());
   macro_map undamageable = ct.get_macros();
-  lexer c_lex(llr, undamageable, def_error_handler);
+  lexer c_lex(llr, undamageable, default_error_handler);
   context_parser cp(&ct, &c_lex);
   token_t tk = c_lex.get_token_in_scope(ct.get_global());
   full_type ft = cp.read_fulltype(tk, ct.get_global());
@@ -383,10 +383,10 @@ void do_cli(Context &ct)
         cout << "Enter the item to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr("user input", buf, true);
-        lexer c_lex(llr, undamageable, def_error_handler);
+        lexer c_lex(llr, undamageable, default_error_handler);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
         if (dummy.type != TT_DEFINITION && dummy.type != TT_DECLARATOR && dummy.type != TT_SCOPE) {
-          dummy.report_errorf(def_error_handler, "Expected definition; encountered %s. Perhaps your term is a macro?");
+          dummy.report_errorf(default_error_handler, "Expected definition; encountered %s. Perhaps your term is a macro?");
           break;
         }
         context_parser cp(&ct, &c_lex);
@@ -432,7 +432,7 @@ void do_cli(Context &ct)
         cout << "Enter the expression to evaluate:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         llreader llr("user input", buf, true);
-        lexer c_lex(llr, undamageable, def_error_handler);
+        lexer c_lex(llr, undamageable, default_error_handler);
         AST a;
         context_parser cparse(&ct, &c_lex);
         token_t dummy = c_lex.get_token_in_scope(ct.get_global());
@@ -443,11 +443,11 @@ void do_cli(Context &ct)
             a.writeSVG(buf);
           }
           if (eval) {
-            value v = a.eval(error_context(def_error_handler, dummy));
+            value v = a.eval(ErrorContext(default_error_handler, dummy));
             cout << "Value returned: " << v.toString() << endl;
           }
           if (coerce) {
-            full_type t = a.coerce(error_context(def_error_handler, dummy));
+            full_type t = a.coerce(ErrorContext(default_error_handler, dummy));
             cout << "Type of expression: " << t.toString() << endl;
             cout << (t.def? t.def->toString() : "NULL") << endl;
           }
@@ -488,10 +488,10 @@ void test_expression_evaluator() {
   putcap("Test expression evaluator");
   
   lexer dlex;
-  context ct;//(&dlex, def_error_handler);
-  context_parser cp(&ct, &dlex, def_error_handler);
+  context ct;//(&dlex, default_error_handler);
+  context_parser cp(&ct, &dlex, default_error_handler);
   AST ast;
-  error_context dec(def_error_handler, "Test AST", 0, 0);
+  ErrorContext dec(default_error_handler, "Test AST", 0, 0);
   
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);

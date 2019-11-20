@@ -23,7 +23,7 @@
 #include <API/compile_settings.h>
 
 namespace jdi {
-  inline definition_hypothetical* handle_hypothetical_ast(AST *a, definition_scope *scope, token_t& token, unsigned flags, error_handler *herr) {
+  inline definition_hypothetical* handle_hypothetical_ast(AST *a, definition_scope *scope, token_t& token, unsigned flags, ErrorHandler *herr) {
     definition_scope *temps;
     for (temps = scope; temps && !(temps->flags & DEF_TEMPLATE); temps = temps->parent);
     if (!temps || !(temps->flags & DEF_TEMPLATE)) {
@@ -54,7 +54,7 @@ namespace jdi {
   definition_hypothetical* context_parser::handle_hypothetical_access(definition_hypothetical *scope, string id) {
     AST *a = AST::create_from_access(scope, id, "::");
     token_t dummy_token;
-    return handle_hypothetical_ast(a, scope->parent, dummy_token, scope->flags, def_error_handler); // XXX: scope->flags, that & DEF_PRIVATE/whaever, or 0?
+    return handle_hypothetical_ast(a, scope->parent, dummy_token, scope->flags, herr); // XXX: scope->flags, that & DEF_PRIVATE/whaever, or 0?
   }
   
   definition_hypothetical* context_parser::handle_hypothetical(definition_scope *scope, token_t& token, unsigned flags) {

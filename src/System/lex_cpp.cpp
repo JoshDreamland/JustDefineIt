@@ -170,7 +170,7 @@ void lexer::enter_macro(const token_t &otk, const macro_type &macro) {
 
 /// Invoked while the reader is *PAST* the opening quote. Terminates with the
 /// reader at the closing quote.
-static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
+static inline bool skip_string(llreader &cfile, char qc, ErrorHandler *herr) {
   while (cfile.next() != EOF && cfile.at() != qc) {
     if (cfile.at() == '\\') {
       if (cfile.next() == EOF) {
@@ -194,7 +194,7 @@ static inline bool skip_string(llreader &cfile, char qc, error_handler *herr) {
 
 /// Invoked while the reader is at the opening quote. Terminates with the reader
 /// at the closing quote.
-static inline bool skip_rstring(llreader &cfile, error_handler *herr) {
+static inline bool skip_rstring(llreader &cfile, ErrorHandler *herr) {
   // Read delimeter
   bool warned = false;
   const size_t spos = cfile.tell();
@@ -230,7 +230,7 @@ static inline bool skip_rstring(llreader &cfile, error_handler *herr) {
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  */
 
-token_t jdi::read_token(llreader &cfile, error_handler *herr) {
+token_t jdi::read_token(llreader &cfile, ErrorHandler *herr) {
   #ifdef DEBUG_MODE
     static int number_of_times_GDB_has_dropped_its_ass = 0;
     ++number_of_times_GDB_has_dropped_its_ass;
@@ -264,7 +264,7 @@ token_t jdi::read_token(llreader &cfile, error_handler *herr) {
   // Dear C++ committee: do you know what would be exponentially more awesome
   // than this line? Just declaring a normal fucking function, please and thanks
   auto mktok = [&cfile](TOKEN_TYPE tp, size_t pos, int length) -> token_t {
-    return token_t(tp, cfile.name.c_str(), cfile.lnum, pos - cfile.lpos,
+    return token_t(tp, cfile.name, cfile.lnum, pos - cfile.lpos,
                    cfile + pos, length);
   };
 
@@ -658,7 +658,7 @@ bool lexer::parse_macro_function(const token_t &otk, const macro_type &mf) {
     pop_frozen_buffer();
   }
 
-  token_vector tokens = mf.substitute_and_unroll(args, evald, herr);
+  token_vector tokens = mf.substitute_and_unroll(args, evald, herr->at(otk));
   push_buffer({mf.name, otk, std::move(tokens)});
   return true;
 }
@@ -1091,7 +1091,7 @@ void lexer::handle_preprocessor() {
         }
 
         files.emplace_back(std::move(cfile));
-        visited_files.insert(incfile.name);
+        visited_files.insert(incfile.name).first;
         cfile.consume(incfile);
       } break;
     case PreprocessorDirective::LINE:
@@ -1155,7 +1155,7 @@ void lexer::handle_preprocessor() {
   return;
 }
 
-token_vector jdi::tokenize(string fname, string_view str, error_handler *herr) {
+token_vector jdi::tokenize(string fname, string_view str, ErrorHandler *herr) {
   token_vector res;
   llreader read(fname, str, false);
   for (token_t tk = read_token(read, herr); tk.type != TT_ENDOFCODE;
@@ -1376,6 +1376,14 @@ bool lexer::translate_identifier(token_t &identifier) {
     }
     return false;
   }
+
+  // TODO: This *feels* like a miserable hack, but it's this or make the AST
+  // evaluator handle it, which could mask real problems. I suspect this'll move
+  // around over time.
+  if (evaluate_cpp_cond_) {
+    identifier.type = TT_DECLITERAL;
+    identifier.content = "0";
+  }
   return false;
 }
 
@@ -1497,12 +1505,13 @@ bool lexer::pop_buffer() {
 
 void lexer::pop_frozen_buffer() {
   if (open_buffers.empty()) {
-    herr->error("Internal error: A frozen buffer was somehow popped.");
+    herr->error(cfile, "Internal error: A frozen buffer was somehow popped.");
     return;
   }
   if (!open_buffers.back().is_frozen) {
-    herr->error("Internal error: the current buffer is not frozen. "
-                "Some tokens were not consumed.");
+    herr->error(cfile) <<
+        "Internal error: the current buffer is not frozen. "
+        "Some tokens were not consumed.";
     for (auto it = open_buffers.rbegin(); it != open_buffers.rend(); ++it) {
       if (it->is_frozen) {
         while (pop_buffer());
@@ -1531,8 +1540,8 @@ bool lexer::pop_file() {
                   "Internal error: Attempting to pop a file while there are "
                   "lexed tokens remaining to be returned.");
     } else {
-      herr->error("Internal error: Attempting to pop a file without first "
-                  "popping open buffers.");
+      herr->error(cfile) << "Internal error: "
+          "Attempting to pop a file without first popping open buffers.";
     }
   }
   
@@ -1550,16 +1559,16 @@ bool lexer::pop_file() {
   return false;
 }
 
-lexer::lexer(macro_map &pmacros, error_handler *err):
+lexer::lexer(macro_map &pmacros, ErrorHandler *err):
     herr(err), macros(pmacros), builtin(&builtin_context()) {}
 
-lexer::lexer(llreader &input, macro_map &pmacros, error_handler *err):
+lexer::lexer(llreader &input, macro_map &pmacros, ErrorHandler *err):
     lexer(pmacros, err) {
   cfile.consume(input);
 }
 
 static macro_map no_macros;
-// lexer::lexer(token_vector &&tokens, error_handler *err): lexer(no_macros, err) {
+// lexer::lexer(token_vector &&tokens, ErrorHandler *err): lexer(no_macros, err) {
 //   push_buffer(std::move(tokens));
 // }
 lexer::lexer(token_vector &&tokens, const lexer &other):
@@ -1570,7 +1579,7 @@ lexer::lexer(const token_vector *tokens, const lexer &other):
     lexer(other.macros, other.herr) {
   push_buffer(tokens);
 }
-lexer::lexer(const token_vector *tokens, error_handler *err):
+lexer::lexer(const token_vector *tokens, ErrorHandler *err):
     lexer(no_macros, err) {
   push_rewind_buffer(tokens);
 }

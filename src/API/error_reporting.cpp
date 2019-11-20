@@ -19,40 +19,61 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <cstdio>
+#include <iostream>
 #include <API/error_reporting.h>
 
-#define null_term(string_view) (std::string(string_view).c_str())
-
 namespace jdi {
-  void default_error_handler::error(std::string_view err, std::string_view filename, int line, int pos) {
-    if (!filename.length())
-      fprintf(stderr, "ERROR: %s\n", null_term(err));
-    if (line == -1)
-      fprintf(stderr, "ERROR(%s): %s\n", null_term(filename), null_term(err));
-    else if (pos == -1)
-      fprintf(stderr, "ERROR(%s:%d): %s\n", null_term(filename), line, null_term(err));
-    else
-      fprintf(stderr, "ERROR(%s,%d,%d): %s\n", null_term(filename), line, pos, null_term(err));
-    ++error_count;
-  }
-  void default_error_handler::warning(std::string_view err, std::string_view filename, int line, int pos) {
-    if (!filename.length())
-      fprintf(stderr, "Warning: %s\n", null_term(err));
-    if (line == -1)
-      fprintf(stderr, "Warning(%s): %s\n", null_term(filename), null_term(err));
-    else if (pos == -1)
-      fprintf(stderr, "Warning(%s:%d): %s\n", null_term(filename), line, null_term(err));
-    else
-      fprintf(stderr, "Warning(%s,%d,%d): %s\n", null_term(filename), line, pos, null_term(err));
-    ++warning_count;
-  }
-  
-  default_error_handler::default_error_handler(): error_count(0), warning_count(0) {}
 
-  /// The instance of \c default_error_handler to which \c def_error_handler will point.
-  static default_error_handler deh_instance;
-  default_error_handler *def_error_handler = &deh_instance;
-
-  error_handler::~error_handler() {}
+std::string SourceLocation::to_string() const {
+  std::string res;
+  if (!filename.empty()) {
+    res += filename;
+    if (line != npos) {
+      res += ":" + std::to_string(line);
+      if (pos != npos) {
+        res += ":" + std::to_string(pos);
+      }
+    }
+  }
+  return res;
 }
+
+void DefaultErrorHandler::error(std::string_view err,
+                              SourceLocation code_point) {
+const std::string cps = code_point.to_string();
+if (cps.empty()) {
+  std::cerr << "ERROR: " << err << std::endl;
+} else {
+  std::cerr << "ERROR(" << cps << "): " << err << std::endl;
+}
+++error_count;
+}
+void DefaultErrorHandler::warning(std::string_view warn,
+                                SourceLocation code_point) {
+const std::string cps = code_point.to_string();
+if (cps.empty()) {
+  std::cerr << "Warning: " << warn << std::endl;
+} else {
+  std::cerr << "Warning(" << cps << "): " << warn << std::endl;
+}
+++warning_count;
+}
+void DefaultErrorHandler::info(std::string_view msg, int,
+                             SourceLocation code_point) {
+const std::string cps = code_point.to_string();
+if (cps.empty()) {
+  std::cerr << "Info: " << msg << std::endl;
+} else {
+  std::cerr << "Info(" << cps << "): " << msg << std::endl;
+}
+}
+
+DefaultErrorHandler::DefaultErrorHandler():
+  error_count(0), warning_count(0) {}
+
+/// The instance of `DefaultErrorHandler` to which `default_error_handler`
+/// will point.
+static DefaultErrorHandler deh_instance;
+DefaultErrorHandler *default_error_handler = &deh_instance;
+
+}  // namespace jdi

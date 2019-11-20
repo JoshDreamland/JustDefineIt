@@ -38,7 +38,7 @@ int jdi::context_parser::read_template_parameter(arg_key &argk, size_t argnum, d
     astbuilder->parse_expression(&a, token, scope, precedence::comma+1);
     if (argnum < temp->params.size())
     {
-      argk.put_value(argnum, a.eval(error_context(herr, token)));
+      argk.put_value(argnum, a.eval(ErrorContext(herr, token)));
       if (argk[argnum].val().type != VT_INTEGER) {
         if (argk[argnum].val().type == VT_DEPENDENT) {
           argk[argnum].val() = VT_DEPENDENT;
@@ -57,11 +57,12 @@ int jdi::context_parser::read_template_parameter(arg_key &argk, size_t argnum, d
   return 0;
 }
 
-int jdi::check_read_template_parameters(arg_key &argk, size_t args_given, definition_template *temp, const token_t &token, error_handler *herr)
-{
+int jdi::check_read_template_parameters(arg_key &argk, size_t args_given,
+                                        definition_template *temp,
+                                        ErrorContext errc) {
   if (args_given > temp->params.size()) {
-      token.report_error(herr, "Too many template parameters provided to `" + temp->toString(0,0) + "'");
-      FATAL_RETURN(1);
+    errc.error() << "Too many template parameters provided to " << PQuote(*temp);
+    FATAL_RETURN(1);
   }
   
   if (args_given < temp->params.size()) {
@@ -77,14 +78,15 @@ int jdi::check_read_template_parameters(arg_key &argk, size_t args_given, defini
     for (size_t i = args_given; i < temp->params.size(); ++i)
       if (temp->params[i]->default_assignment) {
         AST* nast = temp->params[i]->default_assignment->duplicate();
-        nast->remap(n);
+        nast->remap(n, errc);
         if (temp->params[i]->flags & DEF_TYPENAME)
-          argk.put_type(i, nast->coerce(error_context(herr, token)));
+          argk.put_type(i, nast->coerce(errc));
         else
-          argk.put_value(i, nast->eval(error_context(herr, token)));
+          argk.put_value(i, nast->eval(errc));
         delete nast;
+      } else {
+        errc.error() << "Parameter " << i << " is not defaulted";
       }
-      else token.report_error(herr, "Parameter " + value((long)i).toString() + " is not defaulted");
     
     for (remap_iter rit = n.begin(); rit != n.end(); ++rit)
       delete rit->second;
@@ -102,11 +104,15 @@ int jdi::check_read_template_parameters(arg_key &argk, size_t args_given, defini
     }
   
   if (bad_params) {
-    token.report_error(herr, "Insufficient parameters to `" + temp->toString(0,0) + "'; " + value((long)bad_params).toString() + " more required" );
-    for (size_t i = 0; i < temp->params.size(); ++i)
-      if ((argk[i].type == arg_key::AKT_FULLTYPE and !argk[i].ft().def)
-      or  ((argk[i].type == arg_key::AKT_VALUE and (argk[i].val().type == VT_NONE))))
-        token.report_error(herr, "Missing parameter " + value((long)i).toString() + ": parameter is not defaulted");
+    errc.error() << "Insufficient parameters to " << PQuote(*temp) << "; "
+                 << bad_params << " more required";
+    for (size_t i = 0; i < temp->params.size(); ++i) {
+      if ((argk[i].type == arg_key::AKT_FULLTYPE && !argk[i].ft().def) ||
+         ((argk[i].type == arg_key::AKT_VALUE && argk[i].val().type == VT_NONE))) {
+        errc.error() << "Missing parameter " << i
+                     << ": parameter is not defaulted";
+      }
+    }
     FATAL_RETURN(1);
   }
   
@@ -142,5 +148,5 @@ int jdi::context_parser::read_template_parameters(arg_key &argk, definition_temp
     }
   }
   
-  return check_read_template_parameters(argk, args_given, temp, token, herr);
+  return check_read_template_parameters(argk, args_given, temp, herr->at(token));
 }

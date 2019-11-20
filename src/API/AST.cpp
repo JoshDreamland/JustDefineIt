@@ -477,7 +477,7 @@ namespace jdi {
         {
           if (precedence::scope < prec_min)
             return left_node;
-          definition *def = left_node->coerce(error_context(herr, token)).def;
+          definition *def = left_node->coerce(ErrorContext(herr, token)).def;
           if ((def && (def->flags & DEF_TEMPLATE)) || (left_node->type == AT_TEMPID)
           ||  (left_node->type == AT_SCOPE && ((AST_Node_Scope*)left_node)->right && ((AST_Node_Scope*)left_node)->right->type == AT_TEMPID))
           {
@@ -611,7 +611,7 @@ namespace jdi {
       
       case TT_LEFTPARENTH:
           if (left_node->type == AT_DEFINITION or left_node->type == AT_TYPE or left_node->type == AT_SCOPE) {
-            full_type ltype = left_node->coerce(error_context(herr, token));
+            full_type ltype = left_node->coerce(ErrorContext(herr, token));
             if (ltype.def and ltype.def->flags & DEF_TYPENAME)
             {
               AST_Node_Type *ant;
@@ -772,15 +772,15 @@ namespace jdi {
   //=: Evaluators :============================================================================================================
   //===========================================================================================================================
 
-  value AST::eval(const error_context &errc) const {
+  value AST::eval(const ErrorContext &errc) const {
     if (!root) {
-      errc.report_error("Evaluating a broken expression");
+      errc.error("Evaluating a broken expression");
       return value();
     }
     return root->eval(errc);
   }
 
-  value AST_Node::eval(const error_context &errc) const {
+  value AST_Node::eval(const ErrorContext &errc) const {
     if (type == AT_DECLITERAL) {
       dec_literal:
       if (is_letter(content[content.length() - 1])) {
@@ -817,58 +817,62 @@ namespace jdi {
     if (type == AT_CHRLITERAL)
       return value(parselong(content));
     if (type == AT_IDENTIFIER) {
-      if (true) return value(0L);  // TODO: Pass this in the error context? Let AST_Node reference AST?
-      errc.report_error("Evaluation error: `" + content + "` is undeclared");
+      errc.error() << "Evaluation error: `" << content << "` is undeclared";
       return value();
     }
-    errc.report_error("Evaluating unknown node type " + std::to_string(type));
+    errc.error() << "Evaluating unknown node type " << type;
     return value();
   }
-  value AST_Node_Definition::eval(const error_context &errc) const {
+  value AST_Node_Definition::eval(const ErrorContext &errc) const {
     if (def) {
       if (def->flags & DEF_VALUED)
         return ((definition_valued*)def)->value_of;
       if (def->flags & DEF_TEMPPARAM)
         return value(VT_DEPENDENT);
     }
-    errc.report_error("Evaluating null definition");
+    errc.error("Evaluating null definition");
     return value();
   }
-  value AST_Node_Ternary::eval(const error_context &errc) const {
+  value AST_Node_Ternary::eval(const ErrorContext &errc) const {
     if (!exp) {
-      errc.report_error("Bad ternary expression: cannot be evaluated");
+      errc.error("Bad ternary expression: cannot be evaluated");
       return value();
     }
-    value e = exp->eval(errc);
-    return value_boolean(e)?
-      (left?left->eval(errc):   (errc.report_error("Bad ternary left operand: cannot be evaluated"), value())):
-      (right?right->eval(errc): (errc.report_error("Bad ternary right operand: cannot be evaluated"), value()));
+    if (exp->eval(errc)) {
+      if (left) return left->eval(errc);
+      errc.error("Bad ternary left operand: cannot be evaluated");
+    } else {
+      if (right) return right->eval(errc);
+      errc.error("Bad ternary right operand: cannot be evaluated");
+    }
+    return value();
   }
-  value AST_Node_Binary::eval(const error_context &errc) const {
+  value AST_Node_Binary::eval(const ErrorContext &errc) const {
     if (!left or !right) {
-      errc.report_error("Invalid (null) operands");
+      errc.error("Invalid (null) operands");
       return value();
     }
     symbol_iter si = symbols.find(content);
     if (si == symbols.end()) {
-      errc.report_error("Internal error! Operator not found!");
+      errc.error("Internal error! Operator not found!");
       return value();
     }
     symbol &s = si->second;
     if (!s.operate) {
-      errc.report_error("Internal error: Operator has no definition");
+      errc.error("Internal error: Operator has no definition");
       return value();
     }
     value l = left->eval(errc), r = right->eval(errc);
     value res = s.operate(l, r);
     return res;
   }
-  value AST_Node_Scope::eval(const error_context &errc) const {
+  value AST_Node_Scope::eval(const ErrorContext &errc) const {
     full_type res = left->coerce(errc);
     if (res.def == arg_key::abstract)
       return value(VT_DEPENDENT);
     if (!res.def or !(res.def->flags & DEF_SCOPE)) {
-      errc.report_error("Invalid scope " + (res.def? "`" + res.def->name + "'" : "(NULL)"));
+      if (res.def) errc.error() << "Invalid scope `" << res.def->name << "'";
+      else errc.error() << "Invalid (nonsensical) scope to `::` operator";
       return value();
     }
     
@@ -876,55 +880,58 @@ namespace jdi {
     if (!d or not(d->flags & DEF_VALUED)) {
       if (res.def->flags & DEF_DEPENDENT)
         return value(VT_DEPENDENT);
-      errc.report_error("AST evaluation failure: No `" + right->content + "' found in " + res.def->kind() + " `" + res.def->name + "'");
+      errc.error() << "AST evaluation failure: No `" << right->content
+                   << "' found in " << res.def->kind() << " " << res.def->name;
       return value(long(0));
     }
     return ((definition_valued*)d)->value_of;
   }
-  value AST_Node_Unary::eval(const error_context &errc) const {
+  value AST_Node_Unary::eval(const ErrorContext &errc) const {
     if (!operand) {
-      errc.report_error("No operand to unary (operator" + content + ")!");
+      errc.error() << "No operand to unary `operator" << content << "`!";
       return value();
     }
     if (prefix) {
       if (!symbols[content].operate_unary_pre) {
-        errc.report_error("No method to unary (operator" + content + ")!");
+        errc.error() << "No method to unary `operator" << content << "`!";
         return value();
       }
-      value b4 = operand->eval(errc), after = symbols[content].operate_unary_pre(b4);
+      value b4 = operand->eval(errc);
+      value after = symbols[content].operate_unary_pre(b4);
       return after;
     }
     else {
       if (!symbols[content].operate_unary_post) {
-        errc.report_error("No method to unary (operator" + content + ")!");
+        errc.error() << "No method to unary `operator" << content << "`!";
         return value();
       }
-      value b4 = operand->eval(errc), after = symbols[content].operate_unary_post(b4);
+      value b4 = operand->eval(errc);
+      value after = symbols[content].operate_unary_post(b4);
       return after;
     }
   }
   /*value AST_Node_Group::eval() {
     return root?root->eval(errc):value();
   }*/
-  value AST_Node_Parameters::eval(const error_context &errc) const {
-    errc.report_error("Evaluating a function call is not supported.");
+  value AST_Node_Parameters::eval(const ErrorContext &errc) const {
+    errc.error("Evaluating a function call is not supported.");
     return value(); // We can't evaluate a function call ;_;
   }
-  value AST_Node_Type::eval(const error_context &errc) const {
-    errc.report_error("Evaluating a type for value");
+  value AST_Node_Type::eval(const ErrorContext &errc) const {
+    errc.error("Evaluating a type for value");
     return value();
   }
-  value AST_Node_sizeof::eval(const error_context &errc) const {
+  value AST_Node_sizeof::eval(const ErrorContext &errc) const {
     if (!operand) {
-      errc.report_error("Computing size of invalid type");
+      errc.error("Computing size of invalid type");
       return 0L;
     }
     definition *cd = operand->coerce(errc).def;
     return cd? (long)cd->size_of(errc) : 0;
   }
-  value AST_Node_Cast::eval(const error_context &errc) const {
+  value AST_Node_Cast::eval(const ErrorContext &errc) const {
     if (!operand || !cast_type.def) {
-      errc.report_error("Invalid cast type");
+      errc.error("Invalid cast type");
       return value();
     }
     if (cast_type.def == builtin_type__int)
@@ -951,24 +958,24 @@ namespace jdi {
       return value((long)(char)(long)operand->eval(errc));
     else if (cast_type.def == builtin_type__bool)
       return value((long)(bool)operand->eval(errc));
-    errc.report_error("Attempt to cast to `" + cast_type.def->name + "'");
+    errc.error() << "Attempt to cast to `" << cast_type.def->name << "'";
     return value();
   }
-  value AST_Node_Array::eval(const error_context &errc) const {
+  value AST_Node_Array::eval(const ErrorContext &errc) const {
     return elements.size()? elements.front()->eval(errc) : value(0l);
   }
-  value AST_Node_new::eval(const error_context &errc) const {
+  value AST_Node_new::eval(const ErrorContext &errc) const {
     if (!position) {
-      errc.report_error("Cannot perform allocation in AST evaluation: not safe");
+      errc.error("Cannot perform allocation in AST evaluation: not safe");
       return value();
     }
     return position->eval(errc);
   }
-  value AST_Node_delete::eval(const error_context &errc) const {
-    errc.report_error("Cannot delete pointers in AST evaluation: unsafe");
+  value AST_Node_delete::eval(const ErrorContext &errc) const {
+    errc.error("Cannot delete pointers in AST evaluation: unsafe");
     return value();
   }
-  value AST_Node_Subscript::eval(const error_context &errc) const
+  value AST_Node_Subscript::eval(const ErrorContext &errc) const
   {
     value iv = index->eval(errc);
     if (iv.type != VT_INTEGER)
@@ -979,8 +986,9 @@ namespace jdi {
     {
       AST_Node_Array* la = (AST_Node_Array*)left;
       if (ivl >= la->elements.size()) {
-        errc.report_error("Out of bounds read: accessing element " + value(long(ivl)).toString()
-                        + " of array of size " + value(long(la->elements.size())).toString());
+        errc.error() << "Out of bounds read: accessing element "
+                     << value(long(ivl)) <<  " of array of size "
+                     << value(long(la->elements.size()));
         return value();
       }
       return la->elements[ivl]->eval(errc);
@@ -1000,24 +1008,28 @@ namespace jdi {
       return value(long(str[ivl]));
     }
   }
-  value AST_Node_TempInst::eval(const error_context &errc) const {
-    errc.report_error("Attempting to evaluate a template instantiation.");
-    return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
+  value AST_Node_TempInst::eval(const ErrorContext &errc) const {
+    // Evaluating a template instantiatoin, eg, basic_string<char>. Derp.
+    // Shouldn't happen in parser code.
+    errc.error("Attempting to evaluate a template instantiation.");
+    return value();
   }
-  value AST_Node_TempKeyInst::eval(const error_context &errc) const {
-    errc.report_error("Attempting to evaluate a template instantiation.");
-    return value(); // Evaluating a template instantiatoin, eg, basic_string<char>. Derp. Shouldn't happen in parser code.
+  value AST_Node_TempKeyInst::eval(const ErrorContext &errc) const {
+    // Evaluating a template instantiatoin, eg, basic_string<char>. Derp.
+    // Shouldn't happen in parser code.
+    errc.error("Attempting to evaluate a template instantiation.");
+    return value();
   }
   
   //===========================================================================================================================
   //=: Coercers :==============================================================================================================
   //===========================================================================================================================
   
-  full_type AST::coerce(const error_context &errc) const {
+  full_type AST::coerce(const ErrorContext &errc) const {
     return root? root->coerce(errc) : full_type();
   }
 
-  full_type AST_Node::coerce(const error_context &) const {
+  full_type AST_Node::coerce(const ErrorContext &) const {
     full_type res;
     res.def = builtin_type__int;
     res.flags = 0;
@@ -1035,23 +1047,26 @@ namespace jdi {
     return res;
   }
   
-  full_type AST_Node_Binary::coerce(const error_context &errc) const {
+  full_type AST_Node_Binary::coerce(const ErrorContext &errc) const {
     //TODO: Implement using operator() functions.
     return left->coerce(errc);
   }
   
-  full_type AST_Node_Scope::coerce(const error_context &errc) const {
+  full_type AST_Node_Scope::coerce(const ErrorContext &errc) const {
     full_type res = left->coerce(errc);
     if (!res.def)
-      return errc.report_error("Scope to access is NULL!"), full_type();
+      return errc.error("Scope to access is NULL!"), full_type();
     if (res.def == arg_key::abstract)
       return res.def;
     if (!(res.def->flags & DEF_SCOPE)) {
       res.reduce();
       if (!res.def)
-        return errc.report_error("Scope is typedef to NULL!"), full_type();
-      if (!(res.def->flags & DEF_SCOPE))
-        return errc.report_error("Bad scope `" + res.def->name + "' (" + flagnames(res.def->flags) + ")"), full_type();
+        return errc.error("Scope is typedef to NULL!"), full_type();
+      if (!(res.def->flags & DEF_SCOPE)) {
+        errc.error() << "Bad scope `" << res.def->name << "` ("
+                     << flagnames(res.def->flags) << ")";
+        return full_type();
+      }
     }
     if (res.def == arg_key::abstract)
       return arg_key::abstract;
@@ -1060,17 +1075,19 @@ namespace jdi {
     if (!res.def) {
       if (scp->flags & DEF_DEPENDENT)
         return arg_key::abstract;
-      errc.report_error("Scope `" + scp->name + "' (`" + left->toString() + "') has no member `" + right->content + "'");
+      errc.error()
+          << "Scope " << PQuote(scp->name) << " (" << PQuote(left->toString())
+          << ") has no member " << PQuote(right->content);
       scp->find_local(right->content);
     }
     return res;
   }
   
-  full_type AST_Node_Cast::coerce(const error_context &) const {
+  full_type AST_Node_Cast::coerce(const ErrorContext &) const {
     return cast_type;
   }
   
-  full_type AST_Node_Definition::coerce(const error_context &) const {
+  full_type AST_Node_Definition::coerce(const ErrorContext &) const {
     full_type res;
     if (def->flags & DEF_TYPED) {
       res.def = ((definition_typed*)def)->type;
@@ -1082,10 +1099,10 @@ namespace jdi {
     return res;
   }
   
-  full_type AST_Node_Parameters::coerce(const error_context &errc) const {
+  full_type AST_Node_Parameters::coerce(const ErrorContext &errc) const {
     #ifdef DEBUG_MODE
       if (func->type != AT_DEFINITION or !((AST_Node_Definition*)func)->def or !(((AST_Node_Definition*)func)->def->flags & DEF_FUNCTION)) {
-        errc.report_error("Left-hand of parameter list not a function");
+        errc.error("Left-hand of parameter list not a function");
         return full_type();
       }
     #endif
@@ -1104,28 +1121,28 @@ namespace jdi {
     return res;
   }
   
-  full_type AST_Node_sizeof::coerce(const error_context &) const {
+  full_type AST_Node_sizeof::coerce(const ErrorContext &) const {
     full_type res;
     res.def = builtin_type__long;
     res.flags = builtin_flag__unsigned;
     return res;
   }
   
-  full_type AST_Node_Ternary::coerce(const error_context &errc) const {
+  full_type AST_Node_Ternary::coerce(const ErrorContext &errc) const {
     full_type t1 = left->coerce(errc), t2 = right->coerce(errc);
     // FIXME: introduce common type resolution here using whatever casts_to() is used in overload resolution
     if (t1 != t2)
-      errc.report_error("ERROR: Operands to ternary operator differ in type.");
+      errc.error("ERROR: Operands to ternary operator differ in type.");
     return t1;
   }
   
-  full_type AST_Node_Type::coerce(const error_context &) const {
+  full_type AST_Node_Type::coerce(const ErrorContext &) const {
     full_type ret;
     ret.copy(dec_type);
     return ret;
   }
   
-  full_type AST_Node_Unary::coerce(const error_context &errc) const {
+  full_type AST_Node_Unary::coerce(const ErrorContext &errc) const {
     switch (content[0]) {
       case '+':
       case '-':
@@ -1134,12 +1151,13 @@ namespace jdi {
       case '&': { full_type res = operand->coerce(errc); res.refs.push(ref_stack::RT_POINTERTO); return res; }
       case '!': return builtin_type__bool;
       default:
-        errc.report_error("ERROR: Unknown coercion pattern for unary operator `" + content + "'");
+        errc.error() << "ERROR: Unknown coercion pattern for unary operator "
+                     << PQuote(content);
         return operand->coerce(errc);
     }
   }
   
-  full_type AST_Node_Array::coerce(const error_context &errc) const {
+  full_type AST_Node_Array::coerce(const ErrorContext &errc) const {
     if (elements.size()) {
       full_type res = elements[0]->coerce(errc);
       res.refs.push_array(elements.size());
@@ -1150,27 +1168,27 @@ namespace jdi {
     return res;
   }
   
-  full_type AST_Node_new::coerce(const error_context &errc) const {
+  full_type AST_Node_new::coerce(const ErrorContext &errc) const {
     full_type res = alloc_type;
     res.refs.push_array(bound? (long)bound->eval(errc) : 0);
     return res;
   }
   
-  full_type AST_Node_delete::coerce(const error_context &errc) const {
-    errc.report_warning("Type of delete expression not ignored");
+  full_type AST_Node_delete::coerce(const ErrorContext &errc) const {
+    errc.warning("Type of delete expression not ignored");
     return builtin_type__void;
   }
   
-  full_type AST_Node_Subscript::coerce(const error_context &errc) const {
+  full_type AST_Node_Subscript::coerce(const ErrorContext &errc) const {
     if (!left || !index) {
-      errc.report_error("Invalid operands to []");
+      errc.error("Invalid operands to []");
       return full_type();
     }
     full_type res = left->coerce(errc);
     if (!res.refs.size()) {
       // FIXME: Look up operator[] here; check for return type
       if (index->type != AT_ARRAY) {
-        errc.report_error("Left operand of array indices is not an array");
+        errc.error("Left operand of array indices is not an array");
         return full_type();
       }
       res = index->coerce(errc);
@@ -1179,14 +1197,15 @@ namespace jdi {
     return res;
   }
   
-  full_type AST_Node_TempInst::coerce(const error_context &errc) const
+  full_type AST_Node_TempInst::coerce(const ErrorContext &errc) const
   {
     full_type tpd = temp->coerce(errc);
     
     if (tpd.def == arg_key::abstract)
       return arg_key::abstract;
     if (!tpd.def or not(tpd.def->flags & DEF_TEMPLATE)) {
-      errc.report_error("Bad template type " + (tpd.def? tpd.def->name : "(NULL)"));
+      errc.error() << "Bad template type "
+                   << (tpd.def? tpd.def->name : "(NULL)");
       return full_type();
     }
     
@@ -1194,9 +1213,9 @@ namespace jdi {
     arg_key k(tplate->params.size());
     k.mirror_types(tplate);
     if (tplate->params.size() < params.size()) {
-      errc.report_error("Too many parameters to template instantiation; `"
-                        + temp->toString() + "' accepts " + value(long(tplate->params.size())).toString()
-                        + " parameters, but " + value(long(params.size())).toString() + " were given");
+      errc.error() << "Too many parameters to template instantiation; "
+                   << PQuote(*temp) << " accepts only " << tplate->params.size()
+                   << " parameters, but " << params.size() << " were given";
       return full_type();
     }
     
@@ -1216,10 +1235,10 @@ namespace jdi {
         k.put_value(i, v);
       }
     }
-    check_read_template_parameters(k, params.size(), tplate, errc.get_token(), errc.get_herr());
+    check_read_template_parameters(k, params.size(), tplate, errc);
     return full_type(tplate->instantiate(k, errc));
   }
-  full_type AST_Node_TempKeyInst::coerce(const error_context &errc) const {
+  full_type AST_Node_TempKeyInst::coerce(const ErrorContext &errc) const {
     if (key.is_abstract())
       return arg_key::abstract;
     return full_type(temp->instantiate(key, errc));
@@ -1313,9 +1332,9 @@ namespace jdi {
   void AST_Node_TempInst   ::operate(ConstASTOperator *aop, void *param) const { aop->operate_TempInst   (this, param); }
   void AST_Node_TempKeyInst::operate(ConstASTOperator *aop, void *param) const { aop->operate_TempKeyInst(this, param); }
 
-  void AST::remap(const remap_set& n) {
+  void AST::remap(const remap_set& n, ErrorContext errc) {
     if (root)
-      root->remap(n);
+      root->remap(n, errc);
   }
 
   //===========================================================================================================================
@@ -1377,7 +1396,7 @@ namespace jdi {
   AST_Builder::AST_Builder(context_parser *ctp):
       lex(ctp->lex), herr(ctp->herr), cparse(ctp), search_scope(NULL) {}
 
-  AST parse_expression(lexer *lex, error_handler *herr, token_t *token) {
+  AST parse_expression(lexer *lex, ErrorHandler *herr, token_t *token) {
     Context ctex;
     context_parser ctp(&ctex, lex);
     AST_Builder ab(&ctp);

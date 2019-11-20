@@ -28,7 +28,7 @@
 #include "handle_function_impl.h"
 using namespace jdi;
 
-static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_handler *herr) {
+static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, ErrorHandler *herr) {
   if (token.type == TT_LEFTBRACE) {
     for (size_t bc = 0;;) {
       if (token.type == TT_LEFTBRACE) ++bc;
@@ -47,7 +47,7 @@ static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, error_
   }
   return NULL;
 }
-static void *initializer_ignorer(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) {
+static void *initializer_ignorer(lexer *lex, token_t &token, definition_scope *scope, ErrorHandler *herr) {
   do {
     token = lex->get_token_in_scope(scope);
     if (token.type == TT_SEMICOLON || token.type == TT_ENDOFCODE) {
@@ -59,7 +59,7 @@ static void *initializer_ignorer(lexer *lex, token_t &token, definition_scope *s
 }
 static void do_nothing(void*) {}
 
-void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = code_ignorer;
-void* (*handle_constructor_initializers)(lexer *lex, token_t &token, definition_scope *scope, error_handler *herr) = initializer_ignorer;
+void* (*handle_function_implementation)(lexer *lex, token_t &token, definition_scope *scope, ErrorHandler *herr) = code_ignorer;
+void* (*handle_constructor_initializers)(lexer *lex, token_t &token, definition_scope *scope, ErrorHandler *herr) = initializer_ignorer;
 void  (*delete_function_implementation)(void* impl) = do_nothing;
 void  (*delete_constructor_initializers)(void* impl) = do_nothing;

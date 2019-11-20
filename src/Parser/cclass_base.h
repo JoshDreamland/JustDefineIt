@@ -40,7 +40,7 @@
 #define definition_name gcchax_cat(definition_, def_kind)
 
 
-static inline definition_name* insnew(definition_scope *scope, int inherited_flags, const string& classname, const token_t &token, error_handler* const& herr) {
+static inline definition_name* insnew(definition_scope *scope, int inherited_flags, const string& classname, const token_t &token, ErrorHandler* const& herr) {
   decpair dins = scope->declare_c_struct(classname, NULL);
   definition_name* nclass = NULL;
   if (dins.inserted)
@@ -55,7 +55,7 @@ static inline definition_name* insnew(definition_scope *scope, int inherited_fla
 
 
 static unsigned anon_count = 1;
-static inline int get_location(definition_name* &nclass, bool &will_redeclare, bool &already_complete, token_t &token, string &classname, definition_scope *scope, context_parser * const cp, error_handler *const herr) {
+static inline int get_location(definition_name* &nclass, bool &will_redeclare, bool &already_complete, token_t &token, string &classname, definition_scope *scope, context_parser * const cp, ErrorHandler *const herr) {
   if (token.type == TT_IDENTIFIER) {
     classname = token.content.toString();
     token = cp->read_next_token(scope);

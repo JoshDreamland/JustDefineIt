@@ -103,7 +103,7 @@ definition_enum* context_parser::handle_enum(definition_scope *scope, token_t& t
         continue;
       }
       render_ast(*ast, "enum_values");
-      value v = ast->eval(error_context(herr, token));
+      value v = ast->eval(ErrorContext(herr, token));
       if (v.type != VT_INTEGER && v.type != VT_DEPENDENT) {
         #ifdef DEBUG_MODE
           token.report_error(herr, "Expected integer result from expression; " + string(v.type == VT_DOUBLE? "floating point": v.type == VT_STRING? "string": "invalid") + " type given (expression: " + ast->expression + ")");

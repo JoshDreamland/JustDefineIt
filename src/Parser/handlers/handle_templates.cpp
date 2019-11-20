@@ -257,7 +257,8 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
           break;
         }
       }
-      if (check_read_template_parameters(argk, args_given, basetemp, token, herr)) {
+      if (check_read_template_parameters(argk, args_given, basetemp,
+                                         herr->at(token))) {
         delete temp; // XXX: Needed?
         return 1;
       }
@@ -395,11 +396,11 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
     
     definition_overload *tovr = new definition_overload(funcname, scope, funcrefs.def, funcrefs.refs, funcrefs.flags, DEF_FUNCTION);
     temp->def = tovr;
-    
+
     if (!func)
       scope->declare(funcname, func = new definition_function(funcname, scope));
-    func->overload(temp, herr);
-    
+    func->overload(temp, herr->at(token));
+
     if (token.type == TT_COLON) {
       token.report_error(herr, "Unexpected colon; `" + funcname + "' is not a constructor");
       return 1;
@@ -422,7 +423,8 @@ int context_parser::handle_template(definition_scope *scope, token_t& token, uns
       ovr->implementation = handle_function_implementation(lex, token, scope, herr);
     else ovr->flags |= DEF_INCOMPLETE;
     temp->def = ovr;
-    scope->overload_function("(cast)", temp, inherited_flags | funcflags, token, herr);
+    scope->overload_function("(cast)", temp, inherited_flags | funcflags,
+                             herr->at(token));
     return 0;
   }
   else if (token.type == TT_TEMPLATE) {

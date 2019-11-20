@@ -303,8 +303,10 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
           full_type ft = read_operatorkw_cast_type(token, scope);
           if (!ft.def)
             return 1;
-          if (!(decl = scope->overload_function("(cast)", ft, inherited_flags, token, herr)))
+          if (!(decl = scope->overload_function("(cast)", ft, inherited_flags,
+                                                herr->at(token)))) {
             return 1;
+          }
           goto handled_declarator_block;
       } break;
       

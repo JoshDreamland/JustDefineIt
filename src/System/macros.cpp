@@ -66,7 +66,7 @@ inline bool meaningful_span(const token_vector &tokens, size_t b, size_t e) {
 
 vector<macro_type::FuncComponent> macro_type::componentize(
     const token_vector &tokens, const vector<string> &params,
-    error_handler *herr) {
+    ErrorHandler *herr) {
   vector<macro_type::FuncComponent> res;
   std::unordered_map<std::string_view, size_t> params_by_name;
   for (size_t i = 0; i < params.size(); ++i) params_by_name[params[i]] = i;
@@ -128,7 +128,7 @@ vector<macro_type::FuncComponent> macro_type::componentize(
 }
 
 static token_t paste_tokens(
-    const token_t &left, const token_t &right, error_handler *herr) {
+    const token_t &left, const token_t &right, ErrorHandler *herr) {
   string buf = left.content.toString() + right.content.toString();
   llreader read("token concatenation", buf, false);
   token_t res = read_token(read, herr);
@@ -140,7 +140,7 @@ static token_t paste_tokens(
 }
 
 token_vector macro_type::evaluate_concats(const token_vector &replacement_list,
-                                          error_handler *herr) {
+                                          ErrorHandler *herr) {
   token_vector res;
   res.reserve(replacement_list.size());
   for (size_t i = 0; i < replacement_list.size(); ++i) {
@@ -164,7 +164,7 @@ token_vector macro_type::evaluate_concats(const token_vector &replacement_list,
 static void append_or_paste(token_vector &dest,
                             token_vector::const_iterator begin,
                             token_vector::const_iterator end,
-                            bool paste, error_handler *herr) {
+                            bool paste, ErrorHandler *herr) {
   if (begin == end) return;
   if (paste) {
     while (!dest.empty() && dest.back().preprocesses_away()) dest.pop_back();
@@ -179,23 +179,23 @@ static void append_or_paste(token_vector &dest,
 
 token_vector macro_type::substitute_and_unroll(
     const vector<token_vector> &args, const vector<token_vector> &args_evald,
-    error_handler *herr) const {
+    ErrorContext errc) const {
   token_vector res;
   bool paste_next = false;
   if (args.size() < params.size()) {
-    herr->error("Too few arguments to macro " + NameAndPrototype() +
-                ": wanted " + std::to_string(params.size()) +
-                ", got " + std::to_string(args.size()));
+    errc.error() << "Too few arguments to macro " << NameAndPrototype()
+                 << ": wanted " << params.size() << ", got " << args.size();
   }
   if (args.size() > params.size()) {
     if (!is_variadic) {
-      herr->error("Too many arguments to macro " + NameAndPrototype() +
-                  ": wanted " + std::to_string(params.size()) +
-                  ", got " + std::to_string(args.size()));
+      errc.error() << "Too many arguments to macro " << NameAndPrototype()
+                   << ": wanted " << params.size() << ", got " << args.size();
     } else if (args.size() != params.size() + 1) {
-      herr->error("Internal error: variadic macro passed too many arguments");
+      errc.error("Internal error: variadic macro passed too many arguments");
     }
   }
+  // Errors from here on out will concern tokens.
+  ErrorHandler *herr = errc.get_herr();
   for (const FuncComponent &part : parts) {
     switch (part.tag) {
       case FuncComponent::TOKEN_SPAN:
@@ -210,10 +210,10 @@ token_vector macro_type::substitute_and_unroll(
         const size_t ind = part.raw_expanded_or_stringify_argument.index;
         if (ind >= args.size()) {
           if (ind >= params.size()) {
-            herr->error(
-                "Internal error: Macro function built with bad argument "
-                "references. Index " + std::to_string(ind) + " out of bounds "
-                "(only " + std::to_string(params.size()) + " params defined).");
+            errc.error() << "Internal error: "
+                << "Macro function built with bad argument references. Index "
+                << ind << " out of bounds (only " << params.size()
+                << " params defined).";
           }
           paste_next = false;
           continue;
@@ -223,8 +223,8 @@ token_vector macro_type::substitute_and_unroll(
           for (const token_t &tok : args[ind])
             str += tok.content.toString();
           str = quote(str);
-          string name_str = "#" + params[ind];
-          token_vector vec{token_t(TT_STRINGLITERAL, name_str.c_str(), 0, 0, std::move(str))};
+          const string &name_str = params[ind];
+          token_vector vec{token_t(TT_STRINGLITERAL, name_str, 0, 0, std::move(str))};
           append_or_paste(res, vec.begin(), vec.end(), paste_next, herr);
           paste_next = false;
           break;
@@ -260,7 +260,7 @@ token_vector macro_type::substitute_and_unroll(
         break;
       }
       default:
-        herr->error("Internal error: Macro function component unknown...");
+        errc.error("Internal error: Macro function component unknown...");
     }
   }
   return res;
