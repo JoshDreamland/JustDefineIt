@@ -404,6 +404,7 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
       
       case TT_ALIGNAS:
       case TT_NOEXCEPT:
+      case TT_ATTRIBUTE:
         return read_referencers_post(refs, token, scope);
       
       case TT_AMPERSAND: case TT_STAR: {
@@ -428,9 +429,11 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
       case TT_PUBLIC: case TT_FRIEND: case TT_PRIVATE: case TT_PROTECTED: case TT_COLON:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_LESSTHAN: case TT_GREATERTHAN:
-      case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_DECLTYPE: case TT_TYPEID:
+      case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY:
+      case TT_DECLTYPE: case TT_TYPEOF: case TT_TYPEID:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL:
-      case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_BINLITERAL:
+      case TT_CHARLITERAL: case TT_DECLITERAL: case TT_HEXLITERAL:
+      case TT_OCTLITERAL: case TT_BINLITERAL: case TT_TRUE: case TT_FALSE:
       case TT_NEW: case TT_DELETE:
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_ALIGNOF: case TT_CONSTEXPR: case TT_AUTO: case TT_STATIC_ASSERT:
@@ -442,9 +445,10 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
       case TT_ARROW: case TT_DOT: case TT_ARROW_STAR: case TT_DOT_STAR:
       case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
-      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN:
+      case TT_NEGATE_ASSIGN: case TT_EXTENSION:
       case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING:
-      case TTM_WHITESPACE:case TTM_COMMENT: case TTM_NEWLINE:
+      case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:
       case TT_INVALID: default: default_:
       #include <User/token_cases.h>
         return 0;
@@ -509,6 +513,10 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
       case TT_NOEXCEPT:
           token.report_error(herr, "Unimplemented: `noexcept'");
         return 1;
+
+      case TT_ATTRIBUTE:
+          token.report_error(herr, "Unimplemented: `noexcept'");
+        return 1;
       
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
@@ -525,20 +533,24 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
       case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND: case TT_DEFINITION: 
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE: case TT_OPERATORKW:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF:
-      case TT_DECLTYPE: case TT_TYPEID: case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
+      case TT_DECLTYPE: case TT_TYPEID: case TT_TYPEOF: case TT_CONST_CAST:
+      case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_COMMA: case TT_SEMICOLON: case TT_STRINGLITERAL: case TT_CHARLITERAL:
-      case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_BINLITERAL:
-      case TT_NEW: case TT_DELETE: case TT_STATIC_ASSERT: case TT_CONSTEXPR: case TT_AUTO:
-      
+      case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
+      case TT_BINLITERAL: case TT_TRUE: case TT_FALSE:
+      case TT_NEW: case TT_DELETE: case TT_STATIC_ASSERT: case TT_CONSTEXPR:
+      case TT_AUTO: case TT_EXTENSION:
+
       case TT_PLUS: case TT_MINUS: case TT_SLASH: case TT_MODULO: case TT_INCREMENT: case TT_DECREMENT:
       case TT_EQUAL_TO: case TT_NOT_EQUAL_TO: case TT_LESS_EQUAL: case TT_GREATER_EQUAL: case TT_NOT:
       case TT_LSHIFT: case TT_RSHIFT: case TT_AMPERSANDS: case TT_PIPE: case TT_PIPES: case TT_CARET:
       case TT_DOT: case TT_ARROW: case TT_ARROW_STAR: case TT_DOT_STAR: case TT_QUESTIONMARK:
-      
+
       case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
-      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
-      
+      case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN:
+      case TT_NEGATE_ASSIGN:
+
       case TT_ENDOFCODE:
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       case TTM_WHITESPACE:case TTM_COMMENT: case TTM_NEWLINE:

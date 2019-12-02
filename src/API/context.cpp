@@ -1,23 +1,23 @@
 /**
  * @file  context.cpp
  * @brief Source implementing methods for creating contexts of parsed code.
- * 
+ *
  * In general, the implementation is unremarkable. See the header documentation
  * for details on behavior and usage.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011-2012 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
+ *
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
  * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -74,7 +74,7 @@ void Context::add_macro_func(string definiendum, string p1, string p2, string de
   arglist.push_back(p1);
   arglist.push_back(p2);
   macros[definiendum] = new_macro(definiendum,  std::move(arglist), variadic,
-                                  parse_macro(definiendum, definiens, herr), 
+                                  parse_macro(definiendum, definiens, herr),
                                   herr);
 }
 void Context::add_macro_func(string definiendum, string p1, string p2, string p3, string definiens, bool variadic)
@@ -84,7 +84,7 @@ void Context::add_macro_func(string definiendum, string p1, string p2, string p3
   arglist.push_back(p2);
   arglist.push_back(p3);
   macros[definiendum] = new_macro(definiendum,  std::move(arglist), variadic,
-                                  parse_macro(definiendum, definiens, herr), 
+                                  parse_macro(definiendum, definiens, herr),
                                   herr);
 }
 
@@ -99,11 +99,11 @@ void Context::read_search_directories_gnu(const char* filename, const char* begi
 {
   ifstream in(filename);
   if (!in.is_open()) return;
-  
+
   const size_t ln = strlen(filename) + MAX_PATH;
   const size_t bll = begin_line ? strlen(begin_line) : size_t(-1), ell = end_line ? strlen(end_line) : size_t(-1);
   char *sdir = new char[ln];
-  
+
   while (!in.eof())
   {
     *sdir = 0;
@@ -124,7 +124,7 @@ void Context::read_search_directories_gnu(const char* filename, const char* begi
         break;
     add_search_directory(dir);
   }
-  
+
   delete[] sdir;
   in.close();
 }
@@ -143,18 +143,18 @@ static definition* find_mirror(definition *x, definition_scope* root) {
 
 void Context::reset()
 {
-  
+
 }
 void Context::reset_all()
 {
-  
+
 }
 void Context::copy(const Context &ct)
 {
   remap_set n;
   ct.global->copy(global.get(), n);
   ct.global->remap(n, ErrorContext(herr, {"Internal Copy Operation", 0, 0}));
-  
+
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
     pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
     if (dest.second) {
@@ -210,48 +210,35 @@ void Context::load_standard_builtins()
   keywords["using"] = TT_USING;
   keywords["new"] = TT_NEW;
   keywords["delete"] = TT_DELETE;
-  
+
   keywords["const_cast"] = TT_CONST_CAST;
   keywords["static_cast"] = TT_STATIC_CAST;
   keywords["dynamic_cast"] = TT_DYNAMIC_CAST;
   keywords["reinterpret_cast"] = TT_REINTERPRET_CAST;
-  
+
   keywords["auto"] = TT_AUTO;
   keywords["alignas"] = TT_ALIGNAS;
   keywords["alignof"] = TT_ALIGNOF;
   keywords["constexpr"] = TT_CONSTEXPR;
   keywords["noexcept"] = TT_NOEXCEPT;
   keywords["static_assert"] = TT_STATIC_ASSERT;
-  
+
   // GNU Extensions - These are all rolled into the standard in some form.
-  // keywords["__attribute__"] = TT_INVALID;
-  // keywords["__extension__"] = TT_INVALID;
-  // keywords["__typeof__"] = TT_INVALID;
-  // keywords["__typeof"] = TT_INVALID;
-  // keywords["__restrict"] = TT_INVALID;
-  
+  keywords["__attribute__"] = TT_ATTRIBUTE;
+  keywords["__extension__"] = TT_EXTENSION;
+  keywords["__typeof__"] = TT_TYPEOF;
+  keywords["__typeof"] = TT_TYPEOF;
+
   // MinGW Fuckery
   keywords["__MINGW_IMPORT"] = TT_INVALID;
-  
+
   // C++ Extensions
-  keywords["false"] = TT_INVALID;
-  keywords["true"] = TT_INVALID;
-  
-  string x(1,'x');
-  kludge_map.clear();
-  global_macros().swap(kludge_map);
-  add_macro_func("__attribute__", x, string(), false);
-  add_macro_func("__typeof__", x, string("int"), false);
-  add_macro_func("__typeof", x, string("int"), false);
-  add_macro("__extension__", string());
-  add_macro("__MINGW_IMPORT", string());
-  add_macro("false", string(1,'0'));
-  add_macro("true", string(1,'1'));
-  global_macros().swap(kludge_map);
+  keywords["false"] = TT_FALSE;
+  keywords["true"] = TT_TRUE;
 }
 void Context::load_gnu_builtins()
 {
-  
+
 }
 
 #include <iostream>
@@ -270,7 +257,7 @@ void Context::output_macro(string macroname, ostream &out)
   if (it == macros.end()) out << "Macro `" << macroname << "' has not been defined." << endl;
   else print_macro(it, out);
 }
-void Context::output_macros(ostream &out) 
+void Context::output_macros(ostream &out)
 {
   for (macro_iter it = macros.begin(); it != macros.end(); it++)
     print_macro(it, out);

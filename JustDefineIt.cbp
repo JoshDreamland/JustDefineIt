@@ -182,6 +182,9 @@
 		<Unit filename="src/System/token.cpp" />
 		<Unit filename="src/System/token.h" />
 		<Unit filename="src/System/type_usage_flags.h" />
+		<Unit filename="test/General/error_handler_test.cc">
+			<Option target="Test" />
+		</Unit>
 		<Unit filename="test/Lexer/lexer_test.cc">
 			<Option target="Test" />
 		</Unit>

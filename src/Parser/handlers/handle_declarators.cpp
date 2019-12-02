@@ -274,7 +274,8 @@ int jdi::context_parser::handle_declarators(definition_scope *scope, token_t& to
       case GTT_LITERAL:
           token.report_error(herr, "Expected initializer `=' here before literal.");
         return 5;
-      
+
+      case GTT_ASM: case GTT_OPERATORKW:
       case GTT_DECLARATOR: case GTT_BRACKET: case GTT_MEMORYOP: case GTT_PREPROCESSOR:
       case GTT_CONSTRUCT: case GTT_TYPEOP: case GTT_VISIBILITYSPEC: case GTT_IDENTIFIER:
       case GTT_TEMPLATE: case GTT_USING: case GTT_ARITHMETIC: case GTT_RELATIVE_ASSIGN:

@@ -51,53 +51,42 @@ static struct token_info_c {
 
       TKD(TT_DECLARATOR,       "declarator");
       TKD(TT_DECFLAG,          "`%f' declarator");
+      TKD(TT_TYPENAME,         "`typename' token");
+      TKD(TT_INLINE,           "`inline' token");
+      TKD(TT_EXTERN,           "`extern' token");
+      TKD(TT_TYPEDEF,          "`typedef' token");
+      TKD(TT_AUTO,             "`autp' token");
+      TKD(TT_ALIGNAS,          "`alignas' token");
+      TKD(TT_ATTRIBUTE,        "`attribute' token");
+      TKD(TT_CONSTEXPR,        "`constexpr' token");
+      TKD(TT_NOEXCEPT,         "`noexcept' token");
+
       TKD(TT_CLASS,            "`class' token");
       TKD(TT_STRUCT,           "`struct' token");
       TKD(TT_ENUM,             "`enum' token");
       TKD(TT_UNION,            "`union' token");
       TKD(TT_NAMESPACE,        "`namespace' token");
-      TKD(TT_EXTERN,           "`extern' token");
-      TKD(TT_INLINE,           "`inline' token");
 
+      TKD(TT_USING,            "`using' token");
+      TKD(TT_TEMPLATE,         "`template' token");
       TKD(TT_ASM,              "`asm' token");
       TKD(TT_OPERATORKW,       "`operator' token");
-      TKD(TT_SIZEOF,           "`sizeof' token");
-      TKD(TT_ISEMPTY,          "`is_empty' token");
-      TKD(TT_DECLTYPE,         "`decltype' token");
-      TKD(TT_TYPEID,           "`typeid' token");
 
-      TKD(TT_ALIGNAS,          "`alignas' token");
+      TKD(TT_SIZEOF,           "`sizeof' token");
       TKD(TT_ALIGNOF,          "`alignof' token");
-      TKD(TT_AUTO,             "`autp' token");
-      TKD(TT_CONSTEXPR,        "`constexpr' token");
-      TKD(TT_NOEXCEPT,         "`noexcept' token");
+      TKD(TT_DECLTYPE,         "`decltype' token");
+      TKD(TT_TYPEOF,           "`typeof' token");
+      TKD(TT_ISEMPTY,          "`is_empty' token");
+      TKD(TT_TYPEID,           "`typeid' token");
+      TKD(TT_STATIC_ASSERT,    "`static_assert' keyword");
 
       TKD(TT_IDENTIFIER,       "identifier (\"%s\")");
       TKD(TT_DEFINITION,       "identifier (\"%s\")");
-
-      TKD(TT_TEMPLATE,         "`template' token");
-      TKD(TT_TYPENAME,         "`typename' token");
-
-      TKD(TT_TYPEDEF,          "`typedef' token");
-      TKD(TT_USING,            "`using' token");
 
       TKD(TT_PUBLIC,           "`public' token");
       TKD(TT_PRIVATE,          "`private' token");
       TKD(TT_PROTECTED,        "`protected' token");
       TKD(TT_FRIEND,           "`friend' token");
-
-      TKD(TT_COLON,            "`:' token");
-      TKD(TT_SCOPE,            "`::' token");
-      TKD(TT_MEMBER,           "`::*' token");
-
-      TKD(TT_LEFTPARENTH,      "'(' token");
-      TKD(TT_RIGHTPARENTH,     "')' token");
-      TKD(TT_LEFTBRACKET,      "'[' token");
-      TKD(TT_RIGHTBRACKET,     "']' token");
-      TKD(TT_LEFTBRACE,        "'{' token");
-      TKD(TT_RIGHTBRACE,       "'}' token");
-      TKD(TT_LESSTHAN,         "'<' token");
-      TKD(TT_GREATERTHAN,      "'>' token");
 
       TKD(TT_PLUS,              "'+' operator");
       TKD(TT_MINUS,             "'-' operator");
@@ -120,7 +109,9 @@ static struct token_info_c {
       TKD(TT_ARROW_STAR,      "`->*' operator");
       TKD(TT_DOT_STAR,         "`.*' operator");
       TKD(TT_QUESTIONMARK,      "'?' operator");
+
       TKD(TT_EQUAL,             "`=' operator");
+
       TKD(TT_ADD_ASSIGN,       "`+=' operator");
       TKD(TT_SUBTRACT_ASSIGN,  "`-=' operator");
       TKD(TT_MULTIPLY_ASSIGN,  "`*=' operator");
@@ -132,14 +123,27 @@ static struct token_info_c {
       TKD(TT_OR_ASSIGN,        "`|=' operator");
       TKD(TT_XOR_ASSIGN,       "`^=' operator");
       TKD(TT_NEGATE_ASSIGN,    "`~=' operator");
+
+      TKD(TT_LESSTHAN,         "'<' token");
+      TKD(TT_GREATERTHAN,      "'>' token");
       TKD(TT_LSHIFT,           "`<<' operator");
       TKD(TT_RSHIFT,           "`>>' operator");
-      TKD(TT_NOT,               "`!' operator");
-      TKD(TT_TILDE,             "'~' token");
-      TKD(TT_ELLIPSIS,        "`...' token");
 
+      TKD(TT_COLON,            "`:' token");
+      TKD(TT_SCOPE,            "`::' token");
+      TKD(TT_MEMBER,           "`::*' token");
+      TKD(TT_TILDE,             "'~' token");
+      TKD(TT_NOT,               "`!' operator");
+      TKD(TT_ELLIPSIS,        "`...' token");
       TKD(TT_COMMA,            "',' token");
       TKD(TT_SEMICOLON,        "';' token");
+
+      TKD(TT_LEFTPARENTH,      "'(' token");
+      TKD(TT_RIGHTPARENTH,     "')' token");
+      TKD(TT_LEFTBRACKET,      "'[' token");
+      TKD(TT_RIGHTBRACKET,     "']' token");
+      TKD(TT_LEFTBRACE,        "'{' token");
+      TKD(TT_RIGHTBRACE,       "'}' token");
 
       TKD(TT_STRINGLITERAL,    "string literal %s");
       TKD(TT_CHARLITERAL,      "character literal %s");
@@ -147,21 +151,22 @@ static struct token_info_c {
       TKD(TT_HEXLITERAL,       "hexadecimal literal %s");
       TKD(TT_OCTLITERAL,       "octal literal %s");
       TKD(TT_BINLITERAL,       "binary literal %s");
+      TKD(TT_TRUE,             "`true' keyword");
+      TKD(TT_FALSE,            "`false' keyword");
+
+      TKD(TT_NEW,              "`new' keyword");
+      TKD(TT_DELETE,           "`delete' keyword");
+      TKD(TT_CONST_CAST,       "`const_cast' keyword");
+      TKD(TT_STATIC_CAST,      "`static_cast' keyword");
+      TKD(TT_DYNAMIC_CAST,     "`dynamic_cast' keyword");
+      TKD(TT_REINTERPRET_CAST, "`reinterpret_cast' keyword");
+      TKD(TT_EXTENSION,        "`extension' token");
 
       TKD(TTM_CONCAT,          "`##' token");
       TKD(TTM_TOSTRING,        "`#' token");
       TKD(TTM_COMMENT,         "...comment(?)");
       TKD(TTM_NEWLINE,         "...newline(?)");
       TKD(TTM_WHITESPACE,      "...whitespace(?)");
-
-      TKD(TT_NEW,              "`new' keyword");
-      TKD(TT_DELETE,           "`delete' keyword");
-
-      TKD(TT_CONST_CAST,       "`const_cast' keyword");
-      TKD(TT_STATIC_CAST,      "`static_cast' keyword");
-      TKD(TT_DYNAMIC_CAST,     "`dynamic_cast' keyword");
-      TKD(TT_REINTERPRET_CAST, "`reinterpret_cast' keyword");
-      TKD(TT_STATIC_ASSERT,    "`static_assert' keyword");
 
       TKD(TT_ENDOFCODE, "end of code");
       #define handle_user_token(tname, desc) TKD(tname, desc);

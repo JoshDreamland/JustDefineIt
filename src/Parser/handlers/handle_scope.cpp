@@ -36,7 +36,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
   {
     switch (token.type)
     {
-      case TT_TYPENAME: case TT_INLINE:
+      case TT_TYPENAME: case TT_INLINE: case TT_ATTRIBUTE: case TT_TYPEOF:
       case TT_DECFLAG: case TT_DECLTYPE: case TT_DECLARATOR: case_TT_DECLARATOR:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_TILDE:
           decl = NULL;
@@ -313,7 +313,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_ALIGNAS:
       case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
       case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_BINLITERAL:
-      case TT_STRINGLITERAL: case TT_CHARLITERAL:
+      case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_TRUE: case TT_FALSE:
       case TT_NEW: case TT_DELETE: 
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       
@@ -327,7 +327,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
       
-      case TT_NOEXCEPT: case TT_TYPEID:
+      case TT_NOEXCEPT: case TT_TYPEID: case TT_EXTENSION:
 
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:

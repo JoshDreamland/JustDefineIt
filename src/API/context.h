@@ -167,15 +167,12 @@ namespace jdi
     
     /// Get a non-const reference to the global macro set.
     static macro_map &global_macros();
-    
+
     /// List of C++ keywords, mapped to the type of their token.
     /// This list is assumed to contain tokens whose contents are unambiguous;
     /// one string maps to one token, and vice-versa.
     keyword_map keywords;
-    /// This is a map of macros to add bare-minimal support for a number of
-    /// compiler-specific builtins.
-    macro_map kludge_map;
-    
+
     /** Parse an input stream for definitions.
         @param cfile     The stream to be read in.
     **/

@@ -145,6 +145,7 @@ namespace jdi {
     builtin_flag__Complex  = add_declarator("_Complex", UF_FLAG).flag;
     
     builtin_typeflag__throw = add_declarator("throw", UF_FLAG).tf_struct;
+    builtin_flag__restrict = add_declarator("restrict", UF_FLAG).flag;
     builtin_flag__restrict = add_declarator("__restrict", UF_FLAG).flag;
     
     jdi::add_decl_info

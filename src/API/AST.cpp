@@ -107,9 +107,9 @@ namespace jdi {
     
     bool read_next = false; // True at the end of this switch if the next token has already been read.
     bool handled_basics = false; // True at the end of this switch if the basic token info was already read in.
-    switch (token.type)
-    {
-      case TT_DECFLAG: case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_EXTERN: {
+    switch (token.type) {
+      case TT_DECFLAG: case TT_EXTERN:
+      case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: {
           full_type ft = cparse->read_type(token, search_scope); // Read the full set of declarators
           track(ft.toString());
           myroot = new AST_Node_Type(ft);
@@ -258,7 +258,11 @@ namespace jdi {
         myroot = array;
       }
       break;
-      
+
+      case TT_EXTENSION:  // This is GNU warning us shit's about to go down.
+        token = get_next_token();
+        return parse_expression(ast, token, prec_min);
+
       case TT_NEW: {
         token = get_next_token();
         AST_Node_new* ann = new AST_Node_new();
@@ -318,22 +322,37 @@ namespace jdi {
       case TT_CHARLITERAL:   myroot = new AST_Node(unescape(token.content.str, token.content.len), at = AT_CHRLITERAL);
                              track(token.content.toString()); break;
       
-      case TT_DECLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_DECLITERAL);
-                          track(myroot->content); break;
-      case TT_HEXLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_HEXLITERAL);
-                          track(myroot->content); break;
-      case TT_OCTLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_OCTLITERAL);
-                          track(myroot->content); break;
-      case TT_BINLITERAL: myroot = new AST_Node(token.content.toString(), at = AT_BINLITERAL);
-                          track(myroot->content); break;
-      
+      case TT_DECLITERAL:
+          myroot = new AST_Node(token.content.toString(), at = AT_DECLITERAL);
+          track(myroot->content);
+        break;
+      case TT_HEXLITERAL:
+          myroot = new AST_Node(token.content.toString(), at = AT_HEXLITERAL);
+          track(myroot->content);
+        break;
+      case TT_OCTLITERAL:
+          myroot = new AST_Node(token.content.toString(), at = AT_OCTLITERAL);
+          track(myroot->content);
+        break;
+      case TT_BINLITERAL:
+          myroot = new AST_Node(token.content.toString(), at = AT_BINLITERAL);
+          track(myroot->content);
+        break;
+      case TT_TRUE: case TT_FALSE:
+          myroot = new AST_Node(token.content.toString(), at = AT_BOOLLITERAL);
+          track(myroot->content);
+        break;
+
       case TT_DECLTYPE:
           token.report_error(herr, "Unimplemented: `decltype'.");
+        return NULL;
+      case TT_TYPEOF:
+          token.report_error(herr, "Unimplemented: `typeof'.");
         return NULL;
       case TT_TYPEID:
           token.report_error(herr, "Unimplemented: `typeid'.");
         return NULL;
-      
+
       case TT_NOEXCEPT:
           token.report_error(herr, "Unimplemented: `noexcept'.");
         return NULL;
@@ -404,17 +423,17 @@ namespace jdi {
       case TT_ELLIPSIS:
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE:
         // Overflow; same error.
-      case TT_NAMESPACE: case TT_ENDOFCODE: case TT_TYPEDEF: case TT_ASM:
-      case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
+      case TT_NAMESPACE: case TT_ENDOFCODE: case TT_ASM: case TT_TYPEDEF:
+      case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
       case TT_ALIGNAS: case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
-      case TT_INLINE:
+      case TT_ATTRIBUTE: case TT_USING: case TT_INLINE:
       #include <User/token_cases.h>
         token.report_errorf(herr, "Expected expression before %s");
         return NULL;
 
       case TTM_CONCAT: case TTM_TOSTRING:
       case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:
-        token.report_error(herr, "Illogical token type returned!");
+      token.report_error(herr, "Illogical token type returned!");
         return NULL;
       case TT_INVALID: default: token.report_error(herr, "Invalid token type returned!");
         return NULL;
@@ -733,13 +752,11 @@ namespace jdi {
       
       case TT_LEFTBRACE:
       case TT_SEMICOLON:
-      case TT_STRINGLITERAL:
-      case TT_CHARLITERAL:
-      case TT_DECLITERAL:
-      case TT_HEXLITERAL:
-      case TT_OCTLITERAL:
-      case TT_BINLITERAL:
-      
+
+      case TT_STRINGLITERAL: case TT_CHARLITERAL:
+      case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL:
+      case TT_BINLITERAL: case TT_TRUE: case TT_FALSE:
+
       case TT_ELLIPSIS:
       
       case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_RIGHTBRACE: return left_node;
@@ -748,10 +765,11 @@ namespace jdi {
       case TT_USING: case TT_PUBLIC: case TT_PRIVATE: case TT_PROTECTED: case TT_FRIEND:
       case TT_ALIGNAS: case TT_AUTO: case TT_CONSTEXPR: case TT_STATIC_ASSERT:
       
-      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_DECLTYPE: case TT_TYPEID:
+      case TT_ASM: case TT_OPERATORKW: case TT_SIZEOF: case TT_ISEMPTY:
+      case TT_ALIGNOF: case TT_DECLTYPE: case TT_TYPEID: case TT_TYPEOF:
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
       case TT_NEW: case TT_DELETE:
-      case TT_NOEXCEPT:
+      case TT_NOEXCEPT: case TT_ATTRIBUTE: case TT_EXTENSION:
       #include <User/token_cases.h>
       return left_node;
 

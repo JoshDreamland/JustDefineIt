@@ -1329,19 +1329,9 @@ bool lexer::handle_macro(token_t &identifier) {
   keyword_map::iterator kwit = builtin->keywords.find(fn);
   if (kwit != builtin->keywords.end()) {
     if (kwit->second == TT_INVALID) {
-      mi = builtin->kludge_map.find(fn);
-      if (mi == builtin->kludge_map.end()) {
-        cerr << "SYSTEM ERROR! KEYWORD `" << fn
-             << "' IS DEFINED AS INVALID" << endl;
-        return false;
-      }
-      if (mi->second->is_function) {
-        if (!parse_macro_function(identifier, *mi->second))
-          return false;
-      } else {
-        enter_macro(identifier, *mi->second);
-      }
-      return true;
+      herr->error(identifier) << "Internal error: keyword " << PQuote(fn)
+                              << " was defined as an invalid token";
+      return false;
     }
     identifier.type = kwit->second;
     return false;
@@ -1357,9 +1347,8 @@ bool lexer::translate_identifier(token_t &identifier) {
   keyword_map::iterator kwit = builtin->keywords.find(fn);
   if (kwit != builtin->keywords.end()) {
     if (kwit->second == TT_INVALID) {
-      // TODO(CXX11): Delete the kludge map, then delete this.
-      cerr << "SYSTEM ERROR! KEYWORD `" << fn
-           << "' SHOULD HAVE BEEN HANDLED IN KLUDGE MAP" << endl;
+      herr->error(identifier) << "Internal error: keyword " << PQuote(fn)
+                              << " was defined as an invalid token";
       return false;
     }
     identifier.type = kwit->second;
