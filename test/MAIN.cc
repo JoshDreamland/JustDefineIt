@@ -1,14 +1,14 @@
 /* Copyright (C) 2011-2013 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- * 
+ *
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 */
@@ -28,8 +28,8 @@
 
 #ifdef linux
   #include <sys/time.h>
-  #define start_time(ts) timeval ts; usleep(10000); gettimeofday(&ts,NULL)
-  #define end_time(te,tel) timeval te; gettimeofday(&te,NULL); long unsigned tel = (te.tv_sec*1000000 + te.tv_usec) - (ts.tv_sec*1000000 + ts.tv_usec)
+  #define start_time(ts) timeval ts; usleep(10000); gettimeofday(&ts,nullptr)
+  #define end_time(te,tel) timeval te; gettimeofday(&te,nullptr); long unsigned tel = (te.tv_sec*1000000 + te.tv_usec) - (ts.tv_sec*1000000 + ts.tv_usec)
 #else
   #include <time.h>
   #define start_time(ts) time_t ts = clock()
@@ -140,12 +140,12 @@ std::vector<std::string> get_gcc_include_paths(int standard) {
     std::cout << "System include paths: " << std::endl;
     while(std::getline(search_dirs_f, line)) {
       if (line == "End of search list.") search_dirs = false;
-       
+
       if (search_dirs) {
         std::cout << "  " << line << std::endl;
         include_paths.push_back(line.substr(1, line.length()));
       }
-      
+
       if (line == "#include <...> search starts here:") search_dirs = true;
     }
   } else exit(1);
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
   fs::path home = first_not_null(getenv("HOME"), "/tmp/");
   fs::path enigma_path = home/"Projects/ENIGMA";
   fs::path enigma_temp = home/".enigma";
-  bool skip_parser = true;
+  bool skip_parser = false;
   int cpp_std = 20;
   if (argc != 4) {
     std::cerr << "Usage: JustDefineIt <c++std> </path/to/enigma> <skip parser>" << std::endl;
@@ -172,13 +172,13 @@ int main(int argc, char** argv) {
     }
 
     enigma_path = argv[2];
-    if (!fs::exists(enigma_path)) { 
+    if (!fs::exists(enigma_path)) {
       std::cerr << "could not locate enigma at: " << enigma_path << std::endl;
       return -1;
     }
 
-    skip_parser = stoi(argv[3], NULL, 10);
-    cpp_std = stoi(argv[1], NULL, 10);
+    skip_parser = stoi(argv[3], nullptr, 10);
+    cpp_std = stoi(argv[1], nullptr, 10);
 
     std::cout << "Attemping parse of the " << get_cpp_standard_str(cpp_std)  << " standard" << std::endl << std::endl;
 
@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
       return -1;
     }
   }
-  
+
   putcap("Test simple macros");
   Context &builtin = builtin_context();
   builtin.add_macro("scalar_macro","simple value");
@@ -198,16 +198,16 @@ int main(int argc, char** argv) {
   builtin.add_macro_func("two_arg_function","a","b","(-(b)/(2*(a)))",false);
   builtin.add_macro_func("variadic_three_arg_function","a","b","c","printf(a,b,c)",true);
   //builtin->output_macros();
-  
+
   putcap("Metrics");
   cout << "sizeof(jdi::macro_type):         " << sizeof(jdi::macro_type) << endl
        << "sizeof(jdi::definition):         " << sizeof(jdi::definition) << endl
        << "sizeof(jdi::ref_stack):          " << sizeof(jdi::ref_stack) << endl
        << "sizeof(jdi::full_type):          " << sizeof(jdi::full_type) << endl
        << "sizeof(jdi::template::arg_key):  " << sizeof(jdi::arg_key) << endl;
-  
+
   //test_expression_evaluator();
-  
+
   cout << endl << "Test arg_key::operator<" << endl;
   {
     arg_key a(2), b(2);
@@ -236,12 +236,12 @@ int main(int argc, char** argv) {
     return -1;
   }
   llreader macro_reader("/tmp/jdi/defines.txt");
-  
+
   if (macro_reader.is_open())
     builtin.parse_stream(macro_reader);
   else
     cout << "ERROR: Could not open GCC macro file for parse!" << endl;
-  
+
   putcap("Test type reading");
   name_type("int", builtin);
   name_type("int*", builtin);
@@ -307,10 +307,10 @@ int main(int argc, char** argv) {
     printf("Final stats: %lu correct, %lu incorrect\n", correct, incorrect);
     return 0;
   }
-  
+
   putcap("Test parser");
   llreader f((enigma_path/"ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
-  
+
   if (f.is_open())
   {
     /* */
@@ -319,14 +319,14 @@ int main(int argc, char** argv) {
     int res = enigma.parse_stream(f);
     end_time(te,tel);
     cout << "Parse finished in " << tel << " microseconds." << endl;
-    
+
     //enigma.output_definitions();
     if (res)
       cout << endl << "====[------------------------------ FAILURE. ------------------------------]====" << endl << endl;
     else
       cout << endl << "====[++++++++++++++++++++++++++++++ SUCCESS! ++++++++++++++++++++++++++++++]====" << endl << endl;
     cout << "Parse completed with " << default_error_handler->error_count << " errors and " << default_error_handler->warning_count << " warnings." << endl;
-    
+
     do_cli(enigma);
     /*/
     macro_map m;
@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
   }
   else
     cout << "Failed to open file for parsing!" << endl;
-  
+
   clean_up();
   return 0;
 }
@@ -397,18 +397,18 @@ void do_cli(Context &ct)
           }
           else if (justorder) {
             if (def->flags & DEF_TEMPLATE)
-              def = ((definition_template*)def)->def;
+              def = ((definition_template*)def)->def.get();
             if (def->flags & DEF_SCOPE) {
               definition_scope *sc = (definition_scope*)def;
               for (definition_scope::orditer it = sc->dec_order.begin(); it != sc->dec_order.end(); ++it)
-                cout << "- " << (((*it)->def())? ((*it)->def())->name : "<null>") << endl;
+                cout << "- " << ((*it)->second ? (*it)->second->name : "<null>") << endl;
             }
           }
           else
             cout << def->toString() << endl;
         }
       } break;
-    
+
     case 'm': {
         cout << "Enter the macro to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
@@ -418,7 +418,7 @@ void do_cli(Context &ct)
         else
           cout << "Not found." << endl;
       } break;
-    
+
     case 'e': {
         bool eval, coerce, render, show;
         eval = true,
@@ -449,7 +449,7 @@ void do_cli(Context &ct)
           if (coerce) {
             full_type t = a.coerce(ErrorContext(default_error_handler, dummy));
             cout << "Type of expression: " << t.toString() << endl;
-            cout << (t.def? t.def->toString() : "NULL") << endl;
+            cout << (t.def? t.def->toString() : "nullptr") << endl;
           }
           if (show) {
             a.writeSVG("/tmp/anus.svg");
@@ -458,7 +458,7 @@ void do_cli(Context &ct)
           }
         } else cout << "Bailing." << endl;
       } break;
-    
+
     case 'h':
       cout <<
       "'c' Coerce an expression, printing its type\n"
@@ -472,11 +472,11 @@ void do_cli(Context &ct)
       "'s' Render an AST representing an expression and show it\n"
       "'q' Quit this interface\n";
     break;
-      
-    
+
+
     default: cout << "Unrecognized command. Empty command or 'q' to quit." << endl << endl; break;
     case ' ': cout << "Commands are single-letter; 'h' for help." << endl << "Follow commands with ENTER on non-unix." << endl;
-  } 
+  }
   cout << "> " << flush;
   c = getch();
   }
@@ -486,26 +486,26 @@ void do_cli(Context &ct)
 #if 0
 void test_expression_evaluator() {
   putcap("Test expression evaluator");
-  
+
   lexer dlex;
   context ct;//(&dlex, default_error_handler);
   context_parser cp(&ct, &dlex, default_error_handler);
   AST ast;
   ErrorContext dec(default_error_handler, "Test AST", 0, 0);
-  
+
   dlex << create_token_dec_literal("10",2);
   cp.get_AST_builder()->parse_expression(&ast);
   value v = ast.eval(dec);
   ast.writeSVG("/tmp/jdi/AST_00.svg");
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   cp.get_AST_builder()->parse_expression(&ast);
   v = ast.eval(dec);
   ast.writeSVG("/tmp/jdi/AST_01.svg");
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
@@ -514,7 +514,7 @@ void test_expression_evaluator() {
   v = ast.eval(dec);
   ast.writeSVG("/tmp/jdi/AST_02.svg");
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
@@ -525,7 +525,7 @@ void test_expression_evaluator() {
   ast.writeSVG("/tmp/jdi/AST_03.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
@@ -536,7 +536,7 @@ void test_expression_evaluator() {
   ast.writeSVG("/tmp/jdi/AST_04.svg");
   v = ast.eval(dec); dlex.clear();
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("20",2);
   dlex << create_token_operator(jdi::TT_PLUS, "+",1);
@@ -550,7 +550,7 @@ void test_expression_evaluator() {
   ast.writeSVG("/tmp/jdi/AST_05.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("2",1);
   dlex << create_token_operator(jdi::TT_LSHIFT, "<<",2);
@@ -589,7 +589,7 @@ void test_expression_evaluator() {
   ast.writeSVG("/tmp/jdi/AST_06.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
-  
+
   ast.clear(); dlex.clear();
   dlex << create_token_dec_literal("25",2);
   dlex << create_token_operator(jdi::TT_SLASH, "/",1);
@@ -614,7 +614,7 @@ void test_expression_evaluator() {
   ast.writeSVG("/tmp/jdi/AST_07.svg");
   v = ast.eval(dec);
   cout << v.val.i << endl;
-  
+
   ast.clear();
   dlex << create_token_identifier("a",1);
   dlex << create_token_operator(jdi::TT_EQUAL, "=",1);

@@ -134,6 +134,7 @@
 		<Unit filename="src/General/strings.h" />
 		<Unit filename="src/General/svg_simple.cpp" />
 		<Unit filename="src/General/svg_simple.h" />
+		<Unit filename="src/General/utils.h" />
 		<Unit filename="src/Parser/base.cpp" />
 		<Unit filename="src/Parser/cclass_base.h" />
 		<Unit filename="src/Parser/context_parser.cpp" />

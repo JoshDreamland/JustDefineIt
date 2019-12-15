@@ -11,9 +11,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -39,11 +39,11 @@ full_type jdi::context_parser::read_fulltype(token_t &token, definition_scope *s
 
 full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope)
 {
-  definition* inferred_type = NULL; // This is the type we will use if absolutely no other type is given
-  definition* overridable_type = NULL;
+  definition* inferred_type = nullptr; // This is the type we will use if absolutely no other type is given
+  definition* overridable_type = nullptr;
   long int rflags = 0; // Return flags.
   long int swif = 0; // Swap-in flags: or'd in when a flag is determined not to be the main type.
-  definition *rdef = NULL;
+  definition *rdef = nullptr;
   ref_stack rrefs;
 
   // XXX: Should this be allowed? AST builders are calling it.
@@ -77,7 +77,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       rdef = read_qualified_definition(token, scope);
       if (!rdef) {
         token.report_errorf(herr, "Expected type name here before %s");
-        return NULL;
+        return nullptr;
       }
       if (!(rdef->flags & DEF_TYPENAME)) {
         if (rdef->flags & DEF_HYPOTHETICAL) {
@@ -92,7 +92,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
           return res;
         } else {
           token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type (" + flagnames(rdef->flags) + ")");
-          return NULL;
+          return nullptr;
         }
       }
     }
@@ -149,7 +149,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       token = lex->get_token_in_scope(scope);
     }
   }
-  if (rdef == NULL) {
+  if (rdef == nullptr) {
     if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM)
     {
       rdef = (token.type == TT_UNION? (definition*)handle_union(scope,token,0) :
@@ -169,10 +169,10 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       token = lex->get_token_in_scope(scope);
       rdef = handle_hypothetical(scope, token, DEF_TYPENAME);
     }
-    if (rdef == NULL)
+    if (rdef == nullptr)
     {
       rdef = overridable_type;
-      if (rdef == NULL)
+      if (rdef == nullptr)
         rdef = inferred_type;
     }
   }

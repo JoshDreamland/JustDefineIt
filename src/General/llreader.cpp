@@ -16,9 +16,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -83,12 +83,12 @@ inline string fn_path(const char *fn) {
   return last == fn? dot : string(fn, last);
 }
 
-llreader::llreader(): pos(0), length(0), lpos(0), lnum(0), data(NULL),
+llreader::llreader(): pos(0), length(0), lpos(0), lnum(0), data(nullptr),
                       name(""), mode(FT_CLOSED) {}
 llreader::llreader(llreader &&other): llreader() { consume(other); }
 llreader::llreader(const char* filename): llreader() { open(filename); }
 llreader::llreader(std::string bname, std::string contents): pos(0), length(0), 
-    lpos(0), lnum(0), data(NULL), name(bname), mode(FT_CLOSED) {
+    lpos(0), lnum(0), data(nullptr), name(bname), mode(FT_CLOSED) {
   copy(contents);
 }
 llreader::llreader(std::string bname, std::string_view contents, bool copy_):
@@ -108,11 +108,11 @@ void llreader::open(const char* filename) {
   dump_in(filename);
 #elif defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
   SECURITY_ATTRIBUTES sec;
-  sec.nLength = sizeof(sec), sec.lpSecurityDescriptor = NULL, sec.bInheritHandle = true;
-  HANDLE hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, &sec, OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, NULL);
+  sec.nLength = sizeof(sec), sec.lpSecurityDescriptor = nullptr, sec.bInheritHandle = true;
+  HANDLE hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, &sec, OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, nullptr);
   if (hFile == INVALID_HANDLE_VALUE)
     return;
-  HANDLE mapping = CreateFileMapping(hFile, &sec, PAGE_READONLY, 0, 0, NULL);
+  HANDLE mapping = CreateFileMapping(hFile, &sec, PAGE_READONLY, 0, 0, nullptr);
   if (mapping == INVALID_HANDLE_VALUE) {
     CloseHandle(hFile);
     return;
@@ -120,7 +120,7 @@ void llreader::open(const char* filename) {
   data = (const char*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
   if (data) {
     mode = FT_MMAP;
-    length = GetFileSize(hFile, NULL);
+    length = GetFileSize(hFile, nullptr);
   }
   CloseHandle(mapping);
   CloseHandle(hFile);
@@ -130,7 +130,7 @@ void llreader::open(const char* filename) {
   if (fd == -1) return;
   struct stat statbuf;
   fstat(fd, &statbuf), length = statbuf.st_size;
-  data = (const char*)mmap(NULL, length, PROT_READ, MAP_SHARED, fd, 0);
+  data = (const char*)mmap(nullptr, length, PROT_READ, MAP_SHARED, fd, 0);
   mode = FT_MMAP;
   ::close(fd);
 #endif
@@ -219,7 +219,7 @@ void llreader::consume(llreader& whom) {
   data = whom.data;
   whom.mode = FT_CLOSED;
   whom.length = 0;
-  whom.data = NULL;
+  whom.data = nullptr;
   name = whom.name;
 
 # ifndef NOVALIDATE_LINE_NUMBERS
@@ -244,7 +244,7 @@ void llreader::close() {
           #endif
         #endif
       break;
-    case FT_ALIAS: default: data = NULL; break;
+    case FT_ALIAS: default: data = nullptr; break;
   }
   mode = FT_CLOSED;
 }

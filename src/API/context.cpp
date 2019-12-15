@@ -93,7 +93,7 @@ void Context::add_macro_func(string definiendum, string p1, string p2, string p3
 #endif
 
 void Context::read_search_directories(const char* filename) {
-  read_search_directories_gnu(filename,NULL,NULL);
+  read_search_directories_gnu(filename,nullptr,nullptr);
 }
 void Context::read_search_directories_gnu(const char* filename, const char* begin_line, const char* end_line)
 {
@@ -156,7 +156,7 @@ void Context::copy(const Context &ct)
   ct.global->remap(n, ErrorContext(herr, {"Internal Copy Operation", 0, 0}));
 
   for (macro_iter_c mi = ct.macros.begin(); mi != ct.macros.end(); ++mi){
-    pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,NULL));
+    pair<macro_iter,bool> dest = macros.insert(pair<string,macro_type*>(mi->first,nullptr));
     if (dest.second) {
       dest.first->second = new_macro(*mi->second);
     }

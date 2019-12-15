@@ -11,9 +11,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -86,7 +86,7 @@ namespace jdi {
     operator long() const; ///< Cast to a long int, returning zero if no valid cast exists.
     operator double() const; ///< Cast to a double, returning zero if no valid cast exists.
     operator bool() const; ///< Cast to a boolean, returning false if no valid cast exists, true if this is a non-empty string.
-    operator std::string_view() const; ///< Cast to a string_view, returning NULL if no valid cast exists.
+    operator std::string_view() const; ///< Cast to a string_view, returning nullptr if no valid cast exists.
   };
 
   inline std::ostream &operator<<(std::ostream &stream, const value &val) {

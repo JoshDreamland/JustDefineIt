@@ -13,9 +13,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -39,7 +39,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_TYPENAME: case TT_INLINE: case TT_ATTRIBUTE: case TT_TYPEOF:
       case TT_DECFLAG: case TT_DECLTYPE: case TT_DECLARATOR: case_TT_DECLARATOR:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_TILDE:
-          decl = NULL;
+          decl = nullptr;
           handle_declarator_block:
           if (handle_declarators(scope, token, inherited_flags, decl)) {
             FATAL_RETURN(1);
@@ -56,7 +56,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
               }
               else {
                 definition_overload *ovr = ((definition_overload*)decl);
-                if (ovr->implementation != NULL) {
+                if (ovr->implementation != nullptr) {
                   token.report_error(herr, "Multiple implementations of function" FATAL_TERNARY("", "; old implementation discarded"));
                   delete_function_implementation(ovr->implementation);
                 }

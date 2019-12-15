@@ -1,10 +1,10 @@
 /**
  * @file  handle_function_impl.cpp
  * @brief Source implementing a function that skips function bodies in code,
- *        returning NULL.
+ *        returning nullptr.
  * 
  * JustDefineIt implements a function that skips function bodies in code, returning
- * NULL. Other applications can implement their own handler, replacing the existing
+ * nullptr. Other applications can implement their own handler, replacing the existing
  * one and returning a pointer to the parsed function data which will be stored in
  * the \c definition_function for later use.
  * 
@@ -17,9 +17,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -32,11 +32,11 @@ static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, ErrorH
   if (token.type == TT_LEFTBRACE) {
     for (size_t bc = 0;;) {
       if (token.type == TT_LEFTBRACE) ++bc;
-      else if (token.type == TT_RIGHTBRACE and !--bc) return NULL;
+      else if (token.type == TT_RIGHTBRACE and !--bc) return nullptr;
       token = lex->get_token();
       if (token.type == TT_ENDOFCODE) {
         token.report_errorf(herr, "Expected closing brace to code before %s");
-        return NULL;
+        return nullptr;
       }
     }
   }
@@ -45,17 +45,17 @@ static void* code_ignorer(lexer *lex, token_t &token, definition_scope *, ErrorH
     while (token.type != TT_RIGHTPARENTH);
     token = lex->get_token();
   }
-  return NULL;
+  return nullptr;
 }
 static void *initializer_ignorer(lexer *lex, token_t &token, definition_scope *scope, ErrorHandler *herr) {
   do {
     token = lex->get_token_in_scope(scope);
     if (token.type == TT_SEMICOLON || token.type == TT_ENDOFCODE) {
       token.report_error(herr, "Expected constructor body here after initializers.");
-      return NULL;
+      return nullptr;
     }
   } while (token.type != TT_LEFTBRACE);
-  return NULL;
+  return nullptr;
 }
 static void do_nothing(void*) {}
 
