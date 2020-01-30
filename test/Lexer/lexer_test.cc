@@ -201,12 +201,13 @@ TEST(LexerTest, AnnoyingSubstitutionOrder) {
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
 
+  std::string line_6 = std::to_string(6 + llreader::kFirstLine);
   EXPECT_THAT(lex.get_token(),
               AllOf(HasType(TT_IDENTIFIER), HasContent("id__LINE__")));
   EXPECT_THAT(lex.get_token(),
               AllOf(HasType(TT_IDENTIFIER), HasContent("id__LINE__")));
   EXPECT_THAT(lex.get_token(),
-              AllOf(HasType(TT_IDENTIFIER), HasContent("id6")));
+              AllOf(HasType(TT_IDENTIFIER), HasContent("id" + line_6)));
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 

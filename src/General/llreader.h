@@ -49,10 +49,12 @@ class llreader {
   const char *data; ///< The data in the stream
   std::string name; ///< The name or source of this file.
 
+  static constexpr int kFirstLine = 1;
+
 # ifndef NOVALIDATE_LINE_NUMBERS
   size_t validated_pos = 0;
   size_t validated_lpos = 0;
-  size_t validated_lnum = 0;
+  size_t validated_lnum = kFirstLine;
 # endif
 
   const std::string &get_filename() const { return name; }

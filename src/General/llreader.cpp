@@ -55,7 +55,7 @@ void llreader::encapsulate(string_view contents) {
   mode = FT_ALIAS;
   pos = 0;
   lpos = 0;
-  lnum = 0;
+  lnum = kFirstLine;
 }
 void llreader::copy(string_view contents) {
   length = contents.length();
@@ -64,7 +64,7 @@ void llreader::copy(string_view contents) {
   buf[length] = 0;
   pos = 0;
   lpos = 0;
-  lnum = 0;
+  lnum = kFirstLine;
   mode = FT_BUFFER;
   data = buf;
 }
@@ -83,16 +83,16 @@ inline string fn_path(const char *fn) {
   return last == fn? dot : string(fn, last);
 }
 
-llreader::llreader(): pos(0), length(0), lpos(0), lnum(0), data(nullptr),
-                      name(""), mode(FT_CLOSED) {}
+llreader::llreader(): pos(0), length(0), lpos(0), lnum(kFirstLine),
+                      data(nullptr), name(""), mode(FT_CLOSED) {}
 llreader::llreader(llreader &&other): llreader() { consume(other); }
 llreader::llreader(const char* filename): llreader() { open(filename); }
 llreader::llreader(std::string bname, std::string contents): pos(0), length(0), 
-    lpos(0), lnum(0), data(nullptr), name(bname), mode(FT_CLOSED) {
+    lpos(0), lnum(kFirstLine), data(nullptr), name(bname), mode(FT_CLOSED) {
   copy(contents);
 }
 llreader::llreader(std::string bname, std::string_view contents, bool copy_):
-    pos(0), length(0),  lpos(0), lnum(0), data(nullptr), name(bname),
+    pos(0), length(0),  lpos(0), lnum(kFirstLine), data(nullptr), name(bname),
     mode(FT_CLOSED) {
   copy_ ? copy(contents) : encapsulate(contents);
 }
@@ -138,12 +138,12 @@ void llreader::open(const char* filename) {
 
   pos = 0;
   lpos = 0;
-  lnum = 0;
+  lnum = kFirstLine;
 
 # ifndef NOVALIDATE_LINE_NUMBERS
   validated_pos = 0;
   validated_lpos = 0;
-  validated_lnum = 0;
+  validated_lnum = kFirstLine;
 # endif
 }
 
@@ -160,7 +160,7 @@ void llreader::alias(const char* buffer, size_t len) {
 # ifndef NOVALIDATE_LINE_NUMBERS
   validated_pos = 0;
   validated_lpos = 0;
-  validated_lnum = 0;
+  validated_lnum = kFirstLine;
 # endif
 }
 
@@ -180,7 +180,7 @@ void llreader::alias(const llreader &llread) {
 # ifndef NOVALIDATE_LINE_NUMBERS
   validated_pos = 0;
   validated_lpos = 0;
-  validated_lnum = 0;
+  validated_lnum = kFirstLine;
 # endif
 }
 
@@ -197,7 +197,7 @@ void llreader::consume(char* buffer, size_t len) {
 # ifndef NOVALIDATE_LINE_NUMBERS
   validated_pos = 0;
   validated_lpos = 0;
-  validated_lnum = 0;
+  validated_lnum = kFirstLine;
 # endif
 }
 
@@ -225,7 +225,7 @@ void llreader::consume(llreader& whom) {
 # ifndef NOVALIDATE_LINE_NUMBERS
   validated_pos = 0;
   validated_lpos = 0;
-  validated_lnum = 0;
+  validated_lnum = kFirstLine;
 # endif
 }
 
