@@ -82,7 +82,6 @@ namespace jdi {
         EXPANDED_ARGUMENT,
         PASTE,
         STRINGIFY,
-        VA_ARGS,
         VA_OPT
       };
       struct TokenSpan {
@@ -95,7 +94,6 @@ namespace jdi {
       struct ExpandedArgument : Argument {};
       struct Stringify : Argument {};
       struct Paste {};
-      struct VAArgs {};
       struct VAOpt {};
 
       TAG tag;
@@ -116,7 +114,6 @@ namespace jdi {
       FuncComponent(Stringify arg_index):
           tag(STRINGIFY), stringify(arg_index) {}
       FuncComponent(Paste):  tag(PASTE)   {}
-      FuncComponent(VAArgs): tag(VA_ARGS) {}
       FuncComponent(VAOpt):  tag(VA_OPT)  {}
     };
 

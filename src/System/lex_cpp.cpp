@@ -472,6 +472,10 @@ token_t jdi::read_token(llreader &cfile, ErrorHandler *herr) {
       case '>':
         if (cfile.at() == '>') {
           cfile.advance();
+          if (cfile.at() == '=') {
+            cfile.advance();
+            return mktok(TT_RSHIFT_ASSIGN, spos, 3);
+          }
           return mktok(TT_RSHIFT, spos, 2);
         }
         if (cfile.at() == '=') {
@@ -482,6 +486,10 @@ token_t jdi::read_token(llreader &cfile, ErrorHandler *herr) {
       case '<':
         if (cfile.at() == '<') {
           cfile.advance();
+          if (cfile.at() == '=') {
+            cfile.advance();
+            return mktok(TT_LSHIFT_ASSIGN, spos, 3);
+          }
           return mktok(TT_LSHIFT, spos, 2);
         }
         if (cfile.at() == '=') {
@@ -850,8 +858,15 @@ void lexer::handle_preprocessor() {
         while (is_useless(argstr[++i]));
         if (argstr[i] != ')') for (;;) {
           if (!is_letter(argstr[i])) {
-            if (argstr[i] == '.' and argstr[i+1] == '.' and argstr[i+2] == '.') {
+            // If we're at TT_ELLIPSIS.
+            if (argstr[i] == '.' && argstr[i+1] == '.' && argstr[i+2] == '.') {
               variadic = true, i += 3;
+              // Push an empty (anonymous) variadic parameter.
+              // This looks like a hack, but makes a lot of sense under the GNU
+              // interpretation of variadic macro functions, and it simplifies
+              // the code later on--we have a convenient extra parameter to bind
+              // all additional arguments to.
+              paramlist.push_back("");
               while (is_useless(argstr[i])) ++i;
               if (argstr[i] != ')')
                 herr->error(cfile, "Expected end of parameters after variadic");
@@ -1001,9 +1016,10 @@ void lexer::handle_preprocessor() {
           render_ast(a, "if_directives");
 
           if (endofcode.type != TT_ENDOFCODE) {
-            herr->error(cfile, "Extra tokens at end of conditional: "
-                        "%s not handled.", endofcode.to_string());
-            herr->error(endofcode, "Extraneous token read from here.");
+            herr->error(cfile)
+                << "Extra tokens at end of conditional: "
+                << endofcode << " not handled.";
+            herr->error(endofcode) << "Extraneous token read from here.";
           }
 
           if (!a.eval({herr, toks[0]}))
@@ -1547,6 +1563,19 @@ bool lexer::pop_file() {
   files.pop_back();
   
   return false;
+}
+
+std::vector<SourceLocation> lexer::detailed_position() const {
+  std::vector<SourceLocation> res;
+  for (const auto &of : files) {
+    res.emplace_back(of.name, of.from_line, of.from_lpos);
+  }
+  for (const auto &ob : open_buffers) if (ob.macro_info) {
+    res.emplace_back("Usage of macro `" + ob.macro_info->name + "` in "
+                                        + ob.macro_info->origin.file,
+                     ob.macro_info->origin.linenum, ob.macro_info->origin.pos);
+  }
+  return res;
 }
 
 lexer::lexer(macro_map &pmacros, ErrorHandler *err):

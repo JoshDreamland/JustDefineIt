@@ -511,4 +511,70 @@ TEST(LexerTest, ExpressInsanity) {
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
 
+TEST(LexerTest, VariadicMacros) {
+  constexpr char kTestCase[] = R"cpp(
+#define my_macro(x, y, ...) \
+   y x __VA_ARGS__
+my_macro(id, int, = 10);
+my_macro(id2, float);
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // int
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // id
+  EXPECT_THAT(lex.get_token(), HasType(TT_EQUAL));         // =
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));    // 10
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // float
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // id2
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, VariadicMacrosGNU) {
+  constexpr char kTestCase[] = R"cpp(
+#define my_macro(x, y, z...) \
+   y x z
+my_macro(id, int, = 10);
+my_macro(id2, float);
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // int
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // id
+  EXPECT_THAT(lex.get_token(), HasType(TT_EQUAL));         // =
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));    // 10
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // float
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // id2
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
+TEST(LexerTest, NoArgsVariadicMacros) {
+  constexpr char kTestCase[] = R"cpp(
+#define my_macro1(...) __VA_ARGS__
+#define my_macro2(x...) __VA_ARGS__
+my_macro1( int x )
+my_macro2( = 10  );
+)cpp";
+
+  macro_map no_macros;
+  llreader read("test_input", kTestCase, false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // int
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // x
+  EXPECT_THAT(lex.get_token(), HasType(TT_EQUAL));         // =
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));    // 10
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
 }  // namespace jdi

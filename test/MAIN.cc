@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
   fs::path home = first_not_null(getenv("HOME"), "/tmp/");
   fs::path enigma_path = home/"Projects/ENIGMA";
   fs::path enigma_temp = home/".enigma";
-  bool skip_parser = false;
+  bool skip_parser = true;
   int cpp_std = 20;
   if (argc != 4) {
     std::cerr << "Usage: JustDefineIt <c++std> </path/to/enigma> <skip parser>" << std::endl;
@@ -276,6 +276,8 @@ int main(int argc, char** argv) {
         tokens.push_back(token);
         if (!had_diff && p < tokens2.size() && (tokens[p].type != tokens2[p].type || tokens[p].content.view() != tokens2[p].content.view())) {
           cerr << p << endl;
+          for (const auto &sl : lex.detailed_position())
+            cerr << "In " << sl.filename << ":" << sl.line << ":" << sl.pos << ":\n";
           token.report_errorf(default_error_handler,
                               "Token differs from golden set! Read "
                               + token.to_string() + ", expected "

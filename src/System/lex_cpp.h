@@ -375,6 +375,9 @@ namespace jdi {
     /// except they are not rescanned. A rewind buffer can technically be frozen.
     void pop_frozen_buffer();
 
+    /// Build a traceback of open files and macros.
+    std::vector<SourceLocation> detailed_position() const;
+
     // =========================================================================
     // == Configuration Storage ================================================
     // =========================================================================

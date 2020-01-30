@@ -72,10 +72,13 @@ vector<macro_type::FuncComponent> macro_type::componentize(
   for (size_t i = 0; i < params.size(); ++i) params_by_name[params[i]] = i;
   size_t e = 0;
   for (size_t i = 0; i < tokens.size(); ++i) {
+    // -------------------------------------------------------------------------
+    // -- Handle concatenation markers. ----------------------------------------
+    // -------------------------------------------------------------------------
     if (tokens[i].type == TTM_CONCAT) {
       if (!i) {
-        herr->error(tokens[i], "Concatenation marker cannot appear at either "
-                               "end of a replacement list.");
+        herr->error(tokens[i]) << "Concatenation marker (`##`) "
+            "cannot appear at either end of a replacement list.";
         continue;
       }
       // Don't push spans CONCAT would always discard.
@@ -84,25 +87,42 @@ vector<macro_type::FuncComponent> macro_type::componentize(
       res.push_back(FuncComponent::Paste{});
       while (++i < tokens.size() && tokens[i].preprocesses_away());
       e = i--;
-    } else if (tokens[i].type == TT_IDENTIFIER) {
+      continue;
+    }
+    // -------------------------------------------------------------------------
+    // -- Handle argument names, VA_LIST, VA_OPT. ------------------------------
+    // -------------------------------------------------------------------------
+    if (tokens[i].type == TT_IDENTIFIER) {
       auto found = params_by_name.find(tokens[i].content.view());
-      if (found != params_by_name.end()) {
-        if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
-        // Check if either neighboring token is CONCAT.
-        // We already know if the previous was CONCAT, because we'll have
-        // a PASTE at the end of our result vector. We must still look ahead.
-        size_t j = i;  // First, find next non-whitespace token.
-        while (++j < tokens.size() && tokens[j].preprocesses_away());
-        // If the next meaningful token is CONCAT, or our last operation is
-        // PASTE, we use the raw argument token vector.
-        if ((j < tokens.size() && tokens[j].type == TTM_CONCAT) ||
-            (!res.empty() && res.back().tag == FuncComponent::PASTE)) {
-          res.push_back(FuncComponent::RawArgument{found->second});
+      size_t arg_num = 0;
+      if (found == params_by_name.end()) {
+        if (tokens[i].content.view() == "__VA_OPT__") {
+          if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
+          res.push_back(FuncComponent::VAOpt{});
+          e = i + 1;
+        } else if (tokens[i].content.view() == "__VA_ARGS__") {
+          arg_num = params.size() - 1;
         } else {
-          res.push_back(FuncComponent::ExpandedArgument{found->second});
+          continue;
         }
-        e = i + 1;
+      } else {
+        arg_num = found->second;
       }
+      if (e != i) res.push_back(FuncComponent::TokenSpan{e, i});
+      // Check if either neighboring token is CONCAT.
+      // We already know if the previous was CONCAT, because we'll have
+      // a PASTE at the end of our result vector. We must still look ahead.
+      size_t j = i;  // First, find next non-whitespace token.
+      while (++j < tokens.size() && tokens[j].preprocesses_away());
+      // If the next meaningful token is CONCAT, or our last operation is
+      // PASTE, we use the raw argument token vector.
+      if ((j < tokens.size() && tokens[j].type == TTM_CONCAT) ||
+          (!res.empty() && res.back().tag == FuncComponent::PASTE)) {
+        res.push_back(FuncComponent::RawArgument{arg_num});
+      } else {
+        res.push_back(FuncComponent::ExpandedArgument{arg_num});
+      }
+      e = i + 1;
     } else if (tokens[i].type == TTM_TOSTRING) {
       size_t j = i;
       while (++j < tokens.size() && tokens[j].preprocesses_away());
@@ -114,8 +134,9 @@ vector<macro_type::FuncComponent> macro_type::componentize(
       i = j;
       auto found = params_by_name.find(tokens[i].content.view());
       if (found == params_by_name.end()) {
-        herr->error(tokens[i], "# must be followed by a parameter name; " +
-                    tokens[i].content.toString() + " is not a parameter");
+        herr->error(tokens[i])
+            << "# must be followed by a parameter name; "
+            << tokens[i].content.toString() << " is not a parameter";
         continue;
       }
       res.push_back(FuncComponent::Stringify{found->second});
@@ -132,9 +153,10 @@ static token_t paste_tokens(
   string buf = left.content.toString() + right.content.toString();
   llreader read("token concatenation", buf, false);
   token_t res = read_token(read, herr);
-  if (!read.eof()) {
-    herr->error(left, "Concatenation of `%s` and `%s` does not yield a coherent"
-                " token.", left.to_string(), right.to_string());
+  if (res.type == TT_INVALID || res.type == TT_ENDOFCODE || !read.eof()) {
+    herr->error(left) << "Concatenation of " << left << " and " << right
+                      << " does not yield a coherent token (got "
+                      << res << ")";
   }
   return res;
 }
@@ -183,14 +205,16 @@ token_vector macro_type::substitute_and_unroll(
   token_vector res;
   bool paste_next = false;
   if (args.size() < params.size()) {
-    errc.error() << "Too few arguments to macro " << NameAndPrototype()
-                 << ": wanted " << params.size() << ", got " << args.size();
+    if (!is_variadic || args.size() + 1 < params.size()) {
+      errc.error() << "Too few arguments to macro " << NameAndPrototype()
+                   << ": wanted " << params.size() << ", got " << args.size();
+    }
   }
   if (args.size() > params.size()) {
     if (!is_variadic) {
       errc.error() << "Too many arguments to macro " << NameAndPrototype()
                    << ": wanted " << params.size() << ", got " << args.size();
-    } else if (args.size() != params.size() + 1) {
+    } else {
       errc.error("Internal error: variadic macro passed too many arguments");
     }
   }
@@ -207,16 +231,19 @@ token_vector macro_type::substitute_and_unroll(
       case FuncComponent::RAW_ARGUMENT:
       case FuncComponent::EXPANDED_ARGUMENT:
       case FuncComponent::STRINGIFY: {
-        const size_t ind = part.raw_expanded_or_stringify_argument.index;
+        size_t ind = part.raw_expanded_or_stringify_argument.index;
         if (ind >= args.size()) {
           if (ind >= params.size()) {
             errc.error() << "Internal error: "
                 << "Macro function built with bad argument references. Index "
                 << ind << " out of bounds (only " << params.size()
                 << " params defined).";
+            paste_next = false;
+            continue;
+          } else {
+            paste_next = false;
+            continue;
           }
-          paste_next = false;
-          continue;
         }
         if (part.tag == FuncComponent::STRINGIFY) {
           string str;
@@ -238,16 +265,6 @@ token_vector macro_type::substitute_and_unroll(
       }
       case FuncComponent::PASTE:
         paste_next = true;
-        break;
-      case FuncComponent::VA_ARGS:
-        if (args.size() == params.size() + 1) {
-          append_or_paste(res, args[params.size()].begin(),
-                               args[params.size()].end(),
-                          paste_next, herr);
-        } else {
-          token_vector empty;
-          append_or_paste(res, empty.begin(), empty.end(), paste_next, herr);
-        }
         break;
       case FuncComponent::VA_OPT: {
         token_vector opt;
