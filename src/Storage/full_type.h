@@ -11,9 +11,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -68,6 +68,8 @@ namespace jdi {
     full_type(jdi::definition* d, int f); ///< Construct with a definition and flags, but no refs.
     full_type(jdi::definition*, const jdi::ref_stack&, int); ///< Construct from individual components. Copies the given \c ref_stack, so may be slow.
     full_type(const full_type&); ///< Copy constructor. Makes a copy, so slowish.
+    full_type &operator=(const full_type&) = delete;
+    full_type &operator=(full_type&&);
   };
 }
 

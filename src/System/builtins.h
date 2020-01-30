@@ -16,9 +16,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -28,7 +28,7 @@
 #ifndef _JDI_BUILTINS__H
 #define _JDI_BUILTINS__H
 
-namespace jdip {
+namespace jdi {
   class typeflag;
 }
 
@@ -36,13 +36,15 @@ namespace jdip {
 
 namespace jdi {
   /**
-    A context containing built-in macros and compiler parameters.
+    Retrieves the builtin context, which contains built-in macros and compiler
+    parameters.
+
     This context contains all types, macros, and search directories that are
-    considered to be built in to the compiler. Here, you will find types such
+    considered to be built into the compiler. Here, you will find types such
     as int and double, macros such as __WIN32__ or __GNUG__, as well as search
     directories such as /usr/include.
   **/
-  extern jdi::context *builtin;
+  Context &builtin_context();
   
   /**
     Read a list of declarators from a file, toggling on their usage with the given flags.
@@ -54,8 +56,8 @@ namespace jdi {
   struct add_decl_info {
     definition* def; ///< The typeflag struct, as stored in the token.
     unsigned long flag; ///< The typeflag struct, as stored in the token.
-    jdip::typeflag *tf_struct; ///< The typeflag struct, as stored in the token.
-    add_decl_info(definition *d, unsigned long f, jdip::typeflag *tf);
+    jdi::typeflag *tf_struct; ///< The typeflag struct, as stored in the token.
+    add_decl_info(definition *d, unsigned long f, jdi::typeflag *tf);
   };
   /**
     Add a single declarator, toggling on its usage for the given flag.
@@ -108,11 +110,12 @@ namespace jdi {
   extern unsigned long builtin_flag__explicit; ///< Builtin explicit flag
   
   string typeflags_string(definition *type, unsigned flags);
-}
 
-namespace jdip {
-  using namespace jdi;
-  /// Class for storing information about a 'typeflag,' declarators such as 'int', 'short', and 'const' which refer to or modify primitives.
+  /// Class for storing information about a "typeflag," a term coined here to
+  /// refer to anything in the declaration-seq that is not the
+  /// defining-type-specifier. This includes most decl-specifiers, both
+  /// cv-qualifications, both function-specifiers, all storage-class-specifiers,
+  /// and many type-specifiers.
   class typeflag {
     friend add_decl_info jdi::add_declarator(string, USAGE_FLAG, size_t, string);
     friend void jdi::cleanup_declarators();
@@ -152,6 +155,8 @@ namespace jdip {
   extern tf_map builtin_declarators; ///< A map of all builtin declarators, such as const, unsigned, long, and int, by name.
   extern prim_map builtin_primitives; ///< A map of all builtin primitives, such as int and double, by name. By technicality, this includes long.
   extern tf_flag_map builtin_decls_byflag; ///< A map of all flags by their bit mask, in 1 << (0 to 31).
+  
+  void clean_up();
 }
 
 #endif

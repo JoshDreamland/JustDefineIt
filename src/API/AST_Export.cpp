@@ -11,9 +11,9 @@
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
  * 
- * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT ANY 
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
  * 
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
@@ -30,7 +30,7 @@ namespace jdi {
   }
 }
 
-namespace jdip
+namespace jdi
 {
   /// A wrapper to \c SVG which generates IDs based on an internally-stored node count.
   struct SVGrenderInfo {
@@ -43,8 +43,8 @@ namespace jdip
     void draw_line(int nid,char s_id,int x1,int y1,int x2,int y2,unsigned stroke = 0xFF000000,int stroke_width = 2) { svg->draw_line("Connector_"+svg->tostring(nid)+"_"+s_id,x1,y1,x2,y2,stroke,stroke_width); }
     void draw_text(int nid,int cx,int bly,string t,unsigned fill = 0xFF000000) { svg->draw_text("Label_"+svg->tostring(nid),cx,bly,t,12,fill); }
     
-    SVGrenderInfo(): svg(NULL), cur(NULL), nodes_written(0) {}
-    SVGrenderInfo(const char* fn): svg(new SVG(fn)), cur(NULL), nodes_written(0) {}
+    SVGrenderInfo(): svg(nullptr), cur(nullptr), nodes_written(0) {}
+    SVGrenderInfo(const char* fn): svg(new SVG(fn)), cur(nullptr), nodes_written(0) {}
     ~SVGrenderInfo() { delete svg; }
   };
   
@@ -260,8 +260,8 @@ namespace jdi {
   //===========================================================================================================================
   
   void AST::writeSVG(const char* filename) {
-    jdip::SVGrenderInfo svg(filename);
-    svg.cur = NULL;
+    jdi::SVGrenderInfo svg(filename);
+    svg.cur = nullptr;
     if (!svg.svg->is_open()) return;
     
     int w, h;
@@ -288,7 +288,7 @@ namespace jdi {
   }
 }
 
-namespace jdip {
+namespace jdi {
   
   //===========================================================================================================================
   //=: Recursive Width/Height Resolvers :======================================================================================
@@ -370,11 +370,11 @@ namespace jdip {
     return (array?"delete ":"delete[] ") + operand->toString();
   }
   string AST_Node_TempInst::toString() const {
-    string res = temp? temp->toString() + "<" : "(<NULL TEMPLATE>)<";
+    string res = temp? temp->toString() + "<" : "(<nullptr TEMPLATE>)<";
     for (size_t i = 0; i < params.size(); ++i) { res += params[i]->toString(); if (i+1<params.size()) res += ", "; }
     return res + ">";
   }
   string AST_Node_TempKeyInst::toString() const {
-    return (temp? temp->name + "<" : "(<NULL TEMPLATE>)<") + key.toString() + ">";
+    return (temp? temp->name + "<" : "(<nullptr TEMPLATE>)<") + key.toString() + ">";
   }
 }
