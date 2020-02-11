@@ -40,6 +40,7 @@ namespace jdi {
     GTT_TEMPLATE,       ///< The `template` keyword.
     GTT_ASM,            ///< The `using` keyword.
     GTT_OPERATORKW,     ///< The `operator` keyword.
+    GTT_SEMICOLON,      ///< Semicolon.
     GTT_ARITHMETIC,     ///< Arithmetic and comparison operators, such as `+` or `==`.
     GTT_EQUAL,          ///< Assignment operators, such as `=`, `+=`, and `<<=`.
     GTT_RELATIVE_ASSIGN,///< Assignment operators, such as `=`, `+=`, and `<<=`.
@@ -137,14 +138,15 @@ namespace jdi {
     TT_LSHIFT,     ///< The `<<` operator.
     TT_RSHIFT,     ///< The `>>` operator.
 
-    TT_COLON = GLOSS(GTT_OPERATORMISC), ///< A simple colon, which should always mark a label.
+    TT_COLON = GLOSS(GTT_OPERATORMISC),  ///< A simple colon, which should always mark a label.
     TT_SCOPE,        ///< The scope accessor `::` symbol.
     TT_MEMBER,       ///< The member pointer access operator, `::*`.
     TT_TILDE,        ///< The tilde `~` symbol.
     TT_NOT,          ///< The `!` symbol or `not` keyword.
     TT_ELLIPSIS,     ///< An ellipsis: Three dots. (...)
     TT_COMMA,         ///< A comma, `,`. Separates items in lists.
-    TT_SEMICOLON,     ///< A semicolon, `;`. Separates statements and declarations.
+
+    TT_SEMICOLON = GLOSS(GTT_SEMICOLON),  ///< A semicolon, `;`. Separates different statements and declarations.
 
     TT_LEFTPARENTH = GLOSS(GTT_BRACKET), ///< A left parenthesis, `(`.
     TT_RIGHTPARENTH,  ///< A right parenthesis, `)`.
