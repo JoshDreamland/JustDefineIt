@@ -28,7 +28,7 @@
 #include <Parser/context_parser.h>
 #include <API/compile_settings.h>
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <malloc.h>
 #endif
 
