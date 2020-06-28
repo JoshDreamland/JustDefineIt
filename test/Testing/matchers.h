@@ -6,7 +6,7 @@
 #include "System/token.h"
 
 namespace {
-    
+
 using ::testing::Matcher;
 using ::testing::MatcherInterface;
 using ::testing::MatchResultListener;
@@ -51,11 +51,11 @@ class HasContentMatcher : public MatcherInterface<const jdi::token_t&> {
   }
 };
 
-Matcher<const jdi::token_t&> HasType(jdi::TOKEN_TYPE type) {
+inline Matcher<const jdi::token_t&> HasType(jdi::TOKEN_TYPE type) {
   return MakeMatcher(new HasTypeMatcher(type));
 }
 
-Matcher<const jdi::token_t&> HasContent(std::string_view type) {
+inline Matcher<const jdi::token_t&> HasContent(std::string_view type) {
   return MakeMatcher(new HasContentMatcher(type));
 }
 

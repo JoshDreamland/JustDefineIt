@@ -47,18 +47,6 @@ namespace jdi {
   using std::string;
   typedef std::vector<token_t> token_vector;
 
-  struct file_meta {
-    string name; ///< The name of the open file or macro.
-    string searchdir; ///< The search directory from which this file was included, or the empty string.
-    size_t from_line; ///< The index of the line in the file that used or included this one.
-    size_t from_lpos; ///< The position in from_line.
-  };
-
-  struct OpenFile: file_meta {
-    llreader file;
-    OpenFile(llreader &&f): file(std::move(f)) {}
-  };
-
   /// Details a macro we entered during preprocessing. Used in error reporting,
   /// and to avoid infinite recursion from unrolling the same macro.
   struct EnteredMacro {
@@ -96,10 +84,10 @@ namespace jdi {
     OpenBuffer(string macro, token_t origin, const std::vector<token_t> *tokens_):
         tokens(*tokens_), macro_info({macro, origin}) {}
     OpenBuffer(string macro, token_t origin, std::vector<token_t> &&tokens_):
-        tokens(assembled_token_data), macro_info({macro, origin}), 
+        tokens(assembled_token_data), macro_info({macro, origin}),
         assembled_token_data(std::move(tokens_)) {}
     OpenBuffer(token_vector &&tokens_):
-        tokens(assembled_token_data), macro_info(), 
+        tokens(assembled_token_data), macro_info(),
         assembled_token_data(tokens_) {}
     OpenBuffer(const token_vector *tokens_):
         tokens(*tokens_), macro_info(), assembled_token_data() {}
@@ -118,7 +106,7 @@ namespace jdi {
   /**
   The basic C++ lexer. Extracts a single preprocessor token from the given reader.
   Uses @p cfile to include source metadata in the token.
-  
+
   ISO C++ calls for nine phases of translation. The llreader passed to this call
   handles the first (file character mapping), and this routine handles the second
   and third. The data is not physically modified for any of these phases.
@@ -131,7 +119,7 @@ namespace jdi {
 
   /**
   Basic lexing/preprocessing unit; polled by all systems for tokens.
-  
+
   This lexer calls out to `read_token` to handle phases 1-3 of translation.
   It then handles phases four (execution of preprocessing directives), five
   (expansion of string literals), and six (concatenation of adjacent string
@@ -139,7 +127,7 @@ namespace jdi {
   string literal contents can be used at compile time to have meaningful
   effect on output (this was also possible in previous versions, but through
   less conventional means that would not normally arise).
-  
+
   Because of that nuance, and the general lookahead-heavy nature of parsing C++,
   token rewinding is a first-class feature of this lexer. When a string literal
   is encountered, another token is read immediately, and is either queued for
@@ -148,7 +136,7 @@ namespace jdi {
   facilitate handling of cases such as MVP. This way, a try-like branch of code
   can attempt to evaluate the tree one way, then seamlessly give up and allow
   a later branch to attempt the same.
-  
+
   Thus, this lexer implementation has four layers of token source data:
     1. The open file stack. Files or string buffers (managed by an llreader) are
        lexed for raw tokens.
@@ -157,7 +145,7 @@ namespace jdi {
     3. Rewind operations produce queues of tokens. Each queue is stacked.
     4. During normal lexing operations, minor lookahead may be required.
        Tokens read during lookahead are queued at the top of this stack.d
-  
+
   The above stacks are treated in stack order. They are generally populated in
   order from 1-4, but tokens are retrieved in order of 4-1.
   */
@@ -165,7 +153,7 @@ namespace jdi {
     struct condition;
 
     llreader cfile;  ///< The current file being read.
-    std::vector<OpenFile> files; ///< The files we have open, in the order we entered them.
+    std::vector<llreader> files; ///< The files we have open, in the order we entered them.
     std::vector<OpenBuffer> open_buffers; ///< Buffers of tokens to consume.
     ErrorHandler *herr;  ///< Error handler for problems during lex.
 
@@ -269,7 +257,7 @@ namespace jdi {
     /// Internal logic to handle preprocessing and fetching a token, as well
     /// as reading tokens off the current buffer, if needed.
     token_t preprocess_and_read_token();
-    
+
    public:
     /** Consumes an llreader and attaches a new \c lex_macro.
         @param input    The file from which to read definitions.
@@ -317,7 +305,7 @@ namespace jdi {
     token_t get_token();
     /// Read a C++ token, searching the given scope for names.
     token_t get_token_in_scope(definition_scope *scope);
-    
+
     /// RAII type for initiating unbounded lookahead.
     class look_ahead {
       token_vector buffer;

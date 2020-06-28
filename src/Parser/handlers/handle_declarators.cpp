@@ -284,16 +284,16 @@ int context_parser::handle_declarators(
           return handle_declarators(scope, token, tp, inherited_flags, res);
         } else if (token.type == TT_COLON) {
           definition *root = tp.def;
-          while (root->flags & DEF_TYPED and (root = ((definition_typed*)root)->type));
-          if (root != builtin_type__int and root != builtin_type__long and root != builtin_type__short) {
-            token.report_error(herr,"Attempt to assign bit count in non-integer declaration");
+          while (root->flags & DEF_TYPED && (root = ((definition_typed*)root)->type));
+          if (root != builtin_type__int) {
+            token.report_error(herr, "Attempt to assign bit size in non-integer declaration");
             FATAL_RETURN(1);
           }
           AST bitcountexp;
           astbuilder->parse_expression(&bitcountexp, token = read_next_token(scope), scope, precedence::comma+1);
           value bc = bitcountexp.eval(ErrorContext(herr, token));
           if (bc.type != VT_INTEGER) {
-            token.report_error(herr,"Bit count is not an integer");
+            token.report_error(herr, "Bit count is not an integer");
             FATAL_RETURN(1);
           }
           // TODO: Store the bit count somewhere
@@ -310,7 +310,7 @@ int context_parser::handle_declarators(
       case GTT_DECLARATOR: case GTT_BRACKET: case GTT_MEMORYOP: case GTT_PREPROCESSOR:
       case GTT_CONSTRUCT: case GTT_TYPEOP: case GTT_VISIBILITYSPEC: case GTT_IDENTIFIER:
       case GTT_TEMPLATE: case GTT_USING: case GTT_ARITHMETIC: case GTT_RELATIVE_ASSIGN:
-      case GTT_ANGLE: case GTT_ENDOFCODE: case GTT_INVALID:
+      case GTT_ANGLE: case GTT_ENDOFCODE: case GTT_INVALID: case GTT_CONTROL:
       default:
         return 0;
       }

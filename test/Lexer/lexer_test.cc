@@ -18,7 +18,7 @@ TEST(LexerTest, BasicTokenization) {
   llreader read("test_input", R"cpp(const char *my_identifier = "hello, world!";
       )cpp", false);
   lexer lex(read, no_macros, error_constitutes_failure);
-  
+
   EXPECT_THAT(lex.get_token(), HasType(TT_DECFLAG));       // const
   EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // char
   EXPECT_THAT(lex.get_token(), HasType(TT_STAR));          // *
@@ -28,12 +28,32 @@ TEST(LexerTest, BasicTokenization) {
   EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;
   EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
 }
+
+TEST(LexerTest, FlagTokenization) {
+  macro_map no_macros;
+  llreader read("test_input", R"cpp(
+      const unsigned long long int a = 10;
+      )cpp", false);
+  lexer lex(read, no_macros, error_constitutes_failure);
+
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECFLAG));     // const
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECFLAG));     // unsigned
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECFLAG));     // long
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECFLAG));     // long
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));  // int
+  EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));  // a
+  EXPECT_THAT(lex.get_token(), HasType(TT_EQUAL));       // =
+  EXPECT_THAT(lex.get_token(), HasType(TT_DECLITERAL));  // 10
+  EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));   // ;
+  EXPECT_THAT(lex.get_token(), HasType(TT_ENDOFCODE));
+}
+
 TEST(LexerTest, StringLiteralBehavior) {
   macro_map no_macros;
   constexpr char kTestCase[] = R"cpp("hello,"    ""    " world!")cpp";
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
-  
+
   EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
   EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
   EXPECT_THAT(lex.get_token(), HasType(TT_STRINGLITERAL));
@@ -62,7 +82,7 @@ TEST(LexerTest, BasicPreprocessors) {
   macro_map no_macros;
   llreader read("test_input", kCppWithIfDirectives, false);
   lexer lex(read, no_macros, error_constitutes_failure);
-  
+
   EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // int
   EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // identifier
   EXPECT_THAT(lex.get_token(), HasType(TT_EQUAL));         // =
@@ -80,7 +100,7 @@ MACRO_FUNC(identifier, 100, int);
   macro_map no_macros;
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
-  
+
   EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // int
   EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // identifier
   EXPECT_THAT(lex.get_token(), HasType(TT_EQUAL));         // =
@@ -100,7 +120,7 @@ TEST(LexerTest, ConditionalWithMacroExpansion) {
   macro_map no_macros;
   llreader read("test_input", kTestCase, false);
   lexer lex(read, no_macros, error_constitutes_failure);
-  
+
   EXPECT_THAT(lex.get_token(), HasType(TT_DECLARATOR));    // int
   EXPECT_THAT(lex.get_token(), HasType(TT_IDENTIFIER));    // x
   EXPECT_THAT(lex.get_token(), HasType(TT_SEMICOLON));     // ;

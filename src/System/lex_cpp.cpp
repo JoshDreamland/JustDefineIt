@@ -1,24 +1,24 @@
 /**
  * @file lex_cpp.cpp
  * @brief Source implementing the C++ \c lexer class extensions.
- * 
+ *
  * This file's function will be referenced, directly or otherwise, by every
  * other function in the parser. The efficiency of its implementation is of
  * crucial importance. If this file runs slow, so do the others.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -1232,7 +1232,7 @@ bool lexer::handle_macro(token_t &identifier) {
   }
   string fn = identifier.content.toString();
   macro_iter mi;
-  
+
   mi = macros.find(fn);
   if (mi != macros.end()) {
     if (mi->second->is_function) {
@@ -1352,7 +1352,7 @@ bool lexer::handle_macro(token_t &identifier) {
     identifier.type = kwit->second;
     return false;
   }
-  
+
   translate_identifier(identifier);
   return false;
 }
@@ -1370,10 +1370,10 @@ bool lexer::translate_identifier(token_t &identifier) {
     identifier.type = kwit->second;
     return false;
   }
-  
+
   tf_iter tfit = builtin_declarators.find(fn);
   if (tfit != builtin_declarators.end()) {
-    if (tfit->second->usage  & UF_PRIMITIVE) {
+    if ((tfit->second->usage & UF_PRIMITIVE_FLAG) == UF_PRIMITIVE) {
       identifier.type = TT_DECLARATOR;
       identifier.def = tfit->second->def;
     } else {
@@ -1449,7 +1449,7 @@ token_t lexer::preprocess_and_read_token() {
       }
       continue;
     }
-    
+
     return res;
   }
 }
@@ -1463,14 +1463,14 @@ token_t lexer::get_token() {
 
 token_t lexer::get_token_in_scope(jdi::definition_scope *scope) {
   token_t res = get_token();
-  
+
   if (res.type == TT_IDENTIFIER) {
     definition *def = res.def = scope->look_up(res.content.toString());
     if (def) {
       res.type = (def->flags & DEF_TYPENAME) ? TT_DECLARATOR : TT_DEFINITION;
     }
   }
-  
+
   return res;
 }
 
@@ -1550,26 +1550,27 @@ bool lexer::pop_file() {
           "Attempting to pop a file without first popping open buffers.";
     }
   }
-  
+
   if (files.empty())
     return true;
-  
+
   // Close whatever file we have open now
   cfile.close();
-  
+
   // Fetch data from top item and pop stack
-  OpenFile &of = files.back();
-  cfile.consume(of.file);
+  cfile.consume(files.back());
   files.pop_back();
-  
+
   return false;
 }
 
 std::vector<SourceLocation> lexer::detailed_position() const {
   std::vector<SourceLocation> res;
   for (const auto &of : files) {
-    res.emplace_back(of.name, of.from_line, of.from_lpos);
+    res.emplace_back("File " + of.name, of.lnum, of.pos - of.lpos);
   }
+  if (cfile.is_open())
+    res.emplace_back("File " + cfile.name, cfile.lnum, cfile.pos - cfile.lpos);
   for (const auto &ob : open_buffers) if (ob.macro_info) {
     res.emplace_back("Usage of macro `" + ob.macro_info->name + "` in "
                                         + ob.macro_info->origin.file,

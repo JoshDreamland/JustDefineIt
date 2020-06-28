@@ -1,36 +1,36 @@
 /**
  * @file  llreader.h
  * @brief Header declaring a general-purpose array-to-file adapter.
- * 
+ *
  * This file is meant to provide a faster alternative to the standard C++
  * stream classes. It can work directly with files and strings alike.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
 /**
   @brief A low-level file reader structure for quick I/O.
-  
+
   This structure guarantees that its data member represents
   the file as a string in memory, and that its length member
   gives the valid length of the array member. The implementation
   may in fact virtually map the file in memory or read the
   whole thing in at once.
-  
+
   This class may also represent a simple string in memory
   if one is provided in place of a file.
 **/
@@ -74,10 +74,10 @@ class llreader {
   void open(const char* filename);
   /**
     Encapsulate a string for the duration of its life.
-    
+
     Length will be set to code.length(), and data will be
     set to its c_str().
-    
+
     @param contents  A view of the contents to be pointed to.
     @warning As this function only encapsulates the string,
              without copying it; its contents will become
@@ -124,23 +124,23 @@ class llreader {
     destructor.
   **/
   void close();
-  
+
   // Copying this reader can be expensive.
   llreader &operator=(const llreader &llr) = delete;
   llreader &operator=(llreader &&llr);
-  
+
   /**
     Returns whether the stream is open.
   **/
-  bool is_open();
-  
+  bool is_open() const;
+
   // =========================================================================
   // == Help with tokenization ===============================================
   // =========================================================================
-  
+
   /// Skips whitespace from the current position, keeping track of newlines.
   void skip_whitespace();
-  
+
   char operator[](size_t ind) const { return data[ind]; }
   const char* operator+(size_t x) { return data + x; }
   size_t tell() const { return pos; }
@@ -181,11 +181,11 @@ class llreader {
   std::string_view slice(size_t start, size_t end) const {
     return std::string_view(data + start, end - start);
   }
-  
+
   // =========================================================================
   // == Constructors/destructors =============================================
   // =========================================================================
-  
+
   /**
     Default constructor.
     There's really no good way to make a constructor for each method above.
@@ -200,7 +200,7 @@ class llreader {
   /**
     Constructs, behaving like either copy() or encapsulate().
     @param contents  A string containing contents to be mirrored.
-    @param copy      True if the contents are to be copied, false if they are 
+    @param copy      True if the contents are to be copied, false if they are
                      to simply be pointed to (see \c encapsulate).
   **/
   llreader(std::string name, std::string_view contents, bool copy);

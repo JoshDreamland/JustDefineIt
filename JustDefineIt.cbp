@@ -196,14 +196,14 @@
 			<Option target="Release" />
 			<Option target="Profile" />
 		</Unit>
+		<Unit filename="test/Parsing/parsing_test.cc">
+			<Option target="Test" />
+		</Unit>
 		<Unit filename="test/Testing/error_handler.h">
 			<Option target="Test" />
 		</Unit>
 		<Unit filename="test/Testing/matchers.h">
 			<Option target="Test" />
-		</Unit>
-		<Unit filename="test/defines_linux.txt">
-			<Option virtualFolder="test/" />
 		</Unit>
 		<Unit filename="test/modifiers.txt">
 			<Option virtualFolder="test/" />

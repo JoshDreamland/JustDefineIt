@@ -1,25 +1,25 @@
 /**
  * @file  llreader.cpp
  * @brief Source implementing a general-purpose array-to-file adapter.
- * 
+ *
  * This implementation is meant to figure out what functions are available for
  * mapping a file in memory, and use them. Otherwise, it must simply read the
  * entire file into memory. The implementation must also provide a way to copy
  * and mirror std::string contents.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -27,7 +27,7 @@
 #include <cstdio>
 #include <cstring>
 #if defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
-  #include <windows.h>  
+  #include <windows.h>
 #else
   #include <sys/mman.h>
   #include <sys/types.h>
@@ -87,7 +87,7 @@ llreader::llreader(): pos(0), length(0), lpos(0), lnum(kFirstLine),
                       data(nullptr), name(""), mode(FT_CLOSED) {}
 llreader::llreader(llreader &&other): llreader() { consume(other); }
 llreader::llreader(const char* filename): llreader() { open(filename); }
-llreader::llreader(std::string bname, std::string contents): pos(0), length(0), 
+llreader::llreader(std::string bname, std::string contents): pos(0), length(0),
     lpos(0), lnum(kFirstLine), data(nullptr), name(bname), mode(FT_CLOSED) {
   copy(contents);
 }
@@ -124,7 +124,7 @@ void llreader::open(const char* filename) {
   }
   CloseHandle(mapping);
   CloseHandle(hFile);
-  
+
 #else
   int fd = ::open(filename, O_RDONLY);
   if (fd == -1) return;
@@ -249,7 +249,7 @@ void llreader::close() {
   mode = FT_CLOSED;
 }
 
-bool llreader::is_open() {
+bool llreader::is_open() const {
   return mode != FT_CLOSED;
 }
 
