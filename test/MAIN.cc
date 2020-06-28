@@ -157,38 +157,44 @@ inline
 const char *first_not_null(const char *a, const char *b) { return a? a : b; }
 
 int main(int argc, char** argv) {
+  // For JDI testing, developers use ENIGMA--the game engine JDI was originally
+  // built to support. There's nothing special about ENIGMA for the purposes of
+  // this project, but it is a large codebase that developers are familiar with
+  // and actively seek to support using the JDI project.
+
   fs::path home = first_not_null(getenv("HOME"), "/tmp/");
   fs::path enigma_path = home/"Projects/ENIGMA";
   fs::path enigma_temp = home/".enigma";
-  bool skip_parser = true;
+
+  fs::path gcc_defines = "/tmp/jdi/defines.cc";
+  fs::path gcc_preprocessed = "/tmp/jdi/preprocessed.cc";
+
+  bool test_lexer = false;
   int cpp_std = 20;
   if (argc != 4) {
-    std::cerr << "Usage: JustDefineIt <c++std> </path/to/enigma> <skip parser>" << std::endl;
+    std::cerr << "Usage: JustDefineIt <c++std> </path/to/enigma> <test_lexer>"
+              << std::endl << "Will assume default values." << std::endl;
   } else {
-    // ensure place to write stuffs exists
-    if (!fs::create_directory("/tmp/jdi") && !fs::exists("/tmp/jdi")) {
-      std::cerr << "Failed to create working directory: /tmp/jdi" << std::endl;
-      return -1;
-    }
-
     enigma_path = argv[2];
-    if (!fs::exists(enigma_path)) {
-      std::cerr << "could not locate enigma at: " << enigma_path << std::endl;
-      return -1;
-    }
-
-    skip_parser = stoi(argv[3], nullptr, 10);
+    test_lexer = stoi(argv[3], nullptr, 10);
     cpp_std = stoi(argv[1], nullptr, 10);
-
-    std::cout << "Attemping parse of the " << get_cpp_standard_str(cpp_std)  << " standard" << std::endl << std::endl;
-
-    // generate enigma preprocess
-    std::cout << "Generating enigma headers" << std::endl;
-    if (std::system(("pushd " + enigma_path.string() + " && ./emake --list &> /dev/null && popd").c_str()) != 0) {
-      std::cerr << "Failed to generate enigma headers. Bye" << std::endl;
-      return -1;
-    }
   }
+
+  fs::path enigma_shared = enigma_path/"shared";
+  fs::path enigma_shell = enigma_path/"ENIGMAsystem/SHELL";
+  fs::path enigma_shellmain = enigma_shell/"SHELLmain.cpp";
+
+  // ensure place to write stuffs exists
+  if (!fs::create_directory("/tmp/jdi") && !fs::exists("/tmp/jdi")) {
+    std::cerr << "Failed to create working directory: /tmp/jdi" << std::endl;
+    return -1;
+  }
+
+  if (!fs::exists(enigma_path)) {
+    std::cerr << "could not locate enigma at: " << enigma_path << std::endl;
+    return -1;
+  }
+  std::cout << "Attemping parse of the " << get_cpp_standard_str(cpp_std)  << " standard" << std::endl << std::endl;
 
   putcap("Test simple macros");
   Context &builtin = builtin_context();
@@ -228,19 +234,38 @@ int main(int argc, char** argv) {
 
   for (const std::string& p : get_gcc_include_paths(cpp_std)) builtin.add_search_directory(p);
 
-  builtin.add_search_directory((enigma_path/"ENIGMAsystem/SHELL").string());
+  builtin.add_search_directory(enigma_shell.string());
+  builtin.add_search_directory(enigma_shared.c_str());
   builtin.add_search_directory(enigma_temp.c_str());
 
-  if (std::system(("cpp -dM -x c++ --std=" + get_cpp_standard_str(cpp_std) + " -E /dev/null > /tmp/jdi/defines.txt").c_str()) != 0) {
+  std::string preprocess_command =
+      "cpp -dM -x c++ --std=" + get_cpp_standard_str(cpp_std) + " -E /dev/null"
+      " > " + gcc_defines.string();
+  if (std::system(preprocess_command.c_str()) != 0) {
     std::cerr << "Failed to generate gcc defines. Bye" << std::endl;
     return -1;
   }
-  llreader macro_reader("/tmp/jdi/defines.txt");
+  std::string gcc_command =
+      "g++ --std=" + get_cpp_standard_str(cpp_std)
+       + " -E " + enigma_shellmain.string()
+       + " -I" + enigma_shell.string()
+       + " -I" + enigma_shared.string()
+       + " -I" + enigma_temp.string()
+       // + " -DJUST_DEFINE_IT_RUN"
+       + " > " + gcc_preprocessed.string();
+  std::cout << "Preprocessing compiler:\n" << gcc_command << "\n\n";
+  if (std::system(gcc_command.c_str()) != 0) {
+    std::cerr << "Failed to preprocess ENIGMA with GCC. Abort." << std::endl;
+    return -1;
+  }
+  llreader macro_reader(gcc_defines.string().c_str());
 
   if (macro_reader.is_open())
     builtin.parse_stream(macro_reader);
-  else
+  else {
     cout << "ERROR: Could not open GCC macro file for parse!" << endl;
+    return -1;
+  }
 
   putcap("Test type reading");
   name_type("int", builtin);
@@ -250,15 +275,12 @@ int main(int argc, char** argv) {
   name_type("int(*)()", builtin);
   name_type("int&(*)()", builtin);
 
-  if (skip_parser) {
+  if (test_lexer) {
     vector<token_t> tokens, tokens2;
     size_t correct = 0, incorrect = 0;
     if (true) {
       Context butts;
-      // g++ --std=c++03 -E ~/Projects/ENIGMA/ENIGMAsystem/SHELL/SHELLmain.cpp
-      //   -I/home/josh/Projects/ENIGMA/ENIGMAsystem/SHELL -I/home/josh/.enigma/
-      //   -DJUST_DEFINE_IT_RUN > Projects/JustDefineIt/shellmain-pp.cc
-      llreader f("shellmain-pp.cc");
+      llreader f(gcc_preprocessed.c_str());
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -268,7 +290,7 @@ int main(int argc, char** argv) {
     bool had_diff = false;
     if (true) {
       Context butts;
-      llreader f((enigma_path/"ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
+      llreader f(enigma_shellmain.c_str());
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -311,7 +333,7 @@ int main(int argc, char** argv) {
   }
 
   putcap("Test parser");
-  llreader f((enigma_path/"ENIGMAsystem/SHELL/SHELLmain.cpp").c_str());
+  llreader f(enigma_shellmain.c_str());
 
   if (f.is_open())
   {
@@ -370,13 +392,13 @@ static char getch() {
 #include <System/lex_cpp.h>
 #include <General/parse_basics.h>
 
-void do_cli(Context &ct)
-{
+void do_cli(Context &ct) {
   putcap("Command Line Interface");
   char c = ' ';
   macro_map undamageable = ct.get_macros();
-  while (c != 'q' and c != '\n') { switch (c) {
-    case 'd': {
+  while (c != 'q' and c != '\n') {
+    switch (c) {
+      case 'd': {
         bool justflags, justorder;
         justflags = false;
         justorder = false;
@@ -409,9 +431,9 @@ void do_cli(Context &ct)
           else
             cout << def->toString() << endl;
         }
-      } break;
-
-    case 'm': {
+        break;
+      }
+      case 'm': {
         cout << "Enter the macro to define:" << endl << ">> " << flush;
         char buf[4096]; cin.getline(buf, 4096);
         macro_iter_c mi = ct.get_macros().find(buf);
@@ -419,9 +441,9 @@ void do_cli(Context &ct)
           cout << mi->second->toString() << endl;
         else
           cout << "Not found." << endl;
-      } break;
-
-    case 'e': {
+        break;
+      }
+      case 'e': {
         bool eval, coerce, render, show;
         eval = true,
         coerce = false;
@@ -459,28 +481,33 @@ void do_cli(Context &ct)
               cout << "Failed to open." << endl;
           }
         } else cout << "Bailing." << endl;
-      } break;
-
-    case 'h':
-      cout <<
-      "'c' Coerce an expression, printing its type\n"
-      "'d' Define a symbol, printing it recursively\n"
-      "'e' Evaluate an expression, printing its result\n"
-      "'f' Print flags for a given definition\n"
-      "'h' Print this help information\n"
-      "'m' Define a macro, printing a breakdown of its definition\n"
-      "'o' Print the order of declarations in a given scope\n"
-      "'r' Render an AST representing an expression\n"
-      "'s' Render an AST representing an expression and show it\n"
-      "'q' Quit this interface\n";
-    break;
-
-
-    default: cout << "Unrecognized command. Empty command or 'q' to quit." << endl << endl; break;
-    case ' ': cout << "Commands are single-letter; 'h' for help." << endl << "Follow commands with ENTER on non-unix." << endl;
-  }
-  cout << "> " << flush;
-  c = getch();
+        break;
+      }
+      case 'h': {
+        cout <<
+            "'c' Coerce an expression, printing its type\n"
+            "'d' Define a symbol, printing it recursively\n"
+            "'e' Evaluate an expression, printing its result\n"
+            "'f' Print flags for a given definition\n"
+            "'h' Print this help information\n"
+            "'m' Define a macro, printing a breakdown of its definition\n"
+            "'o' Print the order of declarations in a given scope\n"
+            "'r' Render an AST representing an expression\n"
+            "'s' Render an AST representing an expression and show it\n"
+            "'q' Quit this interface\n";
+        break;
+      }
+      default: {
+        cout << "Unrecognized command. Empty command or 'q' to quit." << endl << endl;
+        break;
+      }
+      case ' ': {
+        cout << "Commands are single-letter; 'h' for help." << endl
+             << "Follow commands with ENTER on non-unix." << endl;
+      }
+    }
+    cout << "> " << flush;
+    c = getch();
   }
   cout << endl << "Goodbye" << endl;
 }
