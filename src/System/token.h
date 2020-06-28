@@ -1,22 +1,22 @@
 /**
  * @file token.h
  * @brief Header defining token types.
- * 
+ *
  * These are system constants; use only if you have read the \c jdi disclaimer.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -49,14 +49,15 @@ namespace jdi {
     GTT_LITERAL,        ///< String or numeric literals.
     GTT_BRACKET,        ///< Brackets, including braces and parentheses, but not angle brackets (GTT_ANGLE).
     GTT_MEMORYOP,       ///< Memory and cast operators, eg, `new`, `delete`, `static_cast`.
+    GTT_CONTROL,        ///< Control statements, such as `return`, `break`, `continue`, `throw`.
     GTT_PREPROCESSOR,   ///< Preprocessor-only tokens.
     GTT_ENDOFCODE,      ///< Signals the end of input.
     GTT_INVALID         ///< Invalid; read failed.
   };
-  
+
   /// Used when defining `TOKEN_TYPE`s to choose a specific token value based on a gloss token value.
   constexpr int GLOSS(int gloss_token) { return gloss_token << kGlossBits; }
-  
+
   enum TOKEN_TYPE {
     TT_DECLARATOR = GLOSS(GTT_DECLARATOR), ///< Primitive type catch-it-all.
     TT_DECFLAG,    ///< Modifiers and storage specifiers, like const, unsigned, long.
@@ -69,13 +70,13 @@ namespace jdi {
     TT_ATTRIBUTE,  ///< The GNU `__attribute__` specifier.
     TT_CONSTEXPR,  ///< The `constexpr` specifier.       (C++11)
     TT_NOEXCEPT,   ///< The `noexcept` specifier.        (C++11)
-    
+
     TT_CLASS      = GLOSS(GTT_CONSTRUCT), ///< The `class` keyword.
     TT_STRUCT,     ///< The `struct` keyword.
     TT_ENUM,       ///< The `enum` keyword.
     TT_UNION,      ///< The `union` keyword.
     TT_NAMESPACE,  ///< The `namespace` keyword.
-    
+
     TT_USING      = GLOSS(GTT_USING),      ///< The `using` keyword.
     TT_TEMPLATE   = GLOSS(GTT_TEMPLATE),   ///< The `template` keyword.
     TT_ASM        = GLOSS(GTT_ASM),        ///< The `asm` keyword.
@@ -172,6 +173,8 @@ namespace jdi {
     TT_REINTERPRET_CAST, ///< The `reinterpret_cast` operator
     TT_EXTENSION,        ///< The GNU `__extension__` indicator.
 
+    TT_THROW = GLOSS(GTT_CONTROL),  ///< The `throw` keyword.
+
     TTM_CONCAT = GLOSS(GTT_PREPROCESSOR), ///< A macro-only token meaning the concatenation of two tokens to form a new token, `##`.
     TTM_TOSTRING, ///< A macro-only token meaning the value of a parameter, treated as a string literal, `#`.
     TTM_WHITESPACE, ///< A comment, including the symbols that delimit the comment (excluding any newline).
@@ -182,7 +185,7 @@ namespace jdi {
     #include <User/token_types.h>
     TT_INVALID = GLOSS(GTT_INVALID) ///< Invalid token; read failed.
   };
-  
+
   struct token_t;
 }
 
@@ -213,18 +216,18 @@ namespace jdi {
 namespace jdi {
   using std::string;
   using std::string_view;
-  
+
   /**
     A structure for representing complete info about a token.
-    
+
     First and foremost, the structure denotes the type of the token. If that
     type is insufficient to discern the text of the token, the text is included
     as well in the \c token_t::extra member. Otherwise, there is little point
     to maintaining a pointer to that information in memory.
-    
+
     If the type of the token is a declarator or other sort of object backed by
     a \c definition, then \c token_t::extra member will contain a \c definition*.
-    
+
     For reasons of error reporting, the structure also contains information on
     the origin of the token: the filename, the line number, and the position.
   **/
@@ -233,18 +236,18 @@ namespace jdi {
     inline GLOSS_TOKEN_TYPE gloss_type() const {
       return (GLOSS_TOKEN_TYPE) (type >> kGlossBits);
     }
-    
+
     /// Log the name of the file from which this token was read.
     std::string file;
     /// Log the line on which this token was named in the file.
     size_t linenum;
     /// We are logging positions for precise error reporting.
     size_t pos;
-    
+
     std::string_view get_filename() const { return file; }
     size_t get_line_number()        const { return linenum; }
     size_t get_line_position()      const { return pos; }
-    
+
     union {
       /// For types, namespace-names, etc., the definition by which the type
       /// of this token was determined.
@@ -252,7 +255,7 @@ namespace jdi {
       /// For TT_DECFLAG, the typeflag lookup for this token.
       typeflag *tflag;
     };
-    
+
     /// Structure containing a pointer inside a string, and a length, representing a substring.
     struct content {
       /// A pointer to a substring of a larger buffer of code. NEITHER is null-terminated!
@@ -260,15 +263,15 @@ namespace jdi {
       /// can be modified or freed as soon as the file is closed. As such, any use of it must
       /// be made before the file is closed.
       volatile const char* str;
-      
+
       /// The length of the string pointed to by \c content.
       size_t len;
-      
+
       /// Lazy string value initialization via caching. Also allows external ownership.
       mutable const std::string *cached_str = nullptr;
       /// Allows building, then caching.
       mutable std::string owned_str;
-      
+
       /// Get the string contents of this token: This operation is somewhat costly.
       inline const string &toString() const {
         if (cached_str) return *cached_str;
@@ -276,15 +279,15 @@ namespace jdi {
         cached_str = &owned_str;
         return *cached_str;
       }
-      
+
       /// Return this content as a string_view.
       string_view view() const { return {(const char*) str, len}; }
-      
+
       /// Copy another token's content, handling ownership.
       void copy(const content&);
       /// Copy another token's content, handling ownership.
       void consume(content&&);
-      
+
       inline content() {}
       inline content(const char *s, int l): str(s), len(l) {}
       inline content(std::string_view sv): str(sv.data()), len(sv.length()) {}
@@ -309,7 +312,7 @@ namespace jdi {
         return *this;
       }
     } content;
-    
+
     void validate() const;
 
     /// Returns whether this token preprocesses to nothing.
@@ -320,7 +323,7 @@ namespace jdi {
           type == TTM_WHITESPACE ||
           type == TTM_COMMENT);
     }
-    
+
     /// Construct a new, invalid token.
     token_t():
         type(TT_INVALID), file("<no file>"), linenum(0), pos(-1), def(nullptr),
@@ -346,7 +349,7 @@ namespace jdi {
         type(t), file(fn), linenum(l), pos(p), tflag(tf), content(name) {
             validate();
     }
-    
+
     /**
       Pass error information to an error handler.
       If no information is available, then zeros are copied in its place.
@@ -369,10 +372,10 @@ namespace jdi {
       @param error The text of the error.
     **/
     void report_warning(ErrorHandler *herr, std::string error) const;
-    
+
     /// Comparatively-slow method to represent this token as a human-readable string.
     std::string to_string() const;
-    
+
     static std::string get_name(TOKEN_TYPE type);
   };
 

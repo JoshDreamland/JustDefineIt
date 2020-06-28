@@ -53,7 +53,11 @@ definition* jdi::context_parser::read_qualified_definition(token_t &token, defin
     }
     #ifdef DEBUG_MODE
     if (!token.def) {
-      std::cerr << "This function was invoked improperly." << std::endl;
+      for (const auto &sl : lex->detailed_position())
+        std::cerr << "In " << sl.filename << ":" << sl.line << ":" << sl.pos << ":\n";
+      herr->error(token)
+          << "jdi::read_qualified_definition invoked with non-type token "
+          << token;
       abort();
     }
     #endif

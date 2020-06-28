@@ -1,20 +1,20 @@
 /**
  * @file read_fulltype.cpp
  * @brief Source implementing a utility funciton to read in a type.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -39,34 +39,32 @@ full_type jdi::context_parser::read_fulltype(token_t &token, definition_scope *s
 
 full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope)
 {
-  definition* inferred_type = nullptr; // This is the type we will use if absolutely no other type is given
-  definition* overridable_type = nullptr;
+  definition* inferred_type = nullptr;
   long int rflags = 0; // Return flags.
-  long int swif = 0; // Swap-in flags: or'd in when a flag is determined not to be the main type.
   definition *rdef = nullptr;
   ref_stack rrefs;
 
   // XXX: Should this be allowed? AST builders are calling it.
   if (!scope) scope = ctex->global.get();
-  
+
   if (token.type != TT_DECLARATOR) {
     if (token.type == TT_DECFLAG) {
       const typeflag *tf = (typeflag*) token.def;
       if (!tf) {
-        token.report_errorf(
-            herr, "Internal error: DECFLAG token (%s) does not have type "
-                  "information attached.");
-        tf = builtin_declarators["volatile"];
+        herr->error(token)
+            << "Internal error: DECFLAG token (" << token
+            << ") does not have type information attached.";
       }
       if (tf->usage & UF_PRIMITIVE) {
-        (tf->usage == UF_PRIMITIVE? rdef : overridable_type) = tf->def,
-        swif = tf->flagbit;
+        if (tf->usage & UF_FLAG) {
+          inferred_type = builtin_type__int;
+        } else {
+          rdef = tf->def;
+        }
       }
-      else {
-        if (tf->usage & UF_STANDALONE)
-          inferred_type = tf->def;
-        rflags = tf->flagbit;
-      }
+      // TODO: why isn't this just done below?
+      // This whole routine's a fucking mess.
+      rflags |= tf->value;
       token = lex->get_token_in_scope(scope);
     } else if (token.type == TT_CLASS || token.type == TT_STRUCT
             || token.type == TT_ENUM  || token.type == TT_UNION) {
@@ -91,7 +89,8 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
           res.refs.ndef = rdef;
           return res;
         } else {
-          token.report_error(herr, "Expected type name here; `" + rdef->name + "' does not name a type (" + flagnames(rdef->flags) + ")");
+          herr->error(token) << "Expected type name here; `" << rdef->name
+              << "' does not name a type (" << flagnames(rdef->flags) << ")";
           return nullptr;
         }
       }
@@ -112,10 +111,10 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
         token.report_errorf(herr,"Type name expected here before %s");
       return full_type();
     }
-  }
-  else
+  } else {
     rdef = read_qualified_definition(token, scope);
-  
+  }
+
   // Read any additional type info
   while (token.type == TT_DECLARATOR or token.type == TT_DECFLAG)
   {
@@ -123,60 +122,48 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       if (rdef) {
         if (token.def->flags & (DEF_CLASS | DEF_ENUM | DEF_UNION | DEF_TYPED))
           break;
-        token.report_error(herr,"Two types named in expression");
+        token.report_error(herr, "Two types named in expression");
         FATAL_RETURN(full_type());
       }
       rdef = read_qualified_definition(token, scope);
-      rflags |= swif;
     }
     else {
       typeflag *const tf = ((typeflag*)token.def);
       if (tf->usage & UF_PRIMITIVE) {
-        if (tf->usage == UF_PRIMITIVE) {
-          if (rdef)
-            token.report_error(herr,"Two types named in expression");
-          rdef = tf->def;
-          rflags |= swif;
+        if (tf->usage & UF_FLAG) {
+          inferred_type = builtin_type__int;
+          // TODO: Redundant flag application logic. Deduplicate against above.
+          rflags |= tf->value;
         } else {
-          overridable_type = tf->def,
-          rflags |= swif,
-          swif = tf->flagbit;
+          if (rdef)
+            token.report_error(herr, "Two types named in expression");
+          rdef = tf->def;
         }
       }
-      else if (tf->usage & UF_STANDALONE_FLAG)
-        inferred_type = tf->def,
-        rflags |= tf->flagbit;
       token = lex->get_token_in_scope(scope);
     }
   }
   if (rdef == nullptr) {
-    if (token.type == TT_CLASS or token.type == TT_STRUCT or token.type == TT_UNION or token.type == TT_ENUM)
-    {
+    if (token.type == TT_CLASS || token.type == TT_STRUCT ||
+        token.type == TT_UNION || token.type == TT_ENUM) {
       rdef = (token.type == TT_UNION? (definition*)handle_union(scope,token,0) :
               token.type == TT_ENUM?  (definition*)handle_enum(scope,token,0)  :  (definition*)handle_class(scope,token,0));
-    }
-    else if (token.type == TT_DEFINITION and token.def->flags & (DEF_SCOPE | DEF_TEMPLATE)) {
+    } else if (token.type == TT_DEFINITION and token.def->flags & (DEF_SCOPE | DEF_TEMPLATE)) {
       rdef = read_qualified_definition(token, scope);
-      if (rdef and !(rdef->flags & DEF_TYPENAME))
-      {
-        full_type res(overridable_type? overridable_type : inferred_type, rrefs, rflags);
+      // XXX: ???
+      if (rdef and !(rdef->flags & DEF_TYPENAME)) {
+        full_type res(inferred_type, rrefs, rflags);
         res.refs.ndef = rdef;
         return res;
       }
-    }
-    else if (token.type == TT_TYPENAME) {
+    } else if (token.type == TT_TYPENAME) {
       //if (!cp) { token.report_error(herr, "Cannot use dependent type in this context"); return full_type(); }
       token = lex->get_token_in_scope(scope);
       rdef = handle_hypothetical(scope, token, DEF_TYPENAME);
     }
-    if (rdef == nullptr)
-    {
-      rdef = overridable_type;
-      if (rdef == nullptr)
-        rdef = inferred_type;
-    }
+    if (rdef == nullptr) rdef = inferred_type;
   }
-  
+
   return full_type(rdef, rrefs, rflags);
 }
 
@@ -190,7 +177,7 @@ static parenth_type parenths_type(lexer *lex, definition_scope *scope,
   {
     bool seen_type = false, seen_comma = false;
     token = lex->get_token_in_scope(scope);
-    
+
     bool read_next = false;
     for (; token.type != TT_RIGHTPARENTH; read_next ? void()
          : (token = lex->get_token_in_scope(scope), void())) {
@@ -304,22 +291,20 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
 
   SET_MAXIMUM_RECURSIONS(100);
 
-  for (;;)
-  {
-    switch (token.type)
-    {
+  for (;;) {
+    switch (token.type) {
       case TT_LEFTBRACKET:
         return read_referencers_post(refs, token, scope);
-      
+
       case TT_LEFTPARENTH: { // Either a function or a grouping, or, potentially, a constructor call.
         fix_scope fs(ft.refs.ndef, scope);
-        
+
         lexer::look_ahead lb(lex);
         bool is_func = parenths_type(lex, fs.scope, token, this, herr) == PT_FUNCTION;
-        
+
         lb.rewind();
         token = lex->get_token();
-        
+
         if (is_func)
         {
           ref_stack appme;
@@ -330,10 +315,10 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
           refs.append_c(appme);
           return res;
         }
-        
+
         ref_stack nestedrefs;
         read_referencers(nestedrefs, ft, token, fs.scope); // It's safe to recycle ft because we already know we're not a constructor at this point.
-        
+
         if (token.type != TT_RIGHTPARENTH) {
           token.report_errorf(herr, "Expected right parenthesis before %s to close nested referencers");
           FATAL_RETURN(1);
@@ -343,13 +328,13 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
         refs.append_c(appme); refs.append_nest_c(nestedrefs);
         return res;
       }
-      
+
       case TT_DEFINITION:
       case TT_DECLARATOR: {
         definition *pd = token.def;
         definition *d = read_qualified_definition(token, scope);
         if (!d) return 1;
-        
+
         if (token.type == TT_MEMBER) {
           if (!(d->flags & DEF_CLASS)) {
             token.report_error(herr, "Member pointer to non-class `" + d->name + "'");
@@ -367,7 +352,7 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
           if (pd != d)
             refs.ndef = d;
         }
-        
+
         int res;
         ref_stack appme;
         if (pd != d)
@@ -390,37 +375,37 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
         ref_stack appme; int res = read_referencers_post(appme, token, scope);
         refs.append_c(appme); return res;
       }
-      
+
       case TT_MEMBER:
           token.report_error(herr, "Member pointer (class::*) not presently supported...");
         return 1;
-         
+
       case TT_OPERATORKW: {
           refs.name = read_operatorkw_name(token, scope);
           refs.ndef = scope->look_up(refs.name);
           ref_stack appme; int res = read_referencers_post(appme, token, scope);
           refs.append_c(appme); return res;
       } break;
-      
+
       case TT_ALIGNAS:
       case TT_NOEXCEPT:
       case TT_ATTRIBUTE:
         return read_referencers_post(refs, token, scope);
-      
+
       case TT_AMPERSAND: case TT_STAR: {
           refs.push(token.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
         } goto default_; // Else overflow
-      
+
       case TT_DECFLAG: {
-          typeflag* a = ((typeflag*)token.def);
-          if (a->flagbit == builtin_flag__const || a->flagbit == builtin_flag__volatile || a->flagbit == builtin_flag__restrict) {
+          typeflag* a = ((typeflag*) token.def);
+          if (a == builtin_flag__const || a == builtin_flag__volatile || a == builtin_flag__restrict) {
             // TODO: Give RT_POINTERTO node a bool/volatile flag; to denote that the pointer is const or volatile; set it here.
             token = lex->get_token_in_scope(scope);
             continue;
           }
         } goto default_;
-      
+
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
         goto default_;
@@ -447,6 +432,7 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN:
       case TT_NEGATE_ASSIGN: case TT_EXTENSION:
+      case TT_THROW:
       case TT_ENDOFCODE: case TTM_CONCAT: case TTM_TOSTRING:
       case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:
       case TT_INVALID: default: default_:
@@ -456,14 +442,14 @@ int jdi::context_parser::read_referencers(ref_stack &refs, const full_type& ft, 
     token = lex->get_token_in_scope(scope);
   }
 }
-  
+
 int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, definition_scope *scope)
 {
   #ifdef DEBUG_MODE
   static int number_of_times_GDB_dropped_its_ass = 0;
   number_of_times_GDB_dropped_its_ass++;
   #endif
-  
+
   for (;;)
   {
     switch (token.type)
@@ -486,30 +472,30 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
         else
           refs.push_array(ref_stack::node_array::nbound);
       } break;
-      
+
       case TT_LEFTPARENTH: // Function parameters
         token = lex->get_token_in_scope(scope);
         read_function_params(refs, token, scope);
       continue;
-      
+
       case TT_STAR: case TT_AMPERSAND: {
           refs.push(token.content.str[0] == '&'? ref_stack::RT_REFERENCE : ref_stack::RT_POINTERTO);
           break;
         }
-      
+
       case TT_DECFLAG: {
           typeflag* a = ((typeflag*)token.def);
-          if (a->flagbit == builtin_flag__const || a->flagbit == builtin_flag__volatile || a->flagbit == builtin_flag__restrict) {
+          if (a == builtin_flag__const || a == builtin_flag__volatile || a == builtin_flag__restrict) {
             // TODO: Give RT_POINTERTO node a bool/volatile flag; to denote that the pointer is const or volatile; set it here.
             token = lex->get_token_in_scope(scope);
             continue;
           }
         } goto default_;
-      
+
       case TT_ALIGNAS:
           token.report_error(herr, "Unimplemented: `alignas'");
         return 1;
-      
+
       case TT_NOEXCEPT:
           token.report_error(herr, "Unimplemented: `noexcept'");
         return 1;
@@ -517,20 +503,20 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
       case TT_ATTRIBUTE:
           token.report_error(herr, "Unimplemented: `noexcept'");
         return 1;
-      
+
       case TT_ELLIPSIS:
           token.report_error(herr, "`...' not allowed as general modifier");
         goto default_;
-      
+
       case TT_LESSTHAN:
         goto default_;
-      
+
       case TT_MEMBER:
         token.report_error(herr, "Member access (class::*) expected before name in type");
         return 1;
-      
+
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_EXTERN: case TT_INLINE: case TT_UNION: case TT_DECLARATOR: case TT_IDENTIFIER:
-      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND: case TT_DEFINITION: 
+      case TT_NAMESPACE: case TT_TEMPLATE: case TT_TYPENAME: case TT_TYPEDEF: case TT_USING: case TT_PUBLIC: case TT_FRIEND: case TT_DEFINITION:
       case TT_PRIVATE: case TT_PROTECTED: case TT_COLON: case TT_RIGHTPARENTH: case TT_RIGHTBRACKET: case TT_SCOPE: case TT_OPERATORKW:
       case TT_LEFTBRACE: case TT_RIGHTBRACE: case TT_GREATERTHAN: case TT_TILDE: case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF:
       case TT_DECLTYPE: case TT_TYPEID: case TT_TYPEOF: case TT_CONST_CAST:
@@ -551,6 +537,8 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN:
       case TT_NEGATE_ASSIGN:
 
+      case TT_THROW:
+
       case TT_ENDOFCODE:
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       case TTM_WHITESPACE:case TTM_COMMENT: case TTM_NEWLINE:
@@ -563,7 +551,7 @@ int jdi::context_parser::read_referencers_post(ref_stack &refs, token_t &token, 
 int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, definition_scope *scope)
 {
   ref_stack::parameter_ct params;
-  
+
   // Navigate to the end of the function parametr list
   while (token.type != TT_RIGHTPARENTH)
   {
@@ -583,7 +571,7 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
       astbuilder->parse_expression(param.default_value, token, scope, precedence::comma+1);
     }
     params.throw_on(param);
-    
+
     if (token.type != TT_COMMA) {
       if (token.type == TT_RIGHTPARENTH) break;
       token.report_errorf(herr,"Expected comma or closing parenthesis to function parameters before %s");
@@ -591,22 +579,23 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
     }
     token = lex->get_token_in_scope(scope);
   }
-  
+
   // Push our function information onto the reference stack
   refs.push_func(params);
   if (token.type != TT_RIGHTPARENTH) {
     token.report_error(herr,"Expected closing parenthesis to function parameters");
     FATAL_RETURN(1);
   }
-  
+
   // If there's no other special garbage being tacked onto this, then we are not a pointer-to function,
   // and we are not an array of functions, and we aren't a function returning a function.
   // Ergo, the function can be implemented here. FIXME: Make sure parser allows implementing function returning function pointer.
   token = lex->get_token_in_scope(scope); // Read in our next token to see if it's a brace or extra info
-  while (token.type == TT_DECFLAG) { // It is legal to put the flags throw and const here.
-    typeflag *tf = (typeflag*)token.def;
-    token = lex->get_token_in_scope(scope);
-    if (tf == builtin_typeflag__throw) {
+  while (token.type == TT_DECFLAG || token.type == TT_THROW) {
+    // It is legal to put the flags override, final, and const here, as well as
+    // a throw() block.
+    if (token.type == TT_THROW) {
+      token = lex->get_token_in_scope(scope);
       if (token.type == TT_LEFTPARENTH) {
         token = lex->get_token_in_scope(scope);
         if (token.type != TT_RIGHTPARENTH) {
@@ -624,6 +613,8 @@ int jdi::context_parser::read_function_params(ref_stack &refs, token_t &token, d
         else
           token = lex->get_token_in_scope(scope);
       }
+    } else {
+      token = lex->get_token_in_scope(scope);
     }
   }
   return 0;

@@ -420,7 +420,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token,
       }
       else if (funcrefs.refs.ndef && (funcrefs.refs.ndef->flags & DEF_TYPED)) {
         definition_typed* dt = (definition_typed*)funcrefs.refs.ndef;
-        if (dt->modifiers & builtin_flag__static) {
+        if (dt->modifiers & builtin_flag__static->mask) {
           dt->flags &= ~DEF_INCOMPLETE; // TODO: Make structures OR static members by DEF_INCOMPLETE on creation; add error checking here
         } else {
           herr->error(token) << "Definition of non-static member "

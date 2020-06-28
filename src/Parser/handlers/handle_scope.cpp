@@ -1,22 +1,22 @@
 /**
  * @file  handle_scope.cpp
  * @brief Source implementing a massive delegator which populates a scope.
- * 
+ *
  * This file does a huge amount of work.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -32,10 +32,8 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
 {
   definition* decl;
   token = read_next_token(scope);
-  for (;;)
-  {
-    switch (token.type)
-    {
+  for (;;) {
+    switch (token.type) {
       case TT_TYPENAME: case TT_INLINE: case TT_ATTRIBUTE: case TT_TYPEOF:
       case TT_DECFLAG: case TT_DECLTYPE: case TT_DECLARATOR: case_TT_DECLARATOR:
       case TT_CLASS: case TT_STRUCT: case TT_ENUM: case TT_UNION: case TT_TILDE:
@@ -87,7 +85,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
             }
           }
         break;
-      
+
       case TT_EXTERN:
           token = read_next_token(scope);
           if (token.type == TT_STRINGLITERAL) {
@@ -112,15 +110,15 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
             break;
           }
         goto handle_declarator_block;
-      
+
       case TT_COMMA:
           token.report_error(herr, "Unexpected comma at this point.");
         return 1;
-      
+
       case TT_SEMICOLON:
           /* Printing a warning here is advisable but unnecessary. */
         break;
-      
+
       case TT_NAMESPACE: if (!handle_namespace(scope,token)) return 1; break;
       case TT_LEFTPARENTH: {
           token.report_error(herr, "Stray opening parenthesis.");
@@ -156,11 +154,11 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
             }
           #endif
         } break;
-      
+
       case TT_TYPEDEF:
         token = read_next_token(scope);
         if (handle_declarators(scope,token,inherited_flags | DEF_TYPENAME)) FATAL_RETURN(1); break;
-      
+
       case TT_PUBLIC:
         if (scope->flags & DEF_CLASS) { inherited_flags &= ~(DEF_PRIVATE | DEF_PROTECTED); }
         else token.report_error(herr, "Unexpected `public' token outside class scope.");
@@ -179,7 +177,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
         if ((token = read_next_token(scope)).type != TT_COLON)
           token.report_error(herr, "Colon expected following `protected' token");
         break;
-      
+
       case TT_FRIEND:
           if (!(scope->flags & DEF_CLASS)) {
             token.report_error(herr, "`friend' statement may only appear in a class or structure");
@@ -197,7 +195,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
             }
           }
         continue;
-      
+
       case TT_USING:
           token = read_next_token(scope);
           if (token.type == TT_NAMESPACE) {
@@ -240,14 +238,14 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
             }
           }
         continue;
-      
+
       case TT_SCOPE:
           token = read_next_token(ctex->get_global());
         continue;
       case TT_MEMBER:
           token.report_error(herr, "Unexpected (scope::*) reference");
         return 1;
-      
+
       case TT_STATIC_ASSERT:
           token.report_error(herr, "Unimplemented: static assert");
         break;
@@ -257,7 +255,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_CONSTEXPR:
           token.report_error(herr, "Unimplemented: const expressions outside enum");
         break;
-      
+
       case TT_DEFINITION: {
         if (token.def->flags & DEF_NAMESPACE) {
           definition_scope* dscope = (definition_scope*)token.def;
@@ -280,7 +278,7 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
               token.report_errorf(herr, "Expected constructor parmeters before %s");
               break;
             }
-            
+
             full_type ft;
             ft.def = scope;
             token = read_next_token(scope);
@@ -291,14 +289,14 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
           }
           token.report_error(herr, "Unexpected identifier in this scope (" + scope->name + "); `" + tname + "' does not name a type");
         } break;
-      
+
       case TT_TEMPLATE:
         if (handle_template(scope, token, inherited_flags)) {
           FATAL_RETURN(1);
           goto semicolon_bail;
         }
         break;
-      
+
       case TT_OPERATORKW: {
           full_type ft = read_operatorkw_cast_type(token, scope);
           if (!ft.def)
@@ -309,14 +307,14 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
           }
           goto handled_declarator_block;
       } break;
-      
+
       case TT_ASM: case TT_SIZEOF: case TT_ISEMPTY: case TT_ALIGNOF: case TT_ALIGNAS:
       case TT_ELLIPSIS: case TT_LESSTHAN: case TT_GREATERTHAN: case TT_COLON:
       case TT_DECLITERAL: case TT_HEXLITERAL: case TT_OCTLITERAL: case TT_BINLITERAL:
       case TT_STRINGLITERAL: case TT_CHARLITERAL: case TT_TRUE: case TT_FALSE:
-      case TT_NEW: case TT_DELETE: 
+      case TT_NEW: case TT_DELETE:
       case TT_CONST_CAST: case TT_STATIC_CAST: case TT_DYNAMIC_CAST: case TT_REINTERPRET_CAST:
-      
+
       case TT_PLUS: case TT_MINUS: case TT_STAR: case TT_SLASH: case TT_MODULO:
       case TT_EQUAL_TO: case TT_NOT_EQUAL_TO: case TT_LESS_EQUAL: case TT_GREATER_EQUAL:
       case TT_NOT: case TT_LSHIFT: case TT_RSHIFT: case TT_AMPERSAND: case TT_AMPERSANDS:
@@ -326,15 +324,16 @@ int jdi::context_parser::handle_scope(definition_scope *scope, token_t& token, u
       case TT_EQUAL: case TT_ADD_ASSIGN: case TT_SUBTRACT_ASSIGN: case TT_MULTIPLY_ASSIGN:
       case TT_DIVIDE_ASSIGN: case TT_MODULO_ASSIGN: case TT_LSHIFT_ASSIGN: case TT_RSHIFT_ASSIGN:
       case TT_AND_ASSIGN: case TT_OR_ASSIGN: case TT_XOR_ASSIGN: case TT_NEGATE_ASSIGN:
-      
+
       case TT_NOEXCEPT: case TT_TYPEID: case TT_EXTENSION:
+      case TT_THROW:
 
       case TTM_CONCAT: case TTM_TOSTRING: case TT_INVALID:
       case TTM_WHITESPACE: case TTM_COMMENT: case TTM_NEWLINE:
       default:
         token.report_errorf(herr, "Unexpected %s in this scope");
         break;
-      
+
       case TT_ENDOFCODE:
         return 0;
     }

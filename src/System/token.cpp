@@ -1,20 +1,20 @@
 /**
  * @file token.cpp
  * @brief Source implementing token type constructors.
- * 
+ *
  * @section License
- * 
+ *
  * Copyright (C) 2011-2014 Josh Ventura
  * This file is part of JustDefineIt.
- * 
+ *
  * JustDefineIt is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
  * Foundation, version 3 of the License, or (at your option) any later version.
- * 
+ *
  * JustDefineIt is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
@@ -162,6 +162,8 @@ static struct token_info_c {
       TKD(TT_REINTERPRET_CAST, "`reinterpret_cast' keyword");
       TKD(TT_EXTENSION,        "`extension' token");
 
+      TKD(TT_THROW,            "`throw' keyword");
+
       TKD(TTM_CONCAT,          "`##' token");
       TKD(TTM_TOSTRING,        "`#' token");
       TKD(TTM_COMMENT,         "...comment(?)");
@@ -208,7 +210,7 @@ std::string token_t::to_string() const {
     str.replace(f, 2, string((const char*) content.str, content.len));
   for (f = 0; (f = str.find("%s", f)) != string::npos; f += content.len)
     str.replace(f, 2, string((const char*) content.str, content.len));
-  return str;
+  return str + " (" + (content.toString()) + ")";
 }
 void token_t::report_warning(ErrorHandler *herr, std::string error) const {
   if (herr) {
