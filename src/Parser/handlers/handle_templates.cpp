@@ -198,6 +198,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token,
     if (token.type == TT_IDENTIFIER) {
       regular_identifier:
       temp->name = token.content.toString();
+      // Store a temporary of the proper type. Read "if" as "with".
       if (auto uc = make_unique<definition_class>(temp->name, temp.get(),
                                                   DEF_CLASS | DEF_TYPENAME)) {
         tclass = uc.get();
@@ -292,7 +293,7 @@ int context_parser::handle_template(definition_scope *scope, token_t& token,
                                     basetemp->params[i].get());
             }
           }
-          tclass = (definition_class*) temp->def.get();
+          tclass = (definition_class*) basetemp->def.get();
           temp.reset();
           goto regular_template_class;
         }
