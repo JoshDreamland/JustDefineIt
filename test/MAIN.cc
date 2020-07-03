@@ -245,19 +245,6 @@ int main(int argc, char** argv) {
     std::cerr << "Failed to generate gcc defines. Bye" << std::endl;
     return -1;
   }
-  std::string gcc_command =
-      "g++ --std=" + get_cpp_standard_str(cpp_std)
-       + " -E " + enigma_shellmain.string()
-       + " -I" + enigma_shell.string()
-       + " -I" + enigma_shared.string()
-       + " -I" + enigma_temp.string()
-       // + " -DJUST_DEFINE_IT_RUN"
-       + " > " + gcc_preprocessed.string();
-  std::cout << "Preprocessing compiler:\n" << gcc_command << "\n\n";
-  if (std::system(gcc_command.c_str()) != 0) {
-    std::cerr << "Failed to preprocess ENIGMA with GCC. Abort." << std::endl;
-    return -1;
-  }
   llreader macro_reader(gcc_defines.string().c_str());
 
   if (macro_reader.is_open())
@@ -276,6 +263,20 @@ int main(int argc, char** argv) {
   name_type("int&(*)()", builtin);
 
   if (test_lexer) {
+    std::string gcc_command =
+        "g++ --std=" + get_cpp_standard_str(cpp_std)
+         + " -E " + enigma_shellmain.string()
+         + " -I" + enigma_shell.string()
+         + " -I" + enigma_shared.string()
+         + " -I" + enigma_temp.string()
+         // + " -DJUST_DEFINE_IT_RUN"
+         + " > " + gcc_preprocessed.string();
+    std::cout << "Preprocessing compiler:\n" << gcc_command << "\n\n";
+    if (std::system(gcc_command.c_str()) != 0) {
+      std::cerr << "Failed to preprocess ENIGMA with GCC. Abort." << std::endl;
+      return -1;
+    }
+
     vector<token_t> tokens, tokens2;
     size_t correct = 0, incorrect = 0;
     if (true) {
@@ -337,8 +338,9 @@ int main(int argc, char** argv) {
 
   if (f.is_open())
   {
-    /* */
     Context enigma;
+    // This is the difference between success and failure in 03 mode.
+    // enigma.add_macro_func("__attribute__", "", "", true);
     start_time(ts);
     int res = enigma.parse_stream(f);
     end_time(te,tel);
