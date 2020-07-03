@@ -40,7 +40,8 @@ full_type jdi::context_parser::read_fulltype(token_t &token, definition_scope *s
 full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope)
 {
   definition* inferred_type = nullptr;
-  long int rflags = 0; // Return flags.
+  unsigned long rflags = 0; // Return flags.
+  unsigned long usedflags = 0; // Return flags.
   definition *rdef = nullptr;
   ref_stack rrefs;
 
@@ -64,7 +65,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       }
       // TODO: why isn't this just done below?
       // This whole routine's a fucking mess.
-      rflags |= tf->value;
+      tf->Apply(&usedflags, &rflags, herr->at(token));
       token = lex->get_token_in_scope(scope);
     } else if (token.type == TT_CLASS || token.type == TT_STRUCT
             || token.type == TT_ENUM  || token.type == TT_UNION) {
@@ -132,8 +133,7 @@ full_type jdi::context_parser::read_type(token_t &token, definition_scope *scope
       if (tf->usage & UF_PRIMITIVE) {
         if (tf->usage & UF_FLAG) {
           inferred_type = builtin_type__int;
-          // TODO: Redundant flag application logic. Deduplicate against above.
-          rflags |= tf->value;
+          tf->Apply(&usedflags, &rflags, herr->at(token));
         } else {
           if (rdef)
             token.report_error(herr, "Two types named in expression");
