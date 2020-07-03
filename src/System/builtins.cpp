@@ -36,7 +36,6 @@ using namespace std;
 namespace jdi {
   tf_map builtin_declarators;
   prim_map builtin_primitives;
-  tf_flag_map builtin_decls_byflag;
   typeflag* builtin_typeflag__throw;
 }
 
@@ -55,6 +54,7 @@ typeflag *builtin_flag__unsigned;
 typeflag *builtin_flag__signed;
 typeflag *builtin_flag__short;
 typeflag *builtin_flag__long;
+typeflag *builtin_flag__long_long;
 
 typeflag *builtin_flag__throw;
 typeflag *builtin_flag__restrict;
@@ -74,20 +74,48 @@ definition *builtin_type__va_list;
 typeflag *builtin_flag__virtual;
 typeflag *builtin_flag__explicit;
 
+static std::vector<std::unique_ptr<typeflag>> builtin_typeflags;
+
 // Make entities cache this or not use it.
 static jdi::Context *builtin = nullptr;
 
-/*void read_declarators(const char* filename) {
-  string tname; // The name of this type, as it appears in code.
-  ifstream in(filename);
-  if (!in.is_open())
+bool typeflag::CanApply(unsigned long mask_, unsigned long value_) const {
+  if (!(mask_ & mask_)) return true;
+  // This is a hack. Better to store an upgrade map. But this is more efficient,
+  // and long is the only type this applies to.
+  if (this == builtin_flag__long) return (value_ & mask) == value;
+  return false;
+}
+
+void typeflag::Apply(unsigned long *mask_, unsigned long *value_,
+                     const ErrorContext &errc) const {
+  if (!(*mask_ & mask)) {
+    *mask_ |= mask;
+    *value_ |= value;
     return;
-  while (!in.eof()) {
-    in >> tname;
-    add_primitive(tname);
   }
-  in.close();
-}*/
+  // Sorta perpetuating more hacks, here, but whatever.
+  if (this == builtin_flag__long) {
+    if ((*value_ & mask) == value) {
+      *value_ = (*value_ & ~mask) | builtin_flag__long_long->value;
+    } else {
+      if (builtin_flag__short->Matches(*value_)) {
+        errc.error() << "Conflicting use of short and long specifiers.";
+      } else {
+        errc.error() << "Resulting type is too long.";
+      }
+    }
+    return;
+  }
+  if (!Matches(*value_)) {
+    if (this == builtin_flag__unsigned || this == builtin_flag__signed) {
+      errc.error() << "Conflicting use of signed and unsigned specifiers.";
+    } else {
+      errc.error() << name << " specifier conflicts with a previous specifier.";
+    }
+  }
+  errc.warning() << "Redundant " << name << " specifier in type.";
+}
 
 definition *add_primitive(string name, size_t sz) {
   auto ntit = builtin_primitives.insert({name, nullptr});
@@ -103,13 +131,22 @@ definition *add_primitive(string name, size_t sz) {
   return ntit.first->second;
 }
 
+// Masks always group bits, so just shift left one and AND by the negation to
+// remove any extra bits from the last mask.
+static unsigned long nextbit(unsigned long mask) {
+  return (mask << 1) & ~mask;
+}
+
 typeflag *add_decflag(string name, USAGE_FLAG usage, int bitsize) {
   auto insit = builtin_declarators.insert({name, nullptr});
   if (insit.second) {
     unsigned long mask = 0;
-    int firstbit = 1 << builtin_decls_byflag.size();
-    for (int i = 0; i < bitsize; ++i) mask |= firstbit  << i;
-    insit.first->second = new typeflag(name, usage, firstbit, mask);
+    const unsigned long firstbit =
+        builtin_typeflags.empty() ? 1 : nextbit(builtin_typeflags.back()->mask);
+    for (int i = 0; i < bitsize; ++i) mask |= firstbit << i;
+    builtin_typeflags.emplace_back(
+        new typeflag(name, usage, mask, firstbit));
+    insit.first->second = builtin_typeflags.back().get();
   } else {
     std::cerr << "Internal error: Redefinition of builtin flag `"
               << name << "`.\n";
@@ -122,8 +159,9 @@ typeflag *add_decflag(string name, typeflag *base, int value) {
   auto insit = builtin_declarators.insert({name, nullptr});
   if (insit.second) {
     const auto mask = base->mask;
-    insit.first->second =
-        new typeflag(name, base->usage, value & mask, mask);
+    builtin_typeflags.emplace_back(
+        new typeflag(name, base->usage, mask, value & mask));
+    insit.first->second = builtin_typeflags.back().get();
   } else {
     std::cerr << "Internal error: Redefinition of builtin flag `"
               << name << "`.\n";
@@ -186,6 +224,9 @@ void add_gnu_declarators() {
   builtin_flag__signed = add_decflag("signed", builtin_flag__unsigned, 0);
   builtin_flag__short  = add_decflag("short",  builtin_flag__long,    -1);
 
+  builtin_flag__long_long = add_decflag("long long", builtin_flag__long,
+                                        builtin_flag__long->value << 1);
+
   // TODO: wchar size needs to be configurable.
   builtin_type__wchar_t = add_primitive("wchar_t",           2);
   builtin_type__va_list = add_primitive("__builtin_va_list", 8);
@@ -200,11 +241,8 @@ void add_gnu_declarators() {
 }
 
 void cleanup_declarators() {
-  {
-    std::set<typeflag*> uniques;
-    for (const auto &decl : builtin_declarators) uniques.insert(decl.second);
-    for (typeflag *tf : uniques) delete tf;
-  }
+  builtin_declarators.clear();
+  builtin_typeflags.clear();
   {
     std::set<definition*> uniques;
     for (const auto &prim : builtin_primitives) uniques.insert(prim.second);
@@ -212,15 +250,15 @@ void cleanup_declarators() {
   }
 }
 
-static inline string tostr(int x) { char buf[16]; sprintf(buf, "%d", x); return buf; }
-string typeflags_string(definition *type, unsigned flags) {
+string typeflags_string(definition *type, unsigned long flags) {
   string res;
-  for (int i = 1; i <= 0x10000; i <<= 1)
-    if (flags & i) {
-      jdi::tf_flag_map::iterator tfi = builtin_decls_byflag.find(i);
-      if (tfi == builtin_decls_byflag.end()) res += "<ERROR:NOSUCHFLAG:" + tostr(i) + "> ";
-      else res += tfi->second->name + " ";
+  unsigned long covered = 0;
+  for (const auto &flag : builtin_typeflags) {
+    if (flag->Matches(flags) && flag->value) {
+      res += flag->name + " ";
+      covered |= flag->mask;
     }
+  }
   if (type)
     res += type->name;
   else res += "<null>";

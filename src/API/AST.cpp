@@ -997,19 +997,17 @@ value AST_Node_Cast::eval(const ErrorContext &errc) const {
     return value();
   }
   if (cast_type.def == builtin_type__int) {
-    auto szmod = cast_type.flags & builtin_flag__long->mask;
-    if (szmod) {
-      if (szmod == builtin_flag__short->value) {
+    if (builtin_flag__short->Matches(cast_type.flags)) {
         if (cast_type.flags & builtin_flag__unsigned->mask)
           return value((long)(unsigned short)(long) operand->eval(errc));
         else
           return value((long)(short)(long) operand->eval(errc));
-      } else {
-        if (cast_type.flags & builtin_flag__unsigned->mask)
-          return value((long) operand->eval(errc));
-        else
-          return value((long)(int) operand->eval(errc));
-      }
+    } else if (builtin_flag__long->Matches(cast_type.flags) ||
+               builtin_flag__long_long->Matches(cast_type.flags)) {
+      if (cast_type.flags & builtin_flag__unsigned->mask)
+        return value((long) operand->eval(errc));
+      else
+        return value((long)(int) operand->eval(errc));
     } else {
       if (cast_type.flags & builtin_flag__unsigned->mask)
         return value((long)(unsigned int)(long) operand->eval(errc));
@@ -1096,16 +1094,16 @@ full_type AST::coerce(const ErrorContext &errc) const {
   return root? root->coerce(errc) : full_type();
 }
 
-full_type AST_Node::coerce(const ErrorContext &) const {
+full_type AST_Node::coerce(const ErrorContext &errc) const {
   full_type res;
+  unsigned long flag_mask = 0;
   res.def = builtin_type__int;
   res.flags = 0;
   for (size_t i = content.length(); i and is_letter(content[i]); --i) {
     if (content[i] == 'l' or content[i] == 'L') {
-      // TODO: Redundant flag application logic. Better to write an apply API.
-      res.flags |= builtin_flag__long->value;
+      builtin_flag__long->Apply(&flag_mask, &res.flags, errc);
     } else if (content[i] == 'u' or content[i] == 'U') {
-      res.flags |= builtin_flag__unsigned->value;
+      builtin_flag__unsigned->Apply(&flag_mask, &res.flags, errc);
     }
   }
   if (type == AT_DECLITERAL) {
@@ -1199,10 +1197,12 @@ full_type AST_Node_Parameters::coerce(const ErrorContext &errc) const {
   return res;
 }
 
-full_type AST_Node_sizeof::coerce(const ErrorContext &) const {
+full_type AST_Node_sizeof::coerce(const ErrorContext &errc) const {
   full_type res;
+  unsigned long mask = 0;
   res.def = builtin_type__int;
-  res.flags = builtin_flag__unsigned->value | builtin_flag__long->value;
+  builtin_flag__unsigned->Apply(&mask, &res.flags, errc);
+  builtin_flag__long->Apply(&mask, &res.flags, errc);
   return res;
 }
 

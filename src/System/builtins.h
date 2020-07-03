@@ -77,7 +77,7 @@ void cleanup_declarators();
 //==== Builtin Types ========================================
 //===========================================================
 
-string typeflags_string(definition *type, unsigned flags);
+string typeflags_string(definition *type, unsigned long flags);
 
 /// Class for storing information about a "typeflag," a term coined here to
 /// refer to anything in the declaration-seq that is not the
@@ -91,6 +91,7 @@ class typeflag {
   friend definition *add_primitive(string, size_t sz);
   friend void alias_primitive(string, definition*);
   friend void jdi::cleanup_declarators();
+  friend std::unique_ptr<typeflag>::deleter_type;
 
   typeflag(string name_, USAGE_FLAG usage_, int mask_, int value_):
       name(name_), usage(usage_), mask(mask_), value(value_) {}
@@ -109,6 +110,17 @@ class typeflag {
   /// will be primitives and may also be flags. For examples, see USAGE_FLAG.
   /// @see USAGE_FLAG
   const USAGE_FLAG usage;
+
+  /// Returns whether this flag can be applied. This is true if the flag or a
+  /// conflicting flag has not already been applied. Some flags can be applied
+  /// multiple times (namely, long).
+  bool CanApply(unsigned long mask, unsigned long value) const;
+  /// Apply this flag to a definition's mask and value.
+  void Apply(unsigned long *mask, unsigned long *value,
+             const ErrorContext &errc) const;
+  bool Matches(unsigned long flags) const {
+    return (flags & mask) == value;
+  }
 
   /// If this is a flag, this is its bitmask. Most flags have a single bit,
   /// but the signed/unsigned specifiers share a bit, and the long and short
@@ -136,6 +148,7 @@ extern typeflag *builtin_flag__unsigned; ///< Builtin `unsigned` flag
 extern typeflag *builtin_flag__signed;   ///< Builtin `signed` flag
 extern typeflag *builtin_flag__short;    ///< Builtin `short` flag
 extern typeflag *builtin_flag__long;     ///< Builtin `long` flag
+extern typeflag *builtin_flag__long_long;  ///< Matches two `long` flags.
 
 /// Builtin `__restrict` flag (and alternative spellings).
 extern typeflag *builtin_flag__restrict;
@@ -157,7 +170,6 @@ extern typeflag* builtin_typeflag__override; ///< Builtin `override` flag.
 extern typeflag* builtin_typeflag__final;    ///< Builtin `final` flag.
 
 typedef map<string,typeflag*> tf_map; ///< A map of declarators by name.
-typedef map<unsigned int,typeflag*> tf_flag_map; ///< A map of declarator flags by flag bit, as a power of two.
 typedef map<string,definition*> prim_map; ///< A map of definitions by name.
 typedef tf_map::iterator tf_iter; ///< An iterator type for \c tf_map, eg, \c builtin_declarators.
 typedef prim_map::iterator prim_iter; ///< An iterator type for \c prim_map, eg, \c builtin_primitives.
@@ -171,7 +183,6 @@ typedef prim_map::iterator prim_iter; ///< An iterator type for \c prim_map, eg,
 **/
 extern tf_map builtin_declarators; ///< A map of all builtin declarators, such as const, unsigned, long, and int, by name.
 extern prim_map builtin_primitives; ///< A map of all builtin primitives, such as int and double, by name.
-extern tf_flag_map builtin_decls_byflag; ///< A map of all flags by their bit mask, in 1 << (0 to 31).
 
 void clean_up();
 

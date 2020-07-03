@@ -21,12 +21,13 @@ Context Parse(const char *test_case) {
 }
 
 TEST(ParsingTest, VariousDeclarations) {
-  Parse(R"cpp(
+  auto ctex = Parse(R"cpp(
     int integer;
     char *cstring;
     int intfn(int x);
     int (*intfn_ptr)(int);
   )cpp");
+  EXPECT_EQ(ctex.get_global()->look_up("integer")->toString(), "int integer;");
 }
 
 TEST(ParsingTest, HighlyDecoratedIntegers) {
@@ -35,7 +36,10 @@ TEST(ParsingTest, HighlyDecoratedIntegers) {
 }
 
 TEST(ParsingTest, HighlyDecoratedIntegerTypedefs) {
-  Parse("typedef long long ago;                     ");
+  // FIXME: brittle-ass test; add a better way of matching these attributes.
+  EXPECT_EQ(Parse("typedef long long ago;").get_global()
+                ->look_up("ago")->toString(),
+            "typedef long long int ago;");
   Parse("typedef const long unsigned long int etc;  ");
 }
 
