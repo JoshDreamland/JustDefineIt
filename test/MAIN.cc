@@ -234,18 +234,18 @@ int main(int argc, char** argv) {
 
   for (const std::string& p : get_gcc_include_paths(cpp_std)) builtin.add_search_directory(p);
 
-  builtin.add_search_directory(enigma_shell.string());
-  builtin.add_search_directory(enigma_shared.c_str());
-  builtin.add_search_directory(enigma_temp.c_str());
+  builtin.add_search_directory(enigma_shell.u8string());
+  builtin.add_search_directory(enigma_shared.u8string());
+  builtin.add_search_directory(enigma_temp.u8string());
 
   std::string preprocess_command =
       "cpp -dM -x c++ --std=" + get_cpp_standard_str(cpp_std) + " -E /dev/null"
-      " > " + gcc_defines.string();
+      " > " + gcc_defines.u8string();
   if (std::system(preprocess_command.c_str()) != 0) {
     std::cerr << "Failed to generate gcc defines. Bye" << std::endl;
     return -1;
   }
-  llreader macro_reader(gcc_defines.string().c_str());
+  llreader macro_reader(gcc_defines.u8string().c_str());
 
   if (macro_reader.is_open())
     builtin.parse_stream(macro_reader);
@@ -265,12 +265,12 @@ int main(int argc, char** argv) {
   if (test_lexer) {
     std::string gcc_command =
         "g++ --std=" + get_cpp_standard_str(cpp_std)
-         + " -E " + enigma_shellmain.string()
-         + " -I" + enigma_shell.string()
-         + " -I" + enigma_shared.string()
-         + " -I" + enigma_temp.string()
+         + " -E " + enigma_shellmain.u8string()
+         + " -I" + enigma_shell.u8string()
+         + " -I" + enigma_shared.u8string()
+         + " -I" + enigma_temp.u8string()
          // + " -DJUST_DEFINE_IT_RUN"
-         + " > " + gcc_preprocessed.string();
+         + " > " + gcc_preprocessed.u8string();
     std::cout << "Preprocessing compiler:\n" << gcc_command << "\n\n";
     if (std::system(gcc_command.c_str()) != 0) {
       std::cerr << "Failed to preprocess ENIGMA with GCC. Abort." << std::endl;
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
     size_t correct = 0, incorrect = 0;
     if (true) {
       Context butts;
-      llreader f(gcc_preprocessed.c_str());
+      llreader f(gcc_preprocessed.u8string().c_str());
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
     bool had_diff = false;
     if (true) {
       Context butts;
-      llreader f(enigma_shellmain.c_str());
+      llreader f(enigma_shellmain.u8string().c_str());
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -334,7 +334,7 @@ int main(int argc, char** argv) {
   }
 
   putcap("Test parser");
-  llreader f(enigma_shellmain.c_str());
+  llreader f(enigma_shellmain.u8string().c_str());
 
   if (f.is_open())
   {
