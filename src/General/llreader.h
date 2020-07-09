@@ -39,6 +39,7 @@
 #define _LLREADER__H
 
 #include <string>
+#include <filesystem>
 
 class llreader {
  public:
@@ -71,7 +72,7 @@ class llreader {
     data will mirror its contents.
     @param filename  The name of the file that will be opened.
   **/
-  void open(const char* filename);
+  void open(const std::filesystem::path &filename);
   /**
     Encapsulate a string for the duration of its life.
 
@@ -196,7 +197,7 @@ class llreader {
     This is because knowing the length of the const char* won't help, anyway.
     @param filename  The name of the file that will be opened.
   **/
-  llreader(const char* filename);
+  llreader(const std::filesystem::path &filename);
   /**
     Constructs, behaving like either copy() or encapsulate().
     @param contents  A string containing contents to be mirrored.
