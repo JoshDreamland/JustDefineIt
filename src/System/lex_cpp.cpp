@@ -778,10 +778,10 @@ static llreader try_find_and_open(const llreader &cfile, const Context *ctx,
   filesystem::path incfn, fdir;
   filesystem::path cur_path = filesystem::path(cfile.name).parent_path();
   if (check_local)
-    incfile.open((incfn = cur_path / fnfind).c_str());
+    incfile.open(incfn = cur_path / fnfind);
   for (size_t i = 0; !incfile.is_open() && i < ctx->search_dir_count(); ++i) {
     if (!find_next) {
-      incfile.open((incfn = (fdir = ctx->search_dir(i)) / fnfind).c_str());
+      incfile.open(incfn = (fdir = ctx->search_dir(i)) / fnfind);
     } else {
       // Linear search for this directory in include_next.
       find_next = cur_path != ctx->search_dir(i);
@@ -1588,9 +1588,6 @@ lexer::lexer(llreader &input, macro_map &pmacros, ErrorHandler *err):
 }
 
 static macro_map no_macros;
-// lexer::lexer(token_vector &&tokens, ErrorHandler *err): lexer(no_macros, err) {
-//   push_buffer(std::move(tokens));
-// }
 lexer::lexer(token_vector &&tokens, const lexer &other):
     lexer(other.macros, other.herr) {
   push_buffer(std::move(tokens));

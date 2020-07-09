@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
     std::cerr << "Failed to generate gcc defines. Bye" << std::endl;
     return -1;
   }
-  llreader macro_reader(gcc_defines.u8string().c_str());
+  llreader macro_reader(gcc_defines);
 
   if (macro_reader.is_open())
     builtin.parse_stream(macro_reader);
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
     size_t correct = 0, incorrect = 0;
     if (true) {
       Context butts;
-      llreader f(gcc_preprocessed.u8string().c_str());
+      llreader f(gcc_preprocessed);
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -291,7 +291,7 @@ int main(int argc, char** argv) {
     bool had_diff = false;
     if (true) {
       Context butts;
-      llreader f(enigma_shellmain.u8string().c_str());
+      llreader f(enigma_shellmain);
       macro_map buttMacros = butts.get_macros();
       lexer lex(f, buttMacros, default_error_handler);
       for (token_t token = lex.get_token(); token.type != TT_ENDOFCODE; token = lex.get_token()) {
@@ -334,7 +334,7 @@ int main(int argc, char** argv) {
   }
 
   putcap("Test parser");
-  llreader f(enigma_shellmain.u8string().c_str());
+  llreader f(enigma_shellmain);
 
   if (f.is_open())
   {

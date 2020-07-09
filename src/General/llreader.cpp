@@ -86,7 +86,9 @@ inline string fn_path(const char *fn) {
 llreader::llreader(): pos(0), length(0), lpos(0), lnum(kFirstLine),
                       data(nullptr), name(""), mode(FT_CLOSED) {}
 llreader::llreader(llreader &&other): llreader() { consume(other); }
-llreader::llreader(const char* filename): llreader() { open(filename); }
+llreader::llreader(const std::filesystem::path &filename): llreader() {
+  open(filename);
+}
 llreader::llreader(std::string bname, std::string contents): pos(0), length(0),
     lpos(0), lnum(kFirstLine), data(nullptr), name(bname), mode(FT_CLOSED) {
   copy(contents);
@@ -98,18 +100,17 @@ llreader::llreader(std::string bname, std::string_view contents, bool copy_):
 }
 llreader::~llreader() { close(); }
 
-void llreader::open(const char* filename) {
+void llreader::open(const std::filesystem::path &filename) {
   #ifdef DEBUG_MODE
     if (mode != FT_CLOSED and mode != FT_ALIAS)
       cerr << "ERROR! Leaked a file in open()." << endl;
   #endif
-#if defined(IO_FALLBACK)
-  #warning Compiling in fallback file mode. May lead to slowness.
-  dump_in(filename);
-#elif defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
+#if defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
   SECURITY_ATTRIBUTES sec;
   sec.nLength = sizeof(sec), sec.lpSecurityDescriptor = nullptr, sec.bInheritHandle = true;
-  HANDLE hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, &sec, OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, nullptr);
+  HANDLE hFile = CreateFileW(filename.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                             &sec, OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS,
+                             nullptr);
   if (hFile == INVALID_HANDLE_VALUE)
     return;
   HANDLE mapping = CreateFileMapping(hFile, &sec, PAGE_READONLY, 0, 0, nullptr);
@@ -124,9 +125,8 @@ void llreader::open(const char* filename) {
   }
   CloseHandle(mapping);
   CloseHandle(hFile);
-
 #else
-  int fd = ::open(filename, O_RDONLY);
+  int fd = ::open(filename.u8string().c_str(), O_RDONLY);
   if (fd == -1) return;
   struct stat statbuf;
   fstat(fd, &statbuf), length = statbuf.st_size;
@@ -134,7 +134,7 @@ void llreader::open(const char* filename) {
   mode = FT_MMAP;
   ::close(fd);
 #endif
-  name = filename;
+  name = filename.u8string();
 
   pos = 0;
   lpos = 0;
