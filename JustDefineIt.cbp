@@ -5,8 +5,20 @@
 		<Option title="JustDefineIt" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="Documentation/;test/;src/Parser/handlers/;" />
+		<Option virtualFolders="Documentation/;test/;src/Parser/handlers/" />
 		<Build>
+			<Target title="Demo">
+				<Option output="bin/Demo/JustDefineIt" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-std=c++1z" />
+					<Add option="-g" />
+					<Add option="-D_GLIBCXX_DEBUG" />
+					<Add option="-DDEBUG_MODE" />
+				</Compiler>
+			</Target>
 			<Target title="Debug">
 				<Option output="bin/Debug/JustDefineIt" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
@@ -99,6 +111,9 @@
 			<Add option="-Werror" />
 			<Add directory="./src" />
 		</Compiler>
+		<Unit filename="demo/main.cc">
+			<Option target="Demo" />
+		</Unit>
 		<Unit filename="dox/scope.dox">
 			<Option virtualFolder="Documentation/" />
 		</Unit>
@@ -218,10 +233,6 @@
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Extensions>
-			<envvars />
-			<code_completion />
-			<lib_finder disable_auto="1" />
-			<debugger />
 			<DoxyBlocks>
 				<comment_style block="0" line="0" />
 				<doxyfile_project />
@@ -231,6 +242,7 @@
 				<doxyfile_dot />
 				<general />
 			</DoxyBlocks>
+			<lib_finder disable_auto="1" />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>
