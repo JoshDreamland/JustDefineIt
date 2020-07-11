@@ -81,7 +81,7 @@ static bool prepare_builtin_context() {
   for (const std::string& p : include_paths) builtin.add_search_directory(p);
 
   std::string preprocess_command =
-      "cpp -dM -x c++ --std=" + cpp_std + " -E /dev/null"
+      "cpp -dM -x c++ --std=" + cpp_std + " -E " + blank_file.u8string() +
       " > " + defines_file.u8string();
   std::cout << "Obtaining GCC defines list via command line: "
             << preprocess_command << std::endl;
