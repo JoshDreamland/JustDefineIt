@@ -100,7 +100,7 @@ static void do_cli(jdi::Context &ct) {
   char c = ' ';
   jdi::macro_map undamageable = ct.get_macros();
   jdi::ErrorHandler *herr = jdi::default_error_handler;
-  while (c != 'q' and c != '\n') {
+  while (c != 'q' && c != '\n' && !feof(stdin)) {
     switch (c) {
       case 'd': {
         bool justflags, justorder;
