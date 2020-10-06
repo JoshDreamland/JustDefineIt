@@ -303,7 +303,10 @@ struct definition_scope: definition {
   typedef defmap::value_type entry;
   /// Vector of `definition_scope`s.
   typedef vector<definition_scope*> scopevec;
-  /// In-order view of the definitions in defmap.
+  /// In-order view of the definitions in this scope. This includes definitions
+  /// owned by both the `members` defmap and `c_structs` defmap.
+  // They are stored as iterators because it's a common pattern in JDI sources
+  // to insert nullptr, check for errors, *then* actually allocate the class.
   typedef deque<defiter> ordeque;
   /// Iterator for the in-order definition view.
   typedef ordeque::iterator orditer;

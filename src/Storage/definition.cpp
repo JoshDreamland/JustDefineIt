@@ -174,6 +174,10 @@ definition *definition_scope::look_up(string sname) {
   //  cout << sname << ": Not my member: " << members.begin()->first << " => " << members.begin()->second->toString() << endl;
   if (auto it = using_general.find(sname); it != using_general.end())
     return it->second;
+  // Lookup of class/struct names happens after using lookup but before checking
+  // used scopes.
+  if (auto it = c_structs.find(sname); it != c_structs.end())
+    return it->second.get();
   /*if (members.size() == 1) {
     cout << "Not in my using: {" << endl;
     for (defiter u = using_general.begin(); u != using_general.end(); ++u)
@@ -620,8 +624,9 @@ string definition_scope::toString(unsigned levels, unsigned indent) const {
     res += name.empty()? "namespace " : "namespace " + name + " ";
   if (levels) {
     res += "{\n";
-    for (defiter_c it = members.begin(); it != members.end(); ++it)
-      res += it->second->toString(levels-1, indent+2) + "\n";
+    for (auto it : dec_order) {
+      if (it->second) res += it->second->toString(levels-1, indent+2) + "\n";
+    }
     res += inds + "}";
   }
   else res += "{ ... }";

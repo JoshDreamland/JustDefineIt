@@ -239,16 +239,18 @@ void definition_scope::remap(remap_set &n, const ErrorContext &errc) {
   for (orditer it = dec_order.begin(); it != dec_order.end(); ++it) {
     definition *def = (*it)->second.get();
     remap_set::const_iterator ex = n.find(def);
-    if (ex != n.end())
-      dec_order.erase(it);
-    else
+    if (ex != n.end()) {
+      errc.error() << "Request to change own member from " << def
+                   << " to " << ex->second;
+    } else {
       def->remap(n, errc);
+    }
   }
   for (defiter it = members.begin(); it != members.end(); ++it) {
     remap_set::const_iterator ex = n.find(it->second.get());
     if (ex != n.end()) {
-      cerr << "ERROR: Request to change own member from " << it->second.get()
-           << " to " << ex->second;
+      errc.error() << "Request to change own member from " << it->second.get()
+                   << " to " << ex->second;
     }
   }
   for (definition_scope *use : using_scopes) {

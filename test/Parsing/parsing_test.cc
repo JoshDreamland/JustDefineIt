@@ -43,5 +43,14 @@ TEST(ParsingTest, HighlyDecoratedIntegerTypedefs) {
   Parse("typedef const long unsigned long int etc;  ");
 }
 
+TEST(ParsingTest, SimpleClassDefinition) {
+  // FIXME: brittle-ass test; add a better way of matching these attributes.
+  auto ctex = Parse("class my_class { public: void do_something(); };");
+  EXPECT_THAT(
+      ctex.get_global(),
+      HasMembers(ClassDefinition(
+          "my_class", HasMembers(FunctionDefinition("do_something")))));
+}
+
 }  // namespace
 }  // namespace jdi
