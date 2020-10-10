@@ -652,7 +652,7 @@ string definition_template::toString(unsigned levels, unsigned indent) const {
     else {
       res += (d->integer_type.def? d->integer_type.toString() : "<ERROR>");
       if (d->flags & DEF_VALUED)
-        res += " = " + ((definition_valued*) d.get())->value_of;
+        res += " = " + ((definition_valued*) d.get())->value_of.toString();
     }
     first = false;
   }

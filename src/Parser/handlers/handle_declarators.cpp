@@ -49,7 +49,7 @@ int context_parser::handle_declarators(definition_scope *scope, token_t& token,
                                        definition* &res) {
   // Skip destructor tildes; log if we are a destructor
   bool dtor = token.type == TT_TILDE;
-  bool _inline = token.type == TT_DECFLAG && token.content.toString() == "inline";
+  const bool is_inline = token.type == TT_DECFLAG && token.content.view() == "inline";
   if (dtor) token = read_next_token(scope);
 
   // Outsource to read_fulltype, which will take care of the hard work for us.
@@ -90,7 +90,7 @@ int context_parser::handle_declarators(definition_scope *scope, token_t& token,
                                      herr->at(token));
       return !res;
     }
-    else if (_inline && token.type == TT_NAMESPACE) {
+    else if (is_inline && token.type == TT_NAMESPACE) {
       definition_scope *ns = handle_namespace(scope, token);
       if (!ns) return 1;
       scope->use_namespace(ns);

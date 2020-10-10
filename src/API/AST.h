@@ -25,19 +25,21 @@
  *
 **/
 
-#ifndef _AST__H
-#define _AST__H
-#define _AST__H__DEBUG // Used in debug_macros.h. Do not rename on a whim.
+#ifndef JDI_API_AST_h
+#define JDI_API_AST_h
+#define JDI_API_AST_h_debug // Used in debug_macros.h. Do not rename on a whim.
 
 #include "AST_forward.h"
 
-#include <string>
 #include <Storage/arg_key.h>
 #include <System/token.h>
 #include <System/lex_cpp.h>
 #include <Storage/value.h>
 #include <API/error_reporting.h>
 #include <Storage/definition.h>
+
+#include <string>
+#include <filesystem>
 
 namespace jdi {
 
@@ -558,7 +560,7 @@ class AST {
   void operate(jdi::ConstASTOperator *caop, void *p) const; ///< Perform some externally defined constant recursive operation on this AST.
 
   /// Render the AST to an SVG file.
-  void writeSVG(const char* filename);
+  void writeSVG(std::filesystem::path filename);
 
   /// Use this AST for template parameters
   inline void set_use_for_templates(bool use) { tt_greater_is_op = !use; }
