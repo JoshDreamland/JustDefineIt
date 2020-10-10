@@ -329,7 +329,7 @@ int main(int argc, char** argv) {
         printf("%2d : %2d  -  %d\n", a, b, ndiffs);
       ndiffs += diff;
     }
-    printf("Final stats: %lu correct, %lu incorrect\n", correct, incorrect);
+    printf("Final stats: %zu correct, %zu incorrect\n", correct, incorrect);
     return 0;
   }
 

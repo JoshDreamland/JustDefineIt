@@ -1118,8 +1118,9 @@ void lexer::handle_preprocessor() {
         #ifdef DEBUG_MODE
         {
           string n = read_preprocessor_args();
-          if (n == "DEBUG_ENTRY_POINT" and (conditionals.empty() or conditionals.back().is_true)) {
-            signal(SIGTRAP, donothing); // Try not to die when we raise hell in the interrupt handler briefly
+          if (n == "DEBUG_ENTRY_POINT" &&
+              (conditionals.empty() || conditionals.back().is_true)) {
+            signal(3, donothing); // Catch what we're about to raise in case there's no debugger
             asm("INT3;"); // Raise hell in the interrupt handler; the debugger will grab us from here
             cout << "* Debug entry point" << endl;
           }

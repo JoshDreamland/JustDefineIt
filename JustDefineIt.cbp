@@ -29,6 +29,7 @@
 					<Add option="-g" />
 					<Add option="-D_GLIBCXX_DEBUG" />
 					<Add option="-DDEBUG_MODE" />
+					<Add option="-Werror" />
 				</Compiler>
 			</Target>
 			<Target title="Debug-Render">
@@ -42,6 +43,7 @@
 					<Add option="-D_GLIBCXX_DEBUG" />
 					<Add option="-DDEBUG_MODE" />
 					<Add option="-DRENDER_ASTS" />
+					<Add option="-Werror" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -108,7 +110,6 @@
 			<Add option="-pedantic" />
 			<Add option="-Wextra" />
 			<Add option="-Wall" />
-			<Add option="-Werror" />
 			<Add directory="./src" />
 		</Compiler>
 		<Unit filename="demo/main.cc">

@@ -24,8 +24,12 @@
  * JustDefineIt. If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "llreader.h"
+
 #include <cstdio>
 #include <cstring>
+#include <iostream>
+
 #if defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__WIN64__)
   #include <windows.h>
 #else
@@ -35,9 +39,6 @@
   #include <unistd.h>
   #include <fcntl.h>
 #endif
-
-#include "llreader.h"
-#include <iostream>
 
 /// Enumeration of open states for an \c llreader.
 enum {
