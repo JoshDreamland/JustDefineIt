@@ -22,6 +22,8 @@ jobs:
     
     - script: |
         set PATH=%CD:~0,2\tools\msys64\usr\bin
+        dir C:\tools\msys64
+        dir %CD:~0,2\tools\msys64
         %CD:~0,2\tools\msys64\usr\bin\pacman --noconfirm --needed -S git base-devel mingw-w64-$(MINGW_ARCH)-toolchain mingw-w64-$(MINGW_ARCH)-cmake mingw-w64-$(MINGW_ARCH)-gtest
       displayName: Install Toolchain
     
