@@ -18,8 +18,9 @@ jobs:
       submodules: true
       persistCredentials: true
       
-    - checkout: github://msys2/msys2-ci-base
-      path: $(Agent.ToolsDirectory)/msys64
+    - script: |
+        git clone https://github.com/msys2/msys2-ci-base.git %CD:~0,2%\msys64
+        %CD:~0,2%\msys64\usr\bin\rm -rf %CD:~0,2%\msys64\.git
       displayName: Install MSYS2
     
     - script: |
