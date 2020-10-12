@@ -21,13 +21,12 @@ jobs:
       displayName: Install MSYS2
     
     - script: |
-        set PATH=%CD:~0,2\tools\msys6\usr\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2\tools\msys6\usr\bin\pacman --noconfirm --needed -S git base-devel mingw-w64-$(MINGW_ARCH)-toolchain mingw-w64-$(MINGW_ARCH)-cmake mingw-w64-$(MINGW_ARCH)-gtest
+        set PATH=%CD:~0,2\tools\msys64\usr\bin
+        %CD:~0,2\tools\msys64\usr\bin\pacman --noconfirm --needed -S git base-devel mingw-w64-$(MINGW_ARCH)-toolchain mingw-w64-$(MINGW_ARCH)-cmake mingw-w64-$(MINGW_ARCH)-gtest
       displayName: Install Toolchain
     
     - script: |
-        set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2\tools\msys6\usr\bin\bash -lc "bash cmake CMakeLists.txt"
+        %CD:~0,2\tools\msys64\usr\bin\bash -lc "bash cmake CMakeLists.txt"
       displayName: 'CMake Generate Makefiles'
       env:
         MSYSTEM: $(MINGW_UPPER)
@@ -35,8 +34,7 @@ jobs:
         MINGW_INSTALLS: $(MINGW_LOWER)
         
     - script: |
-        set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2\tools\msys6\usr\bin\bash -lc "bash make"
+        %CD:~0,2\tools\msys64\usr\bin\bash -lc "bash make"
       displayName: 'Build'
       env:
         MSYSTEM: $(MINGW_UPPER)
@@ -44,8 +42,7 @@ jobs:
         MINGW_INSTALLS: $(MINGW_LOWER)
         
     - script: |
-        set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2\tools\msys6\usr\bin\bash -lc "bash bin/Test/JustDefineIt"
+        %CD:~0,2\tools\msys64\usr\bin\bash -lc "bash bin/Test/JustDefineIt"
       displayName: 'Test'
       env:
         MSYSTEM: $(MINGW_UPPER)
