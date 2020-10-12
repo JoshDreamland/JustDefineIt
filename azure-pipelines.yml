@@ -27,7 +27,7 @@ jobs:
     
     - script: |
         set PATH=C:\tools\msys64\usr\bin
-        C:\tools\msys64\usr\bin\bash -lc "bash cmake CMakeLists.txt"
+        C:\tools\msys64\usr\bin\bash -lc "cmake CMakeLists.txt"
       displayName: 'CMake Generate Makefiles'
       env:
         MSYSTEM: $(MINGW_UPPER)
@@ -36,7 +36,7 @@ jobs:
         
     - script: |
         set PATH=C:\tools\msys64\usr\bin
-        C:\tools\msys64\usr\bin\bash -lc "bash make"
+        C:\tools\msys64\usr\bin\bash -lc "make"
       displayName: 'Build'
       env:
         MSYSTEM: $(MINGW_UPPER)
@@ -45,7 +45,7 @@ jobs:
         
     - script: |
         set PATH=C:\tools\msys64\usr\bin
-        C:\tools\msys64\usr\bin\bash -lc "bash bin/Test/JustDefineIt"
+        C:\tools\msys64\usr\bin\bash -lc "bin/Test/JustDefineIt"
       displayName: 'Test'
       env:
         MSYSTEM: $(MINGW_UPPER)
