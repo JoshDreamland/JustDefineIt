@@ -27,7 +27,7 @@ jobs:
     
     - script: |
         set PATH=C:\tools\msys64\usr\bin
-        C:\tools\msys64\usr\bin\bash -lc "cmake CMakeLists.txt"
+        C:\tools\msys64\usr\bin\bash -lc "/$(MINGW_LOWER)/bin/cmake CMakeLists.txt"
       displayName: 'CMake Generate Makefiles'
       env:
         MSYSTEM: $(MINGW_UPPER)
