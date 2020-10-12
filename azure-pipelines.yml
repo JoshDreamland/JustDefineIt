@@ -16,24 +16,10 @@ jobs:
   steps:
     - checkout: self
       submodules: true
-      persistCredentials: true
       
-    - script: |
-        git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" clone https://github.com/msys2/msys2-ci-base.git %CD:~0,2%\msys64
-        %CD:~0,2%\msys64\usr\bin\rm -rf %CD:~0,2%\msys64\.git
+    - powershell: |
+        choco install msys2 /InstallDir %CD:~0,2%\msys64
       displayName: Install MSYS2
-    
-    - script: |
-        set PATH=%CD:~0,2%\msys64\usr\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2%\msys64\usr\bin\curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
-        %CD:~0,2%\msys64\usr\bin\curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig
-        %CD:~0,2%\msys64\usr\bin\pacman-key --verify msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig
-        %CD:~0,2%\msys64\usr\bin\pacman --overwrite='*' --noconfirm -U msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
-        %CD:~0,2%\msys64\usr\bin\pacman --noconfirm -Syyuu
-      displayName: Update MSYS2
-      
-    - script: taskkill /f /fi "MODULES eq msys-2.0.dll" || exit /b 0s
-      displayName: Reset MSYS2
     
     - script: |
         set PATH=%CD:~0,2%\msys64\usr\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
@@ -53,18 +39,8 @@ jobs:
         
     - script: |
         set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2%\msys64\usr\bin\bash -lc "bash make"
-      displayName: 'Build'
-      env:
-        MSYSTEM: $(MINGW_UPPER)
-        CHERE_INVOKING: yes
-        MINGW_INSTALLS: $(MINGW_LOWER)
-
-
-    - script: |
-        set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2%\msys64\usr\bin\bash -lc "bash bin/Test/JustDefineIt"
-      displayName: 'Test'
+        %CD:~0,2%\msys64\usr\bin\bash -lc "bash cmake CMakeLists.txt"
+      displayName: 'CMake Generate Makefiles'
       env:
         MSYSTEM: $(MINGW_UPPER)
         CHERE_INVOKING: yes
