@@ -19,7 +19,7 @@ jobs:
       persistCredentials: true
       
     - script: |
-        git clone https://github.com/msys2/msys2-ci-base.git %CD:~0,2%\msys64
+        git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" clone https://github.com/msys2/msys2-ci-base.git %CD:~0,2%\msys64
         %CD:~0,2%\msys64\usr\bin\rm -rf %CD:~0,2%\msys64\.git
       displayName: Install MSYS2
     
