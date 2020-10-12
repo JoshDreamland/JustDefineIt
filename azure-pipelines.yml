@@ -26,6 +26,7 @@ jobs:
       displayName: Install Toolchain
     
     - script: |
+        set PATH=C:\tools\msys64\usr\bin
         C:\tools\msys64\usr\bin\bash -lc "bash cmake CMakeLists.txt"
       displayName: 'CMake Generate Makefiles'
       env:
@@ -34,6 +35,7 @@ jobs:
         MINGW_INSTALLS: $(MINGW_LOWER)
         
     - script: |
+        set PATH=C:\tools\msys64\usr\bin
         C:\tools\msys64\usr\bin\bash -lc "bash make"
       displayName: 'Build'
       env:
@@ -42,6 +44,7 @@ jobs:
         MINGW_INSTALLS: $(MINGW_LOWER)
         
     - script: |
+        set PATH=C:\tools\msys64\usr\bin
         C:\tools\msys64\usr\bin\bash -lc "bash bin/Test/JustDefineIt"
       displayName: 'Test'
       env:
