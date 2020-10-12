@@ -15,22 +15,19 @@ jobs:
   
   steps:
     - checkout: self
-      submodules: true
-      
+
     - powershell: |
-        choco install msys2 /InstallDir %CD:~0,2%\msys64
+        choco install msys2
       displayName: Install MSYS2
     
     - script: |
-        set PATH=%CD:~0,2%\msys64\usr\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2%\msys64\usr\bin\pacman --noconfirm -Syyuu
-        %CD:~0,2%\msys64\usr\bin\pacman --noconfirm --needed -S git base-devel mingw-w64-$(MINGW_ARCH)-toolchain mingw-w64-$(MINGW_ARCH)-cmake mingw-w64-$(MINGW_ARCH)-gtest
-        %CD:~0,2%\msys64\usr\bin\pacman --noconfirm -Scc
+        set PATH=%CD:~0,2\tools\msys6\usr\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
+        %CD:~0,2\tools\msys6\usr\bin\pacman --noconfirm --needed -S git base-devel mingw-w64-$(MINGW_ARCH)-toolchain mingw-w64-$(MINGW_ARCH)-cmake mingw-w64-$(MINGW_ARCH)-gtest
       displayName: Install Toolchain
     
     - script: |
         set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2%\msys64\usr\bin\bash -lc "bash cmake CMakeLists.txt"
+        %CD:~0,2\tools\msys6\usr\bin\bash -lc "bash cmake CMakeLists.txt"
       displayName: 'CMake Generate Makefiles'
       env:
         MSYSTEM: $(MINGW_UPPER)
@@ -39,8 +36,17 @@ jobs:
         
     - script: |
         set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
-        %CD:~0,2%\msys64\usr\bin\bash -lc "bash cmake CMakeLists.txt"
-      displayName: 'CMake Generate Makefiles'
+        %CD:~0,2\tools\msys6\usr\bin\bash -lc "bash make"
+      displayName: 'Build'
+      env:
+        MSYSTEM: $(MINGW_UPPER)
+        CHERE_INVOKING: yes
+        MINGW_INSTALLS: $(MINGW_LOWER)
+        
+    - script: |
+        set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem
+        %CD:~0,2\tools\msys6\usr\bin\bash -lc "bash bin/Test/JustDefineIt"
+      displayName: 'Test'
       env:
         MSYSTEM: $(MINGW_UPPER)
         CHERE_INVOKING: yes
