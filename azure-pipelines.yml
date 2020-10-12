@@ -16,6 +16,7 @@ jobs:
   steps:
     - checkout: self
       submodules: true
+      persistCredentials: true
       
     - script: |
         git clone https://github.com/msys2/msys2-ci-base.git %CD:~0,2%\msys64
