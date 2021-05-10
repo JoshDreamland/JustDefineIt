@@ -18,9 +18,25 @@ install:
   - popd
 
 env:
-  - CXX=g++-9
+  global:
+    - CXX=g++-9
 
-script:
-  - cmake CMakeLists.txt
-  - make
-  - bin/Test/JustDefineIt
+jobs:
+    - stage: JDI Tests
+      env: CMAKE_AND_GTEST=1
+      script:
+        - cmake CMakeLists.txt
+        - make
+        - bin/Test/JustDefineIt
+    - stage: JDI Tests
+      env: ENIGMA_MASTER_TEST=1
+      install:
+        - sudo apt-get -y install g++-9 libprotobuf-dev protobuf-compiler libpng-dev zlib1g-dev
+      script:
+        - git clone --depth 1 https://github.com/enigma-dev/enigma-dev.git /tmp/enigma-dev
+        - pushd /tmp/enigma-dev
+        - rm -rf CompilerSource/JDI
+        - cp -R ${TRAVIS_BUILD_DIR} CompilerSource/JDI
+        - make
+        - popd
+
